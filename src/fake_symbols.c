@@ -1,0 +1,25 @@
+
+void HI_VOICE_EncReset() {};
+void pthread_create() {};
+void pthread_join() {};
+void HI_UPVQE_Create() {};
+void sem_destroy() {};
+void HI_DNVQE_ReadFrame() {};
+void sem_wait() {};
+void HI_UPVQE_Destroy() {};
+void sem_post() {};
+void HI_DNVQE_Destroy() {};
+void HI_VOICE_EncodeFrame() {};
+void sem_init() {};
+void HI_VOICE_DecodeFrame() {};
+void sem_trywait() {};
+void HI_UPVQE_GetConfig() {};
+void HI_VOICE_DecReset() {};
+void HI_UPVQE_ReadFrame() {};
+void HI_UPVQE_WriteFrame() {};
+void sem_getvalue() {};
+void HI_DNVQE_WriteFrame() {};
+void HI_DNVQE_GetConfig() {};
+void HI_UPVQE_GetVolume() {};
+void HI_UPVQE_SetVolume() {};
+void HI_DNVQE_Create() {};
