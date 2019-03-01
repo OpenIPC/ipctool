@@ -23,3 +23,18 @@ void HI_DNVQE_GetConfig() {};
 void HI_UPVQE_GetVolume() {};
 void HI_UPVQE_SetVolume() {};
 void HI_DNVQE_Create() {};
+
+void ResamplerMono1X4Process() {};
+void ResamplerMono2X1Process() {};
+void ResamplerMono6X1Process() {};
+void ResamplerMono4X1Process() {};
+void ResamplerMono1X2Process() {};
+void ResamplerMono1X6Process() {};
+void AEC_ProcessFrame() {};
+void ANR_ProcessFrame() {};
+void ANR_Init() {};
+void ANR_DeInit() {};
+void ResamplerCreate() {};
+void AEC_DeInit() {};
+void AEC_Init() {};
+void ResamplerFree() {};

@@ -120,7 +120,7 @@ int (*HI_MPI_SYS_GetVersion)(MPP_VERSION_S* pstVersion);
 int get_mpp_version() {
     void *lib = dlopen("libmpi.so", RTLD_NOW | RTLD_GLOBAL);
     if (!lib) {
-        printf("Can't find libmpi.so\n");
+        printf("Can't dlopen libmpi.so\n");
         return EXIT_FAILURE;
     } else {
         HI_MPI_SYS_GetVersion = dlsym(lib, "HI_MPI_SYS_GetVersion");
