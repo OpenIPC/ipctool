@@ -1,6 +1,7 @@
 *
 !*/
 
+!/.clang-format
 !/LICENSE
 !/CMakeLists.txt
 !/src/**/*.h

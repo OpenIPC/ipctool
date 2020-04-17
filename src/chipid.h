@@ -8,6 +8,6 @@ extern char isp_build_number[128];
 extern char isp_sequence_number[128];
 extern char mpp_version[128];
 
-int get_chip_id();
+int get_system_id();
 int get_isp_version();
 int get_mpp_version();

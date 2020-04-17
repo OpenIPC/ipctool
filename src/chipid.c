@@ -1,11 +1,15 @@
 #include "chipid.h"
+#include "tools.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
+#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
+#define _XOPEN_SOURCE 700
 #include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <dlfcn.h>
 
@@ -15,78 +19,155 @@
 
 char system_id[128];
 char chip_id[128];
-int  isp_register = -1;
+int isp_register = -1;
 char isp_version[128];
 char isp_build_number[128];
 char isp_sequence_number[128];
 char mpp_version[128];
 
-int get_chip_id() {
-    int mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
-    if (mem_fd < 0) { printf("can't open /dev/mem \n"); return EXIT_FAILURE; }
+long get_uart0_address() {
+    long res = -1;
 
-    uint32_t SC_CTRL_base = 0x20050000;
+    FILE *fiomem = fopen("/proc/iomem", "r");
+    if (!fiomem)
+        return -1;
+
+    regex_t regex;
+    regmatch_t matches[2];
+    if (!compile_regex(&regex, "^([0-9a-f]+)-[0-9a-f]+ : .*uart[@:][0-9]"))
+        goto exit;
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    while ((read = getline(&line, &len, fiomem)) != -1) {
+        if (regexec(&regex, line, sizeof(matches) / sizeof(matches[0]),
+                    (regmatch_t *)&matches, 0) == 0) {
+            line[matches[1].rm_eo] = 0;
+            res = strtol(line, NULL, 16);
+            break;
+        }
+    }
+
+exit:
+    free(line);
+    regfree(&regex);
+    fclose(fiomem);
+    return res;
+}
+
+static const char *get_chip_id(uint32_t reg) {
+    switch (reg) {
+    case 0x6000001:
+        return "hi3516av200";
+    case 0x35180100:
+        return "hi3518?v100";
+    case 0x3518E100:
+        return "hi3518ev100";
+    case 0x3516C100:
+        return "hi3516cv100";
+    case 0x3516A100:
+        return "hi3516av100";
+    case 0x3516D100:
+        return "hi3516dv100";
+    case 0x3516A200:
+        return "hi3516av200";
+    case 0x35190101:
+        return "hi3519v101";
+    case 0x3516C300:
+        return "hi3516cv300";
+    case 0x3516E100:
+        return "hi3516ev100";
+    case 0x3518E200:
+        return "hi3518ev200";
+    case 0x3516C200:
+        return "hi3516cv200";
+    case 0x3516D300:
+        return "hi3516dv300";
+    case 0x3559A100:
+        return "hi3559av100";
+    default:
+        return "unknown";
+    }
+}
+
+int get_system_id() {
+    uint32_t SC_CTRL_base;
+
+    int uart_base = get_uart0_address();
+    switch (uart_base) {
+    // hi3516cv300
+    case 0x12100000:
+        SC_CTRL_base = 0x12020000;
+        break;
+    // hi3518ev200
+    default:
+        SC_CTRL_base = 0x20050000;
+    }
+
+    int mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
+    if (mem_fd < 0) {
+        printf("can't open /dev/mem \n");
+        return EXIT_FAILURE;
+    }
+
     uint32_t SCSYSID0 = 0xEE0;
     uint32_t SCSYSID1 = 0xEE4;
     uint32_t SCSYSID2 = 0xEE8;
     uint32_t SCSYSID3 = 0xEEC;
 
-//    uint32_t base = SC_CTRL_base + SCSYSID0;
-//    long page_size = sysconf(_SC_PAGE_SIZE);
-//    off_t page_base = (base / page_size) * page_size;
-//    off_t page_offset = base - page_base;
-    volatile char *sc_ctrl_map = mmap(
-        NULL,                  // Any adddress in our space will do
-        SCSYSID0 + 4*100,   // Map length
-        PROT_READ,             // Enable reading & writting to mapped memory
-        MAP_SHARED,            // Shared with other processes
-        mem_fd,                // File to map
-        SC_CTRL_base                   // Offset to base address
-    );
-    if (sc_ctrl_map == MAP_FAILED) { printf("sc_ctrl_map mmap error %d\n", (int)sc_ctrl_map);
-        printf("Error: %s (%d)\n", strerror(errno), errno); close(mem_fd); return EXIT_FAILURE; }
+    volatile char *sc_ctrl_map =
+        mmap(NULL,               // Any adddress in our space will do
+             SCSYSID0 + 4 * 100, // Map length
+             PROT_READ,          // Enable reading & writting to mapped memory
+             MAP_SHARED,         // Shared with other processes
+             mem_fd,             // File to map
+             SC_CTRL_base        // Offset to base address
+        );
+    if (sc_ctrl_map == MAP_FAILED) {
+        printf("sc_ctrl_map mmap error %d\n", (int)sc_ctrl_map);
+        printf("Error: %s (%d)\n", strerror(errno), errno);
+        close(mem_fd);
+        return EXIT_FAILURE;
+    }
 
     close(mem_fd);
 
     uint32_t chip_id_u32 = 0;
-    char* ptr = (char*)&chip_id_u32;
+    char *ptr = (char *)&chip_id_u32;
     ptr[0] = *(volatile char *)(sc_ctrl_map + SCSYSID0);
     ptr[1] = *(volatile char *)(sc_ctrl_map + SCSYSID1);
     ptr[2] = *(volatile char *)(sc_ctrl_map + SCSYSID2);
     ptr[3] = *(volatile char *)(sc_ctrl_map + SCSYSID3);
     sprintf(system_id, "%x", chip_id_u32);
-    // printf("System id: %X", chip_id_u32);
 
-    uint32_t SCSYSID0_reg = ((volatile uint32_t *)(sc_ctrl_map + SCSYSID0))[0];
-    char SCSYSID0_chip_id = ((char*)&SCSYSID0_reg)[3];
-    // printf("    SCSYSID0 chip_id: ");
-    switch (SCSYSID0_chip_id) {
-        case 1: sprintf(chip_id, "hi3516cv200"); break;
-        case 2: sprintf(chip_id, "hi3518ev200"); break;
-        case 3: sprintf(chip_id, "hi3518ev201"); break;
-        default:
-            sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
-    }
-
+    strncpy(chip_id, get_chip_id(chip_id_u32), sizeof(chip_id));
     return EXIT_SUCCESS;
 }
 
 int get_isp_version() {
     int mem_fd = open("/dev/mem", O_RDONLY | O_SYNC);
-    if (mem_fd < 0) { printf("can't open /dev/mem \n"); return EXIT_FAILURE; }
+    if (mem_fd < 0) {
+        printf("can't open /dev/mem \n");
+        return EXIT_FAILURE;
+    }
 
     const uint32_t base_address = 0x20580000;
-    void *isp_version_map = mmap(
-        NULL,                       // Any adddress in our space will do
-        0x20080 + sizeof(uint32_t),           // Map length
-        PROT_READ,                  // Enable reading & writting to mapped memory
-        MAP_PRIVATE,                // Shared with other processes
-        mem_fd,                     // File to map
-        base_address      // Offset to base address
-    );
+    void *isp_version_map =
+        mmap(NULL,                       // Any adddress in our space will do
+             0x20080 + sizeof(uint32_t), // Map length
+             PROT_READ,   // Enable reading & writting to mapped memory
+             MAP_PRIVATE, // Shared with other processes
+             mem_fd,      // File to map
+             base_address // Offset to base address
+        );
     close(mem_fd);
-    if (isp_version_map == MAP_FAILED) { printf("isp_version_map mmap error %d\n", (int)isp_version_map);
-        printf("Error: %s (%d)\n", strerror(errno), errno); return EXIT_FAILURE; }
+    if (isp_version_map == MAP_FAILED) {
+        printf("isp_version_map mmap error %d\n", (int)isp_version_map);
+        printf("Error: %s (%d)\n", strerror(errno), errno);
+        return EXIT_FAILURE;
+    }
 
     isp_register = ((volatile uint32_t *)(isp_version_map + 0x20080))[0];
     // printf("ISP version register: 0x%08X", isp_register);
@@ -96,14 +177,18 @@ int get_isp_version() {
     // 0b_0000_0000_0000_1111_0000_0000_0000_0000
     // 0b_0000_0000_0000_0000_1111_1111_1111_1111
 
-    uint32_t version = (isp_register & 0b11111111111100000000000000000000) >> 20;
-    uint32_t build   = (isp_register & 0b00000000000011110000000000000000) >> 16;   // 0b00000000_00001111_00000000_00000000
-    uint32_t sn      =  isp_register & 0b00000000000000001111111111111111;          // 0b00000000_00000000_11111111_11111111
-//    printf("    version: V%d", version*100);
-//    printf("    build: B%02d", build);
-//    printf("    sequence number: %d\n", sn);
+    uint32_t version =
+        (isp_register & 0b11111111111100000000000000000000) >> 20;
+    uint32_t build = (isp_register & 0b00000000000011110000000000000000) >>
+                     16; // 0b00000000_00001111_00000000_00000000
+    uint32_t sn =
+        isp_register &
+        0b00000000000000001111111111111111; // 0b00000000_00000000_11111111_11111111
+    //    printf("    version: V%d", version*100);
+    //    printf("    build: B%02d", build);
+    //    printf("    sequence number: %d\n", sn);
 
-    sprintf(isp_version, "V%d", version*100);
+    sprintf(isp_version, "V%d", version * 100);
     sprintf(isp_build_number, "B%02d", build);
     sprintf(isp_sequence_number, "%d", sn);
 
@@ -114,7 +199,7 @@ int get_isp_version() {
 typedef struct hiMPP_VERSION_S {
     char aVersion[VERSION_NAME_MAXLEN];
 } MPP_VERSION_S;
-int (*HI_MPI_SYS_GetVersion)(MPP_VERSION_S* pstVersion);
+int (*HI_MPI_SYS_GetVersion)(MPP_VERSION_S *pstVersion);
 // int (*HI_MPI_SYS_GetChipId)(MPP_VERSION_S* pstVersion);
 
 int get_mpp_version() {

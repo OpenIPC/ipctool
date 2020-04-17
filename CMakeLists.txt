@@ -13,6 +13,8 @@ add_executable(hi_chip_info
     src/chipid.h
     src/chipid.c
     src/fake_symbols.c
+    src/tools.h
+    src/tools.c
 )
 target_link_libraries( hi_chip_info dl )
 install(TARGETS hi_chip_info RUNTIME DESTINATION /usr/bin/)

@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
     sprintf(mpp_version, "error");
 
     if (argc == 1) {
-        if (get_chip_id() == EXIT_SUCCESS)
+        if (get_system_id() == EXIT_SUCCESS)
             printf("System id: %s    SCSYSID0 chip_id: %s\n", system_id, chip_id);
         else return EXIT_FAILURE;
         if (get_isp_version() == EXIT_SUCCESS)
@@ -44,10 +44,10 @@ int main(int argc, char *argv[]) {
     if (argc == 2) {
         char *cmd = argv[1];
         if (strcmp(cmd, "--system_id") == 0) {
-            if (get_chip_id() == EXIT_SUCCESS) printf("%s\n", system_id); else return EXIT_FAILURE;
+            if (get_system_id() == EXIT_SUCCESS) printf("%s\n", system_id); else return EXIT_FAILURE;
         }
         else if (strcmp(cmd, "--chip_id") == 0) {
-            if (get_chip_id() == EXIT_SUCCESS) printf("%s\n", chip_id); else return EXIT_FAILURE;
+            if (get_system_id() == EXIT_SUCCESS) printf("%s\n", chip_id); else return EXIT_FAILURE;
         }
         else if (strcmp(cmd, "--isp_register") == 0) {
             if (get_isp_version() == EXIT_SUCCESS) printf("0x%08X\n", isp_register); else return EXIT_FAILURE;
