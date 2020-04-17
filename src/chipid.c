@@ -85,6 +85,10 @@ static const char *get_chip_id(uint32_t reg) {
         return "hi3516cv200";
     case 0x3516D300:
         return "hi3516dv300";
+    case 0x3516e200:
+        return "hi3516ev200";
+    case 0x3516e300:
+        return "hi3516ev300";
     case 0x3559A100:
         return "hi3559av100";
     default:
@@ -99,6 +103,7 @@ int get_system_id() {
     switch (uart_base) {
     // hi3516cv300
     case 0x12100000:
+    case 0x12040000:
         SC_CTRL_base = 0x12020000;
         break;
     // hi3518ev200
@@ -135,11 +140,16 @@ int get_system_id() {
     close(mem_fd);
 
     uint32_t chip_id_u32 = 0;
-    char *ptr = (char *)&chip_id_u32;
-    ptr[0] = *(volatile char *)(sc_ctrl_map + SCSYSID0);
-    ptr[1] = *(volatile char *)(sc_ctrl_map + SCSYSID1);
-    ptr[2] = *(volatile char *)(sc_ctrl_map + SCSYSID2);
-    ptr[3] = *(volatile char *)(sc_ctrl_map + SCSYSID3);
+    chip_id_u32 = *(volatile uint32_t *)(sc_ctrl_map + SCSYSID0);
+
+    if (!chip_id_u32) {
+        // fallback for 8-bit registers on old platforms
+        char *ptr = (char *)&chip_id_u32;
+        ptr[0] = *(volatile char *)(sc_ctrl_map + SCSYSID0);
+        ptr[1] = *(volatile char *)(sc_ctrl_map + SCSYSID1);
+        ptr[2] = *(volatile char *)(sc_ctrl_map + SCSYSID2);
+        ptr[3] = *(volatile char *)(sc_ctrl_map + SCSYSID3);
+    }
     sprintf(system_id, "%x", chip_id_u32);
 
     strncpy(chip_id, get_chip_id(chip_id_u32), sizeof(chip_id));
