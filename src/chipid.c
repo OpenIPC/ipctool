@@ -142,7 +142,7 @@ int get_system_id() {
     uint32_t chip_id_u32 = 0;
     chip_id_u32 = *(volatile uint32_t *)(sc_ctrl_map + SCSYSID0);
 
-    if (!chip_id_u32) {
+    if ((chip_id_u32 >> 16 & 0xff) == 0) {
         // fallback for 8-bit registers on old platforms
         char *ptr = (char *)&chip_id_u32;
         ptr[0] = *(volatile char *)(sc_ctrl_map + SCSYSID0);
