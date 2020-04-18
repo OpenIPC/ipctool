@@ -103,6 +103,7 @@ int get_system_id() {
     switch (uart_base) {
     // hi3516cv300
     case 0x12100000:
+    // hi3516ev200
     case 0x12040000:
         SC_CTRL_base = 0x12020000;
         break;
