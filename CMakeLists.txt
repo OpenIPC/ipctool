@@ -13,6 +13,8 @@ add_executable(hi_chip_info
     src/chipid.h
     src/chipid.c
     src/fake_symbols.c
+    src/sensorid.c
+    src/sensorid.c
     src/tools.h
     src/tools.c
 )
