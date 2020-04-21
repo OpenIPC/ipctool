@@ -1,5 +1,5 @@
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -20,6 +20,16 @@ const unsigned char sensor_i2c_addr = 0x34; /* I2C Address of IMX290 */
 const unsigned int sensor_addr_byte = 2;
 const unsigned int sensor_data_byte = 1;
 
+// Set I2C slave address
+int sensor_i2c_change_addr(int addr) {
+    int ret = ioctl(g_fd, I2C_SLAVE_FORCE, (sensor_i2c_addr >> 1));
+    if (ret < 0) {
+        printf("CMD_SET_DEV error!\n");
+        return ret;
+    }
+    return ret;
+}
+
 int sensor_i2c_init() {
     int ret;
 
@@ -32,13 +42,9 @@ int sensor_i2c_init() {
         printf("Open " I2C_ADAPTER " error!\n");
         return -1;
     }
+    if (sensor_i2c_change_addr(sensor_i2c_addr) < 0)
+        return -1;
 
-    // Set I2C slave address
-    ret = ioctl(g_fd, I2C_SLAVE_FORCE, (sensor_i2c_addr >> 1));
-    if (ret < 0) {
-        printf("CMD_SET_DEV error!\n");
-        return ret;
-    }
     return 0;
 }
 
@@ -131,11 +137,11 @@ int sensor_read_register(unsigned int reg_addr) {
 int get_sensor_id() {
     sensor_i2c_init();
 
-    // i2c_read 0 0x34 0x3009 0x3009 2 1 1
+    // i2c_read 0 0x34 0x31DC 0x31DC 2 1 1
     int ret = sensor_read_register(0x31DC) & 7;
     if (ret <= 1) {
-	sprintf(sensor_id, "IMX29%d", ret);
-	return EXIT_SUCCESS;
+        sprintf(sensor_id, "IMX29%d", ret);
+        return EXIT_SUCCESS;
     }
 
     return EXIT_FAILURE;
