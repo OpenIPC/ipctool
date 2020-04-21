@@ -42,8 +42,6 @@ int sensor_i2c_init() {
         printf("Open " I2C_ADAPTER " error!\n");
         return -1;
     }
-    if (sensor_i2c_change_addr(sensor_i2c_addr) < 0)
-        return -1;
 
     return 0;
 }
@@ -137,10 +135,40 @@ int sensor_read_register(unsigned int reg_addr) {
 int get_sensor_id() {
     sensor_i2c_init();
 
-    // i2c_read 0 0x34 0x31DC 0x31DC 2 1 1
-    int ret = sensor_read_register(0x31DC) & 7;
-    if (ret <= 1) {
-        sprintf(sensor_id, "IMX29%d", ret);
+    if (sensor_i2c_change_addr(sensor_i2c_addr) < 0)
+        return -1;
+    // from IMX335 datasheet, p.40
+    // 316Ah - 2-6 bits are 1, 7 bit is 0
+    int ret316a = sensor_read_register(0x316A);
+    if (ret316a > 0 && ((ret316a & 0xfc) == 0x7c)) {
+        sprintf(sensor_id, "IMX335");
+        return EXIT_SUCCESS;
+    }
+
+    int ret3013 = sensor_read_register(0x3013);
+    if (ret3013 == 64) {
+        sprintf(sensor_id, "IMX323");
+        return EXIT_SUCCESS;
+    }
+
+    int ret31dc = sensor_read_register(0x31DC);
+    if (ret31dc > 0) {
+        if ((ret31dc & 7) <= 1) {
+            sprintf(sensor_id, "IMX29%d", ret31dc);
+            return EXIT_SUCCESS;
+        }
+
+        switch (ret31dc & 6) {
+        case 4:
+            sprintf(sensor_id, "IMX307");
+            break;
+        case 6:
+            sprintf(sensor_id, "IMX327");
+            break;
+        default:
+            sprintf(sensor_id, "IMXXXX");
+            return EXIT_FAILURE;
+        }
         return EXIT_SUCCESS;
     }
 
