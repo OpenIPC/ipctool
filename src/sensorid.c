@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -13,6 +14,7 @@
 #include "sensorid.h"
 
 char sensor_id[128];
+char sensor_manufacturer[128];
 
 #define I2C_ADAPTER "/dev/i2c-0"
 static int g_fd = -1;
@@ -132,9 +134,7 @@ int sensor_read_register(unsigned int reg_addr) {
     return data;
 }
 
-int get_sensor_id() {
-    sensor_i2c_init();
-
+int detect_sony_sensor() {
     if (sensor_i2c_change_addr(sensor_i2c_addr) < 0)
         return -1;
     // from IMX335 datasheet, p.40
@@ -142,20 +142,20 @@ int get_sensor_id() {
     int ret316a = sensor_read_register(0x316A);
     if (ret316a > 0 && ((ret316a & 0xfc) == 0x7c)) {
         sprintf(sensor_id, "IMX335");
-        return EXIT_SUCCESS;
+        return true;
     }
 
     int ret3013 = sensor_read_register(0x3013);
     if (ret3013 == 64) {
         sprintf(sensor_id, "IMX323");
-        return EXIT_SUCCESS;
+        return true;
     }
 
     int ret31dc = sensor_read_register(0x31DC);
     if (ret31dc > 0) {
         if ((ret31dc & 7) <= 1) {
             sprintf(sensor_id, "IMX29%d", ret31dc);
-            return EXIT_SUCCESS;
+            return true;
         }
 
         switch (ret31dc & 6) {
@@ -167,10 +167,20 @@ int get_sensor_id() {
             break;
         default:
             sprintf(sensor_id, "IMXXXX");
-            return EXIT_FAILURE;
+            return false;
         }
-        return EXIT_SUCCESS;
+        return true;
     }
 
+    return false;
+}
+
+int get_sensor_id() {
+    sensor_i2c_init();
+
+    if (detect_sony_sensor()) {
+        strcpy(sensor_manufacturer, "Sony");
+        return EXIT_SUCCESS;
+    }
     return EXIT_FAILURE;
 }
