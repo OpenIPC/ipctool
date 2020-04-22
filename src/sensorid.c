@@ -17,14 +17,13 @@ char sensor_id[128];
 char sensor_manufacturer[128];
 
 #define I2C_ADAPTER "/dev/i2c-0"
-static int g_fd = -1;
 const unsigned char sensor_i2c_addr = 0x34; /* I2C Address of IMX290 */
 const unsigned int sensor_addr_byte = 2;
 const unsigned int sensor_data_byte = 1;
 
 // Set I2C slave address
-int sensor_i2c_change_addr(int addr) {
-    int ret = ioctl(g_fd, I2C_SLAVE_FORCE, (sensor_i2c_addr >> 1));
+int sensor_i2c_change_addr(int fd, int addr) {
+    int ret = ioctl(fd, I2C_SLAVE_FORCE, (sensor_i2c_addr >> 1));
     if (ret < 0) {
         printf("CMD_SET_DEV error!\n");
         return ret;
@@ -33,31 +32,26 @@ int sensor_i2c_change_addr(int addr) {
 }
 
 int sensor_i2c_init() {
-    int ret;
+    int ret, fd;
 
-    if (g_fd >= 0) {
-        return 0;
-    }
-
-    g_fd = open(I2C_ADAPTER, O_RDWR);
-    if (g_fd < 0) {
+    fd = open(I2C_ADAPTER, O_RDWR);
+    if (fd < 0) {
         printf("Open " I2C_ADAPTER " error!\n");
         return -1;
     }
 
-    return 0;
+    return fd;
 }
 
-int sensor_i2c_exit(void) {
-    if (g_fd >= 0) {
-        close(g_fd);
-        g_fd = -1;
-        return 0;
+int sensor_i2c_exit(int fd) {
+    if (fd >= 0) {
+        close(fd);
+        return true;
     }
-    return -1;
+    return false;
 }
 
-int sensor_write_register(int addr, int data) {
+int sensor_write_register(int fd, int addr, int data) {
     int idx = 0;
     int ret;
     char buf[8];
@@ -82,7 +76,7 @@ int sensor_write_register(int addr, int data) {
         idx++;
     }
 
-    ret = write(g_fd, buf, (sensor_addr_byte + sensor_data_byte));
+    ret = write(fd, buf, (sensor_addr_byte + sensor_data_byte));
     if (ret < 0) {
         printf("I2C_WRITE error!\n");
         return -1;
@@ -90,7 +84,7 @@ int sensor_write_register(int addr, int data) {
     return 0;
 }
 
-int sensor_read_register(unsigned int reg_addr) {
+int sensor_read_register(int fd, unsigned int reg_addr) {
     static struct i2c_rdwr_ioctl_data rdwr;
     static struct i2c_msg msg[2];
     unsigned int reg_width = 2, data_width = 1, reg_step = 1;
@@ -119,7 +113,7 @@ int sensor_read_register(unsigned int reg_addr) {
     } else
         buf[0] = reg_addr & 0xff;
 
-    int retval = ioctl(g_fd, I2C_RDWR, &rdwr);
+    int retval = ioctl(fd, I2C_RDWR, &rdwr);
     if (retval != 2) {
         // CMD_I2C_READ error
         retval = -1;
@@ -134,24 +128,25 @@ int sensor_read_register(unsigned int reg_addr) {
     return data;
 }
 
-int detect_sony_sensor() {
-    if (sensor_i2c_change_addr(sensor_i2c_addr) < 0)
-        return -1;
+int detect_sony_sensor(int fd) {
+    if (sensor_i2c_change_addr(fd, sensor_i2c_addr) < 0)
+        return false;
+
     // from IMX335 datasheet, p.40
     // 316Ah - 2-6 bits are 1, 7 bit is 0
-    int ret316a = sensor_read_register(0x316A);
+    int ret316a = sensor_read_register(fd, 0x316A);
     if (ret316a > 0 && ((ret316a & 0xfc) == 0x7c)) {
         sprintf(sensor_id, "IMX335");
         return true;
     }
 
-    int ret3013 = sensor_read_register(0x3013);
+    int ret3013 = sensor_read_register(fd, 0x3013);
     if (ret3013 == 64) {
         sprintf(sensor_id, "IMX323");
         return true;
     }
 
-    int ret31dc = sensor_read_register(0x31DC);
+    int ret31dc = sensor_read_register(fd, 0x31DC);
     if (ret31dc > 0) {
         if ((ret31dc & 7) <= 1) {
             sprintf(sensor_id, "IMX29%d", ret31dc);
@@ -176,9 +171,9 @@ int detect_sony_sensor() {
 }
 
 int get_sensor_id() {
-    sensor_i2c_init();
+    int fd = sensor_i2c_init();
 
-    if (detect_sony_sensor()) {
+    if (detect_sony_sensor(fd)) {
         strcpy(sensor_manufacturer, "Sony");
         return EXIT_SUCCESS;
     }
