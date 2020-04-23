@@ -1,6 +1,7 @@
 *
 !*/
 
+!/README.md
 !/.clang-format
 !/LICENSE
 !/CMakeLists.txt
