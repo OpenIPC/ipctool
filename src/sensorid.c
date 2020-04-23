@@ -170,10 +170,12 @@ int detect_soi_sensor(int fd) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    int reta = sensor_read_register(fd, i2c_addr, 0xa, 1, 1);
-    int retb = sensor_read_register(fd, i2c_addr, 0xb, 1, 1);
-    if (reta == 0xf) {
-        sprintf(sensor_id, "JXF%x", retb);
+    // Product ID number (Read only)
+    int pid = sensor_read_register(fd, i2c_addr, 0xa, 1, 1);
+    // Product version number (Read only)
+    int ver = sensor_read_register(fd, i2c_addr, 0xb, 1, 1);
+    if (pid == 0xf) {
+        sprintf(sensor_id, "JX-F%x", ver);
         return true;
     }
     return false;
