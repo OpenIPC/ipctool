@@ -11,6 +11,9 @@ jobs:
   musl-static:
     runs-on: ubuntu-latest
 
+    env:
+      TOOLCHAIN: arm-unknown-linux-gnueabi
+
     steps:
       - uses: pozetroninc/github-action-get-latest-release@master
         id: ct-ng-release
@@ -25,6 +28,9 @@ jobs:
       - run: |
           REL="${{ steps.ct-ng-release.outputs.release }}"
           echo "Got release $REL"
-          wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/arm-unknown-linux-gnueabi.tar.xz | \
+          wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/$TOOLCHAIN.tar.xz | \
             tar xfJ - -C /opt
-          ls -la /opt
+          export PATH=/opt/$TOOLCHAIN/bin:$PATH
+          sudo apt install -y cmake
+          cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
