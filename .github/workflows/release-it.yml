@@ -26,5 +26,5 @@ jobs:
           REL="${{ steps.ct-ng-release.outputs.release }}"
           echo "Got release $REL"
           wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/arm-unknown-linux-gnueabi.tar.xz | \
-            tar xf - -C /opt
+            tar xfJ - -C /opt
           ls -la /opt
