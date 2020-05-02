@@ -7,8 +7,17 @@
 
 #include "chipid.h"
 #include "sensorid.h"
+#include "version.h"
 
 void Help() {
+    printf("ipc_chip_info, version: ");
+    const char* vers = get_git_version();
+    if (*vers) {
+        printf("%s\n", vers);
+    } else {
+        printf("%s+%s\n", get_git_branch(), get_git_revision());
+    }
+
     printf("    available options:\n");
     printf("        --system_id\n");
     printf("        --chip_id\n");
