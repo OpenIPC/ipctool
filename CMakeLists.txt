@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(ipc_chip_info C)
 
-# set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_FLAGS "-std=gnu99")
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_FLAGS "-std=gnu99 -static")
 
 include_directories(
     ./src/

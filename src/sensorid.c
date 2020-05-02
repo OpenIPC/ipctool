@@ -134,6 +134,9 @@ int detect_sony_sensor(int fd) {
     // from IMX335 datasheet, p.40
     // 316Ah - 2-6 bits are 1, 7 bit is 0
     int ret316a = sensor_read_register(fd, i2c_addr, 0x316A, 2, 1);
+    // early break
+    if (ret316a == -1) return false;
+
     if (ret316a > 0 && ((ret316a & 0xfc) == 0x7c)) {
         sprintf(sensor_id, "IMX335");
         return true;
@@ -172,6 +175,9 @@ int detect_soi_sensor(int fd) {
 
     // Product ID number (Read only)
     int pid = sensor_read_register(fd, i2c_addr, 0xa, 1, 1);
+    // early break
+    if (pid == -1) return false;
+
     // Product version number (Read only)
     int ver = sensor_read_register(fd, i2c_addr, 0xb, 1, 1);
     if (pid == 0xf) {
