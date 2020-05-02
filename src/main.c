@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+#include <termios.h>
+
 #include "chipid.h"
 #include "sensorid.h"
 #include "version.h"
@@ -46,6 +49,10 @@ int main(int argc, char *argv[]) {
                    chip_id);
         else
             return EXIT_FAILURE;
+
+	// flush stdout before go to sensor detection to avoid buggy kernel
+	// freezes
+	tcdrain(STDOUT_FILENO);
         if (get_sensor_id() == EXIT_SUCCESS)
             printf("Sensor id: %s\n", sensor_id);
         else

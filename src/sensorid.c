@@ -11,6 +11,7 @@
 #include <linux/ioctl.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
+#include <sys/resource.h>
 
 #include "sensorid.h"
 
@@ -90,6 +91,10 @@ int sensor_read_register(int fd, unsigned char i2c_addr, unsigned int reg_addr,
     unsigned char buf[4];
     unsigned int data;
 
+    // measure ioctl execution time to exit early in too slow response
+    struct rusage start_time;
+    int ret = getrusage(RUSAGE_SELF, &start_time);
+
     memset(buf, 0x0, sizeof(buf));
 
     msg[0].addr = i2c_addr >> 1;
@@ -114,6 +119,14 @@ int sensor_read_register(int fd, unsigned char i2c_addr, unsigned int reg_addr,
             buf[0] = cur_addr & 0xff;
 
         int retval = ioctl(fd, I2C_RDWR, &rdwr);
+        struct rusage end_time;
+        int ret = getrusage(RUSAGE_SELF, &end_time);
+        if (end_time.ru_stime.tv_sec - start_time.ru_stime.tv_sec > 2) {
+            fprintf(stderr, "Buggy I2C driver detected! Load all ko modules\n");
+            exit(2);
+        }
+        start_time = end_time;
+
         if (retval != 2) {
             return -1;
         }
@@ -190,7 +203,7 @@ int detect_soi_sensor(int fd) {
     return false;
 }
 
-void *get_sensor_id_thread() {
+int get_sensor_id() {
     int fd = sensor_i2c_init();
 
     if (detect_soi_sensor(fd)) {
@@ -200,23 +213,5 @@ void *get_sensor_id_thread() {
         strcpy(sensor_manufacturer, "Sony");
         return EXIT_SUCCESS;
     }
-    return (void *)EXIT_FAILURE;
-}
-
-int get_sensor_id() {
-    pthread_t thread;
-    int res;
-    int status;
-
-    res = pthread_create(&thread, NULL, get_sensor_id_thread, NULL);
-    if (res != 0) {
-        printf("pthread: can't create thread, status = %x\n", res);
-        return EXIT_FAILURE;
-    }
-    res = pthread_join(thread, (void **)&status);
-    if (res != 0) {
-        printf("pthread: can't join thread, status = %x\n", res);
-        return EXIT_FAILURE;
-    }
-    return status;
+    return EXIT_FAILURE;
 }
