@@ -35,6 +35,7 @@ jobs:
           sudo apt install -y cmake
           cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
           cmake --build build
+          ${TOOLCHAIN}-strip build/ipc_chip_info
 
       - name: Prerelease
         uses: "marvinpinto/action-automatic-releases@latest"
