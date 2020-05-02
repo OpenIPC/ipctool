@@ -29,5 +29,9 @@ add_executable(ipc_chip_info
     src/version.h
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )
+
+find_package(Threads REQUIRED)
+target_link_libraries(ipc_chip_info Threads::Threads)
+
 target_link_libraries( ipc_chip_info dl )
 install(TARGETS ipc_chip_info RUNTIME DESTINATION /usr/bin/)

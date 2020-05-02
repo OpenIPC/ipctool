@@ -1,6 +1,6 @@
 void HI_VOICE_EncReset(){};
-void pthread_create(){};
-void pthread_join(){};
+//void pthread_create(){};
+//void pthread_join(){};
 void HI_UPVQE_Create(){};
 void sem_destroy(){};
 void HI_DNVQE_ReadFrame(){};

@@ -9,6 +9,7 @@
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <linux/ioctl.h>
+#include <pthread.h>
 #include <sys/ioctl.h>
 
 #include "sensorid.h"
@@ -135,7 +136,8 @@ int detect_sony_sensor(int fd) {
     // 316Ah - 2-6 bits are 1, 7 bit is 0
     int ret316a = sensor_read_register(fd, i2c_addr, 0x316A, 2, 1);
     // early break
-    if (ret316a == -1) return false;
+    if (ret316a == -1)
+        return false;
 
     if (ret316a > 0 && ((ret316a & 0xfc) == 0x7c)) {
         sprintf(sensor_id, "IMX335");
@@ -176,7 +178,8 @@ int detect_soi_sensor(int fd) {
     // Product ID number (Read only)
     int pid = sensor_read_register(fd, i2c_addr, 0xa, 1, 1);
     // early break
-    if (pid == -1) return false;
+    if (pid == -1)
+        return false;
 
     // Product version number (Read only)
     int ver = sensor_read_register(fd, i2c_addr, 0xb, 1, 1);
@@ -187,7 +190,7 @@ int detect_soi_sensor(int fd) {
     return false;
 }
 
-int get_sensor_id() {
+void *get_sensor_id_thread() {
     int fd = sensor_i2c_init();
 
     if (detect_soi_sensor(fd)) {
@@ -197,5 +200,23 @@ int get_sensor_id() {
         strcpy(sensor_manufacturer, "Sony");
         return EXIT_SUCCESS;
     }
-    return EXIT_FAILURE;
+    return (void *)EXIT_FAILURE;
+}
+
+int get_sensor_id() {
+    pthread_t thread;
+    int res;
+    int status;
+
+    res = pthread_create(&thread, NULL, get_sensor_id_thread, NULL);
+    if (res != 0) {
+        printf("pthread: can't create thread, status = %x\n", res);
+        return EXIT_FAILURE;
+    }
+    res = pthread_join(thread, (void **)&status);
+    if (res != 0) {
+        printf("pthread: can't join thread, status = %x\n", res);
+        return EXIT_FAILURE;
+    }
+    return status;
 }
