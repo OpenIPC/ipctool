@@ -2,6 +2,13 @@
 
 ![ipc-chip-info](https://github.com/OpenIPC/ipc_chip_info/workflows/ipc-chip-info/badge.svg)
 
+## Download
+
+Use [the
+link](https://github.com/OpenIPC/ipc_chip_info/releases/download/latest/ipc_chip_info)
+to download latest build (even directly to your camera). The build use `musl` to
+work on vast majority of hardware.
+
 ## Usage
 
 ```
