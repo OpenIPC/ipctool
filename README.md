@@ -1,5 +1,7 @@
 # IPC chip information
 
+![ipc-chip-info](https://github.com/OpenIPC/ipc_chip_info/workflows/ipc-chip-info/badge.svg)
+
 ## Usage
 
 ```
