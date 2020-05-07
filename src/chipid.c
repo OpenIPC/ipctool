@@ -4,57 +4,77 @@
 #define _POSIX_C_SOURCE 200809L
 #define _GNU_SOURCE
 #define _XOPEN_SOURCE 700
+#include <ctype.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <unistd.h>
-
 #include <dlfcn.h>
-
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 
 char system_id[128];
 char chip_id[128];
+char chip_manufacturer[128];
 int isp_register = -1;
 char isp_version[128];
 char isp_build_number[128];
 char isp_sequence_number[128];
 char mpp_version[128];
 
-long get_uart0_address() {
-    long res = -1;
+bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
+                              size_t buflen) {
+    long res = false;
 
-    FILE *fiomem = fopen("/proc/iomem", "r");
+    FILE *fiomem = fopen(filename, "r");
     if (!fiomem)
-        return -1;
+        return false;
 
     regex_t regex;
     regmatch_t matches[2];
-    if (!compile_regex(&regex, "^([0-9a-f]+)-[0-9a-f]+ : .*uart[@:][0-9]"))
+    if (!compile_regex(&regex, re))
         goto exit;
 
-    char *line = NULL;
-    size_t len = 0;
+    char *line = buf;
+    size_t len = buflen;
     ssize_t read;
 
     while ((read = getline(&line, &len, fiomem)) != -1) {
         if (regexec(&regex, line, sizeof(matches) / sizeof(matches[0]),
                     (regmatch_t *)&matches, 0) == 0) {
-            line[matches[1].rm_eo] = 0;
-            res = strtol(line, NULL, 16);
+            regoff_t start = matches[1].rm_so;
+            regoff_t end = matches[1].rm_eo;
+
+            line[end] = 0;
+            if (start) {
+                memmove(line, line + start, end - start + 1);
+            }
+            res = true;
             break;
         }
     }
 
 exit:
-    free(line);
     regfree(&regex);
     fclose(fiomem);
     return res;
+}
+
+long get_uart0_address() {
+    char buf[256];
+
+    bool res = get_regex_line_from_file(
+        "/proc/iomem", "^([0-9a-f]+)-[0-9a-f]+ : .*uart[@:][0-9]", buf,
+        sizeof(buf));
+    if (!res) {
+        return -1;
+    }
+    return strtol(buf, NULL, 16);
 }
 
 static const char *get_chip_id(uint32_t reg) {
@@ -96,11 +116,32 @@ static const char *get_chip_id(uint32_t reg) {
     }
 }
 
+bool detect_xm510() {
+    char buf[256];
+
+    bool res = get_regex_line_from_file("/proc/cpuinfo", "^Hardware.+(xm.+)",
+                                        buf, sizeof(buf));
+    if (!res) {
+        return false;
+    }
+    strncpy(chip_id, buf, sizeof(chip_id));
+    char* ptr = chip_id;
+    while (*ptr) {
+    	*ptr = toupper(*ptr);
+	ptr++;
+    }
+    strcpy(chip_manufacturer, "Xiongmai");
+    return true;
+}
+
 int get_system_id() {
     uint32_t SC_CTRL_base;
 
-    int uart_base = get_uart0_address();
+    long uart_base = get_uart0_address();
     switch (uart_base) {
+    // xm510
+    case 0x10030000:
+        return detect_xm510() ? EXIT_SUCCESS : EXIT_FAILURE;
     // hi3516cv300
     case 0x12100000:
     // hi3516ev200
