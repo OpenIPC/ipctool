@@ -17,6 +17,7 @@
 #include "tools.h"
 
 char system_id[128];
+char system_manufacturer[128];
 char chip_id[128];
 char chip_manufacturer[128];
 int isp_register = -1;
@@ -78,37 +79,37 @@ long get_uart0_address() {
 static const char *get_chip_id(uint32_t reg) {
     switch (reg) {
     case 0x6000001:
-        return "hi3516av200";
+        return "3516av200";
     case 0x35180100:
-        return "hi3518?v100";
+        return "3518?v100";
     case 0x3518E100:
-        return "hi3518ev100";
+        return "3518ev100";
     case 0x3516C100:
-        return "hi3516cv100";
+        return "3516cv100";
     case 0x3516A100:
-        return "hi3516av100";
+        return "3516av100";
     case 0x3516D100:
-        return "hi3516dv100";
+        return "3516dv100";
     case 0x3516A200:
-        return "hi3516av200";
+        return "3516av200";
     case 0x35190101:
-        return "hi3519v101";
+        return "3519v101";
     case 0x3516C300:
-        return "hi3516cv300";
+        return "3516cv300";
     case 0x3516E100:
-        return "hi3516ev100";
+        return "3516ev100";
     case 0x3518E200:
-        return "hi3518ev200";
+        return "3518ev200";
     case 0x3516C200:
-        return "hi3516cv200";
+        return "3516cv200";
     case 0x3516D300:
-        return "hi3516dv300";
+        return "3516dv300";
     case 0x3516e200:
-        return "hi3516ev200";
+        return "3516ev200";
     case 0x3516e300:
-        return "hi3516ev300";
+        return "3516ev300";
     case 0x3559A100:
-        return "hi3559av100";
+        return "3559av100";
     default:
         return "unknown";
     }
@@ -190,19 +191,18 @@ bool detect_system() {
         ptr[2] = *(volatile char *)(sc_ctrl_map + SCSYSID2);
         ptr[3] = *(volatile char *)(sc_ctrl_map + SCSYSID3);
     }
-    sprintf(system_id, "%x", chip_id_u32);
 
     strncpy(chip_id, get_chip_id(chip_id_u32), sizeof(chip_id));
     strcpy(chip_manufacturer, VENDOR_HISI);
     return true;
 }
 
-int get_system_id() {
+bool get_system_id() {
     if (!detect_system()) {
-        return EXIT_FAILURE;
+        return false;
     };
     setup_hal_drivers();
-    return EXIT_SUCCESS;
+    return true;
 }
 
 int get_isp_version() {

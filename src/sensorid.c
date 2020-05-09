@@ -119,7 +119,7 @@ int detect_onsemi_sensor(int fd) {
     return sid;
 }
 
-int get_sensor_id() {
+bool get_sensor_id() {
     // if system wasn't detected previously
     if (!strcmp("error", chip_id)) {
         get_system_id();
@@ -129,13 +129,13 @@ int get_sensor_id() {
 
     if (detect_soi_sensor(fd)) {
         strcpy(sensor_manufacturer, "Silicon Optronics");
-        return EXIT_SUCCESS;
+        return true;
     } else if (detect_onsemi_sensor(fd)) {
         strcpy(sensor_manufacturer, "ON Semiconductor");
-        return EXIT_SUCCESS;
+        return true;
     } else if (detect_sony_sensor(fd)) {
         strcpy(sensor_manufacturer, "Sony");
-        return EXIT_SUCCESS;
+        return true;
     }
-    return EXIT_FAILURE;
+    return false;
 }

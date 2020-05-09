@@ -5,10 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <unistd.h>
 #include <termios.h>
+#include <unistd.h>
 
 #include "chipid.h"
+#include "hal_hisi.h"
 #include "sensorid.h"
 #include "version.h"
 
@@ -33,10 +34,31 @@ void Help() {
     printf("        --help\n");
 }
 
+void print_system_id(bool report) {
+    if (!*system_manufacturer && !*system_id)
+        return;
+
+    if (*system_manufacturer) {
+        strcat(system_manufacturer, " ");
+    }
+    printf("System: %s%s\n", system_manufacturer, system_id);
+}
+
+void print_chip_id(bool report) {
+    if (*chip_manufacturer) {
+        strcat(chip_manufacturer, " ");
+    }
+    printf("Chip: %s%s\n", chip_manufacturer, chip_id);
+}
+
+void print_sensor_id(bool report) {
+    if (*sensor_manufacturer) {
+        strcat(sensor_manufacturer, " ");
+    }
+    printf("Sensor: %s%s\n", sensor_manufacturer, sensor_id);
+}
+
 int main(int argc, char *argv[]) {
-    sprintf(system_id, "error");
-    sprintf(chip_id, "error");
-    sprintf(sensor_id, "error");
     isp_register = -1;
     sprintf(isp_version, "error");
     sprintf(isp_build_number, "error");
@@ -44,47 +66,37 @@ int main(int argc, char *argv[]) {
     sprintf(mpp_version, "error");
 
     if (argc == 1) {
-        if (get_system_id() == EXIT_SUCCESS)
-            printf("System id: %s    SCSYSID0 chip_id: %s\n", system_id,
-                   chip_id);
+        if (get_system_id()) {
+            print_system_id(true);
+            print_chip_id(true);
+        } else
+            return EXIT_FAILURE;
+
+        // flush stdout before go to sensor detection to avoid buggy kernel
+        // freezes
+        tcdrain(STDOUT_FILENO);
+        if (get_sensor_id())
+            print_sensor_id(true);
         else
             return EXIT_FAILURE;
 
-	// flush stdout before go to sensor detection to avoid buggy kernel
-	// freezes
-	tcdrain(STDOUT_FILENO);
-        if (get_sensor_id() == EXIT_SUCCESS)
-            printf("Sensor id: %s\n", sensor_id);
-        else
-            return EXIT_FAILURE;
-        if (get_isp_version() == EXIT_SUCCESS)
-            printf("ISP register: 0x%08X    isp version: %s    isp build: %s   "
-                   " isp sequence number: %s\n",
-                   isp_register, isp_version, isp_build_number,
-                   isp_sequence_number);
-        else
-            return EXIT_FAILURE;
-        if (get_mpp_version() == EXIT_SUCCESS)
-            printf("MPP version: %s\n", mpp_version);
-        else
-            return EXIT_FAILURE;
         return EXIT_SUCCESS;
     }
 
     if (argc == 2) {
         char *cmd = argv[1];
         if (strcmp(cmd, "--system_id") == 0) {
-            if (get_system_id() == EXIT_SUCCESS)
+            if (get_system_id())
                 printf("%s\n", system_id);
             else
                 return EXIT_FAILURE;
         } else if (strcmp(cmd, "--chip_id") == 0) {
-            if (get_system_id() == EXIT_SUCCESS)
+            if (get_system_id())
                 printf("%s\n", chip_id);
             else
                 return EXIT_FAILURE;
         } else if (strcmp(cmd, "--sensor_id") == 0) {
-            if (get_sensor_id() == EXIT_SUCCESS)
+            if (get_sensor_id())
                 printf("%s\n", sensor_id);
             else
                 return EXIT_FAILURE;
