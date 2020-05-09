@@ -2,6 +2,7 @@
 
 extern char system_id[128];
 extern char chip_id[128];
+extern char chip_manufacturer[128];
 extern char sensor_id[128];
 extern int  isp_register;
 extern char isp_version[128];

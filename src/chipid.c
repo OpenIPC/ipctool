@@ -1,9 +1,3 @@
-#include "chipid.h"
-#include "tools.h"
-
-#define _POSIX_C_SOURCE 200809L
-#define _GNU_SOURCE
-#define _XOPEN_SOURCE 700
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -12,11 +6,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <unistd.h>
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <unistd.h>
+
+#include "hal_common.h"
+#include "chipid.h"
+#include "tools.h"
 
 char system_id[128];
 char chip_id[128];
@@ -125,23 +123,23 @@ bool detect_xm510() {
         return false;
     }
     strncpy(chip_id, buf, sizeof(chip_id));
-    char* ptr = chip_id;
+    char *ptr = chip_id;
     while (*ptr) {
-    	*ptr = toupper(*ptr);
-	ptr++;
+        *ptr = toupper(*ptr);
+        ptr++;
     }
-    strcpy(chip_manufacturer, "Xiongmai");
+    strcpy(chip_manufacturer, VENDOR_XM);
     return true;
 }
 
-int get_system_id() {
+bool detect_system() {
     uint32_t SC_CTRL_base;
 
     long uart_base = get_uart0_address();
     switch (uart_base) {
     // xm510
     case 0x10030000:
-        return detect_xm510() ? EXIT_SUCCESS : EXIT_FAILURE;
+        return detect_xm510();
     // hi3516cv300
     case 0x12100000:
     // hi3516ev200
@@ -156,7 +154,7 @@ int get_system_id() {
     int mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (mem_fd < 0) {
         printf("can't open /dev/mem \n");
-        return EXIT_FAILURE;
+        return false;
     }
 
     uint32_t SCSYSID0 = 0xEE0;
@@ -176,7 +174,7 @@ int get_system_id() {
         printf("sc_ctrl_map mmap error %d\n", (int)sc_ctrl_map);
         printf("Error: %s (%d)\n", strerror(errno), errno);
         close(mem_fd);
-        return EXIT_FAILURE;
+        return false;
     }
 
     close(mem_fd);
@@ -195,6 +193,15 @@ int get_system_id() {
     sprintf(system_id, "%x", chip_id_u32);
 
     strncpy(chip_id, get_chip_id(chip_id_u32), sizeof(chip_id));
+    strcpy(chip_manufacturer, VENDOR_HISI);
+    return true;
+}
+
+int get_system_id() {
+    if (!detect_system()) {
+        return EXIT_FAILURE;
+    };
+    setup_hal_drivers();
     return EXIT_SUCCESS;
 }
 

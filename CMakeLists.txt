@@ -18,14 +18,21 @@ include_directories(
 )
 
 add_executable(ipc_chip_info
-    src/main.c
-    src/chipid.h
     src/chipid.c
+    src/chipid.c
+    src/chipid.h
     src/fake_symbols.c
+    src/hal_common.c
+    src/hal_common.h
+    src/hal_hisi.c
+    src/hal_hisi.h
+    src/hal_xm.c
+    src/hal_xm.h
+    src/main.c
     src/sensorid.c
     src/sensorid.c
-    src/tools.h
     src/tools.c
+    src/tools.h
     src/version.h
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )
