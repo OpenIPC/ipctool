@@ -50,6 +50,7 @@ int xm_sensor_write_register(int fd, unsigned char i2c_addr,
 
 void setup_hal_xm() {
     open_sensor_fd = xm_open_sensor_fd;
+    sensor_i2c_change_addr = common_sensor_i2c_change_addr;
     sensor_read_register = xm_sensor_read_register;
     sensor_write_register = xm_sensor_write_register;
 }

@@ -17,16 +17,6 @@
 char sensor_id[128];
 char sensor_manufacturer[128];
 
-// Set I2C slave address
-int sensor_i2c_change_addr(int fd, unsigned char addr) {
-    int ret = ioctl(fd, I2C_SLAVE_FORCE, (addr >> 1));
-    if (ret < 0) {
-        printf("CMD_SET_DEV error!\n");
-        return ret;
-    }
-    return ret;
-}
-
 int detect_sony_sensor(int fd) {
     const unsigned char i2c_addr = 0x34;
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
@@ -93,8 +83,8 @@ int detect_soi_sensor(int fd) {
 // tested on AR0130
 int detect_onsemi_sensor(int fd) {
     const unsigned char i2c_addr = 0x10;
-    // if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
-    //    return false;
+    if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
 
     int pid = sensor_read_register(fd, i2c_addr, 0x3000, 2, 2);
     int sid = 0;

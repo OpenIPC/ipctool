@@ -1,5 +1,5 @@
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -15,8 +15,9 @@ int (*sensor_read_register)(int fd, unsigned char i2c_addr,
 int (*sensor_write_register)(int fd, unsigned char i2c_addr,
                              unsigned int reg_addr, unsigned int reg_width,
                              unsigned int data, unsigned int data_width);
+int (*sensor_i2c_change_addr)(int fd, unsigned char addr);
 
-int common_open_sensor_fd(const char* dev_name) {
+int common_open_sensor_fd(const char *dev_name) {
     int fd;
 
     fd = open(dev_name, O_RDWR);
@@ -35,6 +36,10 @@ bool common_close_sensor_fd(int fd) {
     }
     return false;
 }
+
+// Set I2C slave address,
+// actually do nothing
+int common_sensor_i2c_change_addr(int fd, unsigned char addr) { return 0; }
 
 void setup_hal_drivers() {
     if (!strcmp(VENDOR_HISI, chip_manufacturer))

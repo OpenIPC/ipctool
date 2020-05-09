@@ -14,11 +14,19 @@
 
 int hisi_open_sensor_fd() { return common_open_sensor_fd("/dev/i2c-0"); }
 
+// Set I2C slave address
+int hisi_sensor_i2c_change_addr(int fd, unsigned char addr) {
+    int ret = ioctl(fd, I2C_SLAVE_FORCE, (addr >> 1));
+    if (ret < 0) {
+        fprintf(stderr, "CMD_SET_DEV error!\n");
+        return ret;
+    }
+    return ret;
+}
+
 int hisi_sensor_write_register(int fd, unsigned char i2c_addr,
-                                    unsigned int reg_addr,
-                                    unsigned int reg_width, unsigned int data,
-                                    unsigned int data_width) {
-//int hisi_sensor_write_register(int fd, int addr, int data) {
+                               unsigned int reg_addr, unsigned int reg_width,
+                               unsigned int data, unsigned int data_width) {
     int idx = 0;
     int ret;
     char buf[8];
@@ -111,6 +119,7 @@ int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
 
 void setup_hal_hisi() {
     open_sensor_fd = hisi_open_sensor_fd;
+    sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
     sensor_read_register = hisi_sensor_read_register;
     sensor_write_register = hisi_sensor_write_register;
 }
