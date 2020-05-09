@@ -17,8 +17,7 @@
 char sensor_id[128];
 char sensor_manufacturer[128];
 
-int detect_sony_sensor(int fd) {
-    const unsigned char i2c_addr = 0x34;
+int detect_sony_sensor(int fd, unsigned char i2c_addr) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -60,8 +59,7 @@ int detect_sony_sensor(int fd) {
 }
 
 // tested on F22, F23, F37
-int detect_soi_sensor(int fd) {
-    const unsigned char i2c_addr = 0x80;
+int detect_soi_sensor(int fd, unsigned char i2c_addr) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -81,8 +79,7 @@ int detect_soi_sensor(int fd) {
 }
 
 // tested on AR0130
-int detect_onsemi_sensor(int fd) {
-    const unsigned char i2c_addr = 0x10;
+int detect_onsemi_sensor(int fd, unsigned char i2c_addr) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -109,6 +106,24 @@ int detect_onsemi_sensor(int fd) {
     return sid;
 }
 
+int detect_possible_sensors(int fd, int (*detect_fn)(int, unsigned char), int type) {
+    sensor_addr_t *sdata = possible_i2c_addrs;
+
+    while (sdata->sensor_type) {
+        if (sdata->sensor_type == type) {
+            unsigned char *addr = sdata->addrs;
+            while (*addr) {
+                if (detect_fn(fd, *addr)) {
+                    return true;
+                };
+                addr++;
+            }
+        }
+        sdata++;
+    }
+    return false;
+}
+
 bool get_sensor_id() {
     // if system wasn't detected previously
     if (!strcmp("error", chip_id)) {
@@ -117,13 +132,14 @@ bool get_sensor_id() {
 
     int fd = open_sensor_fd();
 
-    if (detect_soi_sensor(fd)) {
+    if (detect_possible_sensors(fd, detect_soi_sensor, SENSOR_SOI)) {
         strcpy(sensor_manufacturer, "Silicon Optronics");
         return true;
-    } else if (detect_onsemi_sensor(fd)) {
+    } else if (detect_possible_sensors(fd, detect_onsemi_sensor,
+                                       SENSOR_ONSEMI)) {
         strcpy(sensor_manufacturer, "ON Semiconductor");
         return true;
-    } else if (detect_sony_sensor(fd)) {
+    } else if (detect_possible_sensors(fd, detect_sony_sensor, SENSOR_SONY)) {
         strcpy(sensor_manufacturer, "Sony");
         return true;
     }

@@ -17,11 +17,12 @@ static unsigned char soi_addrs[] = {0x80, NULL};
 static unsigned char onsemi_addrs[] = {0x20, NULL};
 static unsigned char ssens_addrs[] = {0x60, NULL};
 
-sensor_addr_t hisi_possible_addrs[] = {
+sensor_addr_t hisi_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},
     {SENSOR_SOI, soi_addrs},
     {SENSOR_ONSEMI, onsemi_addrs},
     {SENSOR_SMARTSENS, ssens_addrs},
+    {0, NULL}
 };
 
 int hisi_open_sensor_fd() { return common_open_sensor_fd("/dev/i2c-0"); }
@@ -134,5 +135,5 @@ void setup_hal_hisi() {
     sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
     sensor_read_register = hisi_sensor_read_register;
     sensor_write_register = hisi_sensor_write_register;
-    possible_addrs = hisi_possible_addrs;
+    possible_i2c_addrs = hisi_possible_i2c_addrs;
 }

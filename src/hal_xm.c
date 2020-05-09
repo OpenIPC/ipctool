@@ -6,8 +6,9 @@
 
 static unsigned char onsemi_addrs[] = {0x10, NULL};
 
-sensor_addr_t xm_possible_addrs[] = {
+sensor_addr_t xm_possible_i2c_addrs[] = {
     {SENSOR_ONSEMI, onsemi_addrs},
+    {0, NULL}
 };
 
 int xm_open_sensor_fd() { return common_open_sensor_fd("/dev/xm_i2c"); }
@@ -59,5 +60,5 @@ void setup_hal_xm() {
     sensor_i2c_change_addr = common_sensor_i2c_change_addr;
     sensor_read_register = xm_sensor_read_register;
     sensor_write_register = xm_sensor_write_register;
-    possible_addrs = xm_possible_addrs;
+    possible_i2c_addrs = xm_possible_i2c_addrs;
 }

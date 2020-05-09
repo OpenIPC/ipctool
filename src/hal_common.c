@@ -8,7 +8,7 @@
 #include "chipid.h"
 #include "hal_common.h"
 
-sensor_addr_t* possible_addrs;
+sensor_addr_t* possible_i2c_addrs;
 
 int (*open_sensor_fd)();
 int (*sensor_read_register)(int fd, unsigned char i2c_addr,
