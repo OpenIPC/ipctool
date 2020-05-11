@@ -8,7 +8,7 @@ on:
       - 'v*'
 
 jobs:
-  musl-static:
+  build-musl-static:
     runs-on: ubuntu-latest
 
     env:
@@ -26,7 +26,9 @@ jobs:
           fetch-depth: 0
 
       - name: Check if Git tag exists
-        run: echo "::set-env name=HEAD_TAG::$(git tag --points-at HEAD)"
+        run: |
+          echo "::set-env name=HEAD_TAG::$(git tag --points-at HEAD)"
+          echo "::set-env name=GIT_HASH::$(git rev-parse --short $GITHUB_SHA)"
 
       - name: Build sources
         run: |
@@ -39,7 +41,6 @@ jobs:
           cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           ${TOOLCHAIN}-strip build/ipc_chip_info
-          GIT_HASH=$(git rev-parse --short "$GITHUB_SHA")
           cp build/ipc_chip_info ipc_chip_info-$GIT_HASH
 
       - name: Prerelease (for dev versions)
@@ -51,6 +52,18 @@ jobs:
           automatic_release_tag: "latest"
           prerelease: true
           files: "build/ipc_chip_info"
+
+      - name: Publish file on S3 for HTTP access
+        if: env.HEAD_TAG == ''
+        uses: tpaschalis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          FILE: ./ipc_chip_info-${{ env.GIT_HASH }}
+          AWS_REGION: 'eu-north-1'
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Create release (for tagged versions)
         if: env.HEAD_TAG != ''
@@ -64,7 +77,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Release Asset
+      - name: Upload Release Asset (for tagged versions)
         if: env.HEAD_TAG != ''
         uses: actions/upload-release-asset@v1
         env:
