@@ -5,7 +5,7 @@
 
 #include "hal_common.h"
 
-static unsigned char onsemi_addrs[] = {0x10, NULL};
+static unsigned char onsemi_addrs[] = {0x10, 0};
 
 sensor_addr_t xm_possible_i2c_addrs[] = {{SENSOR_ONSEMI, onsemi_addrs},
                                          {0, NULL}};

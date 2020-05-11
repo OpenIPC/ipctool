@@ -13,10 +13,10 @@
 #include "chipid.h"
 #include "hal_common.h"
 
-static unsigned char sony_addrs[] = {0x34, NULL};
-static unsigned char soi_addrs[] = {0x80, NULL};
-static unsigned char onsemi_addrs[] = {0x20, NULL};
-static unsigned char ssens_addrs[] = {0x60, NULL};
+static unsigned char sony_addrs[] = {0x34, 0};
+static unsigned char soi_addrs[] = {0x80, 0};
+static unsigned char onsemi_addrs[] = {0x20, 0};
+static unsigned char ssens_addrs[] = {0x60, 0};
 
 sensor_addr_t hisi_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
                                            {SENSOR_SOI, soi_addrs},
