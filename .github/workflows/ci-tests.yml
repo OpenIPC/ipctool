@@ -1,24 +1,17 @@
 name: ipc-chip-tests
 
 on:
-  push:
-    branches:
-      - master
+  repository_dispatch:
+    types: [ci-tests]
 
 jobs:
   zftlabs-tests:
-    needs: build-musl-static
     runs-on: ubuntu-latest
 
+    env:
+      GIT_HASH: ${{ github.event.client_payload.sha }}
+
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Setup env variables
-        run: |
-          echo "::set-env name=GIT_HASH::$(git rev-parse --short $GITHUB_SHA)"
-
       - name: Executing tests
         uses: appleboy/ssh-action@master
         with:
