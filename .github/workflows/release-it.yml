@@ -65,6 +65,15 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+      - name: Trigger CI tests
+        if: env.HEAD_TAG == ''
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: OpenIPC/ipc_chip_info
+          event-type: ci-tests
+          client-payload: '{"sha": "${{ env.GIT_HASH }}"}'
+
       - name: Create release (for tagged versions)
         if: env.HEAD_TAG != ''
         id: create_release
