@@ -48,6 +48,74 @@ int hisi_sensor_i2c_change_addr(int fd, unsigned char addr) {
     return ret;
 }
 
+#define I2C_16BIT_REG 0x0709  /* 16BIT REG WIDTH */
+#define I2C_16BIT_DATA 0x070a /* 16BIT DATA WIDTH */
+int hisi_gen2_set_width(int fd, unsigned int reg_width,
+                        unsigned int data_width) {
+    int ret;
+    if (reg_width == 2)
+        ret = ioctl(fd, I2C_16BIT_REG, 1);
+    else
+        ret = ioctl(fd, I2C_16BIT_REG, 0);
+    if (ret < 0) {
+        fprintf(stderr, "CMD_SET_REG_WIDTH error!\n");
+        return -1;
+    }
+
+    if (data_width == 2)
+        ret = ioctl(fd, I2C_16BIT_DATA, 1);
+    else
+        ret = ioctl(fd, I2C_16BIT_DATA, 0);
+
+    if (ret < 0) {
+        fprintf(stderr, "CMD_SET_DATA_WIDTH error!\n");
+        return -1;
+    }
+    return 0;
+}
+
+int hisi_gen2_sensor_write_register(int fd, unsigned char i2c_addr,
+                                    unsigned int reg_addr,
+                                    unsigned int reg_width, unsigned int data,
+                                    unsigned int data_width) {
+
+    int ret;
+    unsigned int index = 0;
+    unsigned int reg_value;
+    char buf[4];
+
+    if (hisi_gen2_set_width(fd, reg_width, data_width))
+        return -1;
+
+    if (reg_width == 2) {
+        buf[index] = reg_addr & 0xff;
+        index++;
+        buf[index] = (reg_addr >> 8) & 0xff;
+        index++;
+    } else {
+        buf[index] = reg_addr & 0xff;
+        index++;
+    }
+
+    if (data_width == 2) {
+        buf[index] = reg_value & 0xff;
+        index++;
+        buf[index] = (reg_value >> 8) & 0xff;
+        index++;
+    } else {
+        buf[index] = reg_value & 0xff;
+        index++;
+    }
+
+    ret = write(fd, buf, reg_width + data_width);
+    if (ret < 0) {
+        fprintf(stderr, "I2C_WRITE error!\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int hisi_sensor_write_register(int fd, unsigned char i2c_addr,
                                unsigned int reg_addr, unsigned int reg_width,
                                unsigned int data, unsigned int data_width) {
@@ -83,9 +151,6 @@ int hisi_sensor_write_register(int fd, unsigned char i2c_addr,
     return 0;
 }
 
-#define I2C_16BIT_REG 0x0709  /* 16BIT REG WIDTH */
-#define I2C_16BIT_DATA 0x070a /* 16BIT DATA WIDTH */
-
 int hisi_gen2_sensor_read_register(int fd, unsigned char i2c_addr,
                                    unsigned int reg_addr,
                                    unsigned int reg_width,
@@ -94,24 +159,8 @@ int hisi_gen2_sensor_read_register(int fd, unsigned char i2c_addr,
     char recvbuf[4];
     unsigned int data;
 
-    if (reg_width == 2)
-        ret = ioctl(fd, I2C_16BIT_REG, 1);
-    else
-        ret = ioctl(fd, I2C_16BIT_REG, 0);
-    if (ret < 0) {
-        fprintf(stderr, "CMD_SET_REG_WIDTH error!\n");
+    if (hisi_gen2_set_width(fd, reg_width, data_width))
         return -1;
-    }
-
-    if (data_width == 2)
-        ret = ioctl(fd, I2C_16BIT_DATA, 1);
-    else
-        ret = ioctl(fd, I2C_16BIT_DATA, 0);
-
-    if (ret < 0) {
-        fprintf(stderr, "CMD_SET_DATA_WIDTH error!\n");
-        return -1;
-    }
 
     if (reg_width == 2) {
         recvbuf[0] = reg_addr & 0xff;
@@ -196,9 +245,10 @@ void setup_hal_hisi() {
     sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
     if (chip_generation == 2) {
         sensor_read_register = hisi_gen2_sensor_read_register;
+        sensor_write_register = hisi_gen2_sensor_write_register;
     } else {
         sensor_read_register = hisi_sensor_read_register;
+        sensor_write_register = hisi_sensor_write_register;
     }
-    sensor_write_register = hisi_sensor_write_register;
     possible_i2c_addrs = hisi_possible_i2c_addrs;
 }
