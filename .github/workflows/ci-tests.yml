@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      GITHUB_SHA: ${{ github.event.client_payload.sha }}
+      SHA: ${{ github.event.client_payload.sha }}
 
     steps:
       - name: Executing tests
@@ -19,5 +19,7 @@ jobs:
           username: ${{ secrets.ZFTLABS_USER }}
           port: ${{ secrets.ZFTLABS_PORT }}
           key: ${{ secrets.ZFTLABS_KEY }}
-          envs: GITHUB_SHA
-          script: py.test -v
+          envs: SHA
+          script: |
+            env
+            py.test -v
