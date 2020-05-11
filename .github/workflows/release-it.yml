@@ -69,7 +69,7 @@ jobs:
         if: env.HEAD_TAG == ''
         uses: peter-evans/repository-dispatch@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
           repository: OpenIPC/ipc_chip_info
           event-type: ci-tests
           client-payload: '{"sha": "${{ env.GIT_HASH }}"}'
