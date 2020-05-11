@@ -1,4 +1,4 @@
-name: ipc-chip-info
+name: ipc-chip-build
 
 on:
   push:
