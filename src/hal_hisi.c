@@ -17,15 +17,20 @@ static unsigned char soi_addrs[] = {0x80, NULL};
 static unsigned char onsemi_addrs[] = {0x20, NULL};
 static unsigned char ssens_addrs[] = {0x60, NULL};
 
-sensor_addr_t hisi_possible_i2c_addrs[] = {
-    {SENSOR_SONY, sony_addrs},
-    {SENSOR_SOI, soi_addrs},
-    {SENSOR_ONSEMI, onsemi_addrs},
-    {SENSOR_SMARTSENS, ssens_addrs},
-    {0, NULL}
-};
+sensor_addr_t hisi_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
+                                           {SENSOR_SOI, soi_addrs},
+                                           {SENSOR_ONSEMI, onsemi_addrs},
+                                           {SENSOR_SMARTSENS, ssens_addrs},
+                                           {0, NULL}};
 
-int hisi_open_sensor_fd() { return common_open_sensor_fd("/dev/i2c-0"); }
+int hisi_open_sensor_fd() {
+    int adapter_nr = 0; /* probably dynamically determined */
+    char filename[FILENAME_MAX];
+
+    snprintf(filename, sizeof(filename), "/dev/i2c-%d", adapter_nr);
+
+    return common_open_sensor_fd(filename);
+}
 
 // Set I2C slave address
 int hisi_sensor_i2c_change_addr(int fd, unsigned char addr) {
