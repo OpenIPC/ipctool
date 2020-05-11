@@ -106,7 +106,40 @@ int detect_onsemi_sensor(int fd, unsigned char i2c_addr) {
     return sid;
 }
 
-int detect_possible_sensors(int fd, int (*detect_fn)(int, unsigned char), int type) {
+int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
+    if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    int high = sensor_read_register(fd, i2c_addr, 0x3107, 2, 1);
+    // early break
+    if (high == -1)
+        return false;
+
+    int lower = sensor_read_register(fd, i2c_addr, 0x3108, 2, 1);
+    if (lower == -1)
+        return false;
+
+    int res = high << 8 | lower;
+    switch (res) {
+    case 0x2238:
+        strcpy(sensor_id, "SC2315E");
+        return true;
+    case 0x2232:
+        strcpy(sensor_id, "SC2235P");
+        return true;
+    case 0x2311:
+        res = 0x2315;
+        break;
+    }
+
+    sprintf(sensor_id, "SC%04x", res);
+    return true;
+}
+
+int detect_omni_sensor(int fd, unsigned char i2c_addr) { return false; }
+
+int detect_possible_sensors(int fd, int (*detect_fn)(int, unsigned char),
+                            int type) {
     sensor_addr_t *sdata = possible_i2c_addrs;
 
     while (sdata->sensor_type) {
@@ -141,6 +174,14 @@ bool get_sensor_id() {
         return true;
     } else if (detect_possible_sensors(fd, detect_sony_sensor, SENSOR_SONY)) {
         strcpy(sensor_manufacturer, "Sony");
+        return true;
+    } else if (detect_possible_sensors(fd, detect_smartsens_sensor,
+                                       SENSOR_SMARTSENS)) {
+        strcpy(sensor_manufacturer, "SmartSens");
+        return true;
+    } else if (detect_possible_sensors(fd, detect_omni_sensor,
+                                       SENSOR_OMNIVISION)) {
+        strcpy(sensor_manufacturer, "OmniVision");
         return true;
     }
     return false;

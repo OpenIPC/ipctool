@@ -12,8 +12,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "hal_common.h"
 #include "chipid.h"
+#include "hal_common.h"
 #include "tools.h"
 
 char system_id[128];
@@ -100,10 +100,10 @@ static const char *get_chip_id(uint32_t reg) {
     case 0x3516E100:
         return "3516ev100";
     case 0x3518E200:
-	chip_generation = 2;
+        chip_generation = 2;
         return "3518ev200";
     case 0x3516C200:
-	chip_generation = 2;
+        chip_generation = 2;
         return "3516cv200";
     case 0x3516D300:
         return "3516dv300";
@@ -115,7 +115,7 @@ static const char *get_chip_id(uint32_t reg) {
         return "3559av100";
     // TODO: hi3518ev201?
     default:
-	fprintf(stderr, "get_chip_id() got unexpected 0x%x\n", reg);
+        fprintf(stderr, "get_chip_id() got unexpected 0x%x\n", reg);
         return "unknown";
     }
 }

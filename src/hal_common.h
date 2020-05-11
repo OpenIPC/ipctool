@@ -8,6 +8,7 @@
 #define SENSOR_SOI 2
 #define SENSOR_SONY 3
 #define SENSOR_SMARTSENS 4
+#define SENSOR_OMNIVISION 5
 
 typedef struct {
     int sensor_type;
