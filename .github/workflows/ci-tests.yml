@@ -20,4 +20,4 @@ jobs:
           port: ${{ secrets.ZFTLABS_PORT }}
           key: ${{ secrets.ZFTLABS_KEY }}
           envs: GITHUB_SHA
-          script: whoami
+          script: py.test -v
