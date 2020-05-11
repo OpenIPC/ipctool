@@ -25,6 +25,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check if Git tag exists
+        run: echo "::set-env name=HEAD_TAG::$(git tag --points-at HEAD)"
+
       - name: Build sources
         run: |
           REL="${{ steps.ct-ng-release.outputs.release }}"
@@ -36,8 +39,11 @@ jobs:
           cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           ${TOOLCHAIN}-strip build/ipc_chip_info
+          GIT_HASH=$(git rev-parse --short "$GITHUB_SHA")
+          cp build/ipc_chip_info ipc_chip_info-$GIT_HASH
 
-      - name: Prerelease
+      - name: Prerelease (for dev versions)
+        if: env.HEAD_TAG == ''
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           title: "Development Build"
@@ -45,3 +51,26 @@ jobs:
           automatic_release_tag: "latest"
           prerelease: true
           files: "build/ipc_chip_info"
+
+      - name: Create release (for tagged versions)
+        if: env.HEAD_TAG != ''
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        if: env.HEAD_TAG != ''
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "build/ipc_chip_info"
+          asset_name: ipc_chip_info
+          asset_content_type: application/octet-stream
