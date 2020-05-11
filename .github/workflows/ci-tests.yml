@@ -1,0 +1,23 @@
+name: ipc-chip-tests
+
+on:
+  repository_dispatch:
+    types: [ci-tests]
+
+jobs:
+  zftlabs-tests:
+    runs-on: ubuntu-latest
+
+    env:
+      GIT_HASH: ${{ github.event.client_payload.sha }}
+
+    steps:
+      - name: Executing tests
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.ZFTLABS_HOST }}
+          username: ${{ secrets.ZFTLABS_USER }}
+          port: ${{ secrets.ZFTLABS_PORT }}
+          key: ${{ secrets.ZFTLABS_KEY }}
+          envs: GITHUB_SHA
+          script: whoami
