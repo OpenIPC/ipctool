@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      GIT_HASH: ${{ github.event.client_payload.sha }}
+      GITHUB_SHA: ${{ github.event.client_payload.sha }}
 
     steps:
       - name: Executing tests
