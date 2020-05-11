@@ -53,7 +53,7 @@ jobs:
           prerelease: true
           files: "build/ipc_chip_info"
 
-      - name: Publish file on S3 for HTTP access
+      - name: Publish file on S3 for HTTP access (for dev versions)
         if: env.HEAD_TAG == ''
         uses: tpaschalis/s3-sync-action@master
         with:
