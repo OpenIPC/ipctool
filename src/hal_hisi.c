@@ -10,6 +10,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 
+#include "chipid.h"
 #include "hal_common.h"
 
 static unsigned char sony_addrs[] = {0x34, NULL};
@@ -34,7 +35,12 @@ int hisi_open_sensor_fd() {
 
 // Set I2C slave address
 int hisi_sensor_i2c_change_addr(int fd, unsigned char addr) {
-    int ret = ioctl(fd, I2C_SLAVE_FORCE, (addr >> 1));
+    // use i2c address shift only for generations other than 2
+    if (chip_generation != 2) {
+        addr >>= 1;
+    }
+
+    int ret = ioctl(fd, I2C_SLAVE_FORCE, addr);
     if (ret < 0) {
         fprintf(stderr, "CMD_SET_DEV error!\n");
         return ret;
@@ -75,6 +81,56 @@ int hisi_sensor_write_register(int fd, unsigned char i2c_addr,
         return -1;
     }
     return 0;
+}
+
+#define I2C_16BIT_REG 0x0709  /* 16BIT REG WIDTH */
+#define I2C_16BIT_DATA 0x070a /* 16BIT DATA WIDTH */
+
+int hisi_gen2_sensor_read_register(int fd, unsigned char i2c_addr,
+                                   unsigned int reg_addr,
+                                   unsigned int reg_width,
+                                   unsigned int data_width) {
+    int ret;
+    char recvbuf[4];
+    unsigned int data;
+
+    if (reg_width == 2)
+        ret = ioctl(fd, I2C_16BIT_REG, 1);
+    else
+        ret = ioctl(fd, I2C_16BIT_REG, 0);
+    if (ret < 0) {
+        fprintf(stderr, "CMD_SET_REG_WIDTH error!\n");
+        return -1;
+    }
+
+    if (data_width == 2)
+        ret = ioctl(fd, I2C_16BIT_DATA, 1);
+    else
+        ret = ioctl(fd, I2C_16BIT_DATA, 0);
+
+    if (ret < 0) {
+        fprintf(stderr, "CMD_SET_DATA_WIDTH error!\n");
+        return -1;
+    }
+
+    if (reg_width == 2) {
+        recvbuf[0] = reg_addr & 0xff;
+        recvbuf[1] = (reg_addr >> 8) & 0xff;
+    } else {
+        recvbuf[0] = reg_addr & 0xff;
+    }
+
+    ret = read(fd, recvbuf, reg_width);
+    if (ret < 0) {
+        return -1;
+    }
+
+    if (data_width == 2) {
+        data = recvbuf[0] | (recvbuf[1] << 8);
+    } else
+        data = recvbuf[0];
+
+    return data;
 }
 
 int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
@@ -138,7 +194,11 @@ int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
 void setup_hal_hisi() {
     open_sensor_fd = hisi_open_sensor_fd;
     sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
-    sensor_read_register = hisi_sensor_read_register;
+    if (chip_generation == 2) {
+        sensor_read_register = hisi_gen2_sensor_read_register;
+    } else {
+        sensor_read_register = hisi_sensor_read_register;
+    }
     sensor_write_register = hisi_sensor_write_register;
     possible_i2c_addrs = hisi_possible_i2c_addrs;
 }

@@ -18,6 +18,7 @@
 
 char system_id[128];
 char system_manufacturer[128];
+int chip_generation;
 char chip_id[128];
 char chip_manufacturer[128];
 int isp_register = -1;
@@ -99,8 +100,10 @@ static const char *get_chip_id(uint32_t reg) {
     case 0x3516E100:
         return "3516ev100";
     case 0x3518E200:
+	chip_generation = 2;
         return "3518ev200";
     case 0x3516C200:
+	chip_generation = 2;
         return "3516cv200";
     case 0x3516D300:
         return "3516dv300";
@@ -110,7 +113,9 @@ static const char *get_chip_id(uint32_t reg) {
         return "3516ev300";
     case 0x3559A100:
         return "3559av100";
+    // TODO: hi3518ev201?
     default:
+	fprintf(stderr, "get_chip_id() got unexpected 0x%x\n", reg);
         return "unknown";
     }
 }
