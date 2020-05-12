@@ -11,14 +11,10 @@ jobs:
     steps:
       - name: Executing tests
         uses: appleboy/ssh-action@master
-        env:
-          SHA: ${{ github.event.client_payload.sha }}
         with:
           host: ${{ secrets.ZFTLABS_HOST }}
           username: ${{ secrets.ZFTLABS_USER }}
           port: ${{ secrets.ZFTLABS_PORT }}
           key: ${{ secrets.ZFTLABS_KEY }}
-          envs: SHA
           script: |
-            env
-            py.test -v --color=yes
+            SHA=${{ github.event.client_payload.sha }} py.test -v --color=yes
