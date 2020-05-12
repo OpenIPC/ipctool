@@ -12,6 +12,9 @@ jobs:
       SHA: ${{ github.event.client_payload.sha }}
 
     steps:
+      - run: 'echo "payload: ${{ toJson(github.event.client_payload) }}"'
+      - run: 'env'
+
       - name: Executing tests
         uses: appleboy/ssh-action@master
         with:
@@ -19,7 +22,7 @@ jobs:
           username: ${{ secrets.ZFTLABS_USER }}
           port: ${{ secrets.ZFTLABS_PORT }}
           key: ${{ secrets.ZFTLABS_KEY }}
-          envs: SHA
+          envs: SHA,TERM
           script: |
             env
             py.test -v
