@@ -8,21 +8,17 @@ jobs:
   zftlabs-tests:
     runs-on: ubuntu-latest
 
-    env:
-      SHA: ${{ github.event.client_payload.sha }}
-
     steps:
-      - run: 'echo "payload: ${{ toJson(github.event.client_payload) }}"'
-      - run: 'env'
-
       - name: Executing tests
         uses: appleboy/ssh-action@master
+        env:
+          SHA: ${{ github.event.client_payload.sha }}
         with:
           host: ${{ secrets.ZFTLABS_HOST }}
           username: ${{ secrets.ZFTLABS_USER }}
           port: ${{ secrets.ZFTLABS_PORT }}
           key: ${{ secrets.ZFTLABS_KEY }}
-          envs: SHA,TERM
+          envs: SHA
           script: |
             env
-            py.test -v
+            py.test -v --color=yes
