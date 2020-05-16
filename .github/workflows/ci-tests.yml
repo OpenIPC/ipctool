@@ -5,16 +5,25 @@ on:
     types: [ci-tests]
 
 jobs:
-  zftlabs-tests:
+  ci-tests:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        lab-name:
+          - zflab
+          - dlab
+
+      fail-fast: false
 
     steps:
       - name: Executing tests
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.ZFTLABS_HOST }}
-          username: ${{ secrets.ZFTLABS_USER }}
-          port: ${{ secrets.ZFTLABS_PORT }}
-          key: ${{ secrets.ZFTLABS_KEY }}
+          host: ${{ secrets.CI_HOST }}
+          username: ${{ secrets.CI_USER }}
+          port: ${{ secrets.CI_PORT }}
+          key: ${{ secrets.CI_KEY }}
           script: |
-            SHA=${{ github.event.client_payload.sha }} py.test -v --color=yes
+            SHA=${{ github.event.client_payload.sha }} py.test -v -s --color=yes \
+              ipc_chip_info_tests/ipc_chip_test.py::test_${{ matrix.lab-name }}
