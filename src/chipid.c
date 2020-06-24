@@ -196,6 +196,7 @@ bool detect_system() {
         ptr[2] = *(volatile char *)(sc_ctrl_map + SCSYSID2);
         ptr[3] = *(volatile char *)(sc_ctrl_map + SCSYSID3);
     }
+    strncpy(chip_id, get_chip_id(chip_id_u32), sizeof(chip_id));
 
     // Special case for 16cv200/18ev200/18ev201 family
     if (chip_id_u32 == 0x3518E200) {
@@ -215,8 +216,6 @@ bool detect_system() {
         default:
             sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
         }
-    } else {
-        strncpy(chip_id, get_chip_id(chip_id_u32), sizeof(chip_id));
     }
 
     strcpy(chip_manufacturer, VENDOR_HISI);
