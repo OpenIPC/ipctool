@@ -131,8 +131,10 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
         res = 0x2315;
         break;
     case 0:
-	// SC1135 catches here
+        // SC1135 catches here
         return false;
+    default:
+        fprintf(stderr, "SC returns %x\n", res);
     }
 
     sprintf(sensor_id, "SC%04x", res);
