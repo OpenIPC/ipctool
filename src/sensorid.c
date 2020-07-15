@@ -149,6 +149,8 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     case 0x2232:
         strcpy(sensor_id, "SC2235P");
         return true;
+    case 0x2235:
+	break;
     case 0x2238:
         strcpy(sensor_id, "SC2315E");
         return true;
