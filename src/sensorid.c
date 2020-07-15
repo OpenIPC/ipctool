@@ -58,7 +58,7 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr) {
     return false;
 }
 
-// tested on F22, F23, F37
+// tested on F22, F23, F37, H62, H65
 int detect_soi_sensor(int fd, unsigned char i2c_addr) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
@@ -71,11 +71,18 @@ int detect_soi_sensor(int fd, unsigned char i2c_addr) {
 
     // Product version number (Read only)
     int ver = sensor_read_register(fd, i2c_addr, 0xb, 1, 1);
-    if (pid == 0xf) {
+    switch (pid) {
+    case 0xf:
         sprintf(sensor_id, "JX-F%x", ver);
         return true;
+    case 0xa0:
+    case 0xa:
+        sprintf(sensor_id, "JX-H%x", ver);
+        return true;
+    default:
+        fprintf(stderr, "Unknown SOI id: 0x%x\n", (pid << 8) + ver);
+        return false;
     }
-    return false;
 }
 
 // tested on AR0130
@@ -133,8 +140,6 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     case 0:
         // SC1135 catches here
         return false;
-    default:
-        fprintf(stderr, "SC returns %x\n", res);
     }
 
     sprintf(sensor_id, "SC%04x", res);

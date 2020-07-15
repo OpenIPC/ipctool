@@ -44,7 +44,7 @@ Tested on:
 
 |Manufacturer|Models|
 |---|---|
-|Silicon Optronics, Inc.|JX-F22, JX-F37|
+|Silicon Optronics, Inc.|JX-F22, JX-F23, JX-F37, JX-H62, JX-H65 |
 |Sony|IMX291, IMX307, IMX323, IMX335|
 |ON Semiconductor|AR0130|
 |SmartSens|SC2235|
