@@ -156,9 +156,11 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     case 0x2311:
         res = 0x2315;
         break;
+    // Untested
     case 0x3235:
         res = 0x5239;
         break;
+    // Untested
     case 0x5235:
 	break;
     case 0x5300:

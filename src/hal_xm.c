@@ -14,9 +14,9 @@ static unsigned char omni_addrs[] = {0x36, 0};
 static unsigned char bg_addrs[] = {0x32, 0};
 
 sensor_addr_t xm_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
+                                         {SENSOR_SMARTSENS, ssens_addrs},
                                          {SENSOR_ONSEMI, onsemi_addrs},
                                          {SENSOR_SOI, soi_addrs},
-                                         {SENSOR_SMARTSENS, ssens_addrs},
                                          {SENSOR_OMNIVISION, omni_addrs},
                                          {SENSOR_BRIGATES, bg_addrs},
                                          {0, NULL}};
