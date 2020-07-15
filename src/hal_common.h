@@ -5,7 +5,7 @@
 #include "hal_xm.h"
 
 enum SENSORS {
-    SENSOR_ONSEMI = 0,
+    SENSOR_ONSEMI = 1,
     SENSOR_SOI,
     SENSOR_SONY,
     SENSOR_SMARTSENS,
