@@ -5,15 +5,20 @@
 
 #include "hal_common.h"
 
+static unsigned char sony_addrs[] = {0x1a, 0};
 static unsigned char onsemi_addrs[] = {0x10, 0};
 static unsigned char soi_addrs[] = {0x30, 0};
 static unsigned char ssens_addrs[] = {0x30, 0};
 static unsigned char omni_addrs[] = {0x36, 0};
+// only for reference, used in XM510
+static unsigned char bg_addrs[] = {0x32, 0};
 
-sensor_addr_t xm_possible_i2c_addrs[] = {{SENSOR_ONSEMI, onsemi_addrs},
+sensor_addr_t xm_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
+                                         {SENSOR_ONSEMI, onsemi_addrs},
                                          {SENSOR_SOI, soi_addrs},
                                          {SENSOR_SMARTSENS, ssens_addrs},
                                          {SENSOR_OMNIVISION, omni_addrs},
+                                         {SENSOR_BRIGATES, bg_addrs},
                                          {0, NULL}};
 
 int xm_open_sensor_fd() {

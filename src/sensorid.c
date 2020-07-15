@@ -92,6 +92,9 @@ int detect_onsemi_sensor(int fd, unsigned char i2c_addr) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
+    // sensor_write_register(0x301A, 1);
+    // msDelay(100);
+
     int pid = sensor_read_register(fd, i2c_addr, 0x3000, 2, 2);
     int sid = 0;
 
@@ -118,6 +121,9 @@ int detect_onsemi_sensor(int fd, unsigned char i2c_addr) {
 int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
+
+    // xm_i2c_write(0x103, 1);
+    // msDelay(100);
 
     // could be 0x3005 for SC1035, SC1145, SC1135
     int high = sensor_read_register(fd, i2c_addr, 0x3107, 2, 1);
@@ -150,6 +156,13 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     case 0x2311:
         res = 0x2315;
         break;
+    case 0x3235:
+        res = 0x5239;
+        break;
+    case 0x5235:
+	break;
+    case 0x5300:
+	break;
     case 0:
         // SC1135 catches here
         return false;
@@ -182,6 +195,7 @@ int detect_omni_sensor(int fd, unsigned char i2c_addr) {
 
     // 0x9711 for OV9712
     // 0x9732 for OV9732
+    // 0x9750 for OV9750
     fprintf(stderr, "Detected omni: %x\n", res);
 
     return true;

@@ -4,18 +4,21 @@
 #include "hal_hisi.h"
 #include "hal_xm.h"
 
-#define SENSOR_ONSEMI 1
-#define SENSOR_SOI 2
-#define SENSOR_SONY 3
-#define SENSOR_SMARTSENS 4
-#define SENSOR_OMNIVISION 5
+enum SENSORS {
+    SENSOR_ONSEMI = 0,
+    SENSOR_SOI,
+    SENSOR_SONY,
+    SENSOR_SMARTSENS,
+    SENSOR_OMNIVISION,
+    SENSOR_BRIGATES,
+};
 
 typedef struct {
     int sensor_type;
-    unsigned char* addrs;
+    unsigned char *addrs;
 } sensor_addr_t;
 
-extern sensor_addr_t* possible_i2c_addrs;
+extern sensor_addr_t *possible_i2c_addrs;
 
 extern int (*open_sensor_fd)();
 extern int (*sensor_i2c_change_addr)(int fd, unsigned char addr);
