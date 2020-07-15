@@ -17,11 +17,13 @@ static unsigned char sony_addrs[] = {0x34, 0};
 static unsigned char soi_addrs[] = {0x80, 0};
 static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char ssens_addrs[] = {0x60, 0};
+static unsigned char omni_addrs[] = {0x60, 0};
 
 sensor_addr_t hisi_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
                                            {SENSOR_SOI, soi_addrs},
                                            {SENSOR_ONSEMI, onsemi_addrs},
                                            {SENSOR_SMARTSENS, ssens_addrs},
+                                           {SENSOR_OMNIVISION, omni_addrs},
                                            {0, NULL}};
 
 int hisi_open_sensor_fd() {

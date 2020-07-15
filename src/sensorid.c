@@ -157,7 +157,30 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     return true;
 }
 
-int detect_omni_sensor(int fd, unsigned char i2c_addr) { return false; }
+// TODO(FlyRouter): test on OV9732
+int detect_omni_sensor(int fd, unsigned char i2c_addr) {
+    if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    // sensor_write_register(0x103, 1);
+    // sensor_read_register(0x302A) != 0xA0
+
+    int prod_msb = sensor_read_register(fd, i2c_addr, 0x300A, 1, 1);
+    // early break
+    if (prod_msb == -1)
+        return false;
+
+    int prod_lsb = sensor_read_register(fd, i2c_addr, 0x300B, 1, 1);
+    if (prod_lsb == -1)
+        return false;
+    int res = prod_msb << 8 | prod_lsb;
+
+    // 0x9711 for OV9712
+    // 0x9732 for OV9732
+    fprintf(stderr, "Detected omni: %x\n", res);
+
+    return true;
+}
 
 int detect_possible_sensors(int fd, int (*detect_fn)(int, unsigned char),
                             int type) {
