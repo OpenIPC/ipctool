@@ -70,6 +70,12 @@ int xm_sensor_write_register(int fd, unsigned char i2c_addr,
     return 0;
 }
 
+void xm_neighbor_discovery() {
+    puts("Searching for XM IPCs... Abort with CTRL+C.\n\n");
+    puts("IP              MAC-Address       Identity (platform version "
+         "hardware) uptime");
+}
+
 void setup_hal_xm() {
     open_sensor_fd = xm_open_sensor_fd;
     sensor_i2c_change_addr = common_sensor_i2c_change_addr;

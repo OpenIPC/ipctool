@@ -125,7 +125,7 @@ int hisi_sensor_write_register(int fd, unsigned char i2c_addr,
     int ret;
     char buf[8];
 
-    if (reg_addr == 2) {
+    if (reg_width == 2) {
         buf[idx] = (reg_addr >> 8) & 0xff;
         idx++;
         buf[idx] = reg_addr & 0xff;
@@ -135,7 +135,7 @@ int hisi_sensor_write_register(int fd, unsigned char i2c_addr,
         idx++;
     }
 
-    if (data == 2) {
+    if (data_width == 2) {
         buf[idx] = (data >> 8) & 0xff;
         idx++;
         buf[idx] = data & 0xff;

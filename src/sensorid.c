@@ -59,6 +59,7 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr) {
 }
 
 // tested on F22, F23, F37, H62, H65
+// TODO(FlyRouter): test on H42, H81
 int detect_soi_sensor(int fd, unsigned char i2c_addr) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
@@ -80,7 +81,8 @@ int detect_soi_sensor(int fd, unsigned char i2c_addr) {
         sprintf(sensor_id, "JX-H%x", ver);
         return true;
     default:
-        fprintf(stderr, "Unknown SOI id: 0x%x\n", (pid << 8) + ver);
+        fprintf(stderr, "Error: unexpected value for SOI == 0x%x\n",
+                (pid << 8) + ver);
         return false;
     }
 }
@@ -104,7 +106,7 @@ int detect_onsemi_sensor(int fd, unsigned char i2c_addr) {
     case 0xffffffff:
         break;
     default:
-        fprintf(stderr, "Error: unexpected value for Aptina == %x\n", pid);
+        fprintf(stderr, "Error: unexpected value for Aptina == 0x%x\n", pid);
     }
 
     if (sid) {
@@ -133,8 +135,8 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     switch (res) {
     // Untested
     case 0x2210:
-        strcpy(sensor_id, "SC1035");
-        return true;
+        res = 0x1035;
+        break;
     case 0x2232:
         strcpy(sensor_id, "SC2235P");
         return true;
@@ -143,13 +145,16 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
         return true;
     // Untested
     case 0x2245:
-        strcpy(sensor_id, "SC1145");
-        return true;
+        res = 0x1145;
+        break;
     case 0x2311:
         res = 0x2315;
         break;
     case 0:
         // SC1135 catches here
+        return false;
+    default:
+        fprintf(stderr, "Error: unexpected value for SmartSens == 0x%x\n", res);
         return false;
     }
 
