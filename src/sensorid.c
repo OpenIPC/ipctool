@@ -139,6 +139,9 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
 
     int res = high << 8 | lower;
     switch (res) {
+    case 0x2032:
+	res = 0x2135;
+	break;
     // Untested
     case 0x2210:
         res = 0x1035;
