@@ -117,6 +117,7 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
+    // could be 0x3005 for SC1035, SC1145, SC1135
     int high = sensor_read_register(fd, i2c_addr, 0x3107, 2, 1);
     // early break
     if (high == -1)
@@ -126,13 +127,23 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     if (lower == -1)
         return false;
 
+    // check for SC1035, SC1145, SC1135 '0x3008' reg val is equal to 0x60
+
     int res = high << 8 | lower;
     switch (res) {
-    case 0x2238:
-        strcpy(sensor_id, "SC2315E");
+    // Untested
+    case 0x2210:
+        strcpy(sensor_id, "SC1035");
         return true;
     case 0x2232:
         strcpy(sensor_id, "SC2235P");
+        return true;
+    case 0x2238:
+        strcpy(sensor_id, "SC2315E");
+        return true;
+    // Untested
+    case 0x2245:
+        strcpy(sensor_id, "SC1145");
         return true;
     case 0x2311:
         res = 0x2315;
