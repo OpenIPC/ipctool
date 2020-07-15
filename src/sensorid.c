@@ -80,6 +80,9 @@ int detect_soi_sensor(int fd, unsigned char i2c_addr) {
     case 0xa:
         sprintf(sensor_id, "JX-H%x", ver);
         return true;
+    // it can be another sensor type
+    case 0:
+	return false;
     default:
         fprintf(stderr, "Error: unexpected value for SOI == 0x%x\n",
                 (pid << 8) + ver);
