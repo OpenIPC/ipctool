@@ -13,6 +13,7 @@ jobs:
         lab-name:
           - zftlab
           - dlab
+          - sw
 
       fail-fast: false
 
