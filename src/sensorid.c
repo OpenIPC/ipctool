@@ -145,6 +145,8 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     case 0x2032:
 	res = 0x2135;
 	break;
+    case 0x2045:
+	break;
     // Untested
     case 0x2210:
         res = 0x1035;
@@ -202,6 +204,9 @@ int detect_omni_sensor(int fd, unsigned char i2c_addr) {
     if (prod_lsb == -1)
         return false;
     int res = prod_msb << 8 | prod_lsb;
+
+    // skip empty result
+    if (!res) return false;
 
     // 0x9711 for OV9712
     // 0x9732 for OV9732
