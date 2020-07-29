@@ -16,6 +16,7 @@
 
 char sensor_id[128];
 char sensor_manufacturer[128];
+char control[128];
 
 int detect_sony_sensor(int fd, unsigned char i2c_addr) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
@@ -235,12 +236,7 @@ int detect_possible_sensors(int fd, int (*detect_fn)(int, unsigned char),
     return false;
 }
 
-bool get_sensor_id() {
-    // if system wasn't detected previously
-    if (!*chip_id) {
-        get_system_id();
-    }
-
+bool get_sensor_id_i2c() {
     int fd = open_sensor_fd();
 
     if (detect_possible_sensors(fd, detect_soi_sensor, SENSOR_SOI)) {
@@ -263,4 +259,17 @@ bool get_sensor_id() {
         return true;
     }
     return false;
+}
+
+bool get_sensor_id() {
+    // if system wasn't detected previously
+    if (!*chip_id) {
+        get_system_id();
+    }
+
+    bool i2c_detected = get_sensor_id_i2c();
+    if (i2c_detected) {
+	strcpy(control, "i2c");
+    }
+    return i2c_detected;
 }
