@@ -237,7 +237,7 @@ int detect_possible_sensors(int fd, int (*detect_fn)(int, unsigned char),
 
 bool get_sensor_id() {
     // if system wasn't detected previously
-    if (!strcmp("error", chip_id)) {
+    if (!*chip_id) {
         get_system_id();
     }
 
