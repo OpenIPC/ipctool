@@ -33,7 +33,7 @@ Tested on:
 
 |Manufacturer|Models|
 |---|---|
-|[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|hi3516cv300, hi3516ev200, hi3516ev300|
+|[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|hi3516cv300/hi3516ev100, hi3516ev200, hi3516ev300|
 |Xiongmai|XM510, XM530|
 
 Please test on your device to help us extend the list.
@@ -42,11 +42,11 @@ Please test on your device to help us extend the list.
 
 Tested on:
 
-|Manufacturer|Models|
-|---|---|
+|Manufacturer           |Models                                 |
+|-----------------------|---------------------------------------|
 |Silicon Optronics, Inc.|JX-F22, JX-F23, JX-F37, JX-H62, JX-H65 |
-|Sony|IMX291, IMX307, IMX323, IMX335|
-|ON Semiconductor|AR0130|
-|SmartSens|SC2235, SC2235P, SC5300|
+|Sony                   |IMX291, IMX307, IMX323, IMX335         |
+|ON Semiconductor       |AR0130, AR0237                         |
+|SmartSens              |SC2235, SC2235P, SC5300                |
 
 Please test on your device to help us extend the list.
