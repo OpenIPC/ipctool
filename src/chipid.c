@@ -84,8 +84,6 @@ static const char *get_chip_id(uint32_t reg) {
         return "3516av200";
     case 0x35180100:
         return "3518?v100";
-    case 0x3518E100:
-        return "3518ev100";
     case 0x3516C100:
         return "3516cv100";
     case 0x3516A100:
@@ -103,9 +101,6 @@ static const char *get_chip_id(uint32_t reg) {
     case 0x3518E200:
         chip_generation = 2;
         return "3518ev200";
-    case 0x3516C200:
-        chip_generation = 2;
-        return "3516cv200";
     case 0x3516D300:
         return "3516dv300";
     case 0x3516e200:
@@ -114,7 +109,6 @@ static const char *get_chip_id(uint32_t reg) {
         return "3516ev300";
     case 0x3559A100:
         return "3559av100";
-    // TODO: hi3518ev201?
     default:
         fprintf(stderr, "get_chip_id() got unexpected 0x%x\n", reg);
         return "unknown";
