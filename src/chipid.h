@@ -9,6 +9,8 @@ extern char system_manufacturer[128];
 extern int chip_generation;
 extern char chip_id[128];
 extern char chip_manufacturer[128];
+extern char short_manufacturer[128];
+extern char control[128];
 extern char sensor_id[128];
 extern char sensor_manufacturer[128];
 extern int  isp_register;

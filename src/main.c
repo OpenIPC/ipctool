@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+#include <ctype.h>
 
 #include <termios.h>
 #include <unistd.h>
@@ -58,6 +60,22 @@ void print_sensor_id(bool report) {
     printf("Sensor: %s%s\n", sensor_manufacturer, sensor_id);
 }
 
+void lprintf(char *fmt, ...) {
+    char buf[BUFSIZ];
+
+    va_list argptr;
+    va_start(argptr, fmt);
+    vsnprintf(buf, sizeof buf, fmt, argptr);
+    va_end(argptr);
+
+    char* ptr = buf;
+    while (*ptr) {
+	*ptr = tolower(*ptr);
+	ptr++;
+    }
+    printf("%s", buf);
+}
+
 int main(int argc, char *argv[]) {
     isp_register = -1;
     sprintf(isp_version, "error");
@@ -92,12 +110,12 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
         } else if (strcmp(cmd, "--chip_id") == 0) {
             if (get_system_id())
-                printf("%s\n", chip_id);
+                lprintf("%s%s\n", short_manufacturer, chip_id);
             else
                 return EXIT_FAILURE;
         } else if (strcmp(cmd, "--sensor_id") == 0) {
             if (get_sensor_id())
-                printf("%s\n", sensor_id);
+                lprintf("%s_%s\n", sensor_id, control);
             else
                 return EXIT_FAILURE;
         } else if (strcmp(cmd, "--isp_register") == 0) {

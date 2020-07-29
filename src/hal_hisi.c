@@ -253,4 +253,5 @@ void setup_hal_hisi() {
         sensor_write_register = hisi_sensor_write_register;
     }
     possible_i2c_addrs = hisi_possible_i2c_addrs;
+    strcpy(short_manufacturer, "HI");
 }

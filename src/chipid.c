@@ -21,6 +21,7 @@ char system_manufacturer[128];
 int chip_generation;
 char chip_id[128];
 char chip_manufacturer[128];
+char short_manufacturer[128];
 int isp_register = -1;
 char isp_version[128];
 char isp_build_number[128];
