@@ -199,23 +199,35 @@ bool detect_system() {
     strncpy(chip_id, get_chip_id(chip_id_u32), sizeof(chip_id));
 
     // Special case for 16cv200/18ev200/18ev201 family
-    if (chip_id_u32 == 0x3518E200) {
+    if (chip_id_u32 == 0x3518E200 || chip_id_u32 == 0x3516C300) {
         uint32_t SCSYSID0_reg =
             ((volatile uint32_t *)(sc_ctrl_map + SCSYSID0))[0];
         char SCSYSID0_chip_id = ((char *)&SCSYSID0_reg)[3];
-        switch (SCSYSID0_chip_id) {
-        case 1:
-            sprintf(chip_id, "3516cv200");
-            break;
-        case 2:
-            sprintf(chip_id, "3518ev200");
-            break;
-        case 3:
-            sprintf(chip_id, "3518ev201");
-            break;
-        default:
-            sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
-        }
+        if (chip_id_u32 == 0x3518E200)
+            switch (SCSYSID0_chip_id) {
+            case 1:
+                sprintf(chip_id, "3516cv200");
+                break;
+            case 2:
+                sprintf(chip_id, "3518ev200");
+                break;
+            case 3:
+                sprintf(chip_id, "3518ev201");
+                break;
+            default:
+                sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
+            }
+        if (chip_id_u32 == 0x3516C300)
+            switch (SCSYSID0_chip_id) {
+            case 0:
+                sprintf(chip_id, "3516cv300");
+                break;
+            case 4:
+                sprintf(chip_id, "3516ev100");
+                break;
+            default:
+                sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
+            }
     }
 
     strcpy(chip_manufacturer, VENDOR_HISI);
