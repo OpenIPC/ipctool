@@ -294,9 +294,9 @@ int (*HI_MPI_SYS_GetVersion)(MPP_VERSION_S *pstVersion);
 // int (*HI_MPI_SYS_GetChipId)(MPP_VERSION_S* pstVersion);
 
 int get_mpp_version() {
-    void *lib = dlopen("libmpi.so", RTLD_NOW | RTLD_GLOBAL);
+    void *lib = dlopen("libmpi.so", RTLD_LAZY);
     if (!lib) {
-        printf("Can't dlopen libmpi.so\n");
+        printf("Can't dlopen libmpi.so: %s\n", dlerror());
         return EXIT_FAILURE;
     } else {
         HI_MPI_SYS_GetVersion = dlsym(lib, "HI_MPI_SYS_GetVersion");
