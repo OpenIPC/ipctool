@@ -75,11 +75,11 @@ int detect_soi_sensor(int fd, unsigned char i2c_addr) {
     int ver = sensor_read_register(fd, i2c_addr, 0xb, 1, 1);
     switch (pid) {
     case 0xf:
-        sprintf(sensor_id, "JX-F%x", ver);
+        sprintf(sensor_id, "JXF%x", ver);
         return true;
     case 0xa0:
     case 0xa:
-        sprintf(sensor_id, "JX-H%x", ver);
+        sprintf(sensor_id, "JXH%x", ver);
         return true;
     // it can be another sensor type
     case 0:

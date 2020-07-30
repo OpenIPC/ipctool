@@ -109,6 +109,8 @@ static const char *get_chip_id(uint32_t reg) {
         return "3516ev300";
     case 0x3559A100:
         return "3559av100";
+    case 0x35210100:
+        return "3521v100";
     default:
         fprintf(stderr, "get_chip_id() got unexpected 0x%x\n", reg);
         return "unknown";
