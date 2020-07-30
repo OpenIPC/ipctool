@@ -32,7 +32,7 @@ void Help() {
     printf("        --isp_version\n");
     printf("        --isp_build\n");
     printf("        --isp_sequence_number\n");
-    printf("        --mpp_version\n");
+    printf("        --mpp_info\n");
     printf("        --help\n");
 }
 
@@ -81,7 +81,6 @@ int main(int argc, char *argv[]) {
     sprintf(isp_version, "error");
     sprintf(isp_build_number, "error");
     sprintf(isp_sequence_number, "error");
-    sprintf(mpp_version, "error");
 
     if (argc == 1) {
         if (get_system_id()) {
@@ -138,9 +137,9 @@ int main(int argc, char *argv[]) {
                 printf("%s\n", isp_sequence_number);
             else
                 return EXIT_FAILURE;
-        } else if (strcmp(cmd, "--mpp_version") == 0) {
-            if (get_mpp_version() == EXIT_SUCCESS)
-                printf("%s\n", mpp_version);
+        } else if (strcmp(cmd, "--mpp_info") == 0) {
+            if (get_mpp_info() == EXIT_SUCCESS)
+                printf("%s\n", mpp_info);
             else
                 return EXIT_FAILURE;
         } else

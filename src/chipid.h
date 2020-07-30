@@ -17,10 +17,10 @@ extern int  isp_register;
 extern char isp_version[128];
 extern char isp_build_number[128];
 extern char isp_sequence_number[128];
-extern char mpp_version[128];
+extern char mpp_info[1024];
 
 bool get_system_id();
 int get_isp_version();
-int get_mpp_version();
+int get_mpp_info();
 
 #endif /* CHIPID_H */

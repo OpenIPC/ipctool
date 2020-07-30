@@ -26,7 +26,13 @@ int isp_register = -1;
 char isp_version[128];
 char isp_build_number[128];
 char isp_sequence_number[128];
-char mpp_version[128];
+char mpp_info[1024];
+
+// avoid warnings for old compilers
+#ifndef getline
+extern __ssize_t getline(char **__restrict __lineptr, size_t *__restrict __n,
+                         FILE *__restrict __stream) __wur;
+#endif
 
 bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
                               size_t buflen) {
@@ -293,9 +299,9 @@ typedef struct hiMPP_VERSION_S {
     char aVersion[VERSION_NAME_MAXLEN];
 } MPP_VERSION_S;
 int (*HI_MPI_SYS_GetVersion)(MPP_VERSION_S *pstVersion);
-// int (*HI_MPI_SYS_GetChipId)(MPP_VERSION_S* pstVersion);
+int (*HI_MPI_SYS_GetChipId)(uint32_t *chipId);
 
-int get_mpp_version() {
+int get_mpp_info() {
     void *lib = dlopen("libmpi.so", RTLD_LAZY);
     if (!lib) {
         printf("Can't dlopen libmpi.so: %s\n", dlerror());
@@ -304,22 +310,40 @@ int get_mpp_version() {
         HI_MPI_SYS_GetVersion = dlsym(lib, "HI_MPI_SYS_GetVersion");
         if (!HI_MPI_SYS_GetVersion) {
             printf("Can't find HI_MPI_SYS_GetVersion in libmpi.so\n");
-            return EXIT_FAILURE;
         } else {
             MPP_VERSION_S version;
-            HI_MPI_SYS_GetVersion(&version);
-            // printf("MPP version: %s\n", version.aVersion);
-            sprintf(mpp_version, "%s", version.aVersion);
+            if (!HI_MPI_SYS_GetVersion(&version)) {
+                char *srcptr = version.aVersion;
+                char *dstptr = mpp_info;
+                char *endbuf = mpp_info + sizeof mpp_info;
+                bool value_part = false;
+                while (endbuf != srcptr) {
+                    *dstptr = *srcptr;
+                    if (*srcptr == '=' && !value_part) {
+                        value_part = true;
+                        *++dstptr = '"';
+                    }
+                    if (!*srcptr)
+                        break;
+                    srcptr++;
+                    dstptr++;
+                }
+                strncat(mpp_info, "\"\n",
+                        sizeof(mpp_info) - strlen(mpp_info) - 1);
+            };
         }
 
-        // HI_MPI_SYS_GetChipId = dlsym(lib, "HI_MPI_SYS_GetChipId");
-        // if (!HI_MPI_SYS_GetChipId) {
-        //     printf("Can't find HI_MPI_SYS_GetChipId in libmpi.so\n");
-        // } else {
-        //     MPP_VERSION_S version;
-        //     HI_MPI_SYS_GetChipId(&version);
-        //     printf("HI_MPI_SYS_GetChipId version: '%s'\n", version.aVersion);
-        // }
+        HI_MPI_SYS_GetChipId = dlsym(lib, "HI_MPI_SYS_GetChipId");
+        if (!HI_MPI_SYS_GetChipId) {
+            printf("Can't find HI_MPI_SYS_GetChipId in libmpi.so\n");
+        } else {
+            uint32_t chipId;
+            if (!HI_MPI_SYS_GetChipId(&chipId)) {
+                char buf[BUFSIZ];
+                snprintf(buf, sizeof buf, "HI_CHIPID=%#X", chipId);
+                strncat(mpp_info, buf, sizeof(mpp_info) - strlen(mpp_info) - 1);
+            };
+        }
         dlclose(lib);
     }
     return EXIT_SUCCESS;

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(ipc_chip_info C)
 
 set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_FLAGS "-std=gnu99 -static")
+set(CMAKE_C_FLAGS "-std=gnu99")
 
 # Add a custom command that produces version.cpp, plus
 # a dummy output that's not actually produced, in order

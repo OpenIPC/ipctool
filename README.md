@@ -21,11 +21,35 @@ work on vast majority of hardware.
         --isp_version
         --isp_build
         --isp_sequence_number
-        --mpp_version
+        --mpp_info
         --help
 
     (or run without params to get full available information)
 ```
+
+### In your own scripts
+
+* Determine chip id:
+
+    ```
+    root@IVG-HP203Y-AE# ipc_chip_info --chip_id
+    hi3516cv300
+    ```
+
+* Determine sensor model and control line:
+
+    ```
+    root@IVG-HP203Y-AE# ipc_chip_info --sensor_id
+    imx291_i2c
+    ```
+
+* Determine HiSilicon SDK internal parameters in runtime:
+
+    ```
+    root@IVG-HP203Y-AE# eval $(./ipc_chip_info --mpp_info) env | grep HI_
+    HI_CHIPID=0X3516C300
+    HI_VERSION=Hi3516CV300_MPP_V1.0.4.0 B050 Release
+    ```
 
 ## Supported SoCs
 
@@ -33,7 +57,7 @@ Tested on:
 
 |Manufacturer|Models|
 |---|---|
-|[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|hi3516cv300, hi3516ev200, hi3516ev300|
+|[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|hi3516cv300, hi3516ev100/200/300|
 |Xiongmai|XM510, XM530|
 
 Please test on your device to help us extend the list.
