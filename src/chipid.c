@@ -29,7 +29,7 @@ char isp_sequence_number[128];
 char mpp_info[1024];
 
 // avoid warnings for old compilers
-#ifndef getline
+#if __GNUC__ < 7
 extern __ssize_t getline(char **__restrict __lineptr, size_t *__restrict __n,
                          FILE *__restrict __stream) __wur;
 #endif
