@@ -9,6 +9,10 @@ if(NOT BUILD_SHARED_LIBS)
     set(CMAKE_C_FLAGS "-static ${CMAKE_C_FLAGS}")
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s")
+endif()
+
 # Add a custom command that produces version.cpp, plus
 # a dummy output that's not actually produced, in order
 # to force version.cmake to always be re-run before the build
@@ -42,9 +46,6 @@ add_executable(ipc_chip_info
     src/stack.c
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )
-
-#find_package(Threads REQUIRED)
-#target_link_libraries(ipc_chip_info Threads::Threads)
 
 target_link_libraries( ipc_chip_info dl )
 install(TARGETS ipc_chip_info RUNTIME DESTINATION /usr/bin/)
