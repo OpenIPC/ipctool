@@ -196,7 +196,7 @@ bool detect_system() {
              SC_CTRL_base        // Offset to base address
         );
     if (sc_ctrl_map == MAP_FAILED) {
-        printf("sc_ctrl_map mmap error %d\n", (int)sc_ctrl_map);
+        printf("sc_ctrl_map mmap error %p\n", (int*)sc_ctrl_map);
         printf("Error: %s (%d)\n", strerror(errno), errno);
         close(mem_fd);
         return false;
@@ -279,7 +279,7 @@ int get_isp_version() {
         );
     close(mem_fd);
     if (isp_version_map == MAP_FAILED) {
-        printf("isp_version_map mmap error %d\n", (int)isp_version_map);
+        printf("isp_version_map mmap error %p\n", (int*)isp_version_map);
         printf("Error: %s (%d)\n", strerror(errno), errno);
         return EXIT_FAILURE;
     }
