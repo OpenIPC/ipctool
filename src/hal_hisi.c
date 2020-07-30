@@ -1,3 +1,5 @@
+#include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -254,4 +256,16 @@ void setup_hal_hisi() {
     }
     possible_i2c_addrs = hisi_possible_i2c_addrs;
     strcpy(short_manufacturer, "HI");
+}
+
+int hisi_SYS_DRV_GetChipId() {
+    int fd = open("/dev/sys", O_RDWR);
+    if (fd < 0)
+        return -1;
+
+    uint32_t id;
+    int res = ioctl(fd, 0x80045910, &id);
+    if (res)
+        return -1;
+    return id;
 }

@@ -84,12 +84,26 @@ long get_uart0_address() {
     return strtol(buf, NULL, 16);
 }
 
+static const char *get_chip_id35180100() {
+    int dvrid = hisi_SYS_DRV_GetChipId();
+    switch (dvrid) {
+    case 0x3516C100:
+        return "3516cv100";
+    case 0x3518E100:
+        return "3518ev100";
+    case 0x3518A100:
+        return "3518av100";
+    default:
+        fprintf(stderr, "get_chip_id() got unexpected 0x%x for 3518?v100\n",
+                dvrid);
+        return "unknown";
+    }
+}
+
 static const char *get_chip_id(uint32_t reg) {
     switch (reg) {
     case 0x6000001:
         return "3516av200";
-    case 0x35180100:
-        return "3518?v100";
     case 0x3516C100:
         return "3516cv100";
     case 0x3516A100:
@@ -104,15 +118,17 @@ static const char *get_chip_id(uint32_t reg) {
         return "3516cv300";
     case 0x3516E100:
         return "3516ev100";
-    case 0x3518E200:
-        chip_generation = 2;
-        return "3518ev200";
     case 0x3516D300:
         return "3516dv300";
     case 0x3516e200:
         return "3516ev200";
     case 0x3516e300:
         return "3516ev300";
+    case 0x35180100:
+        return get_chip_id35180100();
+    case 0x3518E200:
+        chip_generation = 2;
+        return "3518ev200";
     case 0x3559A100:
         return "3559av100";
     case 0x35210100:
