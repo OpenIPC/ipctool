@@ -22,9 +22,11 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
+    const unsigned int base = 0x3000;
+
     // from IMX335 datasheet, p.40
     // 316Ah - 2-6 bits are 1, 7 bit is 0
-    int ret316a = sensor_read_register(fd, i2c_addr, 0x316A, 2, 1);
+    int ret316a = sensor_read_register(fd, i2c_addr, base + 0x16A, 2, 1);
     // early break
     if (ret316a == -1)
         return false;
@@ -34,13 +36,20 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr) {
         return true;
     }
 
-    int ret3013 = sensor_read_register(fd, i2c_addr, 0x3013, 2, 1);
-    if (ret3013 == 64) {
-        sprintf(sensor_id, "IMX323");
+    // Fixed to "40h"
+    int ret3013 = sensor_read_register(fd, i2c_addr, base + 0x13, 2, 1);
+    if (ret3013 == 0x40) {
+        int ret304F = sensor_read_register(fd, i2c_addr, base + 0x4F, 2, 1);
+        if (ret304F == 0x07) {
+            sprintf(sensor_id, "IMX323");
+
+        } else {
+            sprintf(sensor_id, "IMX322");
+        }
         return true;
     }
 
-    int ret31dc = sensor_read_register(fd, i2c_addr, 0x31DC, 2, 1);
+    int ret31dc = sensor_read_register(fd, i2c_addr, base + 0x1DC, 2, 1);
     if (ret31dc > 0) {
         switch (ret31dc & 6) {
         case 4:
@@ -83,7 +92,7 @@ int detect_soi_sensor(int fd, unsigned char i2c_addr) {
         return true;
     // it can be another sensor type
     case 0:
-	return false;
+        return false;
     default:
         fprintf(stderr, "Error: unexpected value for SOI == 0x%x\n",
                 (pid << 8) + ver);
@@ -144,10 +153,10 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
     int res = high << 8 | lower;
     switch (res) {
     case 0x2032:
-	res = 0x2135;
-	break;
+        res = 0x2135;
+        break;
     case 0x2045:
-	break;
+        break;
     // Untested
     case 0x2210:
         res = 0x1035;
@@ -156,7 +165,7 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
         strcpy(sensor_id, "SC2235P");
         return true;
     case 0x2235:
-	break;
+        break;
     case 0x2238:
         strcpy(sensor_id, "SC2315E");
         return true;
@@ -173,9 +182,9 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
         break;
     // Untested
     case 0x5235:
-	break;
+        break;
     case 0x5300:
-	break;
+        break;
     case 0:
         // SC1135 catches here
         return false;
@@ -207,7 +216,8 @@ int detect_omni_sensor(int fd, unsigned char i2c_addr) {
     int res = prod_msb << 8 | prod_lsb;
 
     // skip empty result
-    if (!res) return false;
+    if (!res)
+        return false;
 
     // 0x9711 for OV9712
     // 0x9732 for OV9732
@@ -269,7 +279,7 @@ bool get_sensor_id() {
 
     bool i2c_detected = get_sensor_id_i2c();
     if (i2c_detected) {
-	strcpy(control, "i2c");
+        strcpy(control, "i2c");
     }
     return i2c_detected;
 }
