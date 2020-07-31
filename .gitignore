@@ -1,12 +1,3 @@
-*
-!*/
-
-!/README.md
-!/.clang-format
-!/LICENSE
-!/CMakeLists.txt
-!/src/**/*.h
-!/src/**/*.c
-
-!.gitignore
-!*/.gitignore
+.clangd
+build
+compile_commands.json

@@ -1,11 +1,11 @@
+#include <ctype.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
-#include <ctype.h>
 
 #include <termios.h>
 #include <unistd.h>
@@ -50,14 +50,20 @@ void print_chip_id(bool report) {
     if (*chip_manufacturer) {
         strcat(chip_manufacturer, " ");
     }
-    printf("Chip: %s%s\n", chip_manufacturer, chip_id);
+    printf("chip:\n"
+           "    vendor: %s\n"
+           "    model: %s\n",
+           chip_manufacturer, chip_id);
 }
 
 void print_sensor_id(bool report) {
     if (*sensor_manufacturer) {
         strcat(sensor_manufacturer, " ");
     }
-    printf("Sensor: %s%s\n", sensor_manufacturer, sensor_id);
+    printf("sensor:\n"
+           "    vendor: %s\n"
+           "    model: %s\n",
+           sensor_manufacturer, sensor_id);
 }
 
 void lprintf(char *fmt, ...) {
@@ -68,10 +74,10 @@ void lprintf(char *fmt, ...) {
     vsnprintf(buf, sizeof buf, fmt, argptr);
     va_end(argptr);
 
-    char* ptr = buf;
+    char *ptr = buf;
     while (*ptr) {
-	*ptr = tolower(*ptr);
-	ptr++;
+        *ptr = tolower(*ptr);
+        ptr++;
     }
     printf("%s", buf);
 }
