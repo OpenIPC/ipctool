@@ -88,11 +88,11 @@ static const char *get_chip_id35180100() {
     int dvrid = hisi_SYS_DRV_GetChipId();
     switch (dvrid) {
     case 0x3516C100:
-        return "3516cv100";
+        return "3516CV100";
     case 0x3518E100:
-        return "3518ev100";
+        return "3518EV100";
     case 0x3518A100:
-        return "3518av100";
+        return "3518AV100";
     default:
         fprintf(stderr, "get_chip_id() got unexpected 0x%x for 3518?v100\n",
                 dvrid);
@@ -103,36 +103,36 @@ static const char *get_chip_id35180100() {
 static const char *get_chip_id(uint32_t reg) {
     switch (reg) {
     case 0x6000001:
-        return "3516av200";
+        return "3516AV200";
     case 0x3516C100:
-        return "3516cv100";
+        return "3516CV100";
     case 0x3516A100:
-        return "3516av100";
+        return "3516AV100";
     case 0x3516D100:
-        return "3516dv100";
+        return "3516DV100";
     case 0x3516A200:
-        return "3516av200";
+        return "3516AV200";
     case 0x35190101:
-        return "3519v101";
+        return "3519V101";
     case 0x3516C300:
-        return "3516cv300";
+        return "3516CV300";
     case 0x3516E100:
-        return "3516ev100";
+        return "3516EV100";
     case 0x3516D300:
-        return "3516dv300";
+        return "3516DV300";
     case 0x3516e200:
-        return "3516ev200";
+        return "3516EV200";
     case 0x3516e300:
-        return "3516ev300";
+        return "3516EV300";
     case 0x35180100:
         return get_chip_id35180100();
     case 0x3518E200:
         chip_generation = 2;
-        return "3518ev200";
+        return "3518EV200";
     case 0x3559A100:
-        return "3559av100";
+        return "3559AV100";
     case 0x35210100:
-        return "3521v100";
+        return "3521V100";
     default:
         fprintf(stderr, "get_chip_id() got unexpected 0x%x\n", reg);
         return "unknown";
@@ -225,13 +225,13 @@ bool detect_system() {
         if (chip_id_u32 == 0x3518E200)
             switch (SCSYSID0_chip_id) {
             case 1:
-                sprintf(chip_id, "3516cv200");
+                sprintf(chip_id, "3516CV200");
                 break;
             case 2:
-                sprintf(chip_id, "3518ev200");
+                sprintf(chip_id, "3518EV200");
                 break;
             case 3:
-                sprintf(chip_id, "3518ev201");
+                sprintf(chip_id, "3518EV201");
                 break;
             default:
                 sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
@@ -239,10 +239,10 @@ bool detect_system() {
         if (chip_id_u32 == 0x3516C300)
             switch (SCSYSID0_chip_id) {
             case 0:
-                sprintf(chip_id, "3516cv300");
+                sprintf(chip_id, "3516CV300");
                 break;
             case 4:
-                sprintf(chip_id, "3516ev100");
+                sprintf(chip_id, "3516EV100");
                 break;
             default:
                 sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
