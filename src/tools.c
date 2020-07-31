@@ -1,3 +1,5 @@
+#include <ctype.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -36,6 +38,8 @@ bool read_mem_reg(uint32_t addr, uint32_t *output) {
 
     uint32_t offset = addr & 0xffff0000;
     uint32_t size = (((addr & 0x0000ffff) - 1) / pgs + 1) * pgs;
+    if (!size)
+        size = pgs;
     if (!addr || loaded_area && offset != loaded_offset) {
         int res = munmap(loaded_area, loaded_size);
         if (res) {
@@ -68,8 +72,8 @@ bool read_mem_reg(uint32_t addr, uint32_t *output) {
                  offset      // Offset to base address
             );
         if (mapped_area == MAP_FAILED) {
-            fprintf(stderr, "read_mem_reg error: %s (%d)\n", strerror(errno),
-                    errno);
+            fprintf(stderr, "read_mem_reg mmap error: %s (%d)\n",
+                    strerror(errno), errno);
             return false;
         }
         loaded_area = (char *)mapped_area;
@@ -81,4 +85,20 @@ bool read_mem_reg(uint32_t addr, uint32_t *output) {
     *output = *(volatile uint32_t *)(mapped_area + (addr - offset));
 
     return true;
+}
+
+void lprintf(char *fmt, ...) {
+    char buf[BUFSIZ];
+
+    va_list argptr;
+    va_start(argptr, fmt);
+    vsnprintf(buf, sizeof buf, fmt, argptr);
+    va_end(argptr);
+
+    char *ptr = buf;
+    while (*ptr) {
+        *ptr = tolower(*ptr);
+        ptr++;
+    }
+    printf("%s", buf);
 }

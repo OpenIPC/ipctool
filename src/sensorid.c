@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -282,4 +281,22 @@ bool get_sensor_id() {
         strcpy(control, "i2c");
     }
     return i2c_detected;
+}
+
+const char *get_sensor_data_type() {
+    switch (chip_generation) {
+    case 0x3516C300:
+        return hisi_cv300_get_sensor_data_type();
+    default:
+        return NULL;
+    }
+}
+
+const char *get_sensor_clock() {
+    switch (chip_generation) {
+    case 0x3516C300:
+        return hisi_cv300_get_sensor_clock();
+    default:
+        return NULL;
+    }
 }

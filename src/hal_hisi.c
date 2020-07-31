@@ -14,6 +14,7 @@
 
 #include "chipid.h"
 #include "hal_common.h"
+#include "tools.h"
 
 static unsigned char sony_addrs[] = {0x34, 0};
 static unsigned char soi_addrs[] = {0x80, 0};
@@ -40,7 +41,7 @@ int hisi_open_sensor_fd() {
 // Set I2C slave address
 int hisi_sensor_i2c_change_addr(int fd, unsigned char addr) {
     // use i2c address shift only for generations other than 2
-    if (chip_generation != 2) {
+    if (chip_generation != 0x3518E200) {
         addr >>= 1;
     }
 
@@ -247,7 +248,7 @@ int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
 void setup_hal_hisi() {
     open_sensor_fd = hisi_open_sensor_fd;
     sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
-    if (chip_generation == 2) {
+    if (chip_generation == 0x3518E200) {
         sensor_read_register = hisi_gen2_sensor_read_register;
         sensor_write_register = hisi_gen2_sensor_write_register;
     } else {
@@ -268,4 +269,95 @@ int hisi_SYS_DRV_GetChipId() {
     if (res)
         return -1;
     return id;
+}
+
+enum CV300_MIPI_PHY {
+    PHY_MIPI_MODE = 0,
+    PHY_LVDS_MODE,
+    PHY_CMOS_MODE,
+    PHY_RESERVED
+};
+
+struct CV300_MISC_CTRL0 {
+    unsigned int res0 : 1;
+    unsigned int spi0_cs0_pctrl : 1;
+    unsigned int spi1_cs0_pctrl : 1;
+    unsigned int spi1_cs1_pctrl : 1;
+    unsigned int ssp1_cs_sel : 1;
+    enum CV300_MIPI_PHY mipi_phy_mode : 3;
+    bool vicap_vpss_online_mode : 1;
+    unsigned int test_clksel : 4;
+    unsigned int res1 : 2;
+    bool commtx_rx_int_en : 1;
+};
+
+struct CV300_PERI_CRG11 {
+    unsigned int vi0_cken : 1;
+    unsigned int vi0_pctrl : 1;
+    unsigned int vi0_sc_sel : 3;
+    unsigned int res0 : 3;
+    unsigned int vi0_srst_req : 1;
+    unsigned int vi_hrst_req : 1;
+    unsigned int vi_ch0_srst_req : 1;
+    unsigned int mipi_srst_req : 1;
+    unsigned int res1 : 1;
+    unsigned int isp_core_srst_req : 1;
+    unsigned int isp_cfg_srst_req : 1;
+    unsigned int mipi_cken : 1;
+    unsigned int mipi_core_srst_req : 1;
+    unsigned int isp_clksel : 1;
+    unsigned int isp_cken : 1;
+    unsigned int phy_hs_lat : 2;
+    unsigned int phy_cmos_lat : 2;
+    unsigned int sensor_clksel : 3;
+    unsigned int sensor_cken : 1;
+    unsigned int sensor_srst_req : 1;
+    unsigned int res2 : 4;
+};
+
+const unsigned int CV300_MISC_CTRL0_ADDR = 0x12030000;
+const char *hisi_cv300_get_sensor_data_type() {
+    struct CV300_MISC_CTRL0 ctrl0;
+    bool res = read_mem_reg(CV300_MISC_CTRL0_ADDR, (uint32_t *)&ctrl0);
+    if (res) {
+        switch (ctrl0.mipi_phy_mode) {
+        case PHY_MIPI_MODE:
+            return "MIPI";
+        case PHY_CMOS_MODE:
+            return "DC";
+        case PHY_LVDS_MODE:
+            return "LVDS";
+        default:
+            return NULL;
+        }
+    }
+    return NULL;
+}
+
+const unsigned int CV300_PERI_CRG11_ADRR = 0x1201002c;
+const char *hisi_cv300_get_sensor_clock() {
+    struct CV300_PERI_CRG11 crg11;
+    int res = read_mem_reg(CV300_PERI_CRG11_ADRR, (uint32_t *)&crg11);
+    if (res) {
+        switch (crg11.sensor_clksel) {
+        case 0:
+            return "74.25MHz";
+        case 1:
+            return "37.125MHz";
+            break;
+        case 2:
+            return "54MHz";
+            break;
+        case 3:
+            return "27MHz";
+            break;
+        default:
+            if (crg11.sensor_clksel & 1) {
+                return "25MHz";
+            } else {
+                return "24MHz";
+            }
+        }
+    }
+    return NULL;
 }

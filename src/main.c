@@ -1,6 +1,4 @@
-#include <ctype.h>
 #include <errno.h>
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -88,34 +86,20 @@ void print_sensor_id() {
            "    model: %s\n"
            "    control:\n"
            "      type: %s\n"
-           "      bus: 0\n"
-           "    data:\n"
-           "      type: mipi\n", // MISC_CTRL0, 1203_0000
-                                 /*
-                                  * [6:5]
-                                 RW
-                                 mipi_phy_mode
-                                 MIPI PHY mode select 00: MIPI mode
-                                 01: LVDS mode
-                                 10: CMOS mode
-                                 11: reserved */
+           "      bus: 0\n",
            sensor_manufacturer, sensor_id, control);
-}
 
-void lprintf(char *fmt, ...) {
-    char buf[BUFSIZ];
-
-    va_list argptr;
-    va_start(argptr, fmt);
-    vsnprintf(buf, sizeof buf, fmt, argptr);
-    va_end(argptr);
-
-    char *ptr = buf;
-    while (*ptr) {
-        *ptr = tolower(*ptr);
-        ptr++;
+    const char *data_type = get_sensor_data_type();
+    if (data_type) {
+        printf("    data:\n"
+               "      type: %s\n",
+               data_type);
     }
-    printf("%s", buf);
+
+    const char *sensor_clock = get_sensor_clock();
+    if (sensor_clock) {
+        printf("    clock: %s\n", sensor_clock);
+    }
 }
 
 int main(int argc, char *argv[]) {
