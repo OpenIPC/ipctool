@@ -38,12 +38,14 @@ add_executable(ipc_chip_info
     src/hal_xm.c
     src/hal_xm.h
     src/main.c
+    src/network.c
+    src/network.h
     src/sensorid.c
     src/sensorid.c
+    src/stack.c
     src/tools.c
     src/tools.h
     src/version.h
-    src/stack.c
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )
 

@@ -12,7 +12,9 @@
 
 #include "chipid.h"
 #include "hal_hisi.h"
+#include "network.h"
 #include "sensorid.h"
+#include "tools.h"
 #include "version.h"
 
 void Help() {
@@ -25,7 +27,6 @@ void Help() {
     }
 
     printf("    available options:\n");
-    printf("        --system_id\n");
     printf("        --chip_id\n");
     printf("        --sensor_id\n");
     printf("        --isp_register\n");
@@ -36,34 +37,69 @@ void Help() {
     printf("        --help\n");
 }
 
-void print_system_id(bool report) {
+void print_system_id() {
     if (!*system_manufacturer && !*system_id)
         return;
 
-    if (*system_manufacturer) {
-        strcat(system_manufacturer, " ");
-    }
-    printf("System: %s%s\n", system_manufacturer, system_id);
+    printf("vendor: %s\n"
+           "model: %s\n",
+           system_manufacturer, system_id);
 }
 
-void print_chip_id(bool report) {
-    if (*chip_manufacturer) {
-        strcat(chip_manufacturer, " ");
-    }
+void print_chip_id() {
     printf("chip:\n"
-           "    vendor: %s\n"
-           "    model: %s\n",
+           "  vendor: %s\n"
+           "  model: %s\n",
            chip_manufacturer, chip_id);
 }
 
-void print_sensor_id(bool report) {
-    if (*sensor_manufacturer) {
-        strcat(sensor_manufacturer, " ");
-    }
-    printf("sensor:\n"
-           "    vendor: %s\n"
-           "    model: %s\n",
-           sensor_manufacturer, sensor_id);
+void print_ethernet_data() {
+    char buf[1024];
+
+    // himii: probed
+    // [    1.160082] CONFIG_HIETH_PHYID_U 1
+    // [    1.168332] CONFIG_HIETH_PHYID_U 1
+    // [    1.172163] CONFIG_HIETH_PHYID_D 3
+    printf("ethernet:\n");
+    if (get_mac_address(buf, sizeof buf)) {
+        printf("  mac: %s\n", buf);
+    };
+
+    // CV300 only
+    // uint32_t val;
+    // bool res;
+    // res = read_mem_reg(0x10050108, &val); // 0x10050108 UD_MDIO_PHYADDR
+    // printf("  phyaddr: %x\n", val);
+    // printf("  connection: rmii\n");
+}
+
+void print_rom_data() {
+    printf("rom:\n"
+           "  - type: spi_nor\n"
+           "    chip: mx25l6436f\n"
+           "    id: 0xef 0x40 0x18\n"
+           "    size: 8M\n"
+           "    block: 64K\n");
+}
+
+void print_sensor_id() {
+    printf("sensors:\n"
+           "  - vendor: %s\n"
+           "    model: %s\n"
+           "    control:\n"
+           "      type: %s\n"
+           "      bus: 0\n"
+           "    data:\n"
+           "      type: mipi\n", // MISC_CTRL0, 1203_0000
+                                 /*
+                                  * [6:5]
+                                 RW
+                                 mipi_phy_mode
+                                 MIPI PHY mode select 00: MIPI mode
+                                 01: LVDS mode
+                                 10: CMOS mode
+                                 11: reserved */
+           sensor_manufacturer, sensor_id, control);
 }
 
 void lprintf(char *fmt, ...) {
@@ -90,8 +126,10 @@ int main(int argc, char *argv[]) {
 
     if (argc == 1) {
         if (get_system_id()) {
-            print_system_id(true);
-            print_chip_id(true);
+            print_system_id();
+            print_chip_id();
+            print_ethernet_data();
+            // print_rom_data();
         } else
             return EXIT_FAILURE;
 
@@ -99,7 +137,7 @@ int main(int argc, char *argv[]) {
         // freezes
         tcdrain(STDOUT_FILENO);
         if (get_sensor_id())
-            print_sensor_id(true);
+            print_sensor_id();
         else
             return EXIT_FAILURE;
 
@@ -108,12 +146,7 @@ int main(int argc, char *argv[]) {
 
     if (argc == 2) {
         char *cmd = argv[1];
-        if (strcmp(cmd, "--system_id") == 0) {
-            if (get_system_id())
-                printf("%s\n", system_id);
-            else
-                return EXIT_FAILURE;
-        } else if (strcmp(cmd, "--chip_id") == 0) {
+        if (strcmp(cmd, "--chip_id") == 0) {
             if (get_system_id())
                 lprintf("%s%s\n", short_manufacturer, chip_id);
             else

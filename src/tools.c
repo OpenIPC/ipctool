@@ -1,4 +1,11 @@
+#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
+
+#include <fcntl.h>
+#include <sys/errno.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 #include "tools.h"
 
@@ -13,4 +20,65 @@ int compile_regex(regex_t *r, const char *regex_text) {
         return -1;
     }
     return 1;
+}
+
+// reads io register value
+// call with addr == 0 to cleanup cached resources
+bool read_mem_reg(uint32_t addr, uint32_t *output) {
+    static int mem_fd;
+    static int pgs;
+    static char *loaded_area;
+    static uint32_t loaded_offset;
+    static uint32_t loaded_size;
+
+    if (!pgs)
+        pgs = getpagesize();
+
+    uint32_t offset = addr & 0xffff0000;
+    uint32_t size = (((addr & 0x0000ffff) - 1) / pgs + 1) * pgs;
+    if (!addr || loaded_area && offset != loaded_offset) {
+        int res = munmap(loaded_area, loaded_size);
+        if (res) {
+            fprintf(stderr, "read_mem_reg error: %s (%d)\n", strerror(errno),
+                    errno);
+        }
+    }
+
+    if (!addr) {
+        close(mem_fd);
+        return true;
+    }
+
+    if (!mem_fd) {
+        mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
+        if (mem_fd < 0) {
+            fprintf(stderr, "can't open /dev/mem\n");
+            return false;
+        }
+    }
+
+    volatile char *mapped_area;
+    if (offset != loaded_offset) {
+        mapped_area =
+            mmap(NULL,       // Any adddress in our space will do
+                 size,       // Map length
+                 PROT_READ,  // Enable reading & writting to mapped memory
+                 MAP_SHARED, // Shared with other processes
+                 mem_fd,     // File to map
+                 offset      // Offset to base address
+            );
+        if (mapped_area == MAP_FAILED) {
+            fprintf(stderr, "read_mem_reg error: %s (%d)\n", strerror(errno),
+                    errno);
+            return false;
+        }
+        loaded_area = (char *)mapped_area;
+        loaded_size = size;
+        loaded_offset = offset;
+    } else
+        mapped_area = loaded_area;
+
+    *output = *(volatile uint32_t *)(mapped_area + (addr - offset));
+
+    return true;
 }
