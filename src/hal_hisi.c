@@ -270,10 +270,10 @@ int hisi_SYS_DRV_GetChipId() {
 }
 
 enum CV300_MIPI_PHY {
-    PHY_MIPI_MODE = 0,
-    PHY_LVDS_MODE,
-    PHY_CMOS_MODE,
-    PHY_RESERVED
+    CV300_PHY_MIPI_MODE = 0,
+    CV300_PHY_LVDS_MODE,
+    CV300_PHY_CMOS_MODE,
+    CV300_PHY_RESERVED
 };
 
 struct CV300_MISC_CTRL0 {
@@ -308,7 +308,7 @@ struct CV300_PERI_CRG11 {
     unsigned int phy_hs_lat : 2;
     unsigned int phy_cmos_lat : 2;
     unsigned int sensor_clksel : 3;
-    unsigned int sensor_cken : 1;
+    bool sensor_cken : 1;
     unsigned int sensor_srst_req : 1;
     unsigned int res2 : 4;
 };
@@ -320,11 +320,11 @@ const char *hisi_cv300_get_sensor_data_type() {
     // consider 0 as invalid value (system can just reseted)
     if (res && *(uint32_t *)&ctrl0) {
         switch (ctrl0.mipi_phy_mode) {
-        case PHY_MIPI_MODE:
+        case CV300_PHY_MIPI_MODE:
             return "MIPI";
-        case PHY_CMOS_MODE:
+        case CV300_PHY_CMOS_MODE:
             return "DC";
-        case PHY_LVDS_MODE:
+        case CV300_PHY_LVDS_MODE:
             return "LVDS";
         default:
             return NULL;
@@ -357,6 +357,86 @@ const char *hisi_cv300_get_sensor_clock() {
         }
     }
     return NULL;
+}
+
+struct EV300_PERI_CRG60 {
+    bool sensor0_cken : 1;
+    unsigned int sensor0_srst_req : 1;
+    unsigned int sensor0_cksel : 3;
+    bool sensor0_ctrl_cken : 1;
+    unsigned int sensor0_ctrl_srst_req : 1;
+};
+
+enum EV300_MIPI_PHY {
+    EV300_PHY_MIPI_MODE = 0,
+    EV300_PHY_LVDS_MODE,
+    EV300_PHY_RESERVED0,
+    EV300_PHY_RESERVED1
+};
+
+struct EV300_MISC_CTRL6 {
+    unsigned int mipirx0_work_mode : 2;
+};
+
+const unsigned int EV300_MISC_CTRL6_ADDR = 0x12028018;
+const char *hisi_ev300_get_sensor_data_type() {
+    struct EV300_MISC_CTRL6 ctrl6;
+    bool res = mem_reg(EV300_MISC_CTRL6_ADDR, (uint32_t *)&ctrl6, OP_READ);
+    // consider 0 as invalid value (system can just reseted)
+    if (res && *(uint32_t *)&ctrl6) {
+        switch (ctrl6.mipirx0_work_mode) {
+        case EV300_PHY_MIPI_MODE:
+            return "MIPI";
+        case EV300_PHY_LVDS_MODE:
+            return "LVDS";
+        default:
+            return NULL;
+        }
+    }
+
+    return NULL;
+}
+
+const unsigned int EV300_PERI_CRG60_ADRR = 0x120100F0;
+const char *hisi_ev300_get_sensor_clock() {
+    struct EV300_PERI_CRG60 crg60;
+    int res = mem_reg(EV300_PERI_CRG60_ADRR, (uint32_t *)&crg60, OP_READ);
+    // consider sensor clock value only when it's enabled
+    if (res && crg60.sensor0_cken) {
+        switch (crg60.sensor0_cksel) {
+        case 0:
+            return "74.25MHz";
+        case 1:
+            return "72MHz";
+        case 2:
+            return "54MHz";
+        case 3:
+            return "24MHz";
+        case 4:
+            return "37.125MHz";
+        case 5:
+            return "36MHz";
+        case 6:
+            return "27MHz";
+        case 7:
+            return "12MHz";
+        }
+    }
+    return NULL;
+}
+
+bool hisi_ev300_get_die_id(char *buf, ssize_t len) {
+    uint32_t base_id_addr = 0x12020400;
+    for (uint32_t id_addr = base_id_addr + 5 * 4; id_addr >= base_id_addr;
+         id_addr -= 4) {
+        uint32_t val;
+        if (!mem_reg(id_addr, &val, OP_READ))
+            return false;
+        int outsz = snprintf(buf, len, "%08x", val);
+        buf += outsz;
+        len -= outsz;
+    }
+    return true;
 }
 
 static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,

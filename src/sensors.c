@@ -287,6 +287,8 @@ const char *get_sensor_data_type() {
     switch (chip_generation) {
     case 0x3516C300:
         return hisi_cv300_get_sensor_data_type();
+    case 0x3516E300:
+        return hisi_ev300_get_sensor_data_type();
     default:
         return NULL;
     }
@@ -296,6 +298,8 @@ const char *get_sensor_clock() {
     switch (chip_generation) {
     case 0x3516C300:
         return hisi_cv300_get_sensor_clock();
+    case 0x3516E300:
+        return hisi_ev300_get_sensor_clock();
     default:
         return NULL;
     }

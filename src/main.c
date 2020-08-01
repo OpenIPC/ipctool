@@ -50,6 +50,12 @@ void print_chip_id() {
            "  vendor: %s\n"
            "  model: %s\n",
            chip_manufacturer, chip_id);
+    if (chip_generation == 0x3516E300) {
+        char buf[1024];
+        if (hisi_ev300_get_die_id(buf, sizeof buf)) {
+            printf("  id: %s\n", buf);
+        }
+    }
 }
 
 void print_ethernet_data() {
