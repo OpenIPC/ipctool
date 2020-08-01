@@ -28,18 +28,12 @@ int compile_regex(regex_t *r, const char *regex_text) {
 // call with addr == 0 to cleanup cached resources
 bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
     static int mem_fd;
-    static int pgs;
     static char *loaded_area;
     static uint32_t loaded_offset;
     static uint32_t loaded_size;
 
-    if (!pgs)
-        pgs = getpagesize();
-
     uint32_t offset = addr & 0xffff0000;
-    uint32_t size = (((addr & 0x0000ffff) - 1) / pgs + 1) * pgs;
-    if (!size)
-        size = pgs;
+    uint32_t size = 0xffff;
     if (!addr || loaded_area && offset != loaded_offset) {
         int res = munmap(loaded_area, loaded_size);
         if (res) {
