@@ -382,8 +382,7 @@ const unsigned int EV300_MISC_CTRL6_ADDR = 0x12028018;
 const char *hisi_ev300_get_sensor_data_type() {
     struct EV300_MISC_CTRL6 ctrl6;
     bool res = mem_reg(EV300_MISC_CTRL6_ADDR, (uint32_t *)&ctrl6, OP_READ);
-    // consider 0 as invalid value (system can just reseted)
-    if (res && *(uint32_t *)&ctrl6) {
+    if (res) {
         switch (ctrl6.mipirx0_work_mode) {
         case EV300_PHY_MIPI_MODE:
             return "MIPI";
