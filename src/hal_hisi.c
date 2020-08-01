@@ -22,12 +22,10 @@ static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char omni_addrs[] = {0x60, 0};
 
-sensor_addr_t hisi_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
-                                           {SENSOR_SOI, soi_addrs},
-                                           {SENSOR_ONSEMI, onsemi_addrs},
-                                           {SENSOR_SMARTSENS, ssens_addrs},
-                                           {SENSOR_OMNIVISION, omni_addrs},
-                                           {0, NULL}};
+sensor_addr_t hisi_possible_i2c_addrs[] = {
+    {SENSOR_SONY, sony_addrs},       {SENSOR_SOI, soi_addrs},
+    {SENSOR_ONSEMI, onsemi_addrs},   {SENSOR_SMARTSENS, ssens_addrs},
+    {SENSOR_OMNIVISION, omni_addrs}, {0, NULL}};
 
 int hisi_open_sensor_fd() {
     int adapter_nr = 0; /* probably dynamically determined */
@@ -318,8 +316,9 @@ struct CV300_PERI_CRG11 {
 const unsigned int CV300_MISC_CTRL0_ADDR = 0x12030000;
 const char *hisi_cv300_get_sensor_data_type() {
     struct CV300_MISC_CTRL0 ctrl0;
-    bool res = read_mem_reg(CV300_MISC_CTRL0_ADDR, (uint32_t *)&ctrl0);
-    if (res) {
+    bool res = mem_reg(CV300_MISC_CTRL0_ADDR, (uint32_t *)&ctrl0, OP_READ);
+    // consider 0 as invalid value (system can just reseted)
+    if (res && *(uint32_t *)&ctrl0) {
         switch (ctrl0.mipi_phy_mode) {
         case PHY_MIPI_MODE:
             return "MIPI";
@@ -337,20 +336,18 @@ const char *hisi_cv300_get_sensor_data_type() {
 const unsigned int CV300_PERI_CRG11_ADRR = 0x1201002c;
 const char *hisi_cv300_get_sensor_clock() {
     struct CV300_PERI_CRG11 crg11;
-    int res = read_mem_reg(CV300_PERI_CRG11_ADRR, (uint32_t *)&crg11);
-    if (res) {
+    int res = mem_reg(CV300_PERI_CRG11_ADRR, (uint32_t *)&crg11, OP_READ);
+    // consider sensor clock value only when it's enabled
+    if (res && crg11.sensor_cken) {
         switch (crg11.sensor_clksel) {
         case 0:
             return "74.25MHz";
         case 1:
             return "37.125MHz";
-            break;
         case 2:
             return "54MHz";
-            break;
         case 3:
             return "27MHz";
-            break;
         default:
             if (crg11.sensor_clksel & 1) {
                 return "25MHz";
@@ -360,4 +357,45 @@ const char *hisi_cv300_get_sensor_clock() {
         }
     }
     return NULL;
+}
+
+static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
+                              uint32_t prep_addr, uint32_t prep_val) {
+    uint32_t val;
+
+    if (mem_reg(prep_addr, &val, OP_READ)) {
+        if (!val) {
+            val = prep_val;
+            mem_reg(prep_addr, &val, OP_WRITE);
+            usleep(100000);
+        }
+    }
+
+    if (mem_reg(read_addr, &val, OP_READ)) {
+        return val & ((1 << temp_bitness) - 1);
+    }
+    return 0;
+}
+
+int hisi_get_temp() {
+    float tempo;
+    switch (chip_generation) {
+    case 0x3518E200:
+        tempo = hisi_reg_temp(0x20270114, 8, 0x20270110, 0x60FA0000);
+        tempo = ((tempo * 180) / 256) - 40;
+        break;
+    case 0x3516C300:
+        tempo = hisi_reg_temp(0x120300A4, 16, 0x1203009C, 0x60FA0000);
+        tempo = ((tempo - 125.0) / 806) * 165 - 40;
+        break;
+    case 0x3516E300:
+        tempo = hisi_reg_temp(0x120280BC, 16, 0x120280B4, 0xC3200000);
+        tempo = ((tempo - 117) / 798) * 165 - 40;
+        break;
+    default:
+        return EXIT_FAILURE;
+    }
+    printf("%.2f\n", tempo);
+
+    return EXIT_SUCCESS;
 }

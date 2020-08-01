@@ -26,7 +26,7 @@ int compile_regex(regex_t *r, const char *regex_text) {
 
 // reads io register value
 // call with addr == 0 to cleanup cached resources
-bool read_mem_reg(uint32_t addr, uint32_t *output) {
+bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
     static int mem_fd;
     static int pgs;
     static char *loaded_area;
@@ -64,12 +64,13 @@ bool read_mem_reg(uint32_t addr, uint32_t *output) {
     volatile char *mapped_area;
     if (offset != loaded_offset) {
         mapped_area =
-            mmap(NULL,       // Any adddress in our space will do
-                 size,       // Map length
-                 PROT_READ,  // Enable reading & writting to mapped memory
-                 MAP_SHARED, // Shared with other processes
-                 mem_fd,     // File to map
-                 offset      // Offset to base address
+            mmap(NULL, // Any adddress in our space will do
+                 size, // Map length
+                 PROT_READ |
+                     PROT_WRITE, // Enable reading & writting to mapped memory
+                 MAP_SHARED,     // Shared with other processes
+                 mem_fd,         // File to map
+                 offset          // Offset to base address
             );
         if (mapped_area == MAP_FAILED) {
             fprintf(stderr, "read_mem_reg mmap error: %s (%d)\n",
@@ -82,7 +83,10 @@ bool read_mem_reg(uint32_t addr, uint32_t *output) {
     } else
         mapped_area = loaded_area;
 
-    *output = *(volatile uint32_t *)(mapped_area + (addr - offset));
+    if (op == OP_READ)
+        *data = *(volatile uint32_t *)(mapped_area + (addr - offset));
+    else if (op == OP_WRITE)
+        *(volatile uint32_t *)(mapped_area + (addr - offset)) = *data;
 
     return true;
 }

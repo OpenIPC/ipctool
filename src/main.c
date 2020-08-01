@@ -11,7 +11,7 @@
 #include "chipid.h"
 #include "hal_hisi.h"
 #include "network.h"
-#include "sensorid.h"
+#include "sensors.h"
 #include "tools.h"
 #include "version.h"
 
@@ -24,15 +24,16 @@ void Help() {
         printf("%s+%s\n", get_git_branch(), get_git_revision());
     }
 
-    printf("    available options:\n");
-    printf("        --chip_id\n");
-    printf("        --sensor_id\n");
-    printf("        --isp_register\n");
-    printf("        --isp_version\n");
-    printf("        --isp_build\n");
-    printf("        --isp_sequence_number\n");
-    printf("        --mpp_info\n");
-    printf("        --help\n");
+    printf("available options:\n"
+           "\t--chip_id\n"
+           "\t--sensor_id\n"
+           "\t--isp_register\n"
+           "\t--isp_version\n"
+           "\t--isp_build\n"
+           "\t--isp_sequence_number\n"
+           "\t--mpp_info\n"
+           "\t--temp\n"
+           "\t--help\n");
 }
 
 void print_system_id() {
@@ -165,6 +166,9 @@ int main(int argc, char *argv[]) {
                 printf("%s\n", mpp_info);
             else
                 return EXIT_FAILURE;
+        } else if (strcmp(cmd, "--temp") == 0) {
+            get_system_id();
+            return hisi_get_temp();
         } else
             Help();
         return EXIT_SUCCESS;

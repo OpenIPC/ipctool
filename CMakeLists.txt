@@ -40,8 +40,8 @@ add_executable(ipc_chip_info
     src/main.c
     src/network.c
     src/network.h
-    src/sensorid.c
-    src/sensorid.c
+    src/sensors.c
+    src/sensors.c
     src/stack.c
     src/tools.c
     src/tools.h

@@ -119,9 +119,11 @@ static const char *get_chip_id(uint32_t reg) {
         return "3516CV300";
     case 0x3516D300:
         return "3516DV300";
-    case 0x3516e200:
+    case 0x3516E200:
+        chip_generation = 0x3516E300;
         return "3516EV200";
-    case 0x3516e300:
+    case 0x3516E300:
+        chip_generation = 0x3516E300;
         return "3516EV300";
     case 0x35180100:
         return get_chip_id35180100();

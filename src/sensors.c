@@ -11,7 +11,7 @@
 
 #include "chipid.h"
 #include "hal_common.h"
-#include "sensorid.h"
+#include "sensors.h"
 
 char sensor_id[128];
 char sensor_manufacturer[128];
