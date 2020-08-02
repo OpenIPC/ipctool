@@ -38,6 +38,8 @@ add_executable(ipc_chip_info
     src/hal_xm.c
     src/hal_xm.h
     src/main.c
+    src/mtd.h
+    src/mtd.c
     src/network.c
     src/network.h
     src/sensors.c

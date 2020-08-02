@@ -10,6 +10,7 @@
 
 #include "chipid.h"
 #include "hal_hisi.h"
+#include "mtd.h"
 #include "network.h"
 #include "sensors.h"
 #include "tools.h"
@@ -78,15 +79,6 @@ void print_ethernet_data() {
     // printf("  connection: rmii\n");
 }
 
-void print_rom_data() {
-    printf("rom:\n"
-           "  - type: spi_nor\n"
-           "    chip: mx25l6436f\n"
-           "    id: 0xef 0x40 0x18\n"
-           "    size: 8M\n"
-           "    block: 64K\n");
-}
-
 void print_sensor_id() {
     printf("sensors:\n"
            "  - vendor: %s\n"
@@ -121,7 +113,7 @@ int main(int argc, char *argv[]) {
             print_system_id();
             print_chip_id();
             print_ethernet_data();
-            // print_rom_data();
+            print_mtd_info();
         } else
             return EXIT_FAILURE;
 
