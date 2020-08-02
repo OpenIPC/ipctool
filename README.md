@@ -111,8 +111,9 @@ Tested on:
 |Manufacturer           |Models                                 |
 |-----------------------|---------------------------------------|
 |Silicon Optronics, Inc.|JX-F22, JX-F23, JX-F37, JX-H62, JX-H65 |
-|Sony                   |IMX291, IMX307, IMX323, IMX335         |
+|Sony                   |IMX291, IMX307, IMX322, IMX323, IMX335 |
 |ON Semiconductor       |AR0130, AR0237                         |
 |SmartSens              |SC2235, SC2235P, SC5300                |
+|OmniVision             |OV9712                                 |
 
 Please test on your device to help us extend the list.

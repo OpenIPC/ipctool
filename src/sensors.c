@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fcntl.h>
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <linux/ioctl.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
+#include <unistd.h>
 
 #include "chipid.h"
 #include "hal_common.h"
@@ -17,12 +19,9 @@ char sensor_id[128];
 char sensor_manufacturer[128];
 char control[128];
 
-int detect_sony_sensor(int fd, unsigned char i2c_addr) {
-    return false;
+int detect_sony_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
-
-    const unsigned int base = 0x3000;
 
     // from IMX335 datasheet, p.40
     // 316Ah - 2-6 bits are 1, 7 bit is 0
@@ -42,7 +41,6 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr) {
         int ret304F = sensor_read_register(fd, i2c_addr, base + 0x4F, 2, 1);
         if (ret304F == 0x07) {
             sprintf(sensor_id, "IMX323");
-
         } else {
             sprintf(sensor_id, "IMX322");
         }
@@ -50,8 +48,7 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr) {
     }
 
     int ret31dc = sensor_read_register(fd, i2c_addr, base + 0x1DC, 2, 1);
-    printf("0x31DC: 0x%x\n", ret31dc);
-    if (ret31dc > 0) {
+    if (ret31dc > 0 && ret31dc != 0xff) {
         switch (ret31dc & 6) {
         case 4:
             sprintf(sensor_id, "IMX307");
@@ -71,7 +68,7 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr) {
 
 // tested on F22, F23, F37, H62, H65
 // TODO(FlyRouter): test on H42, H81
-int detect_soi_sensor(int fd, unsigned char i2c_addr) {
+int detect_soi_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -103,7 +100,7 @@ int detect_soi_sensor(int fd, unsigned char i2c_addr) {
 }
 
 // tested on AR0130
-int detect_onsemi_sensor(int fd, unsigned char i2c_addr) {
+int detect_onsemi_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -120,9 +117,10 @@ int detect_onsemi_sensor(int fd, unsigned char i2c_addr) {
     case 0x256:
         sid = 0x0237;
         break;
-    // no response
+    case 0:
     case 0xffffffff:
     case 0xffff:
+        // no response
         break;
     default:
         fprintf(stderr, "Error: unexpected value for Aptina == 0x%x\n", pid);
@@ -134,7 +132,7 @@ int detect_onsemi_sensor(int fd, unsigned char i2c_addr) {
     return sid;
 }
 
-int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
+int detect_smartsens_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -201,7 +199,7 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr) {
 }
 
 // TODO(FlyRouter): test on OV9732
-int detect_omni_sensor(int fd, unsigned char i2c_addr) {
+int detect_omni_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -244,15 +242,17 @@ int detect_omni_sensor(int fd, unsigned char i2c_addr) {
     return true;
 }
 
-int detect_possible_sensors(int fd, int (*detect_fn)(int, unsigned char),
-                            int type) {
+int detect_possible_sensors(int fd,
+                            int (*detect_fn)(int, unsigned char,
+                                             unsigned int base),
+                            int type, unsigned int base) {
     sensor_addr_t *sdata = possible_i2c_addrs;
 
     while (sdata->sensor_type) {
         if (sdata->sensor_type == type) {
             unsigned char *addr = sdata->addrs;
             while (*addr) {
-                if (detect_fn(fd, *addr)) {
+                if (detect_fn(fd, *addr, base)) {
                     return true;
                 };
                 addr++;
@@ -263,29 +263,56 @@ int detect_possible_sensors(int fd, int (*detect_fn)(int, unsigned char),
     return false;
 }
 
-bool get_sensor_id_i2c() {
+static bool get_sensor_id_i2c() {
     int fd = open_sensor_fd();
 
-    if (detect_possible_sensors(fd, detect_soi_sensor, SENSOR_SOI)) {
+    if (detect_possible_sensors(fd, detect_soi_sensor, SENSOR_SOI, 0)) {
         strcpy(sensor_manufacturer, "Silicon Optronics");
         return true;
-    } else if (detect_possible_sensors(fd, detect_onsemi_sensor,
-                                       SENSOR_ONSEMI)) {
+    } else if (detect_possible_sensors(fd, detect_onsemi_sensor, SENSOR_ONSEMI,
+                                       0)) {
         strcpy(sensor_manufacturer, "ON Semiconductor");
         return true;
-    } else if (detect_possible_sensors(fd, detect_sony_sensor, SENSOR_SONY)) {
+    } else if (detect_possible_sensors(fd, detect_sony_sensor, SENSOR_SONY,
+                                       0x3000)) {
         strcpy(sensor_manufacturer, "Sony");
         return true;
     } else if (detect_possible_sensors(fd, detect_omni_sensor,
-                                       SENSOR_OMNIVISION)) {
+                                       SENSOR_OMNIVISION, 0)) {
         strcpy(sensor_manufacturer, "OmniVision");
         return true;
     } else if (detect_possible_sensors(fd, detect_smartsens_sensor,
-                                       SENSOR_SMARTSENS)) {
+                                       SENSOR_SMARTSENS, 0)) {
         strcpy(sensor_manufacturer, "SmartSens");
         return true;
     }
+
+    close(fd);
     return false;
+}
+
+int dummy_change_addr(int fd, unsigned char addr) {}
+
+#define SSP_READ_ALT 0x1
+int sony_ssp_read_register(int fd, unsigned char i2c_addr,
+                           unsigned int reg_addr, unsigned int reg_width,
+                           unsigned int data_width) {
+    unsigned int data = (unsigned int)(((reg_addr & 0xffff) << 8));
+    int ret = ioctl(fd, SSP_READ_ALT, &data);
+    return data & 0xff;
+}
+
+static bool get_sensor_id_spi() {
+    int fd = open("/dev/ssp", 0);
+    if (fd < 0)
+        return false;
+
+    sensor_i2c_change_addr = dummy_change_addr;
+    sensor_read_register = sony_ssp_read_register;
+
+    int res = detect_sony_sensor(fd, 0, 0x200);
+    close(fd);
+    return res;
 }
 
 bool get_sensor_id() {
@@ -297,8 +324,14 @@ bool get_sensor_id() {
     bool i2c_detected = get_sensor_id_i2c();
     if (i2c_detected) {
         strcpy(control, "i2c");
+        return true;
     }
-    return i2c_detected;
+
+    bool spi_detected = get_sensor_id_spi();
+    if (spi_detected) {
+        strcpy(control, "spi");
+    }
+    return spi_detected;
 }
 
 const char *get_sensor_data_type() {
