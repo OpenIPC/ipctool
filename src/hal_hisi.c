@@ -287,9 +287,9 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
     tx_buf[1] = reg_addr & 0xff;
     tx_buf[2] = 0;
     memset(mesg, 0, sizeof(mesg));
-    mesg[0].tx_buf = (char *)tx_buf;
+    mesg[0].tx_buf = (__u64)(__u32)&tx_buf;
     mesg[0].len = 3;
-    mesg[0].rx_buf = (char *)rx_buf;
+    mesg[0].rx_buf = (__u64)(__u32)&rx_buf;
     mesg[0].cs_change = 1;
 
     ret = ioctl(fd, SPI_IOC_MESSAGE(1), mesg);
@@ -330,6 +330,42 @@ int hisi_SYS_DRV_GetChipId() {
         return -1;
     return id;
 }
+
+struct CV100_PERI_CRG12 {
+    unsigned int sense_cksel : 3;
+};
+
+static char *cv100_sensor_clksel(unsigned int sensor_clksel) {
+    switch (sensor_clksel) {
+    case 0:
+        return "12MHz";
+    case 1:
+        return "24MHz";
+    case 2:
+    case 5:
+        return "27MHz";
+    case 3:
+        return "54MHz";
+    case 4:
+        return "13.54MHz";
+    case 6:
+        return "37.125MHz";
+    case 7:
+        return "74.25MHz";
+    }
+}
+
+const unsigned int CV100_PERI_CRG12_ADRR = 0x20030030;
+const char *hisi_cv100_get_sensor_clock() {
+    struct CV100_PERI_CRG12 crg12;
+    int res = mem_reg(CV100_PERI_CRG12_ADRR, (uint32_t *)&crg12, OP_READ);
+    if (res) {
+        return cv100_sensor_clksel(crg12.sense_cksel);
+    }
+    return NULL;
+}
+
+const char *hisi_cv100_get_sensor_data_type() { return "DC"; }
 
 enum CV200_MIPI_PHY {
     CV200_PHY_MIPI_MODE = 0,

@@ -2,10 +2,12 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <fcntl.h>
 #include <sys/errno.h>
+#include <sys/klog.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -99,4 +101,26 @@ void lprintf(char *fmt, ...) {
         ptr++;
     }
     printf("%s", buf);
+}
+
+#define SYSLOG_ACTION_READ_ALL 3
+ssize_t get_dmesg_buf(char **buf) {
+    int len = klogctl(10, NULL, 0); /* read ring buffer size */
+    printf("len = %d\n", len);
+
+    *buf = malloc(len);
+    if (!*buf)
+        return 0;
+    len = klogctl(SYSLOG_ACTION_READ_ALL, *buf, len);
+    return len;
+}
+
+void dmesg() {
+    char *dmesg;
+    ssize_t len = get_dmesg_buf(&dmesg);
+
+    if (dmesg) {
+        puts(dmesg);
+        free(dmesg);
+    }
 }

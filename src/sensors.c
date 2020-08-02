@@ -25,21 +25,22 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
 
     // from IMX335 datasheet, p.40
     // 316Ah - 2-6 bits are 1, 7 bit is 0
-    int ret316a = sensor_read_register(fd, i2c_addr, base + 0x16A, 2, 1);
+    int ret16a = sensor_read_register(fd, i2c_addr, base + 0x16A, 2, 1);
     // early break
-    if (ret316a == -1)
+    if (ret16a == -1)
         return false;
 
-    if (ret316a > 0 && ((ret316a & 0xfc) == 0x7c)) {
+    if (ret16a > 0 && ((ret16a & 0xfc) == 0x7c)) {
         sprintf(sensor_id, "IMX335");
         return true;
     }
 
     // Fixed to "40h"
-    int ret3013 = sensor_read_register(fd, i2c_addr, base + 0x13, 2, 1);
-    if (ret3013 == 0x40) {
-        int ret304F = sensor_read_register(fd, i2c_addr, base + 0x4F, 2, 1);
-        if (ret304F == 0x07) {
+    int ret13 = sensor_read_register(fd, i2c_addr, base + 0x13, 2, 1);
+    if (ret13 == 0x40) {
+
+        int ret4F = sensor_read_register(fd, i2c_addr, base + 0x4F, 2, 1);
+        if (ret4F == 0x07) {
             sprintf(sensor_id, "IMX323");
         } else {
             sprintf(sensor_id, "IMX322");
@@ -47,9 +48,9 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
         return true;
     }
 
-    int ret31dc = sensor_read_register(fd, i2c_addr, base + 0x1DC, 2, 1);
-    if (ret31dc > 0 && ret31dc != 0xff) {
-        switch (ret31dc & 6) {
+    int ret1dc = sensor_read_register(fd, i2c_addr, base + 0x1DC, 2, 1);
+    if (ret1dc > 0 && ret1dc != 0xff) {
+        switch (ret1dc & 6) {
         case 4:
             sprintf(sensor_id, "IMX307");
             break;
@@ -57,7 +58,7 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
             sprintf(sensor_id, "IMX327");
             break;
         default:
-            sprintf(sensor_id, "IMX29%d", ret31dc & 7);
+            sprintf(sensor_id, "IMX29%d", ret1dc & 7);
             return true;
         }
         return true;
@@ -300,7 +301,7 @@ static bool get_sensor_id_spi() {
     if (chip_generation == 0x35180100) {
         fd = open("/dev/ssp", 0);
         sensor_read_register = sony_ssp_read_register;
-    } else if (chip_generation == 0x3516C300) {
+    } else if (chip_generation == 0x3516C300 || chip_generation == 0x3518E200) {
         fd = open("/dev/spidev0.0", 0);
         sensor_read_register = hisi_gen3_spi_read_register;
     } else
@@ -339,6 +340,8 @@ bool get_sensor_id() {
 
 const char *get_sensor_data_type() {
     switch (chip_generation) {
+    case 0x35180100:
+        return hisi_cv100_get_sensor_data_type();
     case 0x3518E200:
         return hisi_cv200_get_sensor_data_type();
     case 0x3516C300:
@@ -352,6 +355,8 @@ const char *get_sensor_data_type() {
 
 const char *get_sensor_clock() {
     switch (chip_generation) {
+    case 0x35180100:
+        return hisi_cv100_get_sensor_clock();
     case 0x3518E200:
         return hisi_cv200_get_sensor_clock();
     case 0x3516C300:
