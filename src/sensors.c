@@ -18,6 +18,7 @@ char sensor_manufacturer[128];
 char control[128];
 
 int detect_sony_sensor(int fd, unsigned char i2c_addr) {
+    return false;
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -49,6 +50,7 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr) {
     }
 
     int ret31dc = sensor_read_register(fd, i2c_addr, base + 0x1DC, 2, 1);
+    printf("0x31DC: 0x%x\n", ret31dc);
     if (ret31dc > 0) {
         switch (ret31dc & 6) {
         case 4:
@@ -91,6 +93,7 @@ int detect_soi_sensor(int fd, unsigned char i2c_addr) {
         return true;
     // it can be another sensor type
     case 0:
+    case 0xff:
         return false;
     default:
         fprintf(stderr, "Error: unexpected value for SOI == 0x%x\n",
@@ -119,6 +122,7 @@ int detect_onsemi_sensor(int fd, unsigned char i2c_addr) {
         break;
     // no response
     case 0xffffffff:
+    case 0xffff:
         break;
     default:
         fprintf(stderr, "Error: unexpected value for Aptina == 0x%x\n", pid);
@@ -218,10 +222,24 @@ int detect_omni_sensor(int fd, unsigned char i2c_addr) {
     if (!res)
         return false;
 
-    // 0x9711 for OV9712
-    // 0x9732 for OV9732
-    // 0x9750 for OV9750
-    fprintf(stderr, "Detected omni: %x\n", res);
+    // model mapping
+    switch (res) {
+    case 0x9711:
+        res = 0x9712;
+        break;
+    case 0x9732:
+    case 0x9750:
+        // for models with identical ID for model name
+        break;
+    case 0:
+    case 0xffff:
+        return false;
+    default:
+        fprintf(stderr, "Error: unexpected value for OmniVision == 0x%x\n",
+                res);
+        return false;
+    }
+    sprintf(sensor_id, "OV%04x", res);
 
     return true;
 }
@@ -258,13 +276,13 @@ bool get_sensor_id_i2c() {
     } else if (detect_possible_sensors(fd, detect_sony_sensor, SENSOR_SONY)) {
         strcpy(sensor_manufacturer, "Sony");
         return true;
-    } else if (detect_possible_sensors(fd, detect_smartsens_sensor,
-                                       SENSOR_SMARTSENS)) {
-        strcpy(sensor_manufacturer, "SmartSens");
-        return true;
     } else if (detect_possible_sensors(fd, detect_omni_sensor,
                                        SENSOR_OMNIVISION)) {
         strcpy(sensor_manufacturer, "OmniVision");
+        return true;
+    } else if (detect_possible_sensors(fd, detect_smartsens_sensor,
+                                       SENSOR_SMARTSENS)) {
+        strcpy(sensor_manufacturer, "SmartSens");
         return true;
     }
     return false;

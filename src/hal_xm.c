@@ -21,17 +21,7 @@ sensor_addr_t xm_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
                                          {SENSOR_BRIGATES, bg_addrs},
                                          {0, NULL}};
 
-int xm_open_sensor_fd() {
-    int adapter_nr = 0; /* probably dynamically determined */
-    char adap_name[FILENAME_MAX] = {0};
-    strcpy(adap_name, "/dev/xm_i2c");
-
-    if (adapter_nr) {
-        sprintf(adap_name + strlen(adap_name), "%d", adapter_nr);
-    }
-
-    return common_open_sensor_fd(adap_name);
-}
+int xm_open_sensor_fd() { return common_open_sensor_fd("/dev/xm_i2c"); }
 
 int xm_sensor_read_register(int fd, unsigned char i2c_addr,
                             unsigned int reg_addr, unsigned int reg_width,

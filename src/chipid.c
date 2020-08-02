@@ -104,8 +104,6 @@ static const char *get_chip_id(uint32_t reg) {
     switch (reg) {
     case 0x6000001:
         return "3516AV200";
-    case 0x3516C100:
-        return "3516CV100";
     case 0x3516A100:
         return "3516AV100";
     case 0x3516D100:
@@ -126,6 +124,7 @@ static const char *get_chip_id(uint32_t reg) {
         chip_generation = 0x3516E300;
         return "3516EV300";
     case 0x35180100:
+        chip_generation = 0x35180100;
         return get_chip_id35180100();
     case 0x3518E200:
         chip_generation = 0x3518E200;

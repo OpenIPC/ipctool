@@ -36,6 +36,8 @@ int hisi_open_sensor_fd() {
     return common_open_sensor_fd(filename);
 }
 
+int hisi_gen1_open_sensor_fd() { return common_open_sensor_fd("/dev/hi_i2c"); }
+
 // Set I2C slave address
 int hisi_sensor_i2c_change_addr(int fd, unsigned char addr) {
     // use i2c address shift only for generations other than 2
@@ -246,7 +248,11 @@ int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
 void setup_hal_hisi() {
     open_sensor_fd = hisi_open_sensor_fd;
     sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
-    if (chip_generation == 0x3518E200) {
+    if (chip_generation == 0x35180100) {
+        open_sensor_fd = hisi_gen1_open_sensor_fd;
+        sensor_read_register = xm_sensor_read_register;
+        sensor_write_register = xm_sensor_write_register;
+    } else if (chip_generation == 0x3518E200) {
         sensor_read_register = hisi_gen2_sensor_read_register;
         sensor_write_register = hisi_gen2_sensor_write_register;
     } else {
