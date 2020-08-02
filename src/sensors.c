@@ -311,6 +311,9 @@ static bool get_sensor_id_spi() {
     sensor_read_register = sony_ssp_read_register;
 
     int res = detect_sony_sensor(fd, 0, 0x200);
+    if (res) {
+        strcpy(sensor_manufacturer, "Sony");
+    }
     close(fd);
     return res;
 }
