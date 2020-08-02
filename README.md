@@ -28,6 +28,40 @@ work on vast majority of hardware.
     (or run without params to get full available information)
 ```
 
+When run without parameters utility produces YAML with all hardware-specific
+information about given IPC:
+
+```yaml
+---
+chip:
+  vendor: HiSilicon
+  model: 3516CV200
+ethernet:
+  mac: "00:12:17:83:d6:39"
+rom:
+  - type: nor
+    size: 8M
+    block: 64K
+    partitions:
+      - name: boot
+        size: 0x50000
+      - name: kernel
+        size: 0x380000
+      - name: rootfs
+        size: 0x150000
+      - name: rootfs_data
+        size: 0x2e0000
+sensors:
+  - vendor: Sony
+    model: IMX323
+    control:
+      bus: 0
+      type: i2c
+    data:
+      type: DC
+    clock: 24MHz
+```
+
 ### In your own scripts
 
 * Determine chip id:
