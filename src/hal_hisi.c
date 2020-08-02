@@ -245,6 +245,62 @@ int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
     return data;
 }
 
+#define SSP_READ_ALT 0x1
+int sony_ssp_read_register(int fd, unsigned char i2c_addr,
+                           unsigned int reg_addr, unsigned int reg_width,
+                           unsigned int data_width) {
+    unsigned int data = (unsigned int)(((reg_addr & 0xffff) << 8));
+    int ret = ioctl(fd, SSP_READ_ALT, &data);
+    return data & 0xff;
+}
+
+struct spi_ioc_transfer {
+    __u64 tx_buf;
+    __u64 rx_buf;
+
+    __u32 len;
+    __u32 speed_hz;
+
+    __u16 delay_usecs;
+    __u8 bits_per_word;
+    __u8 cs_change;
+    __u32 pad;
+};
+
+#define SPI_IOC_MAGIC 'k'
+#define SPI_MSGSIZE(N)                                                         \
+    ((((N) * (sizeof(struct spi_ioc_transfer))) < (1 << _IOC_SIZEBITS))        \
+         ? ((N) * (sizeof(struct spi_ioc_transfer)))                           \
+         : 0)
+#define SPI_IOC_MESSAGE(N) _IOW(SPI_IOC_MAGIC, 0, char[SPI_MSGSIZE(N)])
+
+int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
+                                unsigned int reg_addr, unsigned int reg_width,
+                                unsigned int data_width) {
+    int ret = 0;
+    struct spi_ioc_transfer mesg[1];
+    unsigned char tx_buf[8] = {0};
+    unsigned char rx_buf[8] = {0};
+
+    tx_buf[0] = (reg_addr & 0xff00) >> 8;
+    tx_buf[0] |= 0x80;
+    tx_buf[1] = reg_addr & 0xff;
+    tx_buf[2] = 0;
+    memset(mesg, 0, sizeof(mesg));
+    mesg[0].tx_buf = (char *)tx_buf;
+    mesg[0].len = 3;
+    mesg[0].rx_buf = (char *)rx_buf;
+    mesg[0].cs_change = 1;
+
+    ret = ioctl(fd, SPI_IOC_MESSAGE(1), mesg);
+    if (ret < 0) {
+        printf("SPI_IOC_MESSAGE error \n");
+        return -1;
+    }
+
+    return rx_buf[2];
+}
+
 void setup_hal_hisi() {
     open_sensor_fd = hisi_open_sensor_fd;
     sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;

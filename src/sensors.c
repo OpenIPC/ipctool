@@ -293,22 +293,22 @@ static bool get_sensor_id_i2c() {
 
 int dummy_change_addr(int fd, unsigned char addr) {}
 
-#define SSP_READ_ALT 0x1
-int sony_ssp_read_register(int fd, unsigned char i2c_addr,
-                           unsigned int reg_addr, unsigned int reg_width,
-                           unsigned int data_width) {
-    unsigned int data = (unsigned int)(((reg_addr & 0xffff) << 8));
-    int ret = ioctl(fd, SSP_READ_ALT, &data);
-    return data & 0xff;
-}
-
 static bool get_sensor_id_spi() {
-    int fd = open("/dev/ssp", 0);
+    int fd = -1;
+
+    // fallback for SPI implemented only for HiSilicon
+    if (chip_generation == 0x35180100) {
+        fd = open("/dev/ssp", 0);
+        sensor_read_register = sony_ssp_read_register;
+    } else if (chip_generation == 0x3516C300) {
+        fd = open("/dev/spidev0.0", 0);
+        sensor_read_register = hisi_gen3_spi_read_register;
+    } else
+        return false;
     if (fd < 0)
         return false;
 
     sensor_i2c_change_addr = dummy_change_addr;
-    sensor_read_register = sony_ssp_read_register;
 
     int res = detect_sony_sensor(fd, 0, 0x200);
     if (res) {

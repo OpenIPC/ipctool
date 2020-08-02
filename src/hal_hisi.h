@@ -16,4 +16,12 @@ const char *hisi_ev300_get_sensor_data_type();
 bool hisi_ev300_get_die_id(char *buf, ssize_t len);
 int hisi_get_temp();
 
+int sony_ssp_read_register(int fd, unsigned char i2c_addr,
+                           unsigned int reg_addr, unsigned int reg_width,
+                           unsigned int data_width);
+
+int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
+                                unsigned int reg_addr, unsigned int reg_width,
+                                unsigned int data_width);
+
 #endif /* HAL_HISI_H */
