@@ -67,7 +67,7 @@ void print_ethernet_data() {
     // [    1.172163] CONFIG_HIETH_PHYID_D 3
     printf("ethernet:\n");
     if (get_mac_address(buf, sizeof buf)) {
-        printf("  mac: %s\n", buf);
+        printf("  mac: \"%s\"\n", buf);
     };
 
     // CV300 only
@@ -92,8 +92,8 @@ void print_sensor_id() {
            "  - vendor: %s\n"
            "    model: %s\n"
            "    control:\n"
-           "      type: %s\n"
-           "      bus: 0\n",
+           "      bus: 0\n"
+           "      type: %s\n",
            sensor_manufacturer, sensor_id, control);
 
     const char *data_type = get_sensor_data_type();
@@ -117,6 +117,7 @@ int main(int argc, char *argv[]) {
 
     if (argc == 1) {
         if (get_system_id()) {
+            printf("---\n");
             print_system_id();
             print_chip_id();
             print_ethernet_data();

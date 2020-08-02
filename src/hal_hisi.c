@@ -269,6 +269,57 @@ int hisi_SYS_DRV_GetChipId() {
     return id;
 }
 
+enum CV200_MIPI_PHY {
+    CV200_PHY_MIPI_MODE = 0,
+    CV200_PHY_LVDS_MODE,
+    CV200_PHY_CMOS_MODE,
+    CV200_PHY_BYPASS
+};
+
+struct CV200_MISC_CTRL1 {
+    unsigned int sdio0_card_det_mode : 1;
+    unsigned int sdio1_card_det_mode : 1;
+    unsigned int tde_ddrt_mst_sel : 1;
+    bool bootram0_ck_gt_en : 1;
+    bool bootram1_ck_gt_en : 1;
+    unsigned int res0 : 1;
+    unsigned int bootrom_pgen : 1;
+    unsigned int uart1_rts_ctrl : 1;
+    unsigned int spi0_cs0_ctrl : 1;
+    unsigned int spi1_cs0_ctrl : 1;
+    unsigned int spi1_cs1_ctrl : 1;
+    unsigned int res1 : 1;
+    unsigned int ive_gzip_mst_sel : 1;
+    unsigned int res2 : 7;
+    enum CV200_MIPI_PHY mipi_phy_mode : 2;
+    unsigned int res3 : 4;
+    unsigned int ssp1_cs_sel : 2;
+    unsigned int res4 : 2;
+    unsigned int vicap_vpss_online : 1;
+};
+
+const unsigned int CV200_MISC_CTRL1_ADDR = 0x20120004;
+const char *hisi_cv200_get_sensor_data_type() {
+    struct CV200_MISC_CTRL1 ctrl1;
+    bool res = mem_reg(CV200_MISC_CTRL1_ADDR, (uint32_t *)&ctrl1, OP_READ);
+    // TODO: consider valid is ISP is running
+    if (res && *(uint32_t *)&ctrl1) {
+        switch (ctrl1.mipi_phy_mode) {
+        case CV200_PHY_MIPI_MODE:
+            return "MIPI";
+        case CV200_PHY_CMOS_MODE:
+            return "DC";
+        case CV200_PHY_LVDS_MODE:
+            return "LVDS";
+        case CV200_PHY_BYPASS:
+            return "BYPASS";
+        default:
+            return NULL;
+        }
+    }
+    return NULL;
+}
+
 enum CV300_MIPI_PHY {
     CV300_PHY_MIPI_MODE = 0,
     CV300_PHY_LVDS_MODE,
@@ -287,6 +338,26 @@ struct CV300_MISC_CTRL0 {
     unsigned int test_clksel : 4;
     unsigned int res1 : 2;
     bool commtx_rx_int_en : 1;
+};
+
+struct CV200_PERI_CRG11 {
+    bool vi0_cken : 1;
+    unsigned int vi0_pctrl : 1;
+    unsigned int vi0_sc_sel : 1;
+    unsigned int res0 : 1;
+    unsigned int phy_hs_lat : 2;
+    unsigned int phy_cmos_lat : 2;
+    unsigned int vi0_srst_req : 1;
+    unsigned int vi_hrst_req : 1;
+    unsigned int mipi_srst_req : 1;
+    unsigned int res1 : 1;
+    unsigned int isp_core_srst_req : 1;
+    unsigned int isp_cfg_srst_req : 1;
+    bool mipi_cken : 1;
+    unsigned int res2 : 1;
+    unsigned int sensor_cksel : 3;
+    bool sensor_cken : 1;
+    unsigned int sensor_srst_req : 1;
 };
 
 struct CV300_PERI_CRG11 {
@@ -333,28 +404,43 @@ const char *hisi_cv300_get_sensor_data_type() {
     return NULL;
 }
 
+static char *cv200_cv300_map_sensor_clksel(unsigned int sensor_clksel) {
+    switch (sensor_clksel) {
+    case 0:
+        return "74.25MHz";
+    case 1:
+        return "37.125MHz";
+    case 2:
+        return "54MHz";
+    case 3:
+        return "27MHz";
+    default:
+        if (sensor_clksel & 1) {
+            return "25MHz";
+        } else {
+            return "24MHz";
+        }
+    }
+}
+
+const unsigned int CV200_PERI_CRG11_ADRR = 0x2003002c;
+const char *hisi_cv200_get_sensor_clock() {
+    struct CV200_PERI_CRG11 crg11;
+    int res = mem_reg(CV200_PERI_CRG11_ADRR, (uint32_t *)&crg11, OP_READ);
+    // consider sensor clock value only when it's enabled
+    if (res && crg11.sensor_cken) {
+        return cv200_cv300_map_sensor_clksel(crg11.sensor_cksel);
+    }
+    return NULL;
+}
+
 const unsigned int CV300_PERI_CRG11_ADRR = 0x1201002c;
 const char *hisi_cv300_get_sensor_clock() {
     struct CV300_PERI_CRG11 crg11;
     int res = mem_reg(CV300_PERI_CRG11_ADRR, (uint32_t *)&crg11, OP_READ);
     // consider sensor clock value only when it's enabled
     if (res && crg11.sensor_cken) {
-        switch (crg11.sensor_clksel) {
-        case 0:
-            return "74.25MHz";
-        case 1:
-            return "37.125MHz";
-        case 2:
-            return "54MHz";
-        case 3:
-            return "27MHz";
-        default:
-            if (crg11.sensor_clksel & 1) {
-                return "25MHz";
-            } else {
-                return "24MHz";
-            }
-        }
+        return cv200_cv300_map_sensor_clksel(crg11.sensor_clksel);
     }
     return NULL;
 }
@@ -375,7 +461,7 @@ enum EV300_MIPI_PHY {
 };
 
 struct EV300_MISC_CTRL6 {
-    unsigned int mipirx0_work_mode : 2;
+    enum EV300_MIPI_PHY mipirx0_work_mode : 2;
 };
 
 const unsigned int EV300_MISC_CTRL6_ADDR = 0x12028018;
