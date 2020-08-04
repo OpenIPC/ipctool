@@ -188,6 +188,7 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
     case 0x5300:
         break;
     case 0:
+    case 0xffff:
         // SC1135 catches here
         return false;
     default:
