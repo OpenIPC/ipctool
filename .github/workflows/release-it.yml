@@ -37,10 +37,10 @@ jobs:
           wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/$TOOLCHAIN.tar.xz | \
             tar xfJ - -C /opt
           export PATH=/opt/$TOOLCHAIN/bin:$PATH
-          sudo apt install -y cmake
+          sudo apt install -y cmake upx-ucl
           cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
           cmake --build build
-          ${TOOLCHAIN}-strip build/ipc_chip_info
+          upx build/ipc_chip_info
           cp build/ipc_chip_info ipc_chip_info-$GIT_HASH
 
       - name: Prerelease (for dev versions)
