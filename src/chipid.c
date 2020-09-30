@@ -94,13 +94,15 @@ static const char *get_chip_id35180100() {
     case 0x3518A100:
         return "3518AV100";
     default:
-        fprintf(stderr, "get_chip_id() got unexpected 0x%x for 3518?v100\n",
+        fprintf(stderr,
+                "get_chip_id35180100() got unexpected 0x%x for 3518?v100\n"
+                "Check kernel modules loaded\n",
                 dvrid);
         return "unknown";
     }
 }
 
-static const char *get_chip_id(uint32_t reg) {
+static const char *get_hisi_chip_id(uint32_t reg) {
     switch (reg) {
     case 0x6000001:
         return "3516AV200";
@@ -215,7 +217,7 @@ bool detect_system() {
         ptr[2] = *(volatile char *)(sc_ctrl_map + SCSYSID2);
         ptr[3] = *(volatile char *)(sc_ctrl_map + SCSYSID3);
     }
-    strncpy(chip_id, get_chip_id(chip_id_u32), sizeof(chip_id));
+    strncpy(chip_id, get_hisi_chip_id(chip_id_u32), sizeof(chip_id));
 
     // Special case for 16cv200/18ev200/18ev201 family
     if (chip_id_u32 == 0x3518E200 || chip_id_u32 == 0x3516C300) {
