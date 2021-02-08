@@ -25,11 +25,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check if Git tag exists
-        run: |
-          echo "::set-env name=HEAD_TAG::$(git tag --points-at HEAD)"
-          echo "::set-env name=GIT_HASH::$(git rev-parse --short $GITHUB_SHA)"
-
       - name: Build sources
         run: |
           HEAD_TAG=$(git tag --points-at HEAD)
