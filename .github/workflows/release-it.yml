@@ -32,6 +32,21 @@ jobs:
 
       - name: Build sources
         run: |
+          HEAD_TAG=$(git tag --points-at HEAD)
+          GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
+          if [ -z "$HEAD_TAG" ]; then
+            TAG_NAME="latest"
+            RELEASE_NAME="Development Build"
+            PRERELEASE=true
+          else
+            TAG_NAME=${{ github.ref }}
+            RELEASE_NAME="Release ${{ github.ref }}"
+            PRERELEASE=false
+          fi
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
+
           REL="${{ steps.ct-ng-release.outputs.release }}"
           echo "Got release $REL"
           wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/$TOOLCHAIN.tar.xz | \
@@ -43,15 +58,25 @@ jobs:
           upx build/ipc_chip_info
           cp build/ipc_chip_info ipc_chip_info-$GIT_HASH
 
-      - name: Prerelease (for dev versions)
-        if: env.HEAD_TAG == ''
-        uses: "marvinpinto/action-automatic-releases@latest"
+      - name: Create release
+        uses: actions/create-release@v1
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Development Build"
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: true
-          files: "build/ipc_chip_info"
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: ${{ env.RELEASE_NAME }}
+          draft: false
+          prerelease: ${{ env.PRERELEASE }}
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: "build/ipc_chip_info"
+          asset_name: "build/ipc_chip_info"
+          tag: ${{ env.TAG_NAME }}
+          overwrite: true
 
       - name: Publish file on S3 for HTTP access (for dev versions)
         if: env.HEAD_TAG == ''
@@ -73,26 +98,3 @@ jobs:
           repository: OpenIPC/ipc_chip_info
           event-type: ci-tests
           client-payload: '{"sha": "${{ env.GIT_HASH }}"}'
-
-      - name: Create release (for tagged versions)
-        if: env.HEAD_TAG != ''
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset (for tagged versions)
-        if: env.HEAD_TAG != ''
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "build/ipc_chip_info"
-          asset_name: ipc_chip_info
-          asset_content_type: application/octet-stream
