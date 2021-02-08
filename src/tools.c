@@ -124,3 +124,47 @@ void dmesg() {
         free(dmesg);
     }
 }
+
+// avoid warnings for old compilers
+#if __GNUC__ < 7
+extern __ssize_t getline(char **__restrict __lineptr, size_t *__restrict __n,
+                         FILE *__restrict __stream) __wur;
+#endif
+
+bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
+                              size_t buflen) {
+    long res = false;
+
+    FILE *fiomem = fopen(filename, "r");
+    if (!fiomem)
+        return false;
+
+    regex_t regex;
+    regmatch_t matches[2];
+    if (!compile_regex(&regex, re))
+        goto exit;
+
+    char *line = buf;
+    size_t len = buflen;
+    ssize_t read;
+
+    while ((read = getline(&line, &len, fiomem)) != -1) {
+        if (regexec(&regex, line, sizeof(matches) / sizeof(matches[0]),
+                    (regmatch_t *)&matches, 0) == 0) {
+            regoff_t start = matches[1].rm_so;
+            regoff_t end = matches[1].rm_eo;
+
+            line[end] = 0;
+            if (start) {
+                memmove(line, line + start, end - start + 1);
+            }
+            res = true;
+            break;
+        }
+    }
+
+exit:
+    regfree(&regex);
+    fclose(fiomem);
+    return res;
+}

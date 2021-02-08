@@ -48,6 +48,10 @@ add_executable(ipc_chip_info
     src/tools.c
     src/tools.h
     src/version.h
+
+    src/vendors/xm.h
+    src/vendors/xm.c
+
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )
 

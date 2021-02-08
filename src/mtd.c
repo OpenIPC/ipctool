@@ -1,8 +1,11 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
+
+#include "chipid.h"
 
 struct mtd_info_user {
     uint8_t type;
@@ -68,6 +71,9 @@ void print_mtd_info() {
            "    size: %dM\n"
            "    block: %dK\n",
            mtd_type, totalsz / 1024 / 1024, erasesize / 1024);
+    if (strlen(nor_chip)) {
+        printf("    chip:\n%s", nor_chip);
+    }
     if (partsz) {
         printf("    partitions:\n%s", partitions);
     }

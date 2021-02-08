@@ -70,7 +70,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: "build/ipc_chip_info"
-          asset_name: "build/ipc_chip_info"
+          asset_name: "ipc_chip_info"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 

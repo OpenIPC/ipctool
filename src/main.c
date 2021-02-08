@@ -14,6 +14,7 @@
 #include "network.h"
 #include "sensors.h"
 #include "tools.h"
+#include "vendors/xm.h"
 #include "version.h"
 
 void Help() {
@@ -44,6 +45,16 @@ void print_system_id() {
     printf("vendor: %s\n"
            "model: %s\n",
            system_manufacturer, system_id);
+}
+
+void print_board_id() {
+    if (!*board_manufacturer && !*board_id)
+        return;
+
+    printf("board:\n"
+           "  vendor: %s\n"
+           "  model: %s\n%s",
+           board_manufacturer, board_id, board_specific);
 }
 
 void print_chip_id() {
@@ -101,6 +112,14 @@ void print_sensor_id() {
     }
 }
 
+bool get_board_id() {
+    if (is_xm_board()) {
+        gather_xm_board_info();
+        return true;
+    }
+    return false;
+}
+
 int main(int argc, char *argv[]) {
     isp_register = -1;
     sprintf(isp_version, "error");
@@ -110,6 +129,9 @@ int main(int argc, char *argv[]) {
     if (argc == 1) {
         if (get_system_id()) {
             printf("---\n");
+            if (get_board_id()) {
+                print_board_id();
+            }
             print_system_id();
             print_chip_id();
             print_ethernet_data();
