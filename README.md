@@ -2,6 +2,12 @@
 
 ![ipc-chip-info](https://github.com/OpenIPC/ipc_chip_info/workflows/ipc-chip-info/badge.svg)
 
+Thes basic concept belongs to [@cherov](http://github.com/chertov)(thank you for
+your original utility) and [@nikitos1550](https://github.com/nikitos1550/)(for
+cute YAML format for describing hardware). A warm welcome also to [Igor
+Zalatov](https://github.com/ZigFisher)(for suggestions for new features and
+describing ways to do them).
+
 ## Download
 
 Use [the

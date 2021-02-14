@@ -82,12 +82,16 @@ void print_ethernet_data() {
         printf("  mac: \"%s\"\n", buf);
     };
 
-    // CV300 only
-    // uint32_t val;
-    // bool res;
-    // res = read_mem_reg(0x10050108, &val); // 0x10050108 UD_MDIO_PHYADDR
-    // printf("  phyaddr: %x\n", val);
-    // printf("  connection: rmii\n");
+        // CV300 only
+#if 0
+    uint32_t val;
+    bool res;
+    res = mem_reg(0x10050108, &val, OP_READ); // 0x10050108 UD_MDIO_PHYADDR
+    if (res) {
+        printf("  phyaddr: %x\n", val);
+        printf("  connection: rmii\n");
+    }
+#endif
 }
 
 void print_sensor_id() {
@@ -120,6 +124,12 @@ bool get_board_id() {
     return false;
 }
 
+void print_ram_info() {
+    if (strlen(ram_specific)) {
+        printf("ram:\n%s", ram_specific);
+    }
+}
+
 int main(int argc, char *argv[]) {
     isp_register = -1;
     sprintf(isp_version, "error");
@@ -136,6 +146,7 @@ int main(int argc, char *argv[]) {
             print_chip_id();
             print_ethernet_data();
             print_mtd_info();
+            print_ram_info();
         } else
             return EXIT_FAILURE;
 

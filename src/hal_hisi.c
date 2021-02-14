@@ -301,6 +301,18 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
     return rx_buf[2];
 }
 
+static bool hisi_mmz_total() {
+    char buf[256];
+
+    if (!get_regex_line_from_file("/proc/media-mem", "total size=([0-9]+)KB",
+                                  buf, sizeof(buf))) {
+        return false;
+    }
+    sprintf(ram_specific + strlen(ram_specific), "  mediaMem: %dM\n",
+            atoi(buf) / 1024);
+    return true;
+}
+
 void setup_hal_hisi() {
     open_sensor_fd = hisi_open_sensor_fd;
     sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
@@ -317,6 +329,7 @@ void setup_hal_hisi() {
     }
     possible_i2c_addrs = hisi_possible_i2c_addrs;
     strcpy(short_manufacturer, "HI");
+    hisi_mmz_total();
 }
 
 int hisi_SYS_DRV_GetChipId() {
