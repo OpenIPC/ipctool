@@ -135,8 +135,8 @@ bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
                               size_t buflen) {
     long res = false;
 
-    FILE *fiomem = fopen(filename, "r");
-    if (!fiomem)
+    FILE *f = fopen(filename, "r");
+    if (!f)
         return false;
 
     regex_t regex;
@@ -144,27 +144,27 @@ bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
     if (!compile_regex(&regex, re))
         goto exit;
 
-    char *line = buf;
-    size_t len = buflen;
+    char *line = NULL;
+    size_t len = 0;
     ssize_t read;
 
-    while ((read = getline(&line, &len, fiomem)) != -1) {
+    while ((read = getline(&line, &len, f)) != -1) {
         if (regexec(&regex, line, sizeof(matches) / sizeof(matches[0]),
                     (regmatch_t *)&matches, 0) == 0) {
             regoff_t start = matches[1].rm_so;
             regoff_t end = matches[1].rm_eo;
 
             line[end] = 0;
-            if (start) {
-                memmove(line, line + start, end - start + 1);
-            }
+            strncpy(buf, line + start, buflen);
             res = true;
             break;
         }
     }
+    if (line)
+        free(line);
 
 exit:
     regfree(&regex);
-    fclose(fiomem);
+    fclose(f);
     return res;
 }
