@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 project(ipc_chip_info C)
 
 set(CMAKE_C_STANDARD 99)
@@ -10,8 +10,7 @@ if(NOT BUILD_SHARED_LIBS)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s -Os -ffunction-sections
-    -Wl,--gc-sections -DNDEBUG")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s -Os -ffunction-sections -Wl,--gc-sections -DNDEBUG")
 endif()
 
 # Add a custom command that produces version.cpp, plus
