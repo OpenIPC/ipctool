@@ -268,6 +268,8 @@ int detect_possible_sensors(int fd,
 static bool get_sensor_id_i2c() {
     bool detected = false;
     int fd = open_sensor_fd();
+    if (fd == -1)
+        return false;
 
     if (detect_possible_sensors(fd, detect_soi_sensor, SENSOR_SOI, 0)) {
         strcpy(sensor_manufacturer, "Silicon Optronics");

@@ -10,7 +10,8 @@ if(NOT BUILD_SHARED_LIBS)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s -Os -ffunction-sections -Wl,--gc-sections")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s -Os -ffunction-sections
+    -Wl,--gc-sections -DNDEBUG")
 endif()
 
 # Add a custom command that produces version.cpp, plus
@@ -38,10 +39,12 @@ add_executable(ipc_chip_info
     src/hal_xm.c
     src/hal_xm.h
     src/main.c
-    src/mtd.h
     src/mtd.c
+    src/mtd.h
     src/network.c
     src/network.h
+    src/ram.c
+    src/ram.h
     src/sensors.c
     src/sensors.c
     src/stack.c

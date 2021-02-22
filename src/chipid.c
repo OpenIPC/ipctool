@@ -132,6 +132,8 @@ bool detect_system() {
     case 0x12100000:
     // hi3516ev200
     case 0x12040000:
+    // hi3536
+    case 0x12080000:
         SC_CTRL_base = 0x12020000;
         break;
     // hi3518ev200
