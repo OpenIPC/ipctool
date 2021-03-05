@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -39,34 +40,43 @@ void Help() {
            "\t--help\n");
 }
 
+int yaml_printf(char *format, ...) {
+    va_list arglist;
+
+    va_start(arglist, format);
+    int ret = vfprintf(stdout, format, arglist);
+    va_end(arglist);
+    return ret;
+}
+
 void print_system_id() {
     if (!*system_manufacturer && !*system_id)
         return;
 
-    printf("vendor: %s\n"
-           "model: %s\n",
-           system_manufacturer, system_id);
+    yaml_printf("vendor: %s\n"
+                "model: %s\n",
+                system_manufacturer, system_id);
 }
 
 void print_board_id() {
     if (!*board_manufacturer && !*board_id)
         return;
 
-    printf("board:\n"
-           "  vendor: %s\n"
-           "  model: %s\n%s",
-           board_manufacturer, board_id, board_specific);
+    yaml_printf("board:\n"
+                "  vendor: %s\n"
+                "  model: %s\n%s",
+                board_manufacturer, board_id, board_specific);
 }
 
 void print_chip_id() {
-    printf("chip:\n"
-           "  vendor: %s\n"
-           "  model: %s\n",
-           chip_manufacturer, chip_id);
+    yaml_printf("chip:\n"
+                "  vendor: %s\n"
+                "  model: %s\n",
+                chip_manufacturer, chip_id);
     if (chip_generation == 0x3516E300) {
         char buf[1024];
         if (hisi_ev300_get_die_id(buf, sizeof buf)) {
-            printf("  id: %s\n", buf);
+            yaml_printf("  id: %s\n", buf);
         }
     }
 }
@@ -78,9 +88,9 @@ void print_ethernet_data() {
     // [    1.160082] CONFIG_HIETH_PHYID_U 1
     // [    1.168332] CONFIG_HIETH_PHYID_U 1
     // [    1.172163] CONFIG_HIETH_PHYID_D 3
-    printf("ethernet:\n");
+    yaml_printf("ethernet:\n");
     if (get_mac_address(buf, sizeof buf)) {
-        printf("  mac: \"%s\"\n", buf);
+        yaml_printf("  mac: \"%s\"\n", buf);
     };
 
         // CV300 only
@@ -89,31 +99,31 @@ void print_ethernet_data() {
     bool res;
     res = mem_reg(0x10050108, &val, OP_READ); // 0x10050108 UD_MDIO_PHYADDR
     if (res) {
-        printf("  phyaddr: %x\n", val);
-        printf("  connection: rmii\n");
+        yaml_printf("  phyaddr: %x\n", val);
+        yaml_printf("  connection: rmii\n");
     }
 #endif
 }
 
 void print_sensor_id() {
-    printf("sensors:\n"
-           "  - vendor: %s\n"
-           "    model: %s\n"
-           "    control:\n"
-           "      bus: 0\n"
-           "      type: %s\n",
-           sensor_manufacturer, sensor_id, control);
+    yaml_printf("sensors:\n"
+                "  - vendor: %s\n"
+                "    model: %s\n"
+                "    control:\n"
+                "      bus: 0\n"
+                "      type: %s\n",
+                sensor_manufacturer, sensor_id, control);
 
     const char *data_type = get_sensor_data_type();
     if (data_type) {
-        printf("    data:\n"
-               "      type: %s\n",
-               data_type);
+        yaml_printf("    data:\n"
+                    "      type: %s\n",
+                    data_type);
     }
 
     const char *sensor_clock = get_sensor_clock();
     if (sensor_clock) {
-        printf("    clock: %s\n", sensor_clock);
+        yaml_printf("    clock: %s\n", sensor_clock);
     }
 }
 
@@ -127,7 +137,7 @@ bool get_board_id() {
 
 void print_ram_info() {
     if (strlen(ram_specific)) {
-        printf("ram:\n%s", ram_specific);
+        yaml_printf("ram:\n%s", ram_specific);
     }
 }
 
@@ -142,7 +152,7 @@ int main(int argc, char *argv[]) {
     if (argc == 1) {
         generic_system_data();
         if (get_system_id()) {
-            printf("---\n");
+            yaml_printf("---\n");
             if (get_board_id()) {
                 print_board_id();
             }

@@ -7,6 +7,9 @@
 
 #include "chipid.h"
 
+// TODO: refactor later
+int yaml_printf(char *format, ...);
+
 struct mtd_info_user {
     uint8_t type;
     uint32_t flags;
@@ -66,15 +69,15 @@ void print_mtd_info() {
             }
         }
     }
-    printf("rom:\n"
-           "  - type: %s\n"
-           "    size: %dM\n"
-           "    block: %dK\n",
-           mtd_type, totalsz / 1024 / 1024, erasesize / 1024);
+    yaml_printf("rom:\n"
+                "  - type: %s\n"
+                "    size: %dM\n"
+                "    block: %dK\n",
+                mtd_type, totalsz / 1024 / 1024, erasesize / 1024);
     if (strlen(nor_chip)) {
-        printf("    chip:\n%s", nor_chip);
+        yaml_printf("    chip:\n%s", nor_chip);
     }
     if (partsz) {
-        printf("    partitions:\n%s", partitions);
+        yaml_printf("    partitions:\n%s", partitions);
     }
 }
