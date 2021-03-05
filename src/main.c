@@ -40,11 +40,16 @@ void Help() {
            "\t--help\n");
 }
 
+// backup mode pipe end
+FILE *backup_fp;
+
 int yaml_printf(char *format, ...) {
     va_list arglist;
 
     va_start(arglist, format);
     int ret = vfprintf(stdout, format, arglist);
+    if (backup_fp)
+        vfprintf(backup_fp, format, arglist);
     va_end(arglist);
     return ret;
 }
@@ -143,6 +148,37 @@ void print_ram_info() {
 
 static void generic_system_data() { linux_mem(); }
 
+#define MAX_YAML 1024 * 64
+static bool backup_mode() {
+    int fds[2];
+    if (pipe(fds) == -1) {
+        fprintf(stderr, "Pipe Failed");
+        exit(1);
+    }
+
+    pid_t p = fork();
+    if (p < 0) {
+        exit(1);
+    } else if (p > 0) {
+        // parent process
+        close(fds[0]);
+        backup_fp = fdopen(fds[1], "w");
+        return false;
+    } else {
+        close(fds[1]);
+        char *yaml = calloc(MAX_YAML, 0);
+        char *ptr = yaml, *end = yaml + MAX_YAML;
+        size_t n;
+        while ((n = read(fds[0], ptr, 10)) && ptr != end) {
+            ptr += n;
+        }
+        size_t yaml_sz = ptr - yaml;
+        close(fds[0]);
+        free(yaml);
+        return true;
+    }
+}
+
 int main(int argc, char *argv[]) {
     isp_register = -1;
     sprintf(isp_version, "error");
@@ -150,6 +186,9 @@ int main(int argc, char *argv[]) {
     sprintf(isp_sequence_number, "error");
 
     if (argc == 1) {
+        if (backup_mode())
+            return EXIT_SUCCESS;
+
         generic_system_data();
         if (get_system_id()) {
             yaml_printf("---\n");
