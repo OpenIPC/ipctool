@@ -46,7 +46,7 @@ jobs:
 
           REL="${{ steps.ct-ng-release.outputs.release }}"
           echo "Got release $REL"
-          wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/$TOOLCHAIN.tar.xz2 | \
+          wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/$TOOLCHAIN.tar.xz | \
             tar xfJ - -C /opt
           export PATH=/opt/$TOOLCHAIN/bin:$PATH
           sudo apt install -y cmake upx-ucl
