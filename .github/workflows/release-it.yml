@@ -46,7 +46,7 @@ jobs:
 
           REL="${{ steps.ct-ng-release.outputs.release }}"
           echo "Got release $REL"
-          wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/$TOOLCHAIN.tar.xz | \
+          wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/$TOOLCHAIN.tar.xz2 | \
             tar xfJ - -C /opt
           export PATH=/opt/$TOOLCHAIN/bin:$PATH
           sudo apt install -y cmake upx-ucl
@@ -66,7 +66,7 @@ jobs:
           TG_NOTIFY="%0A%0AWarning, ipc_chip_info build error..."
           TG_DEBUG="%0A%0ACommit: $GIT_HASH %0ATag: $TAG_NAME"
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
-            -d chat_id=$TG_CHANNEL -d text="$TG_HEADER $TG_NOTIFY $TG_DEBUG"
+            -F chat_id=$TG_CHANNEL -F text="$TG_NOTIFY $TG_DEBUG" -F caption="$TG_HEADER"
 
       - name: Create release
         uses: actions/create-release@v1
