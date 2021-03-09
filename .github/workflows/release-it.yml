@@ -60,7 +60,7 @@ jobs:
           TG_CNL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
           TG_OPT: -s --connect-timeout 5 --max-time 15
         if: cancelled() == false
-        run: curl $TG_OPT-X POST https://api.telegram.org/bot$TG_KEY/sendMessage?chat_id=$TG_CNL&text="Warning, ipc_chip_info build error..."
+        run: curl $TG_OPT -X POST https://api.telegram.org/bot$TG_KEY/sendMessage?chat_id=$TG_CNL&text="Warning, ipc_chip_info build error..."
 
       - name: Create release
         uses: actions/create-release@v1
