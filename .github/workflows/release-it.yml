@@ -54,6 +54,7 @@ jobs:
           cmake --build build
           upx build/ipc_chip_info
           cp build/ipc_chip_info ipc_chip_info-$GIT_HASH
+        continue-on-error: true
 
       - name: Send warning message to telegram channel
         env:
