@@ -26,6 +26,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build sources
+        id: build
         run: |
           HEAD_TAG=$(git tag --points-at HEAD)
           GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
@@ -58,7 +59,7 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: cancelled() == false
+        if: steps.ct-ng-release.outcome != 'success' || steps.build.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
           TG_HEADER=$(echo -e "\xE2\x9A\xA0 GitHub Actions")
@@ -113,4 +114,7 @@ jobs:
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
         run: |
           TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
-          curl $TG_OPTIONS -F document="@build/ipc_chip_info" "https://api.telegram.org/bot$TG_TOKEN/sendDocument?chat_id=$TG_CHANNEL"
+          TG_HEADER=$(echo -e "\xE2\x9C\x85 GitHub Actions")
+          TG_DEBUG="%0A%0ACommit: $GIT_HASH %0ATag: $TAG_NAME"
+          curl $TG_OPTIONS -F document="@build/ipc_chip_info" https://api.telegram.org/bot$TG_TOKEN/sendDocument \
+            -d chat_id=$TG_CHANNEL -d text="$TG_HEADER $TG_DEBUG"
