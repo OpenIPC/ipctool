@@ -117,4 +117,4 @@ jobs:
           TG_HEADER=$(echo -e "\xE2\x9C\x85 GitHub Actions")
           TG_DEBUG="%0A%0ACommit: $GIT_HASH %0ATag: $TAG_NAME"
           curl $TG_OPTIONS -F document="@build/ipc_chip_info" https://api.telegram.org/bot$TG_TOKEN/sendDocument \
-            -d chat_id=$TG_CHANNEL -d caption="$TG_HEADER $TG_DEBUG"
+            -d chat_id=$TG_CHANNEL -F caption="$TG_HEADER $TG_DEBUG"
