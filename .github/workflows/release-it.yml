@@ -63,11 +63,11 @@ jobs:
         if: steps.ct-ng-release.outcome != 'success' || steps.build.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
-          TG_HEADER=$(echo -e "\xE2\x9A\xA0 GitHub Actions")
-          TG_NOTIFY="%0A%0AWarning, ipc_chip_info build error..."
-          TG_DEBUG="%0A%0ACommit: $GIT_HASH %0ATag: $TAG_NAME"
+          TG_HEADER=$(echo -e "\r\n\xE2\x9A\xA0 GitHub Actions")
+          TG_NOTIFY="\r\nWarning, ipc_chip_info build error..."
+          TG_DEBUG="\r\nCommit: $GIT_HASH \r\nTag: $TAG_NAME"
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
-            -F chat_id=$TG_CHANNEL -F text="$TG_NOTIFY $TG_DEBUG" -F caption="$TG_HEADER"
+            -F chat_id=$TG_CHANNEL -F text="$TG_NOTIFY $TG_DEBUG $TG_HEADER"
 
       - name: Create release
         uses: actions/create-release@v1
