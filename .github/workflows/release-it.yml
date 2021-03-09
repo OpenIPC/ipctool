@@ -45,7 +45,7 @@ jobs:
 
           REL="${{ steps.ct-ng-release.outputs.release }}"
           echo "Got release $REL"
-          wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/$TOOLCHAIN.tar.xz2 | \
+          wget -qO- https://github.com/widgetii/ct-ng-builds/releases/download/$REL/$TOOLCHAIN.tar.xz | \
             tar xfJ - -C /opt
           export PATH=/opt/$TOOLCHAIN/bin:$PATH
           sudo apt install -y cmake upx-ucl
@@ -54,7 +54,7 @@ jobs:
           upx build/ipc_chip_info
           cp build/ipc_chip_info ipc_chip_info-$GIT_HASH
 
-      - name: Send notification if build failed
+      - name: Send warning message to telegram channel
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
@@ -107,9 +107,10 @@ jobs:
           event-type: ci-tests
           client-payload: '{"sha": "${{ env.GIT_HASH }}"}'
 
-      - name: Send message to channel
+      - name: Send binary file to telegram channel
         env:
-          TG_KEY: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
-          TG_CNL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-          TG_OPT: -s --connect-timeout 5 --max-time 15
-        run: curl $TG_OPT -F document="@build/ipc_chip_info" "https://api.telegram.org/bot$TG_KEY/sendDocument?chat_id=$TG_CNL"
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
+          TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
+        run: |
+          TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
+          curl $TG_OPTIONS -F document="@build/ipc_chip_info" "https://api.telegram.org/bot$TG_TOKEN/sendDocument?chat_id=$TG_CHANNEL"
