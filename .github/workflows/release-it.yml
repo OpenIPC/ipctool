@@ -116,5 +116,5 @@ jobs:
           TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
           TG_HEADER=$(echo -e "\xE2\x9C\x85 GitHub Actions")
           TG_DEBUG="%0A%0ACommit: $GIT_HASH %0ATag: $TAG_NAME"
-          curl $TG_OPTIONS -F document="@build/ipc_chip_info" https://api.telegram.org/bot$TG_TOKEN/sendDocument \
-            -d chat_id=$TG_CHANNEL -F caption="$TG_HEADER $TG_DEBUG"
+          curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -F document="@build/ipc_chip_info" https://api.telegram.org/bot$TG_TOKEN/sendDocument \
+            -F chat_id=$TG_CHANNEL -F caption="$TG_HEADER $TG_DEBUG"
