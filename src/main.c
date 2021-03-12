@@ -9,6 +9,7 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "backup.h"
 #include "chipid.h"
 #include "hal_hisi.h"
 #include "mtd.h"
@@ -174,6 +175,7 @@ static bool backup_mode() {
         }
         size_t yaml_sz = ptr - yaml;
         close(fds[0]);
+        do_backup(yaml, yaml_sz);
         free(yaml);
         return true;
     }

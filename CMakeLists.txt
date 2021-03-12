@@ -27,6 +27,8 @@ include_directories(
 )
 
 add_executable(ipc_chip_info
+    src/backup.c
+    src/backup.h
     src/chipid.c
     src/chipid.c
     src/chipid.h
