@@ -130,14 +130,14 @@ int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
     for (int i = 0; i < srv.len; i++) {
         memcpy(&addr.sin_addr, &srv.ipv4_addr[i], sizeof(uint32_t));
 
-        //#ifndef NDEBUG
+#ifndef NDEBUG
         char buf[256];
         inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf));
-        fprintf(stderr, "Connecting to %s...\n", buf);
-        //#endif
+        fprintf(stdout, "Connecting to %s...\n", buf);
+#endif
 
         if (connect_with_timeout(s, (struct sockaddr *)&addr, sizeof(addr),
-                                 CONNECT_TIMEOUT) == 1) {
+                                 CONNECT_TIMEOUT) != 1) {
             ret = ERR_GENERAL;
             break;
         }
