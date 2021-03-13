@@ -90,7 +90,7 @@ jobs:
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
-      - name: Publish file on S3 for HTTP access (for dev versions)
+      - name: Publish file on S3 for HTTP access (to test dev versions)
         if: env.HEAD_TAG == ''
         uses: tpaschalis/s3-sync-action@master
         with:

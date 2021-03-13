@@ -13,4 +13,10 @@ void lprintf(char *fmt, ...);
 bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
                               size_t buflen);
 
+// avoid warnings for old compilers
+#if __GNUC__ < 7
+extern __ssize_t getline(char **__restrict __lineptr, size_t *__restrict __n,
+                         FILE *__restrict __stream) __wur;
+#endif
+
 #endif /* TOOLS_H */

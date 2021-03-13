@@ -32,6 +32,8 @@ add_executable(ipc_chip_info
     src/chipid.c
     src/chipid.c
     src/chipid.h
+    src/dns.c
+    src/dns.h
     src/fake_symbols.c
     src/hal_common.c
     src/hal_common.h
@@ -39,6 +41,8 @@ add_executable(ipc_chip_info
     src/hal_hisi.h
     src/hal_xm.c
     src/hal_xm.h
+    src/http.c
+    src/http.h
     src/main.c
     src/mtd.c
     src/mtd.h
@@ -59,5 +63,5 @@ add_executable(ipc_chip_info
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )
 
-target_link_libraries( ipc_chip_info dl )
+target_link_libraries(ipc_chip_info dl)
 install(TARGETS ipc_chip_info RUNTIME DESTINATION /usr/bin/)
