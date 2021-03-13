@@ -17,8 +17,10 @@
 #include "ram.h"
 #include "sensors.h"
 #include "tools.h"
-#include "vendors/xm.h"
 #include "version.h"
+
+#include "vendors/openwrt.h"
+#include "vendors/xm.h"
 
 void Help() {
     printf("ipc_chip_info, version: ");
@@ -68,10 +70,16 @@ void print_board_id() {
     if (!*board_manufacturer && !*board_id)
         return;
 
-    yaml_printf("board:\n"
-                "  vendor: %s\n"
-                "  model: %s\n%s",
-                board_manufacturer, board_id, board_specific);
+    yaml_printf("board:\n");
+
+    if (*board_manufacturer)
+        yaml_printf("  vendor: %s\n", board_manufacturer);
+    if (*board_id)
+        yaml_printf("  model: %s\n", board_id);
+    if (*board_ver)
+        yaml_printf("  version: %s\n", board_ver);
+    if (*board_specific)
+        yaml_printf("%s", board_specific);
 }
 
 void print_chip_id() {
@@ -137,6 +145,9 @@ bool get_board_id() {
     if (is_xm_board()) {
         gather_xm_board_info();
         return true;
+    } else if (is_openwrt_board()) {
+        gather_openwrt_board_info();
+        return true;
     }
     return false;
 }
@@ -151,8 +162,8 @@ static void generic_system_data() { linux_mem(); }
 
 #define MAX_YAML 1024 * 64
 static bool backup_mode() {
-    // prevent double backup creation
-    if (!udp_lock())
+    // prevent double backup creation and don't backup OpenWrt firmware
+    if (!udp_lock() || is_openwrt_board())
         return false;
 
     int fds[2];

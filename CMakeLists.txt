@@ -57,8 +57,10 @@ add_executable(ipc_chip_info
     src/tools.h
     src/version.h
 
-    src/vendors/xm.h
+    src/vendors/openwrt.c
+    src/vendors/openwrt.h
     src/vendors/xm.c
+    src/vendors/xm.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )

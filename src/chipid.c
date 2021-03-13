@@ -19,6 +19,7 @@
 char system_id[128];
 char system_manufacturer[128];
 char board_id[128];
+char board_ver[128];
 char board_manufacturer[128];
 char board_specific[1024];
 char ram_specific[1024];
