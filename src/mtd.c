@@ -28,10 +28,32 @@ struct mtd_info_user {
 #define MTD_NORFLASH 3
 #define MTD_NANDFLASH 4
 
+#define MAX_MPOINTS 10
+#define MPOINT_LEN 90
+
 void print_mtd_info() {
     FILE *fp;
-    char dev[80];
-    char name[80];
+
+    char mpoints[MAX_MPOINTS][MPOINT_LEN] = {0};
+    if ((fp = fopen("/proc/mounts", "r"))) {
+        char mount[80];
+        while (fgets(mount, sizeof mount, fp)) {
+            char path[80], fs[80], attrs[80];
+            int n;
+
+            if (sscanf(mount, "/dev/mtdblock%d %s %s %s", &n, path, fs,
+                       attrs)) {
+                if (n < MAX_MPOINTS) {
+                    snprintf(mpoints[n], MPOINT_LEN, "%s,%s", path, fs);
+                    if (strstr(attrs, "rw"))
+                        strcat(mpoints[n], ",rw");
+                }
+            }
+        }
+        fclose(fp);
+    }
+
+    char dev[80], name[80];
     int i, es, ee, ret;
     struct mtd_info_user mtd;
 
@@ -65,9 +87,16 @@ void print_mtd_info() {
                              "      - name: %s\n"
                              "        size: 0x%x\n",
                              name, mtd.size);
+                if (i < MAX_MPOINTS && *mpoints[i]) {
+                    // printf("[%d] %s\n", i, mpoints[i]);
+                    partsz += snprintf(partitions + partsz,
+                                       sizeof partitions - partsz,
+                                       "        path: %s\n", mpoints[i]);
+                }
                 totalsz += mtd.size;
             }
         }
+        fclose(fp);
     }
     yaml_printf("rom:\n"
                 "  - type: %s\n"
