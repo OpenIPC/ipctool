@@ -112,7 +112,8 @@ int connect_with_timeout(int sockfd, const struct sockaddr *addr,
 
 #define CONNECT_TIMEOUT 3000 // milliseconds
 
-static int common_connect(char *hostname, char *uri, nservers_t *ns, int *s) {
+static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
+                          int *s) {
     int ret = ERR_GENERAL;
 
     a_records_t srv;
@@ -154,8 +155,7 @@ int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
         return ERR_CONNECT;
     }
 
-    char buf[4096];
-    // use the hack to save some space in .rodata
+    char buf[4096] = "GET /";
     strcpy(buf, "GET /");
     if (uri) {
         strncat(buf, uri, sizeof(buf) - strlen(buf) - 1);
@@ -193,41 +193,9 @@ int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
 
 int upload(const char *hostname, const char *uri, nservers_t *ns,
            const char *data, size_t len) {
-    int ret = ERR_GENERAL;
-
-    a_records_t srv;
-    if (!resolv_name(ns, hostname, &srv)) {
-        return ERR_GETADDRINFO;
-    }
-
-    int s = socket(AF_INET, SOCK_STREAM, 0);
-
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(80);
-
-    for (int i = 0; i < srv.len; i++) {
-        memcpy(&addr.sin_addr, &srv.ipv4_addr[i], sizeof(uint32_t));
-
-#ifndef NDEBUG
-        char buf[256];
-        inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf));
-        fprintf(stderr, "Connecting to %s...\n", buf);
-#endif
-
-        if (connect_with_timeout(s, (struct sockaddr *)&addr, sizeof(addr),
-                                 CONNECT_TIMEOUT) == 1) {
-            ret = ERR_GENERAL;
-            break;
-        }
-        close(s);
-        s = socket(AF_INET, SOCK_STREAM, 0);
-        ret = ERR_CONNECT;
-    }
-
-    if (ret == ERR_CONNECT) {
-        return ret;
+    int s;
+    if (common_connect(hostname, uri, ns, &s) == ERR_CONNECT) {
+        return ERR_CONNECT;
     }
 
     char buf[4096] = "PUT /";

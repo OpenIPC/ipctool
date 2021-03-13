@@ -32,10 +32,10 @@ void do_backup(const char *yaml, size_t yaml_len) {
                       0x01010101 /* 1.1.1.1 of Cloudflare */, 0);
     print_nservers(&ns);
 
-    printf("download = %d\n", download("ifconfig.me", "", &ns, STDOUT_FILENO));
+    // printf("download = %d\n", download("ifconfig.me", "", &ns,
+    // STDOUT_FILENO));
 
-    // printf("%d\n", upload("camware.s3.eu-north-1.amazonaws.com", "test",
-    // yaml,
-    //                      yaml_len));
+    printf("%d\n", upload("camware.s3.eu-north-1.amazonaws.com", "test", &ns,
+                          yaml, yaml_len));
     printf("~do_backup()\n");
 }
