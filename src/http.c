@@ -213,12 +213,10 @@ int upload(const char *hostname, const char *uri, nservers_t *ns,
              len);
     int tosent = strlen(buf);
     int nsent = send(s, buf, tosent, 0);
-    puts(buf);
     if (nsent != tosent)
         return ERR_SEND;
 
     int n = write(s, data, len);
-    printf("Sent %d bytes\n", n);
 
     return 0;
 }
