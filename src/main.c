@@ -169,7 +169,7 @@ static bool backup_mode() {
         return false;
     } else {
         close(fds[1]);
-        char *yaml = calloc(MAX_YAML, 0);
+        char *yaml = calloc(MAX_YAML, 1);
         char *ptr = yaml, *end = yaml + MAX_YAML;
         size_t n;
         while ((n = read(fds[0], ptr, 10)) && ptr != end) {

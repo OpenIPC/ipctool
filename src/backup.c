@@ -18,6 +18,7 @@
 #include "backup.h"
 #include "dns.h"
 #include "http.h"
+#include "network.h"
 
 void do_backup(const char *yaml, size_t yaml_len) {
     printf("do_backup()\n");
@@ -26,16 +27,20 @@ void do_backup(const char *yaml, size_t yaml_len) {
     ns.len = 0;
 
     if (!parse_resolv_conf(&ns)) {
+#if 0
         fprintf(stderr, "parse_resolv_conf failed\n");
+#endif
+        return;
     }
     add_predefined_ns(&ns, 0xd043dede /* 208.67.222.222 of OpenDNS */,
                       0x01010101 /* 1.1.1.1 of Cloudflare */, 0);
-    print_nservers(&ns);
 
-    // printf("download = %d\n", download("ifconfig.me", "", &ns,
-    // STDOUT_FILENO));
+    char mac[32];
+    if (!get_mac_address(mac, sizeof mac)) {
+        return;
+    };
 
-    printf("%d\n", upload("camware.s3.eu-north-1.amazonaws.com", "test", &ns,
-                          yaml, yaml_len));
+    printf("%d\n", upload("camware.s3.eu-north-1.amazonaws.com", mac, &ns, yaml,
+                          yaml_len));
     printf("~do_backup()\n");
 }
