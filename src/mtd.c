@@ -1,11 +1,14 @@
+#include <regex.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
 
 #include "chipid.h"
+#include "tools.h"
 
 // TODO: refactor later
 int yaml_printf(char *format, ...);
@@ -31,10 +34,49 @@ struct mtd_info_user {
 #define MAX_MPOINTS 10
 #define MPOINT_LEN 90
 
-void print_mtd_info() {
-    FILE *fp;
+static void get_rootfs(char mpoints[MAX_MPOINTS][MPOINT_LEN]) {
+    FILE *f = fopen("/proc/cmdline", "r");
+    if (!f)
+        return;
 
-    char mpoints[MAX_MPOINTS][MPOINT_LEN] = {0};
+    regex_t regex;
+    regmatch_t matches[3];
+    if (!compile_regex(&regex, "root=/dev/mtdblock([0-9]) rootfstype=(\\w+)"))
+        goto exit;
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    if ((read = getline(&line, &len, f)) != -1) {
+        if (regexec(&regex, line, sizeof(matches) / sizeof(matches[0]),
+                    (regmatch_t *)&matches, 0) == 0) {
+            regoff_t start = matches[1].rm_so;
+            regoff_t end = matches[1].rm_eo;
+            line[end] = 0;
+            int i = strtod(line + start, NULL);
+
+            if (i < MAX_MPOINTS) {
+                start = matches[2].rm_so;
+                end = matches[2].rm_eo;
+                line[end] = 0;
+                snprintf(mpoints[i], MPOINT_LEN, "/,%s", line + start);
+            }
+        }
+    }
+    if (line)
+        free(line);
+
+exit:
+    regfree(&regex);
+    fclose(f);
+    return;
+}
+
+static void parse_partitions(char mpoints[MAX_MPOINTS][MPOINT_LEN]) {
+    get_rootfs(mpoints);
+
+    FILE *fp;
     if ((fp = fopen("/proc/mounts", "r"))) {
         char mount[80];
         while (fgets(mount, sizeof mount, fp)) {
@@ -52,6 +94,13 @@ void print_mtd_info() {
         }
         fclose(fp);
     }
+}
+
+void print_mtd_info() {
+    FILE *fp;
+
+    char mpoints[MAX_MPOINTS][MPOINT_LEN] = {0};
+    parse_partitions(mpoints);
 
     char dev[80], name[80];
     int i, es, ee, ret;
@@ -88,7 +137,6 @@ void print_mtd_info() {
                              "        size: 0x%x\n",
                              name, mtd.size);
                 if (i < MAX_MPOINTS && *mpoints[i]) {
-                    // printf("[%d] %s\n", i, mpoints[i]);
                     partsz += snprintf(partitions + partsz,
                                        sizeof partitions - partsz,
                                        "        path: %s\n", mpoints[i]);
