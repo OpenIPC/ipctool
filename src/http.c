@@ -112,7 +112,7 @@ int connect_with_timeout(int sockfd, const struct sockaddr *addr,
 
 #define CONNECT_TIMEOUT 3000 // milliseconds
 
-int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
+static int common_connect(char *hostname, char *uri, nservers_t *ns, int *s) {
     int ret = ERR_GENERAL;
 
     a_records_t srv;
@@ -120,7 +120,7 @@ int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
         return ERR_GETADDRINFO;
     }
 
-    int s = socket(AF_INET, SOCK_STREAM, 0);
+    *s = socket(AF_INET, SOCK_STREAM, 0);
 
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
@@ -136,18 +136,22 @@ int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
         fprintf(stdout, "Connecting to %s...\n", buf);
 #endif
 
-        if (connect_with_timeout(s, (struct sockaddr *)&addr, sizeof(addr),
+        if (connect_with_timeout(*s, (struct sockaddr *)&addr, sizeof(addr),
                                  CONNECT_TIMEOUT) != 1) {
             ret = ERR_GENERAL;
             break;
         }
-        close(s);
-        s = socket(AF_INET, SOCK_STREAM, 0);
+        close(*s);
+        *s = socket(AF_INET, SOCK_STREAM, 0);
         ret = ERR_CONNECT;
     }
+    return ret;
+}
 
-    if (ret == ERR_CONNECT) {
-        return ret;
+int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
+    int s;
+    if (common_connect(hostname, uri, ns, &s) == ERR_CONNECT) {
+        return ERR_CONNECT;
     }
 
     char buf[4096];
