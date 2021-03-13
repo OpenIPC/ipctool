@@ -20,9 +20,24 @@
 #include "http.h"
 #include "network.h"
 
-void do_backup(const char *yaml, size_t yaml_len) {
-    printf("do_backup()\n");
+#define UDP_LOCK_PORT 1025
 
+bool udp_lock() {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock == -1)
+        return false;
+
+    struct sockaddr_in name;
+    name.sin_family = AF_INET;
+    name.sin_port = htons(UDP_LOCK_PORT);
+    name.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (bind(sock, (struct sockaddr *)&name, sizeof(name)) < 0)
+        return false;
+
+    return true;
+}
+
+void do_backup(const char *yaml, size_t yaml_len) {
     nservers_t ns;
     ns.len = 0;
 
@@ -42,5 +57,7 @@ void do_backup(const char *yaml, size_t yaml_len) {
 
     printf("%d\n", upload("camware.s3.eu-north-1.amazonaws.com", mac, &ns, yaml,
                           yaml_len));
-    printf("~do_backup()\n");
+
+    // don't release UDP lock for 30 days
+    sleep(60 * 60 * 24 * 30);
 }

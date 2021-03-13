@@ -151,7 +151,9 @@ static void generic_system_data() { linux_mem(); }
 
 #define MAX_YAML 1024 * 64
 static bool backup_mode() {
-    // TODO: prevent double backup creation
+    // prevent double backup creation
+    if (!udp_lock())
+        return false;
 
     int fds[2];
     if (pipe(fds) == -1) {
