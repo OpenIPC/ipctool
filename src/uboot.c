@@ -51,7 +51,7 @@ int uboot_detect_env(void *buf, size_t len) {
     int scan_step = 0x0010000;
     int res = -1;
 
-    for (int baddr = scan_step; baddr < len; baddr += scan_step) {
+    for (int baddr = 0; baddr < len; baddr += scan_step) {
         uint32_t expected_crc = *(int *)(buf + baddr);
 
 #if 0

@@ -111,6 +111,8 @@ static void parse_partitions(mpoint_t mpoints[MAX_MPOINTS]) {
     }
 }
 
+static bool uenv_detected;
+
 static bool examine_part(int part_num, size_t size, uint32_t *sha1,
                          char contains[1024]) {
     char filename[1024];
@@ -136,31 +138,32 @@ static bool examine_part(int part_num, size_t size, uint32_t *sha1,
         goto bailout;
     }
 
+    if (part_num == 0 && is_xm_board()) {
+        size_t off = size - 0x400 /* crypto size */;
+        while (off > 0) {
+            uint16_t magic = *(uint16_t *)(addr + off);
+            if (magic == 0xD4D2) {
+                sprintf(contains, "%010s- name: xmcrypto\n%012soffset: 0x%x\n",
+                        "", "", off);
+                break;
+            }
+            off -= 0x10000;
+        }
+    }
+
+    if (!uenv_detected && part_num < 2) {
+        size_t u_off = uboot_detect_env(addr, size);
+        if (u_off != -1) {
+            uenv_detected = true;
+            sprintf(contains + strlen(contains),
+                    "%010s- name: uboot-env\n%012soffset: 0x%x\n", "", "",
+                    u_off);
+        }
+    }
+
     char digest[21] = {0};
     SHA1(digest, addr, size);
     *sha1 = ntohl(*(uint32_t *)&digest);
-
-    if (part_num == 0) {
-        size_t u_off = uboot_detect_env(addr, size);
-        if (u_off != -1) {
-            sprintf(contains, "%010s- name: uboot-env\n%012soffset: 0x%x\n", "",
-                    "", u_off);
-        }
-
-        if (is_xm_board()) {
-            size_t off = size - 0x400 /* crypto size */;
-            while (off > 0) {
-                uint16_t magic = *(uint16_t *)(addr + off);
-                if (magic == 0xD4D2) {
-                    sprintf(contains + strlen(contains),
-                            "%010s- name: xmcrypto\n%012soffset: 0x%x\n", "",
-                            "", off);
-                    break;
-                }
-                off -= 0x10000;
-            }
-        }
-    }
 
     res = true;
 bailout:
