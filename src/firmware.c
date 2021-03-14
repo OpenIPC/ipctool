@@ -25,8 +25,7 @@
     {                                                                          \
         char val[1024];                                                        \
         snprintf(val, sizeof(val), fmt, __VA_ARGS__);                          \
-        cJSON *strval = cJSON_CreateString(val);                               \
-        cJSON_AddItemToObject(j_firmware, param, strval);                      \
+        ADD_FIRMWARE(param, val);                                              \
     }
 
 static unsigned long time_by_proc(const char *filename) {
