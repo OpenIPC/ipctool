@@ -62,6 +62,9 @@ add_executable(ipc_chip_info
     src/uboot.h
     src/version.h
 
+    src/cjson/cJSON.c
+    src/cjson/cJSON.h
+
     src/vendors/openwrt.c
     src/vendors/openwrt.h
     src/vendors/xm.c
