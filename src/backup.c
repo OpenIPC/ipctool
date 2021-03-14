@@ -55,8 +55,7 @@ void do_backup(const char *yaml, size_t yaml_len) {
         return;
     };
 
-    printf("%d\n", upload("camware.s3.eu-north-1.amazonaws.com", mac, &ns, yaml,
-                          yaml_len));
+    upload("camware.s3.eu-north-1.amazonaws.com", mac, &ns, yaml, yaml_len);
 
     // don't release UDP lock for 30 days
     sleep(60 * 60 * 24 * 30);
