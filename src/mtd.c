@@ -15,6 +15,7 @@
 #include "chipid.h"
 #include "sha1.h"
 #include "tools.h"
+#include "uboot.h"
 #include "vendors/xm.h"
 
 // TODO: refactor later
@@ -139,16 +140,25 @@ static bool examine_part(int part_num, size_t size, uint32_t *sha1,
     SHA1(digest, addr, size);
     *sha1 = ntohl(*(uint32_t *)&digest);
 
-    if (part_num == 0 && is_xm_board()) {
-        size_t off = size - 0x400 /* crypto size */;
-        while (off > 0) {
-            uint16_t magic = *(uint16_t *)(addr + off);
-            if (magic == 0xD4D2) {
-                sprintf(contains, "%010s- name: xmcrypto\n%012soffset: 0x%x\n",
-                        "", "", off);
-                break;
+    if (part_num == 0) {
+        size_t u_off = uboot_detect_env(addr, size);
+        if (u_off != -1) {
+            sprintf(contains, "%010s- name: uboot-env\n%012soffset: 0x%x\n", "",
+                    "", u_off);
+        }
+
+        if (is_xm_board()) {
+            size_t off = size - 0x400 /* crypto size */;
+            while (off > 0) {
+                uint16_t magic = *(uint16_t *)(addr + off);
+                if (magic == 0xD4D2) {
+                    sprintf(contains + strlen(contains),
+                            "%010s- name: xmcrypto\n%012soffset: 0x%x\n", "",
+                            "", off);
+                    break;
+                }
+                off -= 0x10000;
             }
-            off -= 0x10000;
         }
     }
 

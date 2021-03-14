@@ -56,6 +56,8 @@ add_executable(ipc_chip_info
     src/stack.c
     src/tools.c
     src/tools.h
+    src/uboot.c
+    src/uboot.h
     src/version.h
 
     src/vendors/openwrt.c
