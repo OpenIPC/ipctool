@@ -7,7 +7,12 @@
 
 #include "chipid.h"
 #include "firmware.h"
+#include "tools.h"
 #include "uboot.h"
+
+#define ADD_FIRMWARE(fmt, ...)                                                 \
+    snprintf(firmware + strlen(firmware), sizeof(firmware) - strlen(firmware), \
+             "  " fmt "\n", __VA_ARGS__)
 
 static unsigned long time_by_proc(const char *filename) {
     FILE *fp = fopen(filename, "r");
@@ -63,10 +68,26 @@ static void get_god_app() {
             return;
         if (!fgets(sname, sizeof(sname), fp))
             return;
-        snprintf(firmware + strlen(firmware),
-                 sizeof(firmware) - strlen(firmware), "  god-app: %s\n", sname);
+        ADD_FIRMWARE("god-app: %s", sname);
 
         fclose(fp);
+    }
+}
+
+static void get_hisi_sdk() {
+    char buf[1024];
+
+    if (get_regex_line_from_file("/proc/umap/sys", "Version: \\[(.+)\\]", buf,
+                                 sizeof(buf))) {
+        char *ptr = strchr(buf, ']');
+        char *build = strchr(buf, '[');
+        if (!ptr || !build)
+            return;
+        *ptr++ = ' ';
+        *ptr++ = '(';
+        strcpy(ptr, build + 1);
+        strcat(ptr, ")");
+        ADD_FIRMWARE("sdk: %s", buf);
     }
 }
 
@@ -75,10 +96,11 @@ bool detect_firmare() {
     if (uver) {
         const char *stver = strchr(uver, ' ');
         if (stver && *(stver + 1)) {
-            snprintf(firmware, sizeof(firmware), "  u-boot: %s\n", stver + 1);
+            ADD_FIRMWARE("u-boot: %s", stver + 1);
         }
     }
 
+    get_hisi_sdk();
     get_god_app();
 
     return true;
