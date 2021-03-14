@@ -8,14 +8,16 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "cjson/cJSON.h"
+
 #include "chipid.h"
 #include "firmware.h"
 #include "tools.h"
 #include "uboot.h"
 
-#define ADD_FIRMWARE(fmt, ...)                                                 \
+#define ADD_FIRMWARE(param, fmt, ...)                                          \
     snprintf(firmware + strlen(firmware), sizeof(firmware) - strlen(firmware), \
-             "  " fmt "\n", __VA_ARGS__)
+             "  " param ": " fmt "\n", __VA_ARGS__)
 
 static unsigned long time_by_proc(const char *filename) {
     FILE *fp = fopen(filename, "r");
@@ -71,7 +73,7 @@ static void get_god_app() {
             return;
         if (!fgets(sname, sizeof(sname), fp))
             return;
-        ADD_FIRMWARE("god-app: %s", sname);
+        ADD_FIRMWARE("god-app", "%s", sname);
 
         fclose(fp);
     }
@@ -90,7 +92,7 @@ static void get_hisi_sdk() {
         *ptr++ = '(';
         strcpy(ptr, build + 1);
         strcat(ptr, ")");
-        ADD_FIRMWARE("sdk: %s", buf);
+        ADD_FIRMWARE("sdk", "%s", buf);
     }
 }
 
@@ -149,9 +151,9 @@ static void get_kernel_version() {
             }
         }
     }
-    ADD_FIRMWARE("kernel: %s (%s)", version, build);
+    ADD_FIRMWARE("kernel", "%s (%s)", version, build);
     if (toolchain)
-        ADD_FIRMWARE("toolchain: %s", toolchain);
+        ADD_FIRMWARE("toolchain", "%s", toolchain);
 }
 
 static void get_libc() {
@@ -168,16 +170,18 @@ static void get_libc() {
                 break;
             }
         }
-        ADD_FIRMWARE("libc: uClibc %s", ver);
+        ADD_FIRMWARE("libc", "uClibc %s", ver);
     }
 }
 
 bool detect_firmare() {
+    cJSON *j_firmware = cJSON_CreateObject();
+
     const char *uver = uboot_getenv("ver");
     if (uver) {
         const char *stver = strchr(uver, ' ');
         if (stver && *(stver + 1)) {
-            ADD_FIRMWARE("u-boot: %s", stver + 1);
+            ADD_FIRMWARE("u-boot", "%s", stver + 1);
         }
     }
 
@@ -186,5 +190,6 @@ bool detect_firmare() {
     get_hisi_sdk();
     get_god_app();
 
+    cJSON_Delete(j_firmware);
     return true;
 }
