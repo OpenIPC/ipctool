@@ -15,7 +15,13 @@
 #include "tools.h"
 #include "uboot.h"
 
-#define ADD_FIRMWARE(param, fmt, ...)                                          \
+#define ADD_FIRMWARE(param, val)                                               \
+    {                                                                          \
+        cJSON *strval = cJSON_CreateString(val);                               \
+        cJSON_AddItemToObject(j_firmware, param, strval);                      \
+    }
+
+#define ADD_FIRMWARE_FMT(param, fmt, ...)                                      \
     {                                                                          \
         char val[1024];                                                        \
         snprintf(val, sizeof(val), fmt, __VA_ARGS__);                          \
@@ -77,7 +83,7 @@ static void get_god_app(cJSON *j_firmware) {
             return;
         if (!fgets(sname, sizeof(sname), fp))
             return;
-        ADD_FIRMWARE("god-app", "%s", sname);
+        ADD_FIRMWARE("god-app", sname);
 
         fclose(fp);
     }
@@ -96,7 +102,7 @@ static void get_hisi_sdk(cJSON *j_firmware) {
         *ptr++ = '(';
         strcpy(ptr, build + 1);
         strcat(ptr, ")");
-        ADD_FIRMWARE("sdk", "%s", buf);
+        ADD_FIRMWARE("sdk", buf);
     }
 }
 
@@ -155,9 +161,9 @@ static void get_kernel_version(cJSON *j_firmware) {
             }
         }
     }
-    ADD_FIRMWARE("kernel", "%s (%s)", version, build);
+    ADD_FIRMWARE_FMT("kernel", "%s (%s)", version, build);
     if (toolchain)
-        ADD_FIRMWARE("toolchain", "%s", toolchain);
+        ADD_FIRMWARE("toolchain", toolchain);
 }
 
 static void get_libc(cJSON *j_firmware) {
@@ -174,7 +180,7 @@ static void get_libc(cJSON *j_firmware) {
                 break;
             }
         }
-        ADD_FIRMWARE("libc", "uClibc %s", ver);
+        ADD_FIRMWARE_FMT("libc", "uClibc %s", ver);
     }
 }
 
@@ -187,7 +193,7 @@ bool detect_firmare() {
     if (uver) {
         const char *stver = strchr(uver, ' ');
         if (stver && *(stver + 1)) {
-            ADD_FIRMWARE("u-boot", "%s", stver + 1);
+            ADD_FIRMWARE("u-boot", stver + 1);
         }
     }
 
