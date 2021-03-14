@@ -10,7 +10,6 @@
 
 #include "cjson/cYAML.h"
 
-#include "chipid.h"
 #include "firmware.h"
 #include "tools.h"
 #include "uboot.h"
