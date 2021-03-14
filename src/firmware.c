@@ -1,9 +1,11 @@
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <dirent.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "chipid.h"
 #include "firmware.h"
@@ -132,8 +134,6 @@ static void get_kernel_version() {
             }
         }
     }
-    if (toolchain)
-        ADD_FIRMWARE("toolchain: %s", toolchain);
 
     char *version = line;
     int spaces = 0;
@@ -149,6 +149,26 @@ static void get_kernel_version() {
         }
     }
     ADD_FIRMWARE("kernel: %s (%s)", version, build);
+    if (toolchain)
+        ADD_FIRMWARE("toolchain: %s", toolchain);
+}
+
+static void get_libc() {
+    char buf[PATH_MAX] = {0};
+
+    if (readlink("/lib/libc.so.0", buf, sizeof(buf)) == -1)
+        return;
+
+    if (!strncmp(buf, "libuClibc-", 10)) {
+        char *ver = buf + 10;
+        for (char *ptr = ver + strlen(ver) - 1; ptr != ver; ptr--) {
+            if (*ptr == '.') {
+                *ptr = 0;
+                break;
+            }
+        }
+        ADD_FIRMWARE("libc: uClibc %s", ver);
+    }
 }
 
 bool detect_firmare() {
@@ -161,6 +181,7 @@ bool detect_firmare() {
     }
 
     get_kernel_version();
+    get_libc();
     get_hisi_sdk();
     get_god_app();
 
