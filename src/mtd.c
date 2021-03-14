@@ -40,7 +40,12 @@ struct mtd_info_user {
 #define MAX_MPOINTS 10
 #define MPOINT_LEN 90
 
-static void get_rootfs(char mpoints[MAX_MPOINTS][MPOINT_LEN]) {
+typedef struct {
+    char path[MPOINT_LEN];
+    bool rw;
+} mpoint_t;
+
+static void get_rootfs(mpoint_t mpoints[MAX_MPOINTS]) {
     FILE *f = fopen("/proc/cmdline", "r");
     if (!f)
         return;
@@ -66,7 +71,7 @@ static void get_rootfs(char mpoints[MAX_MPOINTS][MPOINT_LEN]) {
                 start = matches[2].rm_so;
                 end = matches[2].rm_eo;
                 line[end] = 0;
-                snprintf(mpoints[i], MPOINT_LEN, "/,%s", line + start);
+                snprintf(mpoints[i].path, MPOINT_LEN, "/,%s", line + start);
             }
         }
     }
@@ -79,7 +84,7 @@ exit:
     return;
 }
 
-static void parse_partitions(char mpoints[MAX_MPOINTS][MPOINT_LEN]) {
+static void parse_partitions(mpoint_t mpoints[MAX_MPOINTS]) {
     get_rootfs(mpoints);
 
     FILE *fp;
@@ -92,9 +97,11 @@ static void parse_partitions(char mpoints[MAX_MPOINTS][MPOINT_LEN]) {
             if (sscanf(mount, "/dev/mtdblock%d %s %s %s", &n, path, fs,
                        attrs)) {
                 if (n < MAX_MPOINTS) {
-                    snprintf(mpoints[n], MPOINT_LEN, "%s,%s", path, fs);
-                    if (strstr(attrs, "rw"))
-                        strcat(mpoints[n], ",rw");
+                    snprintf(mpoints[n].path, MPOINT_LEN, "%s,%s", path, fs);
+                    if (strstr(attrs, "rw")) {
+                        strcat(mpoints[n].path, ",rw");
+                        mpoints[n].rw = true;
+                    }
                 }
             }
         }
@@ -137,7 +144,7 @@ bailout:
 void print_mtd_info() {
     FILE *fp;
 
-    char mpoints[MAX_MPOINTS][MPOINT_LEN] = {0};
+    mpoint_t mpoints[MAX_MPOINTS] = {0};
     parse_partitions(mpoints);
 
     char dev[80], name[80];
@@ -172,17 +179,19 @@ void print_mtd_info() {
                                        "      - name: %s\n"
                                        "        size: 0x%x\n",
                                        name, mtd.size);
-                    if (i < MAX_MPOINTS && *mpoints[i]) {
+                    if (i < MAX_MPOINTS && *mpoints[i].path) {
+                        partsz += snprintf(
+                            partitions + partsz, sizeof partitions - partsz,
+                            "        path: %s\n", mpoints[i].path);
+                    }
+                    if (!mpoints[i].rw) {
+                        snprintf(dev, sizeof dev, "/dev/mtdblock%d", i);
+                        uint32_t sha1;
+                        calc_checksum(dev, mtd.size, &sha1);
                         partsz += snprintf(partitions + partsz,
                                            sizeof partitions - partsz,
-                                           "        path: %s\n", mpoints[i]);
+                                           "        sha1: %.8x\n", sha1);
                     }
-                    snprintf(dev, sizeof dev, "/dev/mtdblock%d", i);
-                    uint32_t sha1;
-                    calc_checksum(dev, mtd.size, &sha1);
-                    partsz += snprintf(partitions + partsz,
-                                       sizeof partitions - partsz,
-                                       "        sha1: %.8x\n", sha1);
                     totalsz += mtd.size;
                 }
                 close(devfd);
