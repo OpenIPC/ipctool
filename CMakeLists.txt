@@ -30,7 +30,6 @@ add_executable(ipc_chip_info
     src/backup.c
     src/backup.h
     src/chipid.c
-    src/chipid.c
     src/chipid.h
     src/dns.c
     src/dns.h
@@ -51,7 +50,9 @@ add_executable(ipc_chip_info
     src/ram.c
     src/ram.h
     src/sensors.c
-    src/sensors.c
+    src/sensors.h
+    src/sha1.c
+    src/sha1.h
     src/stack.c
     src/tools.c
     src/tools.h

@@ -1,13 +1,19 @@
+#include <netinet/in.h>
 #include <regex.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "chipid.h"
+#include "sha1.h"
 #include "tools.h"
 
 // TODO: refactor later
@@ -96,6 +102,38 @@ static void parse_partitions(char mpoints[MAX_MPOINTS][MPOINT_LEN]) {
     }
 }
 
+static bool calc_checksum(const char *filename, size_t size, uint32_t *sha1) {
+    int fd = open(filename, O_RDONLY);
+    if (fd == -1) {
+        return false;
+    }
+
+    bool res = false;
+
+    if (!size) {
+        struct stat buf;
+        fstat(fd, &buf);
+        size = buf.st_size;
+    }
+
+    char *addr = (char *)mmap(
+        NULL, size, PROT_READ,
+        MAP_PRIVATE | MAP_POPULATE /* causes read-ahead on the file */, fd, 0);
+    if ((void *)addr == MAP_FAILED) {
+        res = false;
+        goto bailout;
+    }
+
+    char digest[21] = {0};
+    SHA1(digest, addr, size);
+    *sha1 = ntohl(*(uint32_t *)&digest);
+
+    res = true;
+bailout:
+    close(fd);
+    return res;
+}
+
 void print_mtd_info() {
     FILE *fp;
 
@@ -121,27 +159,33 @@ void print_mtd_info() {
                 if (devfd < 0)
                     continue;
 
-                if (ioctl(devfd, MEMGETINFO, &mtd) < 0) {
-                    continue;
-                }
-                if (!mtd_type) {
-                    if (mtd.type == MTD_NORFLASH)
-                        mtd_type = "nor";
-                    else if (mtd.type == MTD_NANDFLASH)
-                        mtd_type = "nand";
-                    erasesize = mtd.erasesize;
-                }
-                partsz +=
-                    snprintf(partitions + partsz, sizeof partitions - partsz,
-                             "      - name: %s\n"
-                             "        size: 0x%x\n",
-                             name, mtd.size);
-                if (i < MAX_MPOINTS && *mpoints[i]) {
+                if (ioctl(devfd, MEMGETINFO, &mtd) >= 0) {
+                    if (!mtd_type) {
+                        if (mtd.type == MTD_NORFLASH)
+                            mtd_type = "nor";
+                        else if (mtd.type == MTD_NANDFLASH)
+                            mtd_type = "nand";
+                        erasesize = mtd.erasesize;
+                    }
                     partsz += snprintf(partitions + partsz,
                                        sizeof partitions - partsz,
-                                       "        path: %s\n", mpoints[i]);
+                                       "      - name: %s\n"
+                                       "        size: 0x%x\n",
+                                       name, mtd.size);
+                    if (i < MAX_MPOINTS && *mpoints[i]) {
+                        partsz += snprintf(partitions + partsz,
+                                           sizeof partitions - partsz,
+                                           "        path: %s\n", mpoints[i]);
+                    }
+                    snprintf(dev, sizeof dev, "/dev/mtdblock%d", i);
+                    uint32_t sha1;
+                    calc_checksum(dev, mtd.size, &sha1);
+                    partsz += snprintf(partitions + partsz,
+                                       sizeof partitions - partsz,
+                                       "        sha1: %.8x\n", sha1);
+                    totalsz += mtd.size;
                 }
-                totalsz += mtd.size;
+                close(devfd);
             }
         }
         fclose(fp);
