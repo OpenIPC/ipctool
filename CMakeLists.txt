@@ -73,5 +73,5 @@ add_executable(ipc_chip_info
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )
 
-target_link_libraries(ipc_chip_info dl)
+target_link_libraries(ipc_chip_info dl m)
 install(TARGETS ipc_chip_info RUNTIME DESTINATION /usr/bin/)

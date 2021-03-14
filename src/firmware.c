@@ -17,7 +17,13 @@
 
 #define ADD_FIRMWARE(param, fmt, ...)                                          \
     snprintf(firmware + strlen(firmware), sizeof(firmware) - strlen(firmware), \
-             "  " param ": " fmt "\n", __VA_ARGS__)
+             "  " param ": " fmt "\n", __VA_ARGS__);                           \
+    {                                                                          \
+        char val[1024];                                                        \
+        snprintf(val, sizeof(val), fmt, __VA_ARGS__);                          \
+        cJSON *strval = cJSON_CreateString(val);                               \
+        cJSON_AddItemToObject(j_firmware, param, strval);                      \
+    }
 
 static unsigned long time_by_proc(const char *filename) {
     FILE *fp = fopen(filename, "r");
@@ -44,7 +50,7 @@ static unsigned long time_by_proc(const char *filename) {
     return utime + stime;
 }
 
-static void get_god_app() {
+static void get_god_app(cJSON *j_firmware) {
     DIR *dir = opendir("/proc");
     if (!dir)
         return;
@@ -79,7 +85,7 @@ static void get_god_app() {
     }
 }
 
-static void get_hisi_sdk() {
+static void get_hisi_sdk(cJSON *j_firmware) {
     char buf[1024];
 
     if (get_regex_line_from_file("/proc/umap/sys", "Version: \\[(.+)\\]", buf,
@@ -96,7 +102,7 @@ static void get_hisi_sdk() {
     }
 }
 
-static void get_kernel_version() {
+static void get_kernel_version(cJSON *j_firmware) {
     FILE *fp = fopen("/proc/version", "r");
     if (!fp)
         return;
@@ -156,7 +162,7 @@ static void get_kernel_version() {
         ADD_FIRMWARE("toolchain", "%s", toolchain);
 }
 
-static void get_libc() {
+static void get_libc(cJSON *j_firmware) {
     char buf[PATH_MAX] = {0};
 
     if (readlink("/lib/libc.so.0", buf, sizeof(buf)) == -1)
@@ -185,10 +191,15 @@ bool detect_firmare() {
         }
     }
 
-    get_kernel_version();
-    get_libc();
-    get_hisi_sdk();
-    get_god_app();
+    get_kernel_version(j_firmware);
+    get_libc(j_firmware);
+    get_hisi_sdk(j_firmware);
+    get_god_app(j_firmware);
+
+    /*
+    char *string = cJSON_Print(j_firmware);
+    puts(string);
+    */
 
     cJSON_Delete(j_firmware);
     return true;
