@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <dirent.h>
+#include <linux/limits.h>
 #include <sys/types.h>
 #include <unistd.h>
 
