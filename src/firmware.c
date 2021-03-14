@@ -91,6 +91,44 @@ static void get_hisi_sdk() {
     }
 }
 
+static void get_kernel_version() {
+    FILE *fp = fopen("/proc/version", "r");
+    if (!fp)
+        return;
+
+    char line[1024];
+    if (!fgets(line, sizeof(line), fp))
+        return;
+    fclose(fp);
+
+    const char *build = "";
+    char *pound = strchr(line, '#');
+    if (pound) {
+        char *buildstr = strchr(pound, ' ');
+        if (buildstr) {
+            char *end = strchr(buildstr, '\n');
+            if (end)
+                *end = 0;
+            build = buildstr + 1;
+        }
+    }
+
+    char *ptr, *version = line;
+    int spaces = 0;
+    for (ptr = line; *ptr; ptr++) {
+        if (*ptr == ' ') {
+            spaces++;
+            if (spaces == 2) {
+                version = ptr + 1;
+            } else if (spaces == 3) {
+                *ptr = 0;
+                break;
+            }
+        }
+    }
+    ADD_FIRMWARE("kernel: %s (%s)", version, build);
+}
+
 bool detect_firmare() {
     const char *uver = uboot_getenv("ver");
     if (uver) {
@@ -100,6 +138,7 @@ bool detect_firmare() {
         }
     }
 
+    get_kernel_version();
     get_hisi_sdk();
     get_god_app();
 
