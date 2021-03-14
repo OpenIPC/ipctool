@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "cjson/cJSON.h"
+#include "cjson/cYAML.h"
 
 #include "chipid.h"
 #include "firmware.h"
@@ -16,8 +16,6 @@
 #include "uboot.h"
 
 #define ADD_FIRMWARE(param, fmt, ...)                                          \
-    snprintf(firmware + strlen(firmware), sizeof(firmware) - strlen(firmware), \
-             "  " param ": " fmt "\n", __VA_ARGS__);                           \
     {                                                                          \
         char val[1024];                                                        \
         snprintf(val, sizeof(val), fmt, __VA_ARGS__);                          \
@@ -181,7 +179,9 @@ static void get_libc(cJSON *j_firmware) {
 }
 
 bool detect_firmare() {
+    cJSON *fake_root = cJSON_CreateObject();
     cJSON *j_firmware = cJSON_CreateObject();
+    cJSON_AddItemToObject(fake_root, "firmware", j_firmware);
 
     const char *uver = uboot_getenv("ver");
     if (uver) {
@@ -196,11 +196,9 @@ bool detect_firmare() {
     get_hisi_sdk(j_firmware);
     get_god_app(j_firmware);
 
-    /*
-    char *string = cJSON_Print(j_firmware);
+    char *string = cYAML_Print(fake_root);
     puts(string);
-    */
 
-    cJSON_Delete(j_firmware);
+    cJSON_Delete(fake_root);
     return true;
 }

@@ -64,6 +64,8 @@ add_executable(ipc_chip_info
 
     src/cjson/cJSON.c
     src/cjson/cJSON.h
+    src/cjson/cYAML.c
+    src/cjson/cYAML.h
 
     src/vendors/openwrt.c
     src/vendors/openwrt.h
