@@ -113,7 +113,29 @@ static void get_kernel_version() {
         }
     }
 
-    char *ptr, *version = line;
+    char *ptr, *toolchain = NULL;
+    int pars = 0, group = 0;
+    for (ptr = line; *ptr; ptr++) {
+        if (*ptr == '(') {
+            pars++;
+            if (group == 1 && pars == 1) {
+                toolchain = ptr + 1;
+            }
+        } else if (*ptr == ')') {
+            pars--;
+            if (pars == 0) {
+                group++;
+                if (group == 2) {
+                    *ptr = 0;
+                    break;
+                }
+            }
+        }
+    }
+    if (toolchain)
+        ADD_FIRMWARE("toolchain: %s", toolchain);
+
+    char *version = line;
     int spaces = 0;
     for (ptr = line; *ptr; ptr++) {
         if (*ptr == ' ') {
