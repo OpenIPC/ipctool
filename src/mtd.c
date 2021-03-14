@@ -15,6 +15,7 @@
 #include "chipid.h"
 #include "sha1.h"
 #include "tools.h"
+#include "vendors/xm.h"
 
 // TODO: refactor later
 int yaml_printf(char *format, ...);
@@ -109,13 +110,16 @@ static void parse_partitions(mpoint_t mpoints[MAX_MPOINTS]) {
     }
 }
 
-static bool calc_checksum(const char *filename, size_t size, uint32_t *sha1) {
+static bool examine_part(int part_num, size_t size, uint32_t *sha1,
+                         char contains[1024]) {
+    char filename[1024];
+    bool res = false;
+
+    snprintf(filename, sizeof filename, "/dev/mtdblock%d", part_num);
     int fd = open(filename, O_RDONLY);
     if (fd == -1) {
         return false;
     }
-
-    bool res = false;
 
     if (!size) {
         struct stat buf;
@@ -134,6 +138,19 @@ static bool calc_checksum(const char *filename, size_t size, uint32_t *sha1) {
     char digest[21] = {0};
     SHA1(digest, addr, size);
     *sha1 = ntohl(*(uint32_t *)&digest);
+
+    if (part_num == 0 && is_xm_board()) {
+        size_t off = size - 0x400 /* crypto size */;
+        while (off > 0) {
+            uint16_t magic = *(uint16_t *)(addr + off);
+            if (magic == 0xD4D2) {
+                sprintf(contains, "%010s- name: xmcrypto\n%012soffset: 0x%x\n",
+                        "", "", off);
+                break;
+            }
+            off -= 0x10000;
+        }
+    }
 
     res = true;
 bailout:
@@ -185,12 +202,17 @@ void print_mtd_info() {
                             "        path: %s\n", mpoints[i].path);
                     }
                     if (!mpoints[i].rw) {
-                        snprintf(dev, sizeof dev, "/dev/mtdblock%d", i);
+                        char contains[1024] = {0};
                         uint32_t sha1;
-                        calc_checksum(dev, mtd.size, &sha1);
+                        examine_part(i, mtd.size, &sha1, contains);
                         partsz += snprintf(partitions + partsz,
                                            sizeof partitions - partsz,
                                            "        sha1: %.8x\n", sha1);
+                        if (*contains) {
+                            partsz += snprintf(
+                                partitions + partsz, sizeof partitions - partsz,
+                                "        contains:\n%s", contains);
+                        }
                     }
                     totalsz += mtd.size;
                 }
