@@ -42,11 +42,11 @@ static void crc32(const void *data, size_t n_bytes, uint32_t *crc) {
 }
 
 const int crc_sz = 4;
+// Assume env sole size of 64Kb
+const int env_len = 0x10000;
 
 // Detect U-Boot environment area offset
 int uboot_detect_env(void *buf, size_t len) {
-    // Assume env sole size of 64Kb
-    int env_len = 0x10000;
     // Jump over memory by step
     int scan_step = 0x0010000;
     int res = -1;
@@ -77,4 +77,33 @@ void uboot_printenv(void *buf) {
         puts(ptr);
         ptr += strlen(ptr) + 1;
     }
+}
+
+static void *uenv;
+void uboot_copyenv(void *buf) {
+    uenv = malloc(env_len);
+    memcpy(uenv, buf, env_len);
+}
+
+void uboot_freeenv() {
+    if (uenv)
+        free(uenv);
+}
+
+// Get environment variable
+const char *uboot_getenv(const char *name) {
+    if (!uenv)
+        return NULL;
+
+    char param[1024];
+    snprintf(param, sizeof(param), "%s=", name);
+
+    const char *ptr = uenv + crc_sz;
+    while (*ptr) {
+        if (strncmp(ptr, param, strlen(param)) == 0) {
+            return ptr + strlen(param);
+        }
+        ptr += strlen(ptr) + 1;
+    }
+    return NULL;
 }

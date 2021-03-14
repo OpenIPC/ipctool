@@ -34,6 +34,8 @@ add_executable(ipc_chip_info
     src/dns.c
     src/dns.h
     src/fake_symbols.c
+    src/firmware.c
+    src/firmware.h
     src/hal_common.c
     src/hal_common.h
     src/hal_hisi.c

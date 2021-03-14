@@ -11,6 +11,7 @@
 
 #include "backup.h"
 #include "chipid.h"
+#include "firmware.h"
 #include "hal_hisi.h"
 #include "mtd.h"
 #include "network.h"
@@ -158,6 +159,12 @@ void print_ram_info() {
     }
 }
 
+void print_firmware_info() {
+    if (strlen(firmware)) {
+        yaml_printf("firmware:\n%s", firmware);
+    }
+}
+
 static void generic_system_data() { linux_mem(); }
 
 #define MAX_YAML 1024 * 64
@@ -217,6 +224,8 @@ int main(int argc, char *argv[]) {
             print_ethernet_data();
             print_mtd_info();
             print_ram_info();
+            if (detect_firmare())
+                print_firmware_info();
         } else
             return EXIT_FAILURE;
 

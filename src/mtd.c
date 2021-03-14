@@ -158,6 +158,7 @@ static bool examine_part(int part_num, size_t size, uint32_t *sha1,
             sprintf(contains + strlen(contains),
                     "%010s- name: uboot-env\n%012soffset: 0x%x\n", "", "",
                     u_off);
+            uboot_copyenv(addr + u_off);
         }
     }
 
