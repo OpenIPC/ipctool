@@ -36,7 +36,7 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
 
     uint32_t offset = addr & 0xffff0000;
     uint32_t size = 0xffff;
-    if (!addr || loaded_area && offset != loaded_offset) {
+    if (!addr || (loaded_area && offset != loaded_offset)) {
         int res = munmap(loaded_area, loaded_size);
         if (res) {
             fprintf(stderr, "read_mem_reg error: %s (%d)\n", strerror(errno),
