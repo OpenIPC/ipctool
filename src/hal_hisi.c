@@ -14,6 +14,7 @@
 
 #include "chipid.h"
 #include "hal_common.h"
+#include "ram.h"
 #include "tools.h"
 
 static unsigned char sony_addrs[] = {0x34, 0};
@@ -301,6 +302,30 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
     return rx_buf[2];
 }
 
+uint32_t rounded_num(uint32_t n) {
+    int i;
+    for (i = 0; n; i++) {
+        n /= 2;
+    }
+    return 1 << i;
+}
+
+static bool hisi_mmz_total() {
+    char buf[256];
+
+    if (!get_regex_line_from_file("/proc/media-mem", "total size=([0-9]+)KB",
+                                  buf, sizeof(buf))) {
+        return false;
+    }
+    unsigned long media_mem = strtoul(buf, NULL, 10);
+    uint32_t total_mem = (media_mem + kernel_mem()) / 1024;
+    sprintf(ram_specific + strlen(ram_specific), "  total: %uM\n",
+            rounded_num(total_mem));
+    sprintf(ram_specific + strlen(ram_specific), "  media: %luM\n",
+            media_mem / 1024);
+    return true;
+}
+
 void setup_hal_hisi() {
     open_sensor_fd = hisi_open_sensor_fd;
     sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
@@ -317,6 +342,7 @@ void setup_hal_hisi() {
     }
     possible_i2c_addrs = hisi_possible_i2c_addrs;
     strcpy(short_manufacturer, "HI");
+    hisi_mmz_total();
 }
 
 int hisi_SYS_DRV_GetChipId() {

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 project(ipc_chip_info C)
 
 set(CMAKE_C_STANDARD 99)
@@ -10,7 +10,7 @@ if(NOT BUILD_SHARED_LIBS)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s -Os -ffunction-sections -Wl,--gc-sections")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s -Os -ffunction-sections -Wl,--gc-sections -DNDEBUG")
 endif()
 
 # Add a custom command that produces version.cpp, plus
@@ -27,29 +27,48 @@ include_directories(
 )
 
 add_executable(ipc_chip_info
-    src/chipid.c
+    src/backup.c
+    src/backup.h
     src/chipid.c
     src/chipid.h
+    src/dns.c
+    src/dns.h
     src/fake_symbols.c
+    src/firmware.c
+    src/firmware.h
     src/hal_common.c
     src/hal_common.h
     src/hal_hisi.c
     src/hal_hisi.h
     src/hal_xm.c
     src/hal_xm.h
+    src/http.c
+    src/http.h
     src/main.c
-    src/mtd.h
     src/mtd.c
+    src/mtd.h
     src/network.c
     src/network.h
+    src/ram.c
+    src/ram.h
     src/sensors.c
-    src/sensors.c
+    src/sensors.h
+    src/sha1.c
+    src/sha1.h
     src/stack.c
     src/tools.c
     src/tools.h
+    src/uboot.c
+    src/uboot.h
     src/version.h
+
+    src/vendors/openwrt.c
+    src/vendors/openwrt.h
+    src/vendors/xm.c
+    src/vendors/xm.h
+
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )
 
-target_link_libraries( ipc_chip_info dl )
+target_link_libraries(ipc_chip_info dl)
 install(TARGETS ipc_chip_info RUNTIME DESTINATION /usr/bin/)

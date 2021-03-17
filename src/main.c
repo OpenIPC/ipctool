@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,13 +9,19 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "backup.h"
 #include "chipid.h"
+#include "firmware.h"
 #include "hal_hisi.h"
 #include "mtd.h"
 #include "network.h"
+#include "ram.h"
 #include "sensors.h"
 #include "tools.h"
 #include "version.h"
+
+#include "vendors/openwrt.h"
+#include "vendors/xm.h"
 
 void Help() {
     printf("ipc_chip_info, version: ");
@@ -37,24 +44,54 @@ void Help() {
            "\t--help\n");
 }
 
+// backup mode pipe end
+FILE *backup_fp;
+
+int yaml_printf(char *format, ...) {
+    va_list arglist;
+
+    va_start(arglist, format);
+    int ret = vfprintf(stdout, format, arglist);
+    if (backup_fp)
+        vfprintf(backup_fp, format, arglist);
+    va_end(arglist);
+    return ret;
+}
+
 void print_system_id() {
     if (!*system_manufacturer && !*system_id)
         return;
 
-    printf("vendor: %s\n"
-           "model: %s\n",
-           system_manufacturer, system_id);
+    yaml_printf("vendor: %s\n"
+                "model: %s\n",
+                system_manufacturer, system_id);
+}
+
+void print_board_id() {
+    if (!*board_manufacturer && !*board_id)
+        return;
+
+    yaml_printf("board:\n");
+
+    if (*board_manufacturer)
+        yaml_printf("  vendor: %s\n", board_manufacturer);
+    if (*board_id)
+        yaml_printf("  model: %s\n", board_id);
+    if (*board_ver)
+        yaml_printf("  version: %s\n", board_ver);
+    if (*board_specific)
+        yaml_printf("%s", board_specific);
 }
 
 void print_chip_id() {
-    printf("chip:\n"
-           "  vendor: %s\n"
-           "  model: %s\n",
-           chip_manufacturer, chip_id);
+    yaml_printf("chip:\n"
+                "  vendor: %s\n"
+                "  model: %s\n",
+                chip_manufacturer, chip_id);
     if (chip_generation == 0x3516E300) {
         char buf[1024];
         if (hisi_ev300_get_die_id(buf, sizeof buf)) {
-            printf("  id: %s\n", buf);
+            yaml_printf("  id: %s\n", buf);
         }
     }
 }
@@ -66,38 +103,103 @@ void print_ethernet_data() {
     // [    1.160082] CONFIG_HIETH_PHYID_U 1
     // [    1.168332] CONFIG_HIETH_PHYID_U 1
     // [    1.172163] CONFIG_HIETH_PHYID_D 3
-    printf("ethernet:\n");
+    yaml_printf("ethernet:\n");
     if (get_mac_address(buf, sizeof buf)) {
-        printf("  mac: \"%s\"\n", buf);
+        yaml_printf("  mac: \"%s\"\n", buf);
     };
 
-    // CV300 only
-    // uint32_t val;
-    // bool res;
-    // res = read_mem_reg(0x10050108, &val); // 0x10050108 UD_MDIO_PHYADDR
-    // printf("  phyaddr: %x\n", val);
-    // printf("  connection: rmii\n");
+        // CV300 only
+#if 0
+    uint32_t val;
+    bool res;
+    res = mem_reg(0x10050108, &val, OP_READ); // 0x10050108 UD_MDIO_PHYADDR
+    if (res) {
+        yaml_printf("  phyaddr: %x\n", val);
+        yaml_printf("  connection: rmii\n");
+    }
+#endif
 }
 
 void print_sensor_id() {
-    printf("sensors:\n"
-           "  - vendor: %s\n"
-           "    model: %s\n"
-           "    control:\n"
-           "      bus: 0\n"
-           "      type: %s\n",
-           sensor_manufacturer, sensor_id, control);
+    yaml_printf("sensors:\n"
+                "  - vendor: %s\n"
+                "    model: %s\n"
+                "    control:\n"
+                "      bus: 0\n"
+                "      type: %s\n",
+                sensor_manufacturer, sensor_id, control);
 
     const char *data_type = get_sensor_data_type();
     if (data_type) {
-        printf("    data:\n"
-               "      type: %s\n",
-               data_type);
+        yaml_printf("    data:\n"
+                    "      type: %s\n",
+                    data_type);
     }
 
     const char *sensor_clock = get_sensor_clock();
     if (sensor_clock) {
-        printf("    clock: %s\n", sensor_clock);
+        yaml_printf("    clock: %s\n", sensor_clock);
+    }
+}
+
+bool get_board_id() {
+    if (is_xm_board()) {
+        gather_xm_board_info();
+        return true;
+    } else if (is_openwrt_board()) {
+        gather_openwrt_board_info();
+        return true;
+    }
+    return false;
+}
+
+void print_ram_info() {
+    if (strlen(ram_specific)) {
+        yaml_printf("ram:\n%s", ram_specific);
+    }
+}
+
+void print_firmware_info() {
+    if (strlen(firmware)) {
+        yaml_printf("firmware:\n%s", firmware);
+    }
+}
+
+static void generic_system_data() { linux_mem(); }
+
+#define MAX_YAML 1024 * 64
+static bool backup_mode() {
+    // prevent double backup creation and don't backup OpenWrt firmware
+    if (!udp_lock() || is_openwrt_board())
+        return false;
+
+    int fds[2];
+    if (pipe(fds) == -1) {
+        fprintf(stderr, "Pipe Failed");
+        exit(1);
+    }
+
+    pid_t p = fork();
+    if (p < 0) {
+        exit(1);
+    } else if (p > 0) {
+        // parent process
+        close(fds[0]);
+        backup_fp = fdopen(fds[1], "w");
+        return false;
+    } else {
+        close(fds[1]);
+        char *yaml = calloc(MAX_YAML, 1);
+        char *ptr = yaml, *end = yaml + MAX_YAML;
+        size_t n;
+        while ((n = read(fds[0], ptr, 10)) && ptr != end) {
+            ptr += n;
+        }
+        size_t yaml_sz = ptr - yaml;
+        close(fds[0]);
+        do_backup(yaml, yaml_sz);
+        free(yaml);
+        return true;
     }
 }
 
@@ -108,12 +210,22 @@ int main(int argc, char *argv[]) {
     sprintf(isp_sequence_number, "error");
 
     if (argc == 1) {
+        if (backup_mode())
+            return EXIT_SUCCESS;
+
+        generic_system_data();
         if (get_system_id()) {
-            printf("---\n");
+            yaml_printf("---\n");
+            if (get_board_id()) {
+                print_board_id();
+            }
             print_system_id();
             print_chip_id();
             print_ethernet_data();
             print_mtd_info();
+            print_ram_info();
+            if (detect_firmare())
+                print_firmware_info();
         } else
             return EXIT_FAILURE;
 

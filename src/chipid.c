@@ -18,6 +18,12 @@
 
 char system_id[128];
 char system_manufacturer[128];
+char board_id[128];
+char board_ver[128];
+char board_manufacturer[128];
+char board_specific[1024];
+char ram_specific[1024];
+char firmware[1024];
 int chip_generation;
 char chip_id[128];
 char chip_manufacturer[128];
@@ -27,50 +33,7 @@ char isp_version[128];
 char isp_build_number[128];
 char isp_sequence_number[128];
 char mpp_info[1024];
-
-// avoid warnings for old compilers
-#if __GNUC__ < 7
-extern __ssize_t getline(char **__restrict __lineptr, size_t *__restrict __n,
-                         FILE *__restrict __stream) __wur;
-#endif
-
-bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
-                              size_t buflen) {
-    long res = false;
-
-    FILE *fiomem = fopen(filename, "r");
-    if (!fiomem)
-        return false;
-
-    regex_t regex;
-    regmatch_t matches[2];
-    if (!compile_regex(&regex, re))
-        goto exit;
-
-    char *line = buf;
-    size_t len = buflen;
-    ssize_t read;
-
-    while ((read = getline(&line, &len, fiomem)) != -1) {
-        if (regexec(&regex, line, sizeof(matches) / sizeof(matches[0]),
-                    (regmatch_t *)&matches, 0) == 0) {
-            regoff_t start = matches[1].rm_so;
-            regoff_t end = matches[1].rm_eo;
-
-            line[end] = 0;
-            if (start) {
-                memmove(line, line + start, end - start + 1);
-            }
-            res = true;
-            break;
-        }
-    }
-
-exit:
-    regfree(&regex);
-    fclose(fiomem);
-    return res;
-}
+char nor_chip[128];
 
 long get_uart0_address() {
     char buf[256];
@@ -94,13 +57,15 @@ static const char *get_chip_id35180100() {
     case 0x3518A100:
         return "3518AV100";
     default:
-        fprintf(stderr, "get_chip_id() got unexpected 0x%x for 3518?v100\n",
+        fprintf(stderr,
+                "get_chip_id35180100() got unexpected 0x%x for 3518?v100\n"
+                "Check kernel modules loaded\n",
                 dvrid);
         return "unknown";
     }
 }
 
-static const char *get_chip_id(uint32_t reg) {
+static const char *get_hisi_chip_id(uint32_t reg) {
     switch (reg) {
     case 0x6000001:
         return "3516AV200";
@@ -171,6 +136,10 @@ bool detect_system() {
     case 0x12040000:
         SC_CTRL_base = 0x12020000;
         break;
+    // hi3536
+    case 0x12080000:
+        SC_CTRL_base = 0x12050000;
+        break;
     // hi3518ev200
     default:
         SC_CTRL_base = 0x20050000;
@@ -215,7 +184,7 @@ bool detect_system() {
         ptr[2] = *(volatile char *)(sc_ctrl_map + SCSYSID2);
         ptr[3] = *(volatile char *)(sc_ctrl_map + SCSYSID3);
     }
-    strncpy(chip_id, get_chip_id(chip_id_u32), sizeof(chip_id));
+    strncpy(chip_id, get_hisi_chip_id(chip_id_u32), sizeof(chip_id));
 
     // Special case for 16cv200/18ev200/18ev201 family
     if (chip_id_u32 == 0x3518E200 || chip_id_u32 == 0x3516C300) {

@@ -24,7 +24,9 @@ int common_open_sensor_fd(const char *dev_name) {
 
     fd = open(dev_name, O_RDWR);
     if (fd < 0) {
+#ifndef NDEBUG
         printf("Open %s error!\n", dev_name);
+#endif
         return -1;
     }
 
