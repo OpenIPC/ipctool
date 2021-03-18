@@ -37,6 +37,8 @@ int hisi_open_sensor_fd() {
     return common_open_sensor_fd(filename);
 }
 
+void hisi_close_sensor_fd(int fd) { close(fd); }
+
 int hisi_gen1_open_sensor_fd() { return common_open_sensor_fd("/dev/hi_i2c"); }
 
 // Set I2C slave address
@@ -326,8 +328,40 @@ static bool hisi_mmz_total() {
     return true;
 }
 
+static char printk_state[16];
+#define PRINTK_FILE "/proc/sys/kernel/printk"
+void disable_printk() {
+    if (*printk_state)
+        return;
+
+    FILE *fp = fopen(PRINTK_FILE, "rw+");
+    if (!fp)
+        return;
+    fgets(printk_state, sizeof(printk_state) - 1, fp);
+    // We cannot use rewind() here
+    fclose(fp);
+    fp = fopen(PRINTK_FILE, "w");
+    fprintf(fp, "0 0 0 0\n");
+    fclose(fp);
+}
+
+void restore_printk() {
+    if (!*printk_state)
+        return;
+
+    FILE *fp = fopen(PRINTK_FILE, "w");
+    fprintf(fp, "%s", printk_state);
+    fclose(fp);
+}
+
+static void hisi_hal_cleanup() { restore_printk(); }
+
 void setup_hal_hisi() {
+    disable_printk();
+
     open_sensor_fd = hisi_open_sensor_fd;
+    close_sensor_fd = hisi_close_sensor_fd;
+    hal_cleanup = hisi_hal_cleanup;
     sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
     if (chip_generation == 0x35180100) {
         open_sensor_fd = hisi_gen1_open_sensor_fd;

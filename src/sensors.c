@@ -294,7 +294,8 @@ static bool get_sensor_id_i2c() {
     }
 
 exit:
-    close(fd);
+    close_sensor_fd(fd);
+    hal_cleanup();
     return detected;
 }
 

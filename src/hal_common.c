@@ -11,6 +11,7 @@
 sensor_addr_t* possible_i2c_addrs;
 
 int (*open_sensor_fd)();
+void (*close_sensor_fd)(int fd);
 int (*sensor_read_register)(int fd, unsigned char i2c_addr,
                             unsigned int reg_addr, unsigned int reg_width,
                             unsigned int data_width);
@@ -18,6 +19,7 @@ int (*sensor_write_register)(int fd, unsigned char i2c_addr,
                              unsigned int reg_addr, unsigned int reg_width,
                              unsigned int data, unsigned int data_width);
 int (*sensor_i2c_change_addr)(int fd, unsigned char addr);
+void (*hal_cleanup)();
 
 int common_open_sensor_fd(const char *dev_name) {
     int fd;

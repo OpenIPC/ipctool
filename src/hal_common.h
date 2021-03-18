@@ -21,6 +21,7 @@ typedef struct {
 extern sensor_addr_t *possible_i2c_addrs;
 
 extern int (*open_sensor_fd)();
+extern void (*close_sensor_fd)(int fd);
 extern int (*sensor_i2c_change_addr)(int fd, unsigned char addr);
 extern int (*sensor_read_register)(int fd, unsigned char i2c_addr,
                                    unsigned int reg_addr,
@@ -30,6 +31,7 @@ extern int (*sensor_write_register)(int fd, unsigned char i2c_addr,
                                     unsigned int reg_addr,
                                     unsigned int reg_width, unsigned int data,
                                     unsigned int data_width);
+extern void (*hal_cleanup)();
 
 void setup_hal_drivers();
 void setup_hal_hisi();
