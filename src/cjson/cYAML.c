@@ -374,15 +374,17 @@ static cJSON_bool print_object(const cJSON *const item,
         return false;
     }
 
+    bool non_root = output_buffer->depth;
+
     /* Compose the output: */
-    length = 1; /* fmt: \n */
+    length = non_root;
     output_pointer = ensure(output_buffer, length + 1);
     if (output_pointer == NULL) {
         return false;
     }
 
     output_buffer->depth++;
-    if (output_buffer->depth != 1)
+    if (non_root)
         *output_pointer++ = '\n';
     output_buffer->offset += length;
 
