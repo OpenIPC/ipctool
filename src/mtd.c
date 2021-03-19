@@ -218,15 +218,11 @@ void cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     c->totalsz += mtd->size;
 }
 
-void print_mtd_info() {
+void enum_mtd_info(void *ctx) {
     FILE *fp;
     char dev[80], name[80];
-    int i, es, ee, ret;
+    int i, es, ee;
     struct mtd_info_user mtd;
-
-    enum_mtd_ctx ctx;
-    memset(&ctx, 0, sizeof(ctx));
-    parse_partitions(ctx.mpoints);
 
     if ((fp = fopen("/proc/mtd", "r"))) {
         while (fgets(dev, sizeof dev, fp)) {
@@ -238,13 +234,21 @@ void print_mtd_info() {
                     continue;
 
                 if (ioctl(devfd, MEMGETINFO, &mtd) >= 0) {
-                    cb_mtd_info(i, name, &mtd, &ctx);
+                    cb_mtd_info(i, name, &mtd, ctx);
                 }
                 close(devfd);
             }
         }
         fclose(fp);
     }
+}
+
+void print_mtd_info() {
+    enum_mtd_ctx ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    parse_partitions(ctx.mpoints);
+    enum_mtd_info(&ctx);
+
     yaml_printf("rom:\n"
                 "  - type: %s\n"
                 "    size: %dM\n"
