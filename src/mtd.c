@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "chipid.h"
+#include "mtd.h"
 #include "sha1.h"
 #include "tools.h"
 #include "uboot.h"
@@ -20,17 +21,6 @@
 
 // TODO: refactor later
 int yaml_printf(char *format, ...);
-
-struct mtd_info_user {
-    uint8_t type;
-    uint32_t flags;
-    uint32_t size; // Total size of the MTD
-    uint32_t erasesize;
-    uint32_t oobblock; // Size of OOB blocks (e.g. 512)
-    uint32_t oobsize;  // Amount of OOB data per block (e.g. 16)
-    uint32_t ecctype;
-    uint32_t eccsize;
-};
 
 #ifndef MEMGETINFO
 #define MEMGETINFO _IOR('M', 1, struct mtd_info_user)
@@ -181,8 +171,8 @@ typedef struct {
     mpoint_t mpoints[MAX_MPOINTS];
 } enum_mtd_ctx;
 
-void cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
-                 void *ctx) {
+static void cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
+                        void *ctx) {
     enum_mtd_ctx *c = (enum_mtd_ctx *)ctx;
 
     if (!c->mtd_type) {
@@ -218,7 +208,7 @@ void cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     c->totalsz += mtd->size;
 }
 
-void enum_mtd_info(void *ctx) {
+void enum_mtd_info(void *ctx, cb_mtd cb) {
     FILE *fp;
     char dev[80], name[80];
     int i, es, ee;
@@ -233,9 +223,8 @@ void enum_mtd_info(void *ctx) {
                 if (devfd < 0)
                     continue;
 
-                if (ioctl(devfd, MEMGETINFO, &mtd) >= 0) {
-                    cb_mtd_info(i, name, &mtd, ctx);
-                }
+                if (ioctl(devfd, MEMGETINFO, &mtd) >= 0)
+                    cb(i, name, &mtd, ctx);
                 close(devfd);
             }
         }
@@ -247,7 +236,7 @@ void print_mtd_info() {
     enum_mtd_ctx ctx;
     memset(&ctx, 0, sizeof(ctx));
     parse_partitions(ctx.mpoints);
-    enum_mtd_info(&ctx);
+    enum_mtd_info(&ctx, cb_mtd_info);
 
     yaml_printf("rom:\n"
                 "  - type: %s\n"

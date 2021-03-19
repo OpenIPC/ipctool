@@ -11,6 +11,8 @@
 
 #include "backup.h"
 #include "chipid.h"
+#include "cjson/cJSON.h"
+#include "cjson/cYAML.h"
 #include "firmware.h"
 #include "hal_hisi.h"
 #include "mtd.h"
@@ -56,6 +58,15 @@ int yaml_printf(char *format, ...) {
         vfprintf(backup_fp, format, arglist);
     va_end(arglist);
     return ret;
+}
+
+void show_yaml(cJSON *json) {
+    char *string = cYAML_Print(json);
+    fprintf(stdout, "%s", string);
+    if (backup_fp)
+        fprintf(backup_fp, "%s", string);
+
+    cJSON_Delete(json);
 }
 
 void print_system_id() {
@@ -218,7 +229,7 @@ int main(int argc, char *argv[]) {
             print_ethernet_data();
             print_mtd_info();
             print_ram_info();
-            detect_firmare();
+            show_yaml(detect_firmare());
         } else
             return EXIT_FAILURE;
 

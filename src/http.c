@@ -192,10 +192,15 @@ int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
 }
 
 int upload(const char *hostname, const char *uri, nservers_t *ns,
-           const char *data, size_t len) {
+           span_t blocks[MAX_MTDBLOCKS + 1], size_t blocks_num) {
     int s;
     if (common_connect(hostname, uri, ns, &s) == ERR_CONNECT) {
         return ERR_CONNECT;
+    }
+
+    size_t len = 0;
+    for (int i = 0; i < blocks_num; i++) {
+        len += blocks[i].len;
     }
 
     char buf[4096] = "PUT /";
@@ -216,7 +221,14 @@ int upload(const char *hostname, const char *uri, nservers_t *ns,
     if (nsent != tosent)
         return ERR_SEND;
 
-    int n = write(s, data, len);
+    for (int i = 0; i < blocks_num; i++) {
+        int nbytes = write(s, blocks[i].data, blocks[i].len);
+        if (nbytes == -1)
+            break;
+#if 0
+	printf("[%d] sent %d bytes\n", i, nbytes);
+#endif
+    }
 
     return 0;
 }

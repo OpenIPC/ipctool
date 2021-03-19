@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "cjson/cJSON.h"
 #include "cjson/cYAML.h"
 
 #include "firmware.h"
@@ -182,7 +183,7 @@ static void get_libc(cJSON *j_firmware) {
     }
 }
 
-bool detect_firmare() {
+cJSON *detect_firmare() {
     cJSON *fake_root = cJSON_CreateObject();
     cJSON *j_firmware = cJSON_CreateObject();
     cJSON_AddItemToObject(fake_root, "firmware", j_firmware);
@@ -200,9 +201,5 @@ bool detect_firmare() {
     get_hisi_sdk(j_firmware);
     get_god_app(j_firmware);
 
-    char *string = cYAML_Print(fake_root);
-    puts(string);
-
-    cJSON_Delete(fake_root);
-    return true;
+    return fake_root;
 }

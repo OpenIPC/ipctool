@@ -3,6 +3,6 @@
 
 #include <stdbool.h>
 
-bool detect_firmare();
+cJSON *detect_firmare();
 
 #endif /* FIRMWARE_H */
