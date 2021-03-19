@@ -119,16 +119,22 @@ void print_ethernet_data() {
         yaml_printf("  mac: \"%s\"\n", buf);
     };
 
-        // CV300 only
-#if 0
-    uint32_t val;
-    bool res;
-    res = mem_reg(0x10050108, &val, OP_READ); // 0x10050108 UD_MDIO_PHYADDR
-    if (res) {
-        yaml_printf("  phyaddr: %x\n", val);
-        yaml_printf("  connection: rmii\n");
+    uint32_t mdio_phyaddr = 0;
+    if (chip_generation == 0x3516C300) {
+        // 0x10050108 UD_MDIO_PHYADDR cv300
+        mdio_phyaddr = 0x10050108;
+    } else if (chip_generation == 0x3518E200) {
+        // 0x1009_0108 UD_MDIO_PHYADDR
+        mdio_phyaddr = 0x10090108;
     }
-#endif
+
+    if (mdio_phyaddr) {
+        uint32_t val;
+        if (mem_reg(mdio_phyaddr, &val, OP_READ)) {
+            yaml_printf("  phyaddr: %x\n", val);
+            // yaml_printf("  connection: rmii\n");
+        }
+    }
 }
 
 void print_sensor_id() {
