@@ -172,22 +172,62 @@ bailout:
     return res;
 }
 
+typedef struct {
+    const char *mtd_type;
+    ssize_t erasesize;
+    char partitions[4096];
+    ssize_t partsz;
+    ssize_t totalsz;
+    mpoint_t mpoints[MAX_MPOINTS];
+} enum_mtd_ctx;
+
+void cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
+                 void *ctx) {
+    enum_mtd_ctx *c = (enum_mtd_ctx *)ctx;
+
+    if (!c->mtd_type) {
+        if (mtd->type == MTD_NORFLASH)
+            c->mtd_type = "nor";
+        else if (mtd->type == MTD_NANDFLASH)
+            c->mtd_type = "nand";
+        c->erasesize = mtd->erasesize;
+    }
+    c->partsz +=
+        snprintf(c->partitions + c->partsz, sizeof c->partitions - c->partsz,
+                 "      - name: %s\n"
+                 "        size: 0x%x\n",
+                 name, mtd->size);
+    if (i < MAX_MPOINTS && *c->mpoints[i].path) {
+        c->partsz += snprintf(c->partitions + c->partsz,
+                              sizeof c->partitions - c->partsz,
+                              "        path: %s\n", c->mpoints[i].path);
+    }
+    if (!c->mpoints[i].rw) {
+        char contains[1024] = {0};
+        uint32_t sha1;
+        examine_part(i, mtd->size, &sha1, contains);
+        c->partsz += snprintf(c->partitions + c->partsz,
+                              sizeof c->partitions - c->partsz,
+                              "        sha1: %.8x\n", sha1);
+        if (*contains) {
+            c->partsz += snprintf(c->partitions + c->partsz,
+                                  sizeof c->partitions - c->partsz,
+                                  "        contains:\n%s", contains);
+        }
+    }
+    c->totalsz += mtd->size;
+}
+
 void print_mtd_info() {
     FILE *fp;
-
-    mpoint_t mpoints[MAX_MPOINTS] = {0};
-    parse_partitions(mpoints);
-
     char dev[80], name[80];
     int i, es, ee, ret;
     struct mtd_info_user mtd;
 
-    char partitions[4096];
-    ssize_t partsz = 0;
+    enum_mtd_ctx ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    parse_partitions(ctx.mpoints);
 
-    ssize_t totalsz = 0;
-    const char *mtd_type = NULL;
-    ssize_t erasesize = 0;
     if ((fp = fopen("/proc/mtd", "r"))) {
         while (fgets(dev, sizeof dev, fp)) {
             name[0] = 0;
@@ -198,37 +238,7 @@ void print_mtd_info() {
                     continue;
 
                 if (ioctl(devfd, MEMGETINFO, &mtd) >= 0) {
-                    if (!mtd_type) {
-                        if (mtd.type == MTD_NORFLASH)
-                            mtd_type = "nor";
-                        else if (mtd.type == MTD_NANDFLASH)
-                            mtd_type = "nand";
-                        erasesize = mtd.erasesize;
-                    }
-                    partsz += snprintf(partitions + partsz,
-                                       sizeof partitions - partsz,
-                                       "      - name: %s\n"
-                                       "        size: 0x%x\n",
-                                       name, mtd.size);
-                    if (i < MAX_MPOINTS && *mpoints[i].path) {
-                        partsz += snprintf(
-                            partitions + partsz, sizeof partitions - partsz,
-                            "        path: %s\n", mpoints[i].path);
-                    }
-                    if (!mpoints[i].rw) {
-                        char contains[1024] = {0};
-                        uint32_t sha1;
-                        examine_part(i, mtd.size, &sha1, contains);
-                        partsz += snprintf(partitions + partsz,
-                                           sizeof partitions - partsz,
-                                           "        sha1: %.8x\n", sha1);
-                        if (*contains) {
-                            partsz += snprintf(
-                                partitions + partsz, sizeof partitions - partsz,
-                                "        contains:\n%s", contains);
-                        }
-                    }
-                    totalsz += mtd.size;
+                    cb_mtd_info(i, name, &mtd, &ctx);
                 }
                 close(devfd);
             }
@@ -239,11 +249,11 @@ void print_mtd_info() {
                 "  - type: %s\n"
                 "    size: %dM\n"
                 "    block: %dK\n",
-                mtd_type, totalsz / 1024 / 1024, erasesize / 1024);
+                ctx.mtd_type, ctx.totalsz / 1024 / 1024, ctx.erasesize / 1024);
     if (strlen(nor_chip)) {
         yaml_printf("    chip:\n%s", nor_chip);
     }
-    if (partsz) {
-        yaml_printf("    partitions:\n%s", partitions);
+    if (ctx.partsz) {
+        yaml_printf("    partitions:\n%s", ctx.partitions);
     }
 }
