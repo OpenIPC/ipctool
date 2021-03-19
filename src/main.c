@@ -108,6 +108,79 @@ void print_chip_id() {
     }
 }
 
+struct CV100_MDIO_RWCTRL {
+    unsigned int phy_inaddr : 5;
+    unsigned int frq_dv : 3;
+    unsigned int phy_exaddr : 5;
+    unsigned int rw : 1;
+    unsigned int res : 1;
+    bool finish : 1;
+    unsigned int cpu_data_in : 16;
+};
+
+#define MDIO_RWCTRL 0x1100
+#define MDIO_RO_DATA 0x1104
+#define U_MDIO_PHYADDR 0x0108
+#define D_MDIO_PHYADDR 0x2108
+#define U_MDIO_RO_STAT 0x010C
+#define D_MDIO_RO_STAT 0x210C
+
+uint32_t hieth_readl(uint32_t regaddr) {
+    uint32_t val;
+    if (mem_reg(regaddr + 0x10090000, &val, OP_READ)) {
+        return val;
+    }
+    return 0x1111;
+}
+
+void hieth_writel(uint32_t val, uint32_t regaddr) {
+    if (!mem_reg(regaddr + 0x10090000, &val, OP_WRITE)) {
+        printf("write error\n");
+    }
+}
+
+/* hardware set bit'15 of MDIO_REG(0) if mdio ready */
+#define test_mdio_ready() (hieth_readl(MDIO_RWCTRL) & (1 << 15))
+
+static int wait_mdio_ready() {
+    int timeout_us = 1000;
+    while (--timeout_us && !test_mdio_ready())
+        usleep(1);
+    return timeout_us;
+}
+
+#define MDIO_MK_RWCTL(cpu_data_in, finish, rw, phy_exaddr, frq_div,            \
+                      phy_regnum)                                              \
+    (((cpu_data_in) << 16) | (((finish)&0x01) << 15) | (((rw)&0x01) << 13) |   \
+     (((phy_exaddr)&0x1F) << 8) | (((frq_div)&0x7) << 5) |                     \
+     ((phy_regnum)&0x1F))
+
+#define mdio_start_phyread(phy_addr, regnum)                                   \
+    hieth_writel(MDIO_MK_RWCTL(0, 0, 0, phy_addr, 2, regnum), MDIO_RWCTRL)
+
+#define mdio_get_phyread_val() (hieth_readl(MDIO_RO_DATA) & 0xFFFF)
+
+int hieth_mdio_read(int phy_addr, int regnum) {
+    int val = 0;
+
+    if (!wait_mdio_ready()) {
+        printf("mdio busy");
+        goto error_exit;
+    }
+
+    mdio_start_phyread(phy_addr, regnum);
+
+    if (wait_mdio_ready())
+        val = mdio_get_phyread_val();
+    else
+        printf("read timeout");
+
+error_exit:
+    printf("phy_addr = %d, regnum = %d, val = 0x%04x\n", phy_addr, regnum, val);
+
+    return val;
+}
+
 void print_ethernet_data() {
     char buf[1024];
 
@@ -121,11 +194,15 @@ void print_ethernet_data() {
     };
 
     uint32_t mdio_phyaddr = 0;
+    uint32_t mdio_rwctrl = 0;
+    uint32_t mdio_ro_data = 0;
     switch (chip_generation) {
     case 0x35180100:
     case 0x3518E200:
         // 0x1009_0108 UD_MDIO_PHYADDR
         mdio_phyaddr = 0x10090108;
+        mdio_rwctrl = 0x10091100;
+        mdio_ro_data = 0x10091104;
         break;
     case 0x3516C300:
         // 0x10050108 UD_MDIO_PHYADDR
@@ -134,12 +211,43 @@ void print_ethernet_data() {
     }
 
     if (mdio_phyaddr) {
+        uint32_t my_phyaddr;
+        if (mem_reg(mdio_phyaddr, &my_phyaddr, OP_READ)) {
+            yaml_printf("  u-mdio-phyaddr: %x\n", my_phyaddr);
+        }
+        unsigned long phy_id;
+        unsigned short id1, id2;
+
+        id1 = hieth_mdio_read(my_phyaddr, 0x02);
+        id2 = hieth_mdio_read(my_phyaddr, 0x03);
+        phy_id = (((id1 & 0xffff) << 16) | (id2 & 0xffff));
+
+        yaml_printf("  phy-id: 0x%.8lx\n", phy_id);
+
         uint32_t val;
-        if (mem_reg(mdio_phyaddr, &val, OP_READ)) {
-            yaml_printf("  phyaddr: %x\n", val);
-            // yaml_printf("  connection: rmii\n");
+        if (mem_reg(mdio_phyaddr + 0x2000, &val, OP_READ)) {
+            yaml_printf("  d-mdio-phyaddr: %x\n", val);
+        }
+        struct CV100_MDIO_RWCTRL reg;
+        if (mem_reg(mdio_rwctrl, (uint32_t *)&reg, OP_READ)) {
+            yaml_printf("  rw_ctrl: %x\n", val);
+            if (reg.finish) {
+                reg.phy_inaddr = 1;
+                printf("phy_exaddr: %x\n", reg.phy_exaddr);
+                printf("frq_dv: %x\n", reg.frq_dv);
+                if (mem_reg(mdio_rwctrl, (uint32_t *)&reg, OP_WRITE)) {
+                    if (mem_reg(mdio_rwctrl, (uint32_t *)&reg, OP_READ)) {
+                        if (reg.finish) {
+                            if (mem_reg(mdio_ro_data, &val, OP_READ)) {
+                                yaml_printf("  ro_data: %x\n", val & 0xFFFF);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
+    exit(0);
 }
 
 void print_sensor_id() {
