@@ -29,6 +29,7 @@ work on vast majority of hardware.
         --isp_sequence_number
         --mpp_info
         --temp
+        --dmesg
         --help
 
     (or run without params to get full available information)
@@ -99,6 +100,12 @@ sensors:
     50.69
     ```
 
+* Drop-in replacement of `dmesg` command:
+
+    ```
+    root@IVG-HP203Y-AE:~# /utils/sdk/ipc_chip_info --dmesg
+    ```
+
 ## Supported SoCs
 
 Tested on:
@@ -119,7 +126,7 @@ Tested on:
 |Silicon Optronics, Inc.|JX-F22, JX-F23, JX-F37, JX-H62, JX-H65 |
 |Sony                   |IMX291, IMX307, IMX322, IMX323, IMX335 |
 |ON Semiconductor       |AR0130, AR0237                         |
-|SmartSens              |SC2235, SC2235P, SC5300                |
+|SmartSens              |SC2135, SC2235, SC2235P, SC5300        |
 |OmniVision             |OV9712                                 |
 
 Please test on your device to help us extend the list.

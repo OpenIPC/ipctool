@@ -43,6 +43,7 @@ void Help() {
            "\t--isp_sequence_number\n"
            "\t--mpp_info\n"
            "\t--temp\n"
+           "\t--dmesg\n"
            "\t--help\n");
 }
 
@@ -120,12 +121,16 @@ void print_ethernet_data() {
     };
 
     uint32_t mdio_phyaddr = 0;
-    if (chip_generation == 0x3516C300) {
-        // 0x10050108 UD_MDIO_PHYADDR cv300
-        mdio_phyaddr = 0x10050108;
-    } else if (chip_generation == 0x3518E200) {
+    switch (chip_generation) {
+    case 0x35180100:
+    case 0x3518E200:
         // 0x1009_0108 UD_MDIO_PHYADDR
         mdio_phyaddr = 0x10090108;
+        break;
+    case 0x3516C300:
+        // 0x10050108 UD_MDIO_PHYADDR
+        mdio_phyaddr = 0x10050108;
+        break;
     }
 
     if (mdio_phyaddr) {
@@ -290,6 +295,8 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(cmd, "--temp") == 0) {
             get_system_id();
             return hisi_get_temp();
+        } else if (strcmp(cmd, "--dmesg") == 0) {
+            dmesg();
         } else
             Help();
         return EXIT_SUCCESS;
