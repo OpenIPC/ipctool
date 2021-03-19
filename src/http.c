@@ -201,6 +201,9 @@ int upload(const char *hostname, const char *uri, nservers_t *ns,
     size_t len = 0;
     for (int i = 0; i < blocks_num; i++) {
         len += blocks[i].len;
+        // add len header
+        if (i)
+            len += sizeof(uint32_t);
     }
 
     char buf[4096] = "PUT /";
@@ -222,6 +225,11 @@ int upload(const char *hostname, const char *uri, nservers_t *ns,
         return ERR_SEND;
 
     for (int i = 0; i < blocks_num; i++) {
+        if (i) {
+            uint32_t len_header = blocks[i].len;
+            write(s, &len_header, sizeof(len_header));
+        }
+
         int nbytes = write(s, blocks[i].data, blocks[i].len);
         if (nbytes == -1)
             break;
