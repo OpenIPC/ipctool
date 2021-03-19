@@ -248,7 +248,7 @@ static cJSON_bool print_string_ptr(const unsigned char *const input,
     /* no characters have to be escaped */
     if (escape_characters == 0) {
         memcpy(output, input, output_length);
-        output[output_length + 1] = '\0';
+        output[output_length] = '\0';
 
         return true;
     }
@@ -429,7 +429,7 @@ static cJSON_bool print_object(const cJSON *const item,
             return false;
         }
 
-        if (current_item->next)
+        if (output_buffer->depth != 1)
             *output_pointer++ = '\n';
         *output_pointer = '\0';
         output_buffer->offset += length;
