@@ -155,12 +155,12 @@ static int wait_mdio_ready() {
      (((phy_exaddr)&0x1F) << 8) | (((frq_div)&0x7) << 5) |                     \
      ((phy_regnum)&0x1F))
 
-#define mdio_start_phyread(phy_addr, regnum)                                   \
-    hieth_writel(MDIO_MK_RWCTL(0, 0, 0, phy_addr, 2, regnum), MDIO_RWCTRL)
+#define mdio_start_phyread(frq_dv, phy_addr, regnum)                           \
+    hieth_writel(MDIO_MK_RWCTL(0, 0, 0, phy_addr, frq_dv, regnum), MDIO_RWCTRL)
 
 #define mdio_get_phyread_val() (hieth_readl(MDIO_RO_DATA) & 0xFFFF)
 
-int hieth_mdio_read(int phy_addr, int regnum) {
+int hieth_mdio_read(int frq_dv, int phy_addr, int regnum) {
     int val = 0;
 
     if (!wait_mdio_ready()) {
@@ -168,7 +168,7 @@ int hieth_mdio_read(int phy_addr, int regnum) {
         goto error_exit;
     }
 
-    mdio_start_phyread(phy_addr, regnum);
+    mdio_start_phyread(frq_dv, phy_addr, regnum);
 
     if (wait_mdio_ready())
         val = mdio_get_phyread_val();
@@ -218,33 +218,19 @@ void print_ethernet_data() {
         unsigned long phy_id;
         unsigned short id1, id2;
 
-        id1 = hieth_mdio_read(my_phyaddr, 0x02);
-        id2 = hieth_mdio_read(my_phyaddr, 0x03);
-        phy_id = (((id1 & 0xffff) << 16) | (id2 & 0xffff));
+        struct CV100_MDIO_RWCTRL reg;
+        if (mem_reg(mdio_rwctrl, (uint32_t *)&reg, OP_READ)) {
+            yaml_printf("  rw_ctrl: %x\n", reg.frq_dv);
 
-        yaml_printf("  phy-id: 0x%.8lx\n", phy_id);
+            id1 = hieth_mdio_read(reg.frq_dv, my_phyaddr, 0x02);
+            id2 = hieth_mdio_read(reg.frq_dv, my_phyaddr, 0x03);
+            phy_id = (((id1 & 0xffff) << 16) | (id2 & 0xffff));
+            yaml_printf("  phy-id: 0x%.8lx\n", phy_id);
+        }
 
         uint32_t val;
         if (mem_reg(mdio_phyaddr + 0x2000, &val, OP_READ)) {
             yaml_printf("  d-mdio-phyaddr: %x\n", val);
-        }
-        struct CV100_MDIO_RWCTRL reg;
-        if (mem_reg(mdio_rwctrl, (uint32_t *)&reg, OP_READ)) {
-            yaml_printf("  rw_ctrl: %x\n", val);
-            if (reg.finish) {
-                reg.phy_inaddr = 1;
-                printf("phy_exaddr: %x\n", reg.phy_exaddr);
-                printf("frq_dv: %x\n", reg.frq_dv);
-                if (mem_reg(mdio_rwctrl, (uint32_t *)&reg, OP_WRITE)) {
-                    if (mem_reg(mdio_rwctrl, (uint32_t *)&reg, OP_READ)) {
-                        if (reg.finish) {
-                            if (mem_reg(mdio_ro_data, &val, OP_READ)) {
-                                yaml_printf("  ro_data: %x\n", val & 0xFFFF);
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
     exit(0);
