@@ -107,6 +107,9 @@ cJSON *detect_ethernet() {
     case HISI_V3:
         mdio_base = 0x10050000;
         break;
+    case HISI_V4:
+        mdio_base = 0x10040000;
+        break;
     }
 
     if (mdio_base) {
