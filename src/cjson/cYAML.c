@@ -217,6 +217,8 @@ static cJSON_bool print_string_ptr(const unsigned char *const input,
         return true;
     }
 
+    bool need_quotes = false;
+
     /* set "flag" to 1 if something needs to be escaped */
     for (input_pointer = input; *input_pointer; input_pointer++) {
         switch (*input_pointer) {
@@ -229,6 +231,9 @@ static cJSON_bool print_string_ptr(const unsigned char *const input,
         case '\t':
             /* one character escape sequence */
             escape_characters++;
+            break;
+        case ':':
+            need_quotes = true;
             break;
         default:
             if (*input_pointer < 32) {
@@ -246,7 +251,7 @@ static cJSON_bool print_string_ptr(const unsigned char *const input,
     }
 
     /* no characters have to be escaped */
-    if (escape_characters == 0) {
+    if (!need_quotes && escape_characters == 0) {
         memcpy(output, input, output_length);
         output[output_length] = '\0';
 
