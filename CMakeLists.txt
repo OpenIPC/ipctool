@@ -33,6 +33,8 @@ add_executable(ipc_chip_info
     src/chipid.h
     src/dns.c
     src/dns.h
+    src/ethernet.c
+    src/ethernet.h
     src/fake_symbols.c
     src/firmware.c
     src/firmware.h
