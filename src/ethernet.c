@@ -6,6 +6,7 @@
 #include "chipid.h"
 #include "cjson/cYAML.h"
 #include "ethernet.h"
+#include "hal_hisi.h"
 #include "network.h"
 #include "tools.h"
 
@@ -91,10 +92,10 @@ cJSON *detect_ethernet() {
     cJSON *j_inner = cJSON_CreateObject();
     cJSON_AddItemToObject(fake_root, "ethernet", j_inner);
 
-    char buf[1024];
+    char mac[20];
 
-    if (get_mac_address(buf, sizeof buf)) {
-        ADD_PARAM("mac", buf);
+    if (get_mac_address(mac, sizeof mac)) {
+        ADD_PARAM("mac", mac);
     };
 
     uint32_t mdio_base = 0;
@@ -123,6 +124,9 @@ cJSON *detect_ethernet() {
             ADD_PARAM_FMT("d-mdio-phyaddr", "%x",
                           hieth_readl(mdio_base, D_MDIO_PHYADDR));
         }
+
+        if (chip_generation == 0x35180100)
+            ADD_PARAM("phy-mode", hisi_cv100_get_mii_mux());
     }
     return fake_root;
 }

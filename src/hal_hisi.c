@@ -722,3 +722,33 @@ int hisi_get_temp() {
 
     return EXIT_SUCCESS;
 }
+
+// muxctrl_reg23 is a multiplexing control register for the MII_TXCK pin.
+struct CV100_MUXCTRL_REG23 {
+    unsigned int muxctrl_reg23 : 2;
+};
+
+enum CV100_MUX_MII_TXCK {
+    CV100_GPIO3_3 = 0,
+    CV100_MII_TXCK,
+    CV100_VOU1120_DATA7,
+    CV100_RMII_CLK,
+};
+
+const unsigned int CV100_MUXCTRL_ADDR = 0x200F005C;
+const char *hisi_cv100_get_mii_mux() {
+    struct CV100_MUXCTRL_REG23 muxctrl_reg23;
+    bool res = mem_reg(CV100_MUXCTRL_ADDR, (uint32_t *)&muxctrl_reg23, OP_READ);
+    if (res) {
+        switch (muxctrl_reg23.muxctrl_reg23) {
+        case CV100_MII_TXCK:
+            return "mii";
+        case CV100_RMII_CLK:
+            return "rmii";
+        default:
+            return NULL;
+        }
+    }
+
+    return NULL;
+}

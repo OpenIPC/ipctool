@@ -13,6 +13,7 @@
 #include "chipid.h"
 #include "cjson/cJSON.h"
 #include "cjson/cYAML.h"
+#include "ethernet.h"
 #include "firmware.h"
 #include "hal_hisi.h"
 #include "mtd.h"
