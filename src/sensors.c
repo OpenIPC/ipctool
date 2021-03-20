@@ -12,9 +12,11 @@
 #include <unistd.h>
 
 #include "chipid.h"
+#include "cjson/cJSON.h"
 #include "hal_common.h"
 #include "hal_hisi.h"
 #include "sensors.h"
+#include "tools.h"
 
 char sensor_id[128];
 char sensor_manufacturer[128];
@@ -346,32 +348,28 @@ bool get_sensor_id() {
     return spi_detected;
 }
 
-const char *get_sensor_data_type() {
-    switch (chip_generation) {
-    case HISI_V1:
-        return hisi_cv100_get_sensor_data_type();
-    case HISI_V2:
-        return hisi_cv200_get_sensor_data_type();
-    case HISI_V3:
-        return hisi_cv300_get_sensor_data_type();
-    case HISI_V4:
-        return hisi_ev300_get_sensor_data_type();
-    default:
+cJSON *detect_sensors() {
+    if (!get_sensor_id()) {
         return NULL;
     }
-}
 
-const char *get_sensor_clock() {
-    switch (chip_generation) {
-    case HISI_V1:
-        return hisi_cv100_get_sensor_clock();
-    case HISI_V2:
-        return hisi_cv200_get_sensor_clock();
-    case HISI_V3:
-        return hisi_cv300_get_sensor_clock();
-    case HISI_V4:
-        return hisi_ev300_get_sensor_clock();
-    default:
-        return NULL;
+    cJSON *fake_root = cJSON_CreateObject();
+    cJSON *j_sensors = cJSON_AddArrayToObject(fake_root, "sensors");
+
+    cJSON *j_sensor = cJSON_CreateObject();
+    cJSON *j_inner = j_sensor;
+    cJSON_AddItemToArray(j_sensors, j_inner);
+    ADD_PARAM("vendor", sensor_manufacturer);
+    ADD_PARAM("model", sensor_id);
+
+    {
+        cJSON *j_inner = cJSON_CreateObject();
+        cJSON_AddItemToObject(j_sensor, "control", j_inner);
+        ADD_PARAM("bus", "0");
+        ADD_PARAM("type", control);
+
+        hisi_vi_information(j_sensor);
     }
+
+    return fake_root;
 }

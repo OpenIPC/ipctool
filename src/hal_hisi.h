@@ -32,4 +32,6 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
                                 unsigned int reg_addr, unsigned int reg_width,
                                 unsigned int data_width);
 
+void hisi_vi_information();
+
 #endif /* HAL_HISI_H */

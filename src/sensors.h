@@ -4,7 +4,6 @@
 #include <stdbool.h>
 
 bool get_sensor_id();
-const char *get_sensor_data_type();
-const char *get_sensor_clock();
+cJSON *detect_sensors();
 
 #endif /* SENSORID_H */

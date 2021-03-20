@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "cYAML.h"
+#include "cjson/cJSON.h"
 
 #define internal_malloc malloc
 #define internal_free free
@@ -29,6 +30,7 @@ typedef struct {
     cJSON_bool noalloc;
     cJSON_bool format; /* is this print a formatted print */
     internal_hooks hooks;
+    cJSON_bool next_dash;
 } printbuffer;
 
 #define cjson_min(a, b) (((a) < (b)) ? (a) : (b))
@@ -332,9 +334,8 @@ static cJSON_bool print_array(const cJSON *const item,
         return false;
     }
 
-    *output_pointer = '[';
-    output_buffer->offset++;
     output_buffer->depth++;
+    output_buffer->next_dash = true;
 
     while (current_element != NULL) {
         if (!print_value(current_element, output_buffer)) {
@@ -357,11 +358,10 @@ static cJSON_bool print_array(const cJSON *const item,
         current_element = current_element->next;
     }
 
-    output_pointer = ensure(output_buffer, 2);
+    output_pointer = ensure(output_buffer, 1);
     if (output_pointer == NULL) {
         return false;
     }
-    *output_pointer++ = ']';
     *output_pointer = '\0';
     output_buffer->depth--;
 
@@ -401,7 +401,12 @@ static cJSON_bool print_object(const cJSON *const item,
             return false;
         }
         for (i = 0; i < ident; i++) {
-            *output_pointer++ = ' ';
+            char space = ' ';
+            if (output_buffer->next_dash && i == ident - 2) {
+                output_buffer->next_dash = false;
+                space = '-';
+            }
+            *output_pointer++ = space;
         }
         output_buffer->offset += ident;
 

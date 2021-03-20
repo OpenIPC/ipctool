@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "chipid.h"
+#include "cjson/cJSON.h"
 #include "hal_common.h"
 #include "ram.h"
 #include "tools.h"
@@ -815,19 +816,72 @@ const bool hisi_vi_is_not_running() {
     uint32_t addr = 0, PT_N = 0;
     switch (chip_generation) {
     case HISI_V1:
-        addr = 0x20580000 + 0x0100;
     case HISI_V2:
-        addr = 0x11000000 + 0x1000 + PT_N * 0x100;
+        addr = 0x20580000 + 0x0100;
+        break;
     case HISI_V3:
         addr = 0x11380000 + 0x0100;
+        break;
     case HISI_V4:
         addr = 0x11000000 + 0x1000 + PT_N * 0x100;
+        break;
     default:
         return false;
     }
     struct PT_INTF_MOD reg;
-    if (mem_reg(addr, (uint32_t *)&reg, OP_READ))
+    if (mem_reg(addr, (uint32_t *)&reg, OP_READ)) {
+        // if (!reg.enable) // viState: down
+
         return !reg.enable;
+    }
 
     return false;
+}
+
+static const char *get_sensor_data_type() {
+    switch (chip_generation) {
+    case HISI_V1:
+        return hisi_cv100_get_sensor_data_type();
+    case HISI_V2:
+        return hisi_cv200_get_sensor_data_type();
+    case HISI_V3:
+        return hisi_cv300_get_sensor_data_type();
+    case HISI_V4:
+        return hisi_ev300_get_sensor_data_type();
+    default:
+        return NULL;
+    }
+}
+
+static const char *get_sensor_clock() {
+    switch (chip_generation) {
+    case HISI_V1:
+        return hisi_cv100_get_sensor_clock();
+    case HISI_V2:
+        return hisi_cv200_get_sensor_clock();
+    case HISI_V3:
+        return hisi_cv300_get_sensor_clock();
+    case HISI_V4:
+        return hisi_ev300_get_sensor_clock();
+    default:
+        return NULL;
+    }
+}
+
+void hisi_vi_information(cJSON *j_root) {
+    if (hisi_vi_is_not_running())
+        return;
+
+    const char *data_type = get_sensor_data_type();
+    if (data_type) {
+        cJSON *j_inner = cJSON_CreateObject();
+        cJSON_AddItemToObject(j_root, "data", j_inner);
+        ADD_PARAM("type", data_type);
+    }
+
+    const char *sensor_clock = get_sensor_clock();
+    if (sensor_clock) {
+        cJSON *j_inner = j_root;
+        ADD_PARAM("clock", sensor_clock);
+    }
 }

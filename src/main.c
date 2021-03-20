@@ -109,28 +109,6 @@ void print_chip_id() {
     }
 }
 
-void print_sensor_id() {
-    yaml_printf("sensors:\n"
-                "  - vendor: %s\n"
-                "    model: %s\n"
-                "    control:\n"
-                "      bus: 0\n"
-                "      type: %s\n",
-                sensor_manufacturer, sensor_id, control);
-
-    const char *data_type = get_sensor_data_type();
-    if (data_type) {
-        yaml_printf("    data:\n"
-                    "      type: %s\n",
-                    data_type);
-    }
-
-    const char *sensor_clock = get_sensor_clock();
-    if (sensor_clock) {
-        yaml_printf("    clock: %s\n", sensor_clock);
-    }
-}
-
 bool get_board_id() {
     if (is_xm_board()) {
         gather_xm_board_info();
@@ -214,10 +192,7 @@ int main(int argc, char *argv[]) {
         // flush stdout before go to sensor detection to avoid buggy kernel
         // freezes
         tcdrain(STDOUT_FILENO);
-        if (get_sensor_id())
-            print_sensor_id();
-        else
-            return EXIT_FAILURE;
+        show_yaml(detect_sensors());
 
         return EXIT_SUCCESS;
     }
