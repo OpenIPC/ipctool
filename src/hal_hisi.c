@@ -812,7 +812,7 @@ struct PT_INTF_MOD {
     bool enable : 1;
 };
 
-const bool hisi_vi_is_not_running() {
+const bool hisi_vi_is_not_running(cJSON *j_inner) {
     uint32_t addr = 0, PT_N = 0;
     switch (chip_generation) {
     case HISI_V1:
@@ -830,7 +830,8 @@ const bool hisi_vi_is_not_running() {
     }
     struct PT_INTF_MOD reg;
     if (mem_reg(addr, (uint32_t *)&reg, OP_READ)) {
-        // if (!reg.enable) // viState: down
+        if (!reg.enable)
+            ADD_PARAM("viState", "down");
 
         return !reg.enable;
     }
@@ -869,7 +870,7 @@ static const char *get_sensor_clock() {
 }
 
 void hisi_vi_information(cJSON *j_root) {
-    if (hisi_vi_is_not_running())
+    if (hisi_vi_is_not_running(j_root))
         return;
 
     const char *data_type = get_sensor_data_type();
