@@ -186,7 +186,7 @@ int main(int argc, char *argv[]) {
             print_system_id();
             print_chip_id();
             show_yaml(detect_ethernet());
-            print_mtd_info();
+            // print_mtd_info();
             print_ram_info();
             show_yaml(detect_firmare());
         } else

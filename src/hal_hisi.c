@@ -590,22 +590,150 @@ struct CV300_PERI_CRG11 {
     unsigned int res2 : 4;
 };
 
+const uint32_t CV300_LVDS0_IMGSIZE_ADDR = 0x11300000 + 0x130C;
+struct LVDS0_IMGSIZE {
+    unsigned int lvds_imgwidth_lane : 16;
+    unsigned int lvds_imgheight : 16;
+};
+
+const uint32_t CV300_LVDS0_WDR_ADDR = 0x11300000 + 0x1300;
+struct LVDS0_WDR {
+    bool lvds_wdr_en : 1;
+    unsigned int res0 : 3;
+    unsigned int lvds_wdr_num : 2;
+    unsigned int res1 : 2;
+    unsigned int lvds_wdr_mode : 4;
+    unsigned int lvds_wdr_id_shift : 4;
+};
+
+typedef enum {
+    RAW_UNKNOWN = 0,
+    RAW_DATA_8BIT,
+    RAW_DATA_10BIT,
+    RAW_DATA_12BIT,
+    RAW_DATA_14BIT,
+    RAW_DATA_16BIT,
+} raw_data_type_e;
+
+typedef enum {
+    LVDS_SYNC_MODE_SOF = 0, /* sensor SOL, EOL, SOF, EOF */
+    LVDS_SYNC_MODE_SAV,     /* SAV, EAV */
+} lvds_sync_mode_e;
+
+typedef enum {
+    LVDS_ENDIAN_LITTLE = 0x0,
+    LVDS_ENDIAN_BIG = 0x1,
+} lvds_bit_endian;
+
+const uint32_t CV300_LVDS0_CTRL_ADDR = 0x11300000 + 0x1304;
+struct LVDS0_CTRL {
+    lvds_sync_mode_e lvds_sync_mode : 1;
+    unsigned int res0 : 3;
+    raw_data_type_e lvds_raw_type : 3;
+    unsigned int res1 : 1;
+    lvds_bit_endian lvds_pix_big_endian : 1;
+    lvds_bit_endian lvds_code_big_endian : 1;
+    unsigned int res2 : 2;
+    bool lvds_crop_en : 1;
+    unsigned int res3 : 3;
+    unsigned int lvds_split_mode : 3;
+};
+
+const uint32_t CV300_MIPI0_LANES_NUM_ADDR = 0x11300000 + 0x1004;
+struct CV300_MIPI0_LANES_NUM {
+    unsigned int lane_num : 3;
+};
+
+const uint32_t CV300_ALIGN0_LANE_ID_ADDR = 0x11300000 + 0x1600;
+struct ALIGN0_LANE_ID {
+    unsigned int lane0_id : 4;
+    unsigned int lane1_id : 4;
+    unsigned int lane2_id : 4;
+    unsigned int lane3_id : 4;
+};
+
+static void lvds_code_set(cJSON *j_inner, const char *param,
+                          lvds_bit_endian val) {
+    if (val == LVDS_ENDIAN_LITTLE)
+        ADD_PARAM(param, "LVDS_ENDIAN_LITTLE")
+    else
+        ADD_PARAM(param, "LVDS_ENDIAN_BIG");
+}
+
 const unsigned int CV300_MISC_CTRL0_ADDR = 0x12030000;
 static void hisi_cv300_sensor_data(cJSON *j_root) {
     cJSON *j_inner = cJSON_CreateObject();
 
     struct CV300_MISC_CTRL0 ctrl0;
-    bool res = mem_reg(CV300_MISC_CTRL0_ADDR, (uint32_t *)&ctrl0, OP_READ);
-    if (res && *(uint32_t *)&ctrl0) {
+    bool is_lvds = false;
+    if (mem_reg(CV300_MISC_CTRL0_ADDR, (uint32_t *)&ctrl0, OP_READ)) {
         switch (ctrl0.mipi_phy_mode) {
-        case CV300_PHY_MIPI_MODE:
-            ADD_PARAM("type", "MIPI");
-            break;
         case CV300_PHY_CMOS_MODE:
             ADD_PARAM("type", "DC");
             break;
         case CV300_PHY_LVDS_MODE:
             ADD_PARAM("type", "LVDS");
+            is_lvds = true;
+        case CV300_PHY_MIPI_MODE:
+            if (!is_lvds)
+                ADD_PARAM("type", "MIPI");
+
+            struct CV300_MIPI0_LANES_NUM lnum;
+            mem_reg(CV300_MIPI0_LANES_NUM_ADDR, (uint32_t *)&lnum, OP_READ);
+            size_t lanes = lnum.lane_num + 1;
+
+            struct ALIGN0_LANE_ID lid;
+            if (mem_reg(CV300_ALIGN0_LANE_ID_ADDR, (uint32_t *)&lid, OP_READ)) {
+                cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "laneId");
+                cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane0_id));
+                if (lanes > 1)
+                    cJSON_AddItemToArray(j_lanes,
+                                         cJSON_CreateNumber(lid.lane1_id));
+                if (lanes > 2)
+                    cJSON_AddItemToArray(j_lanes,
+                                         cJSON_CreateNumber(lid.lane2_id));
+                if (lanes > 3)
+                    cJSON_AddItemToArray(j_lanes,
+                                         cJSON_CreateNumber(lid.lane3_id));
+            }
+
+            struct LVDS0_CTRL lvds0_ctrl;
+            if (mem_reg(CV300_LVDS0_CTRL_ADDR, (uint32_t *)&lvds0_ctrl,
+                        OP_READ)) {
+                if (lvds0_ctrl.lvds_sync_mode == LVDS_SYNC_MODE_SOF)
+                    ADD_PARAM("syncMode", "LVDS_SYNC_MODE_SOF")
+                else
+                    ADD_PARAM("syncMode", "LVDS_SYNC_MODE_SAV");
+
+                const char *raw;
+                switch (lvds0_ctrl.lvds_raw_type) {
+                case RAW_DATA_8BIT:
+                    raw = "RAW_DATA_8BIT";
+                    break;
+                case RAW_DATA_10BIT:
+                    raw = "RAW_DATA_10BIT";
+                    break;
+                case RAW_DATA_12BIT:
+                    raw = "RAW_DATA_12BIT";
+                    break;
+                case RAW_DATA_14BIT:
+                    raw = "RAW_DATA_14BIT";
+                    break;
+                case RAW_DATA_16BIT:
+                    raw = "RAW_DATA_16BIT";
+                    break;
+                default:
+                    raw = NULL;
+                }
+                if (raw)
+                    ADD_PARAM("rawDataType", raw);
+
+                lvds_code_set(j_inner, "dataEndian",
+                              lvds0_ctrl.lvds_pix_big_endian);
+                lvds_code_set(j_inner, "syncCodeEndian",
+                              lvds0_ctrl.lvds_code_big_endian);
+            }
+
             break;
         default:
             return;
