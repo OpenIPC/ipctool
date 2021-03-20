@@ -12,7 +12,7 @@ struct mtd_info_user {
     uint32_t eccsize;
 };
 
-typedef void (*cb_mtd)(int i, const char *name, struct mtd_info_user *mtd,
+typedef bool (*cb_mtd)(int i, const char *name, struct mtd_info_user *mtd,
                        void *ctx);
 
 void print_mtd_info();

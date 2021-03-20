@@ -464,7 +464,11 @@ const char *hisi_cv100_get_sensor_clock() {
     return NULL;
 }
 
-const char *hisi_cv100_get_sensor_data_type() { return "DC"; }
+static void hisi_cv100_sensor_data(cJSON *j_root) {
+    cJSON *j_inner = cJSON_CreateObject();
+    cJSON_AddItemToObject(j_root, "data", j_inner);
+    ADD_PARAM("type", "DC");
+}
 
 enum CV200_MIPI_PHY {
     CV200_PHY_MIPI_MODE = 0,
@@ -496,25 +500,30 @@ struct CV200_MISC_CTRL1 {
 };
 
 const unsigned int CV200_MISC_CTRL1_ADDR = 0x20120004;
-const char *hisi_cv200_get_sensor_data_type() {
+static void hisi_cv200_sensor_data(cJSON *j_root) {
+    cJSON *j_inner = cJSON_CreateObject();
+
     struct CV200_MISC_CTRL1 ctrl1;
     bool res = mem_reg(CV200_MISC_CTRL1_ADDR, (uint32_t *)&ctrl1, OP_READ);
-    // TODO: consider valid is ISP is running
     if (res && *(uint32_t *)&ctrl1) {
         switch (ctrl1.mipi_phy_mode) {
         case CV200_PHY_MIPI_MODE:
-            return "MIPI";
+            ADD_PARAM("type", "MIPI");
+            break;
         case CV200_PHY_CMOS_MODE:
-            return "DC";
+            ADD_PARAM("type", "DC");
+            break;
         case CV200_PHY_LVDS_MODE:
-            return "LVDS";
+            ADD_PARAM("type", "LVDS");
+            break;
         case CV200_PHY_BYPASS:
-            return "BYPASS";
+            ADD_PARAM("type", "BYPASS");
+            break;
         default:
-            return NULL;
+            return;
         }
     }
-    return NULL;
+    cJSON_AddItemToObject(j_root, "data", j_inner);
 }
 
 enum CV300_MIPI_PHY {
@@ -582,23 +591,27 @@ struct CV300_PERI_CRG11 {
 };
 
 const unsigned int CV300_MISC_CTRL0_ADDR = 0x12030000;
-const char *hisi_cv300_get_sensor_data_type() {
+static void hisi_cv300_sensor_data(cJSON *j_root) {
+    cJSON *j_inner = cJSON_CreateObject();
+
     struct CV300_MISC_CTRL0 ctrl0;
     bool res = mem_reg(CV300_MISC_CTRL0_ADDR, (uint32_t *)&ctrl0, OP_READ);
-    // consider 0 as invalid value (system can just reseted)
     if (res && *(uint32_t *)&ctrl0) {
         switch (ctrl0.mipi_phy_mode) {
         case CV300_PHY_MIPI_MODE:
-            return "MIPI";
+            ADD_PARAM("type", "MIPI");
+            break;
         case CV300_PHY_CMOS_MODE:
-            return "DC";
+            ADD_PARAM("type", "DC");
+            break;
         case CV300_PHY_LVDS_MODE:
-            return "LVDS";
+            ADD_PARAM("type", "LVDS");
+            break;
         default:
-            return NULL;
+            return;
         }
     }
-    return NULL;
+    cJSON_AddItemToObject(j_root, "data", j_inner);
 }
 
 static char *cv200_cv300_map_sensor_clksel(unsigned int sensor_clksel) {
@@ -654,21 +667,24 @@ struct EV300_MISC_CTRL6 {
 };
 
 const unsigned int EV300_MISC_CTRL6_ADDR = 0x12028018;
-const char *hisi_ev300_get_sensor_data_type() {
+static void hisi_ev300_sensor_data(cJSON *j_root) {
+    cJSON *j_inner = cJSON_CreateObject();
+
     struct EV300_MISC_CTRL6 ctrl6;
     bool res = mem_reg(EV300_MISC_CTRL6_ADDR, (uint32_t *)&ctrl6, OP_READ);
     if (res) {
         switch (ctrl6.mipirx0_work_mode) {
         case EV300_PHY_MIPI_MODE:
-            return "MIPI";
+            ADD_PARAM("type", "MIPI");
+            break;
         case EV300_PHY_LVDS_MODE:
-            return "LVDS";
+            ADD_PARAM("type", "LVDS");
+            break;
         default:
-            return NULL;
+            return;
         }
     }
-
-    return NULL;
+    cJSON_AddItemToObject(j_root, "data", j_inner);
 }
 
 const char *hisi_ev300_get_sensor_clock() {
@@ -871,18 +887,23 @@ const bool hisi_vi_is_not_running(cJSON *j_inner) {
     return false;
 }
 
-static const char *get_sensor_data_type() {
+static void determine_sensor_data_type(cJSON *j_root) {
+    const char *dtype = NULL;
     switch (chip_generation) {
     case HISI_V1:
-        return hisi_cv100_get_sensor_data_type();
+        hisi_cv100_sensor_data(j_root);
+        break;
     case HISI_V2:
-        return hisi_cv200_get_sensor_data_type();
+        hisi_cv200_sensor_data(j_root);
+        break;
     case HISI_V3:
-        return hisi_cv300_get_sensor_data_type();
+        hisi_cv300_sensor_data(j_root);
+        break;
     case HISI_V4:
-        return hisi_ev300_get_sensor_data_type();
+        hisi_ev300_sensor_data(j_root);
+        break;
     default:
-        return NULL;
+        return;
     }
 }
 
@@ -905,12 +926,7 @@ void hisi_vi_information(cJSON *j_root) {
     if (hisi_vi_is_not_running(j_root))
         return;
 
-    const char *data_type = get_sensor_data_type();
-    if (data_type) {
-        cJSON *j_inner = cJSON_CreateObject();
-        cJSON_AddItemToObject(j_root, "data", j_inner);
-        ADD_PARAM("type", data_type);
-    }
+    determine_sensor_data_type(j_root);
 
     const char *sensor_clock = get_sensor_clock();
     if (sensor_clock) {

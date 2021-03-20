@@ -44,7 +44,7 @@ typedef struct {
     size_t cap;
 } enum_mtd_ctx;
 
-static void cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
+static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
                         void *ctx) {
     enum_mtd_ctx *c = (enum_mtd_ctx *)ctx;
     char filename[1024];
@@ -52,18 +52,19 @@ static void cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     snprintf(filename, sizeof filename, "/dev/mtdblock%d", i);
     int fd = open(filename, O_RDONLY);
     if (fd == -1) {
-        return;
+        return true;
     }
 
     char *addr = (char *)mmap(NULL, mtd->size, PROT_READ, MAP_PRIVATE, fd, 0);
     if ((void *)addr == MAP_FAILED) {
         close(fd);
-        return;
+        return true;
     }
 
     c->blocks[c->count].data = addr;
     c->blocks[c->count].len = mtd->size;
     c->count++;
+    return true;
 }
 
 static int map_mtdblocks(span_t *blocks, size_t bl_len) {

@@ -168,7 +168,7 @@ typedef struct {
     mpoint_t mpoints[MAX_MPOINTS];
 } enum_mtd_ctx;
 
-static void cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
+static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
                         void *ctx) {
     enum_mtd_ctx *c = (enum_mtd_ctx *)ctx;
 
@@ -202,6 +202,7 @@ static void cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
         }
     }
     c->totalsz += mtd->size;
+    return true;
 }
 
 void enum_mtd_info(void *ctx, cb_mtd cb) {
@@ -211,7 +212,8 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
     struct mtd_info_user mtd;
 
     if ((fp = fopen("/proc/mtd", "r"))) {
-        while (fgets(dev, sizeof dev, fp)) {
+        bool running = true;
+        while (fgets(dev, sizeof dev, fp) && running) {
             name[0] = 0;
             if (sscanf(dev, "mtd%d: %x %x \"%64[^\"]\"", &i, &es, &ee, name)) {
                 snprintf(dev, sizeof dev, "/dev/mtd%d", i);
@@ -219,8 +221,10 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
                 if (devfd < 0)
                     continue;
 
-                if (ioctl(devfd, MEMGETINFO, &mtd) >= 0)
-                    cb(i, name, &mtd, ctx);
+                if (ioctl(devfd, MEMGETINFO, &mtd) >= 0) {
+                    if (!cb(i, name, &mtd, ctx))
+                        running = false;
+                }
                 close(devfd);
             }
         }
