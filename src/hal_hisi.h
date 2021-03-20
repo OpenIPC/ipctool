@@ -6,6 +6,11 @@
 
 #define VENDOR_HISI "HiSilicon"
 
+#define HISI_V1 0x35180100
+#define HISI_V2 0x3518E200
+#define HISI_V3 0x3516C300
+#define HISI_V4 0x3516E300
+
 int hisi_SYS_DRV_GetChipId();
 const char *hisi_cv100_get_sensor_clock();
 const char *hisi_cv100_get_sensor_data_type();

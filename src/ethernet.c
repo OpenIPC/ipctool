@@ -100,11 +100,11 @@ cJSON *detect_ethernet() {
 
     uint32_t mdio_base = 0;
     switch (chip_generation) {
-    case 0x35180100:
-    case 0x3518E200:
+    case HISI_V1:
+    case HISI_V2:
         mdio_base = 0x10090000;
         break;
-    case 0x3516C300:
+    case HISI_V3:
         mdio_base = 0x10050000;
         break;
     }
@@ -125,7 +125,7 @@ cJSON *detect_ethernet() {
                           hieth_readl(mdio_base, D_MDIO_PHYADDR));
         }
 
-        if (chip_generation == 0x35180100)
+        if (chip_generation == HISI_V1)
             ADD_PARAM("phy-mode", hisi_cv100_get_mii_mux());
     }
     return fake_root;

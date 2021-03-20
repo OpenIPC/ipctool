@@ -13,6 +13,7 @@
 
 #include "chipid.h"
 #include "hal_common.h"
+#include "hal_hisi.h"
 #include "sensors.h"
 
 char sensor_id[128];
@@ -305,10 +306,10 @@ static bool get_sensor_id_spi() {
     int fd = -1;
 
     // fallback for SPI implemented only for HiSilicon
-    if (chip_generation == 0x35180100) {
+    if (chip_generation == HISI_V1) {
         fd = open("/dev/ssp", 0);
         sensor_read_register = sony_ssp_read_register;
-    } else if (chip_generation == 0x3516C300 || chip_generation == 0x3518E200) {
+    } else if (chip_generation == HISI_V3 || chip_generation == HISI_V2) {
         fd = open("/dev/spidev0.0", 0);
         sensor_read_register = hisi_gen3_spi_read_register;
     } else
@@ -347,13 +348,13 @@ bool get_sensor_id() {
 
 const char *get_sensor_data_type() {
     switch (chip_generation) {
-    case 0x35180100:
+    case HISI_V1:
         return hisi_cv100_get_sensor_data_type();
-    case 0x3518E200:
+    case HISI_V2:
         return hisi_cv200_get_sensor_data_type();
-    case 0x3516C300:
+    case HISI_V3:
         return hisi_cv300_get_sensor_data_type();
-    case 0x3516E300:
+    case HISI_V4:
         return hisi_ev300_get_sensor_data_type();
     default:
         return NULL;
@@ -362,13 +363,13 @@ const char *get_sensor_data_type() {
 
 const char *get_sensor_clock() {
     switch (chip_generation) {
-    case 0x35180100:
+    case HISI_V1:
         return hisi_cv100_get_sensor_clock();
-    case 0x3518E200:
+    case HISI_V2:
         return hisi_cv200_get_sensor_clock();
-    case 0x3516C300:
+    case HISI_V3:
         return hisi_cv300_get_sensor_clock();
-    case 0x3516E300:
+    case HISI_V4:
         return hisi_ev300_get_sensor_clock();
     default:
         return NULL;

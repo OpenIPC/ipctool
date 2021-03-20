@@ -77,21 +77,21 @@ static const char *get_hisi_chip_id(uint32_t reg) {
     case 0x35190101:
         return "3519V101";
     case 0x3516C300:
-        chip_generation = 0x3516C300;
+        chip_generation = HISI_V3;
         return "3516CV300";
     case 0x3516D300:
         return "3516DV300";
     case 0x3516E200:
-        chip_generation = 0x3516E300;
+        chip_generation = HISI_V4;
         return "3516EV200";
     case 0x3516E300:
-        chip_generation = 0x3516E300;
+        chip_generation = HISI_V4;
         return "3516EV300";
     case 0x35180100:
-        chip_generation = 0x35180100;
+        chip_generation = HISI_V1;
         return get_chip_id35180100();
     case 0x3518E200:
-        chip_generation = 0x3518E200;
+        chip_generation = HISI_V2;
         return "3518EV200";
     case 0x3559A100:
         return "3559AV100";
@@ -186,7 +186,7 @@ bool detect_system() {
     strncpy(chip_id, get_hisi_chip_id(chip_id_u32), sizeof(chip_id));
 
     // Special case for 16cv200/18ev200/18ev201 family
-    if (chip_id_u32 == 0x3518E200 || chip_id_u32 == 0x3516C300) {
+    if (chip_id_u32 == HISI_V2 || chip_id_u32 == HISI_V3) {
         uint32_t SCSYSID0_reg =
             ((volatile uint32_t *)(sc_ctrl_map + SCSYSID0))[0];
         char SCSYSID0_chip_id = ((char *)&SCSYSID0_reg)[3];
@@ -204,7 +204,7 @@ bool detect_system() {
             default:
                 sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
             }
-        if (chip_id_u32 == 0x3516C300)
+        if (chip_id_u32 == HISI_V3)
             switch (SCSYSID0_chip_id) {
             case 0:
                 sprintf(chip_id, "3516CV300");

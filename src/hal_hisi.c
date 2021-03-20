@@ -44,7 +44,7 @@ int hisi_gen1_open_sensor_fd() { return common_open_sensor_fd("/dev/hi_i2c"); }
 // Set I2C slave address
 int hisi_sensor_i2c_change_addr(int fd, unsigned char addr) {
     // use i2c address shift only for generations other than 2
-    if (chip_generation != 0x3518E200) {
+    if (chip_generation != HISI_V2) {
         addr >>= 1;
     }
 
@@ -363,11 +363,11 @@ void setup_hal_hisi() {
     close_sensor_fd = hisi_close_sensor_fd;
     hal_cleanup = hisi_hal_cleanup;
     sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
-    if (chip_generation == 0x35180100) {
+    if (chip_generation == HISI_V1) {
         open_sensor_fd = hisi_gen1_open_sensor_fd;
         sensor_read_register = xm_sensor_read_register;
         sensor_write_register = xm_sensor_write_register;
-    } else if (chip_generation == 0x3518E200) {
+    } else if (chip_generation == HISI_V2) {
         sensor_read_register = hisi_gen2_sensor_read_register;
         sensor_write_register = hisi_gen2_sensor_write_register;
     } else {
@@ -703,15 +703,15 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
 int hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
-    case 0x3518E200:
+    case HISI_V2:
         tempo = hisi_reg_temp(0x20270114, 8, 0x20270110, 0x60FA0000);
         tempo = ((tempo * 180) / 256) - 40;
         break;
-    case 0x3516C300:
+    case HISI_V3:
         tempo = hisi_reg_temp(0x120300A4, 16, 0x1203009C, 0x60FA0000);
         tempo = ((tempo - 125.0) / 806) * 165 - 40;
         break;
-    case 0x3516E300:
+    case HISI_V4:
         tempo = hisi_reg_temp(0x120280BC, 16, 0x120280B4, 0xC3200000);
         tempo = ((tempo - 117) / 798) * 165 - 40;
         break;
@@ -751,4 +751,83 @@ const char *hisi_cv100_get_mii_mux() {
     }
 
     return NULL;
+}
+
+void cv300_enum_lanes() {
+    uint32_t addr = 0x11301320;
+    uint32_t end_addr = 0x1130141C;
+
+    for (;;) {
+    }
+}
+
+const uint32_t CV300_ISP_AF_CFG_ADDR = 0x12200;
+struct CV300_ISP_AF_CFG {
+    bool en : 1;
+    bool iir0_en0 : 1;
+    bool iir0_en1 : 1;
+    bool iir0_en2 : 1;
+    bool iir1_en0 : 1;
+    bool iir1_en1 : 1;
+    bool iir1_en2 : 1;
+    unsigned int peak_mode : 1;
+    unsigned int squ_mode : 1;
+    bool offset_en : 1;
+    bool crop_en : 1;
+    bool lpf_en : 1;
+    bool mean_en : 1;
+    bool sqrt_en : 1;
+    bool raw_mode : 1;
+    unsigned int bayer_mode : 2;
+    bool iir0_ds_en : 1;
+    bool iir1_ds_en : 1;
+    bool fir0_lpf_en : 1;
+    bool fir1_lpf_en : 1;
+    bool iir0_ldg_en : 1;
+    bool iir1_ldg_en : 1;
+    bool fir0_ldg_en : 1;
+    bool fir1_ldg_en : 1;
+    unsigned int res : 6;
+    bool ck_gt_en : 1;
+};
+
+enum CV300_ISP_AF_BAYER {
+    CV300_B_RGGB = 0,
+    CV300_B_GRBG,
+    CV300_B_GBRG,
+    CV300_B_BGGR,
+};
+
+/*
+ev300 = 0x1100_0000 + 0x1000 + PT_N x 0x100;
+cv300 = 0x1138_0000 + 0x0100;
+cv200 = 0x1100_0000 + 0x1000 + PT_N x 0x100;
+cv100 =
+*/
+
+struct PT_INTF_MOD {
+    unsigned int mode : 1;
+    unsigned int res : 30;
+    bool enable : 1;
+};
+
+const bool hisi_vi_is_not_running() {
+    uint32_t addr = 0, PT_N = 0;
+    switch (chip_generation) {
+    case HISI_V1:
+        addr = 0x20580000 + 0x0100;
+    case HISI_V2:
+        addr = 0x11000000 + 0x1000 + PT_N * 0x100;
+    case HISI_V3:
+        addr = 0x11380000 + 0x0100;
+    case HISI_V4:
+        addr = 0x11000000 + 0x1000 + PT_N * 0x100;
+    default:
+        return false;
+    }
+    struct PT_INTF_MOD reg;
+    if (mem_reg(addr, (uint32_t *)&reg, OP_READ))
+        return !reg.enable;
+
+    return false;
 }
