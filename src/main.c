@@ -108,7 +108,7 @@ void print_chip_id() {
     }
 }
 
-struct CV100_MDIO_RWCTRL {
+struct REG_MDIO_RWCTRL {
     unsigned int phy_inaddr : 5;
     unsigned int frq_dv : 3;
     unsigned int phy_exaddr : 5;
@@ -125,26 +125,26 @@ struct CV100_MDIO_RWCTRL {
 #define U_MDIO_RO_STAT 0x010C
 #define D_MDIO_RO_STAT 0x210C
 
-uint32_t hieth_readl(uint32_t regaddr) {
+uint32_t hieth_readl(uint32_t base, uint32_t regaddr) {
     uint32_t val;
-    if (mem_reg(regaddr + 0x10090000, &val, OP_READ)) {
+    if (mem_reg(base + regaddr, &val, OP_READ)) {
         return val;
     }
     return 0x1111;
 }
 
-void hieth_writel(uint32_t val, uint32_t regaddr) {
-    if (!mem_reg(regaddr + 0x10090000, &val, OP_WRITE)) {
+void hieth_writel(uint32_t val, uint32_t base, uint32_t regaddr) {
+    if (!mem_reg(base + regaddr, &val, OP_WRITE)) {
         printf("write error\n");
     }
 }
 
 /* hardware set bit'15 of MDIO_REG(0) if mdio ready */
-#define test_mdio_ready() (hieth_readl(MDIO_RWCTRL) & (1 << 15))
+#define test_mdio_ready(base) (hieth_readl(base, MDIO_RWCTRL) & (1 << 15))
 
-static int wait_mdio_ready() {
+static int wait_mdio_ready(uint32_t base) {
     int timeout_us = 1000;
-    while (--timeout_us && !test_mdio_ready())
+    while (--timeout_us && !test_mdio_ready(base))
         usleep(1);
     return timeout_us;
 }
@@ -155,28 +155,30 @@ static int wait_mdio_ready() {
      (((phy_exaddr)&0x1F) << 8) | (((frq_div)&0x7) << 5) |                     \
      ((phy_regnum)&0x1F))
 
-#define mdio_start_phyread(frq_dv, phy_addr, regnum)                           \
-    hieth_writel(MDIO_MK_RWCTL(0, 0, 0, phy_addr, frq_dv, regnum), MDIO_RWCTRL)
+#define mdio_start_phyread(base, frq_dv, phy_addr, regnum)                     \
+    hieth_writel(MDIO_MK_RWCTL(0, 0, 0, phy_addr, frq_dv, regnum), base,       \
+                 MDIO_RWCTRL)
 
-#define mdio_get_phyread_val() (hieth_readl(MDIO_RO_DATA) & 0xFFFF)
+#define mdio_get_phyread_val(base) (hieth_readl(base, MDIO_RO_DATA) & 0xFFFF)
 
-int hieth_mdio_read(int frq_dv, int phy_addr, int regnum) {
+int hieth_mdio_read(int frq_dv, int phy_addr, uint32_t base, int regnum) {
     int val = 0;
 
-    if (!wait_mdio_ready()) {
-        printf("mdio busy");
+    if (!wait_mdio_ready(base)) {
+        fprintf(stderr, "mdio busy\n");
         goto error_exit;
     }
 
-    mdio_start_phyread(frq_dv, phy_addr, regnum);
+    mdio_start_phyread(base, frq_dv, phy_addr, regnum);
 
-    if (wait_mdio_ready())
-        val = mdio_get_phyread_val();
+    if (wait_mdio_ready(base))
+        val = mdio_get_phyread_val(base);
     else
-        printf("read timeout");
+        fprintf(stderr, "read timeout\n");
 
 error_exit:
-    printf("phy_addr = %d, regnum = %d, val = 0x%04x\n", phy_addr, regnum, val);
+    fprintf(stderr, "phy_addr = %d, regnum = %d, val = 0x%04x\n", phy_addr,
+            regnum, val);
 
     return val;
 }
@@ -193,44 +195,32 @@ void print_ethernet_data() {
         yaml_printf("  mac: \"%s\"\n", buf);
     };
 
-    uint32_t mdio_phyaddr = 0;
-    uint32_t mdio_rwctrl = 0;
-    uint32_t mdio_ro_data = 0;
+    uint32_t mdio_base = 0;
     switch (chip_generation) {
     case 0x35180100:
     case 0x3518E200:
-        // 0x1009_0108 UD_MDIO_PHYADDR
-        mdio_phyaddr = 0x10090108;
-        mdio_rwctrl = 0x10091100;
-        mdio_ro_data = 0x10091104;
+        mdio_base = 0x10090000;
         break;
     case 0x3516C300:
-        // 0x10050108 UD_MDIO_PHYADDR
-        mdio_phyaddr = 0x10050108;
+        mdio_base = 0x10050000;
         break;
     }
 
-    if (mdio_phyaddr) {
-        uint32_t my_phyaddr;
-        if (mem_reg(mdio_phyaddr, &my_phyaddr, OP_READ)) {
+    if (mdio_base) {
+        struct REG_MDIO_RWCTRL reg;
+        if (mem_reg(mdio_base + MDIO_RWCTRL, (uint32_t *)&reg, OP_READ)) {
+            uint32_t my_phyaddr = hieth_readl(mdio_base, U_MDIO_PHYADDR);
             yaml_printf("  u-mdio-phyaddr: %x\n", my_phyaddr);
-        }
-        unsigned long phy_id;
-        unsigned short id1, id2;
 
-        struct CV100_MDIO_RWCTRL reg;
-        if (mem_reg(mdio_rwctrl, (uint32_t *)&reg, OP_READ)) {
-            yaml_printf("  rw_ctrl: %x\n", reg.frq_dv);
-
-            id1 = hieth_mdio_read(reg.frq_dv, my_phyaddr, 0x02);
-            id2 = hieth_mdio_read(reg.frq_dv, my_phyaddr, 0x03);
+            unsigned long phy_id;
+            unsigned short id1, id2;
+            id1 = hieth_mdio_read(reg.frq_dv, my_phyaddr, mdio_base, 0x02);
+            id2 = hieth_mdio_read(reg.frq_dv, my_phyaddr, mdio_base, 0x03);
             phy_id = (((id1 & 0xffff) << 16) | (id2 & 0xffff));
             yaml_printf("  phy-id: 0x%.8lx\n", phy_id);
-        }
 
-        uint32_t val;
-        if (mem_reg(mdio_phyaddr + 0x2000, &val, OP_READ)) {
-            yaml_printf("  d-mdio-phyaddr: %x\n", val);
+            yaml_printf("  d-mdio-phyaddr: %x\n",
+                        hieth_readl(mdio_base, D_MDIO_PHYADDR));
         }
     }
     exit(0);
