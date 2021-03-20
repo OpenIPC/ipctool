@@ -331,7 +331,7 @@ static bool hisi_mmz_total() {
 
 static char printk_state[16];
 #define PRINTK_FILE "/proc/sys/kernel/printk"
-void disable_printk() {
+static void disable_printk() {
     if (*printk_state)
         return;
 
@@ -346,7 +346,39 @@ void disable_printk() {
     fclose(fp);
 }
 
-void restore_printk() {
+struct EV300_PERI_CRG60 {
+    bool sensor0_cken : 1;
+    unsigned int sensor0_srst_req : 1;
+    unsigned int sensor0_cksel : 3;
+    bool sensor0_ctrl_cken : 1;
+    unsigned int sensor0_ctrl_srst_req : 1;
+};
+
+const unsigned int EV300_PERI_CRG60_ADRR = 0x120100F0;
+static struct EV300_PERI_CRG60 peri_crg60;
+static bool crg60_changed;
+static void v4_ensure_sensor_enabled() {
+    struct EV300_PERI_CRG60 crg60;
+    if (mem_reg(EV300_PERI_CRG60_ADRR, (uint32_t *)&crg60, OP_READ)) {
+        if (!crg60.sensor0_cken) {
+            peri_crg60 = crg60;
+            // 1: clock enabled
+            crg60.sensor0_cken = true;
+            // 0: reset deasserted
+            crg60.sensor0_srst_req = false;
+            mem_reg(EV300_PERI_CRG60_ADRR, (uint32_t *)&crg60, OP_WRITE);
+            crg60_changed = true;
+        }
+    }
+}
+
+static void ensure_sensor_restored() {
+    if (crg60_changed) {
+        mem_reg(EV300_PERI_CRG60_ADRR, (uint32_t *)&peri_crg60, OP_WRITE);
+    }
+}
+
+static void restore_printk() {
     if (!*printk_state)
         return;
 
@@ -355,10 +387,16 @@ void restore_printk() {
     fclose(fp);
 }
 
-static void hisi_hal_cleanup() { restore_printk(); }
+static void hisi_hal_cleanup() {
+    if (chip_generation == HISI_V4)
+        ensure_sensor_restored();
+    restore_printk();
+}
 
 void setup_hal_hisi() {
     disable_printk();
+    if (chip_generation == HISI_V4)
+        v4_ensure_sensor_enabled();
 
     open_sensor_fd = hisi_open_sensor_fd;
     close_sensor_fd = hisi_close_sensor_fd;
@@ -604,14 +642,6 @@ const char *hisi_cv300_get_sensor_clock() {
     return NULL;
 }
 
-struct EV300_PERI_CRG60 {
-    bool sensor0_cken : 1;
-    unsigned int sensor0_srst_req : 1;
-    unsigned int sensor0_cksel : 3;
-    bool sensor0_ctrl_cken : 1;
-    unsigned int sensor0_ctrl_srst_req : 1;
-};
-
 enum EV300_MIPI_PHY {
     EV300_PHY_MIPI_MODE = 0,
     EV300_PHY_LVDS_MODE,
@@ -641,7 +671,6 @@ const char *hisi_ev300_get_sensor_data_type() {
     return NULL;
 }
 
-const unsigned int EV300_PERI_CRG60_ADRR = 0x120100F0;
 const char *hisi_ev300_get_sensor_clock() {
     struct EV300_PERI_CRG60 crg60;
     int res = mem_reg(EV300_PERI_CRG60_ADRR, (uint32_t *)&crg60, OP_READ);
@@ -799,30 +828,33 @@ enum CV300_ISP_AF_BAYER {
     CV300_B_BGGR,
 };
 
-/*
-ev300 = 0x1100_0000 + 0x1000 + PT_N x 0x100;
-cv300 = 0x1138_0000 + 0x0100;
-cv200 = 0x1100_0000 + 0x1000 + PT_N x 0x100;
-cv100 =
-*/
-
 struct PT_INTF_MOD {
     unsigned int mode : 1;
     unsigned int res : 30;
     bool enable : 1;
 };
 
+// cv100 - 0x0110
+// cv200 - 0x0110
+// cv300 - 0x0110
+// ev300 -  0x1014 + PT_N x 0x100
+
+const uint32_t PT_INTF_MOD_OFFSET = 0x100;
 const bool hisi_vi_is_not_running(cJSON *j_inner) {
     uint32_t addr = 0, PT_N = 0;
+    uint32_t base = 0;
     switch (chip_generation) {
     case HISI_V1:
     case HISI_V2:
+        base = 0x20580000;
         addr = 0x20580000 + 0x0100;
         break;
     case HISI_V3:
+        base = 0x11380000;
         addr = 0x11380000 + 0x0100;
         break;
     case HISI_V4:
+        base = 0x11000000 + 0x1000;
         addr = 0x11000000 + 0x1000 + PT_N * 0x100;
         break;
     default:
@@ -886,3 +918,18 @@ void hisi_vi_information(cJSON *j_root) {
         ADD_PARAM("clock", sensor_clock);
     }
 }
+
+// for IMX291 1920x1110
+struct PT_SIZE {
+    unsigned int width : 16;
+    unsigned int height : 16;
+};
+
+struct PT_OFFSET {
+    unsigned int offset : 6;
+    unsigned int res : 9;
+    bool rev : 1;
+    unsigned int mask : 16;
+};
+
+// PT_UNIFY_TIMING_CFG

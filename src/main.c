@@ -63,6 +63,9 @@ int yaml_printf(char *format, ...) {
 }
 
 void show_yaml(cJSON *json) {
+    if (!json)
+        return;
+
     char *string = cYAML_Print(json);
     fprintf(stdout, "%s", string);
     if (backup_fp)
