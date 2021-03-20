@@ -196,7 +196,7 @@ static cJSON_bool print_number(const cJSON *const item,
 
 /* Render the cstring provided to an escaped version that can be printed. */
 static cJSON_bool print_string_ptr(const unsigned char *const input,
-                                   printbuffer *const output_buffer) {
+                                   printbuffer *const output_buffer, bool br) {
     const unsigned char *input_pointer = NULL;
     unsigned char *output = NULL;
     unsigned char *output_pointer = NULL;
@@ -210,11 +210,14 @@ static cJSON_bool print_string_ptr(const unsigned char *const input,
 
     /* empty string */
     if (input == NULL) {
-        output = ensure(output_buffer, sizeof("\"\""));
+        const char *qstr = "\"\"";
+        if (br)
+            qstr = "\"\"\n";
+        output = ensure(output_buffer, strlen(qstr));
         if (output == NULL) {
             return false;
         }
-        strcpy((char *)output, "\"\"");
+        strcpy((char *)output, qstr);
 
         return true;
     }
@@ -247,7 +250,7 @@ static cJSON_bool print_string_ptr(const unsigned char *const input,
     }
     output_length = (size_t)(input_pointer - input) + escape_characters;
 
-    output = ensure(output_buffer, output_length);
+    output = ensure(output_buffer, output_length + 1);
     if (output == NULL) {
         return false;
     }
@@ -255,6 +258,8 @@ static cJSON_bool print_string_ptr(const unsigned char *const input,
     /* no characters have to be escaped */
     if (!need_quotes && escape_characters == 0) {
         memcpy(output, input, output_length);
+        if (br)
+            output[output_length++] = '\n';
         output[output_length] = '\0';
 
         return true;
@@ -302,15 +307,17 @@ static cJSON_bool print_string_ptr(const unsigned char *const input,
             }
         }
     }
-    output[output_length + 1] = '\"';
-    output[output_length + 2] = '\0';
+    output[++output_length] = '\"';
+    if (br)
+        output[++output_length] = '\n';
+    output[++output_length] = '\0';
 
     return true;
 }
 
 /* Invoke print_string_ptr (which is useful) on an item. */
 static cJSON_bool print_string(const cJSON *const item, printbuffer *const p) {
-    return print_string_ptr((unsigned char *)item->valuestring, p);
+    return print_string_ptr((unsigned char *)item->valuestring, p, true);
 }
 
 static cJSON_bool print_value(const cJSON *const item,
@@ -412,7 +419,7 @@ static cJSON_bool print_object(const cJSON *const item,
 
         /* print key */
         if (!print_string_ptr((unsigned char *)current_item->string,
-                              output_buffer)) {
+                              output_buffer, false)) {
             return false;
         }
         update_offset(output_buffer);
@@ -431,18 +438,6 @@ static cJSON_bool print_object(const cJSON *const item,
             return false;
         }
         update_offset(output_buffer);
-
-        /* print comma if not last */
-        length = 1;
-        output_pointer = ensure(output_buffer, length + 1);
-        if (output_pointer == NULL) {
-            return false;
-        }
-
-        if (output_buffer->depth != 1)
-            *output_pointer++ = '\n';
-        *output_pointer = '\0';
-        output_buffer->offset += length;
 
         current_item = current_item->next;
     }
