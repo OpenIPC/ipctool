@@ -5,6 +5,19 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define ADD_PARAM(param, val)                                                  \
+    {                                                                          \
+        cJSON *strval = cJSON_CreateString(val);                               \
+        cJSON_AddItemToObject(j_inner, param, strval);                         \
+    }
+
+#define ADD_PARAM_FMT(param, fmt, ...)                                         \
+    {                                                                          \
+        char val[1024];                                                        \
+        snprintf(val, sizeof(val), fmt, __VA_ARGS__);                          \
+        ADD_PARAM(param, val);                                                 \
+    }
+
 enum REG_OPS { OP_READ, OP_WRITE };
 
 int compile_regex(regex_t *r, const char *regex_text);

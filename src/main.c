@@ -177,22 +177,23 @@ int hieth_mdio_read(int frq_dv, int phy_addr, uint32_t base, int regnum) {
         fprintf(stderr, "read timeout\n");
 
 error_exit:
+#if 0
     fprintf(stderr, "phy_addr = %d, regnum = %d, val = 0x%04x\n", phy_addr,
             regnum, val);
+#endif
 
     return val;
 }
 
-void print_ethernet_data() {
+cJSON *detect_ethernet() {
+    cJSON *fake_root = cJSON_CreateObject();
+    cJSON *j_inner = cJSON_CreateObject();
+    cJSON_AddItemToObject(fake_root, "ethernet", j_inner);
+
     char buf[1024];
 
-    // himii: probed
-    // [    1.160082] CONFIG_HIETH_PHYID_U 1
-    // [    1.168332] CONFIG_HIETH_PHYID_U 1
-    // [    1.172163] CONFIG_HIETH_PHYID_D 3
-    yaml_printf("ethernet:\n");
     if (get_mac_address(buf, sizeof buf)) {
-        yaml_printf("  mac: \"%s\"\n", buf);
+        ADD_PARAM("mac", buf);
     };
 
     uint32_t mdio_base = 0;
@@ -210,20 +211,19 @@ void print_ethernet_data() {
         struct REG_MDIO_RWCTRL reg;
         if (mem_reg(mdio_base + MDIO_RWCTRL, (uint32_t *)&reg, OP_READ)) {
             uint32_t my_phyaddr = hieth_readl(mdio_base, U_MDIO_PHYADDR);
-            yaml_printf("  u-mdio-phyaddr: %x\n", my_phyaddr);
+            ADD_PARAM_FMT("u-mdio-phyaddr", "%d", my_phyaddr);
 
             unsigned long phy_id;
             unsigned short id1, id2;
             id1 = hieth_mdio_read(reg.frq_dv, my_phyaddr, mdio_base, 0x02);
             id2 = hieth_mdio_read(reg.frq_dv, my_phyaddr, mdio_base, 0x03);
             phy_id = (((id1 & 0xffff) << 16) | (id2 & 0xffff));
-            yaml_printf("  phy-id: 0x%.8lx\n", phy_id);
-
-            yaml_printf("  d-mdio-phyaddr: %x\n",
-                        hieth_readl(mdio_base, D_MDIO_PHYADDR));
+            ADD_PARAM_FMT("phy-id", "0x%.8lx", phy_id);
+            ADD_PARAM_FMT("d-mdio-phyaddr", "%x",
+                          hieth_readl(mdio_base, D_MDIO_PHYADDR));
         }
     }
-    exit(0);
+    return fake_root;
 }
 
 void print_sensor_id() {
@@ -321,7 +321,8 @@ int main(int argc, char *argv[]) {
             }
             print_system_id();
             print_chip_id();
-            print_ethernet_data();
+            show_yaml(detect_ethernet());
+            exit(0);
             print_mtd_info();
             print_ram_info();
             show_yaml(detect_firmare());

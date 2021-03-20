@@ -15,19 +15,6 @@
 #include "tools.h"
 #include "uboot.h"
 
-#define ADD_FIRMWARE(param, val)                                               \
-    {                                                                          \
-        cJSON *strval = cJSON_CreateString(val);                               \
-        cJSON_AddItemToObject(j_firmware, param, strval);                      \
-    }
-
-#define ADD_FIRMWARE_FMT(param, fmt, ...)                                      \
-    {                                                                          \
-        char val[1024];                                                        \
-        snprintf(val, sizeof(val), fmt, __VA_ARGS__);                          \
-        ADD_FIRMWARE(param, val);                                              \
-    }
-
 static unsigned long time_by_proc(const char *filename) {
     FILE *fp = fopen(filename, "r");
     if (!fp)
@@ -53,7 +40,7 @@ static unsigned long time_by_proc(const char *filename) {
     return utime + stime;
 }
 
-static void get_god_app(cJSON *j_firmware) {
+static void get_god_app(cJSON *j_inner) {
     DIR *dir = opendir("/proc");
     if (!dir)
         return;
@@ -82,13 +69,13 @@ static void get_god_app(cJSON *j_firmware) {
             return;
         if (!fgets(sname, sizeof(sname), fp))
             return;
-        ADD_FIRMWARE("god-app", sname);
+        ADD_PARAM("god-app", sname);
 
         fclose(fp);
     }
 }
 
-static void get_hisi_sdk(cJSON *j_firmware) {
+static void get_hisi_sdk(cJSON *j_inner) {
     char buf[1024];
 
     if (get_regex_line_from_file("/proc/umap/sys", "Version: \\[(.+)\\]", buf,
@@ -101,11 +88,11 @@ static void get_hisi_sdk(cJSON *j_firmware) {
         *ptr++ = '(';
         strcpy(ptr, build + 1);
         strcat(ptr, ")");
-        ADD_FIRMWARE("sdk", buf);
+        ADD_PARAM("sdk", buf);
     }
 }
 
-static void get_kernel_version(cJSON *j_firmware) {
+static void get_kernel_version(cJSON *j_inner) {
     FILE *fp = fopen("/proc/version", "r");
     if (!fp)
         return;
@@ -160,12 +147,12 @@ static void get_kernel_version(cJSON *j_firmware) {
             }
         }
     }
-    ADD_FIRMWARE_FMT("kernel", "%s (%s)", version, build);
+    ADD_PARAM_FMT("kernel", "%s (%s)", version, build);
     if (toolchain)
-        ADD_FIRMWARE("toolchain", toolchain);
+        ADD_PARAM("toolchain", toolchain);
 }
 
-static void get_libc(cJSON *j_firmware) {
+static void get_libc(cJSON *j_inner) {
     char buf[PATH_MAX] = {0};
 
     if (readlink("/lib/libc.so.0", buf, sizeof(buf)) == -1)
@@ -179,27 +166,27 @@ static void get_libc(cJSON *j_firmware) {
                 break;
             }
         }
-        ADD_FIRMWARE_FMT("libc", "uClibc %s", ver);
+        ADD_PARAM_FMT("libc", "uClibc %s", ver);
     }
 }
 
 cJSON *detect_firmare() {
     cJSON *fake_root = cJSON_CreateObject();
-    cJSON *j_firmware = cJSON_CreateObject();
-    cJSON_AddItemToObject(fake_root, "firmware", j_firmware);
+    cJSON *j_inner = cJSON_CreateObject();
+    cJSON_AddItemToObject(fake_root, "firmware", j_inner);
 
     const char *uver = uboot_getenv("ver");
     if (uver) {
         const char *stver = strchr(uver, ' ');
         if (stver && *(stver + 1)) {
-            ADD_FIRMWARE("u-boot", stver + 1);
+            ADD_PARAM("u-boot", stver + 1);
         }
     }
 
-    get_kernel_version(j_firmware);
-    get_libc(j_firmware);
-    get_hisi_sdk(j_firmware);
-    get_god_app(j_firmware);
+    get_kernel_version(j_inner);
+    get_libc(j_inner);
+    get_hisi_sdk(j_inner);
+    get_god_app(j_inner);
 
     return fake_root;
 }
