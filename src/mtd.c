@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include <fcntl.h>
+#include <linux/limits.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -101,32 +102,36 @@ static void parse_partitions(mpoint_t mpoints[MAX_MPOINTS]) {
     }
 }
 
+char *open_mtdblock(int i, int *fd, uint32_t size, int flags) {
+    char filename[PATH_MAX];
+
+    snprintf(filename, sizeof filename, "/dev/mtdblock%d", i);
+    *fd = open(filename, O_RDONLY);
+    if (*fd == -1) {
+        return NULL;
+    }
+
+    char *addr =
+        (char *)mmap(NULL, size, PROT_READ, MAP_PRIVATE | flags, *fd, 0);
+    if ((void *)addr == MAP_FAILED) {
+        close(*fd);
+        return NULL;
+    }
+
+    return addr;
+}
+
 static bool uenv_detected;
 
 static bool examine_part(int part_num, size_t size, uint32_t *sha1,
                          char contains[1024]) {
-    char filename[1024];
     bool res = false;
 
-    snprintf(filename, sizeof filename, "/dev/mtdblock%d", part_num);
-    int fd = open(filename, O_RDONLY);
-    if (fd == -1) {
-        return false;
-    }
-
-    if (!size) {
-        struct stat buf;
-        fstat(fd, &buf);
-        size = buf.st_size;
-    }
-
-    char *addr = (char *)mmap(
-        NULL, size, PROT_READ,
-        MAP_PRIVATE | MAP_POPULATE /* causes read-ahead on the file */, fd, 0);
-    if ((void *)addr == MAP_FAILED) {
-        res = false;
-        goto bailout;
-    }
+    int fd;
+    char *addr = open_mtdblock(
+        part_num, &fd, size, MAP_POPULATE /* causes read-ahead on the file */);
+    if (!addr)
+        return res;
 
     if (part_num == 0 && is_xm_board()) {
         size_t off = size - 0x400 /* crypto size */;

@@ -23,13 +23,9 @@ work on vast majority of hardware.
         --system_id
         --chip_id
         --sensor_id
-        --isp_register
-        --isp_version
-        --isp_build
-        --isp_sequence_number
-        --mpp_info
         --temp
         --dmesg
+        --printenv
         --help
 
     (or run without params to get full available information)

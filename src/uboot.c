@@ -1,8 +1,13 @@
+#include <fcntl.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
+#include "mtd.h"
 #include "uboot.h"
 
 static uint32_t crc32_for_byte(uint32_t r) {
@@ -107,3 +112,25 @@ const char *uboot_getenv(const char *name) {
     }
     return NULL;
 }
+
+static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
+                        void *ctx) {
+    int fd;
+    char *addr = open_mtdblock(i, &fd, mtd->size, 0);
+    if (!addr)
+        return true;
+
+    if (i < 2) {
+        size_t u_off = uboot_detect_env(addr, mtd->size);
+        if (u_off != -1) {
+            uboot_printenv(addr + u_off);
+            close(fd);
+            return false;
+        }
+    }
+
+    close(fd);
+    return true;
+}
+
+void printenv() { enum_mtd_info(NULL, cb_mtd_info); }

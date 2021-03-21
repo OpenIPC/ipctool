@@ -21,6 +21,7 @@
 #include "ram.h"
 #include "sensors.h"
 #include "tools.h"
+#include "uboot.h"
 #include "version.h"
 
 #include "vendors/openwrt.h"
@@ -52,6 +53,7 @@ void Help() {
            "\t--sensor_id\n"
            "\t--temp\n"
            "\t--dmesg\n"
+           "\t--printenv\n"
            "\t--help\n");
 }
 
@@ -217,6 +219,8 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(cmd, "--temp") == 0) {
             get_system_id();
             return hisi_get_temp();
+        } else if (strcmp(cmd, "--printenv") == 0) {
+            printenv();
         } else if (strcmp(cmd, "--dmesg") == 0) {
             dmesg();
         } else

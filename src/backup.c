@@ -47,19 +47,11 @@ typedef struct {
 static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
                         void *ctx) {
     enum_mtd_ctx *c = (enum_mtd_ctx *)ctx;
-    char filename[1024];
 
-    snprintf(filename, sizeof filename, "/dev/mtdblock%d", i);
-    int fd = open(filename, O_RDONLY);
-    if (fd == -1) {
+    int fd;
+    char *addr = open_mtdblock(i, &fd, mtd->size, 0);
+    if (!addr)
         return true;
-    }
-
-    char *addr = (char *)mmap(NULL, mtd->size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if ((void *)addr == MAP_FAILED) {
-        close(fd);
-        return true;
-    }
 
     c->blocks[c->count].data = addr;
     c->blocks[c->count].len = mtd->size;

@@ -16,6 +16,7 @@ typedef bool (*cb_mtd)(int i, const char *name, struct mtd_info_user *mtd,
                        void *ctx);
 
 void print_mtd_info();
+char *open_mtdblock(int i, int *fd, uint32_t size, int flags);
 void enum_mtd_info(void *ctx, cb_mtd cb);
 
 #endif /* MTD_H */

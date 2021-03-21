@@ -7,5 +7,6 @@ int uboot_detect_env(void *buf, size_t len);
 const char *uboot_getenv(const char *name);
 void uboot_freeenv();
 void uboot_copyenv(void *buf);
+void printenv();
 
 #endif /* UBOOT_H */
