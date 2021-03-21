@@ -27,10 +27,6 @@ int chip_generation;
 char chip_id[128];
 char chip_manufacturer[128];
 char short_manufacturer[128];
-int isp_register = -1;
-char isp_version[128];
-char isp_build_number[128];
-char isp_sequence_number[128];
 char mpp_info[1024];
 char nor_chip[128];
 
@@ -227,108 +223,4 @@ bool get_system_id() {
     };
     setup_hal_drivers();
     return true;
-}
-
-int get_isp_version() {
-    int mem_fd = open("/dev/mem", O_RDONLY | O_SYNC);
-    if (mem_fd < 0) {
-        printf("can't open /dev/mem \n");
-        return EXIT_FAILURE;
-    }
-
-    const uint32_t base_address = 0x20580000;
-    void *isp_version_map =
-        mmap(NULL,                       // Any adddress in our space will do
-             0x20080 + sizeof(uint32_t), // Map length
-             PROT_READ,   // Enable reading & writting to mapped memory
-             MAP_PRIVATE, // Shared with other processes
-             mem_fd,      // File to map
-             base_address // Offset to base address
-        );
-    close(mem_fd);
-    if (isp_version_map == MAP_FAILED) {
-        printf("isp_version_map mmap error %p\n", (int*)isp_version_map);
-        printf("Error: %s (%d)\n", strerror(errno), errno);
-        return EXIT_FAILURE;
-    }
-
-    isp_register = ((volatile uint32_t *)(isp_version_map + 0x20080))[0];
-    // printf("ISP version register: 0x%08X", isp_register);
-
-    // 0b_0000_0000_0001_0000_0000_0000_0000_0000
-    // 0b_1111_1111_1111_0000_0000_0000_0000_0000
-    // 0b_0000_0000_0000_1111_0000_0000_0000_0000
-    // 0b_0000_0000_0000_0000_1111_1111_1111_1111
-
-    uint32_t version =
-        (isp_register & 0b11111111111100000000000000000000) >> 20;
-    uint32_t build = (isp_register & 0b00000000000011110000000000000000) >>
-                     16; // 0b00000000_00001111_00000000_00000000
-    uint32_t sn =
-        isp_register &
-        0b00000000000000001111111111111111; // 0b00000000_00000000_11111111_11111111
-    //    printf("    version: V%d", version*100);
-    //    printf("    build: B%02d", build);
-    //    printf("    sequence number: %d\n", sn);
-
-    sprintf(isp_version, "V%d", version * 100);
-    sprintf(isp_build_number, "B%02d", build);
-    sprintf(isp_sequence_number, "%d", sn);
-
-    return EXIT_SUCCESS;
-}
-
-#define VERSION_NAME_MAXLEN 64
-typedef struct hiMPP_VERSION_S {
-    char aVersion[VERSION_NAME_MAXLEN];
-} MPP_VERSION_S;
-int (*HI_MPI_SYS_GetVersion)(MPP_VERSION_S *pstVersion);
-int (*HI_MPI_SYS_GetChipId)(uint32_t *chipId);
-
-int get_mpp_info() {
-    void *lib = dlopen("libmpi.so", RTLD_LAZY);
-    if (!lib) {
-        printf("Can't dlopen libmpi.so: %s\n", dlerror());
-        return EXIT_FAILURE;
-    } else {
-        HI_MPI_SYS_GetVersion = dlsym(lib, "HI_MPI_SYS_GetVersion");
-        if (!HI_MPI_SYS_GetVersion) {
-            printf("Can't find HI_MPI_SYS_GetVersion in libmpi.so\n");
-        } else {
-            MPP_VERSION_S version;
-            if (!HI_MPI_SYS_GetVersion(&version)) {
-                char *srcptr = version.aVersion;
-                char *dstptr = mpp_info;
-                char *endbuf = mpp_info + sizeof mpp_info;
-                bool value_part = false;
-                while (endbuf != srcptr) {
-                    *dstptr = *srcptr;
-                    if (*srcptr == '=' && !value_part) {
-                        value_part = true;
-                        *++dstptr = '"';
-                    }
-                    if (!*srcptr)
-                        break;
-                    srcptr++;
-                    dstptr++;
-                }
-                strncat(mpp_info, "\"\n",
-                        sizeof(mpp_info) - strlen(mpp_info) - 1);
-            };
-        }
-
-        HI_MPI_SYS_GetChipId = dlsym(lib, "HI_MPI_SYS_GetChipId");
-        if (!HI_MPI_SYS_GetChipId) {
-            printf("Can't find HI_MPI_SYS_GetChipId in libmpi.so\n");
-        } else {
-            uint32_t chipId;
-            if (!HI_MPI_SYS_GetChipId(&chipId)) {
-                char buf[BUFSIZ];
-                snprintf(buf, sizeof buf, "HI_CHIPID=%#X", chipId);
-                strncat(mpp_info, buf, sizeof(mpp_info) - strlen(mpp_info) - 1);
-            };
-        }
-        dlclose(lib);
-    }
-    return EXIT_SUCCESS;
 }

@@ -26,6 +26,9 @@
 #include "vendors/openwrt.h"
 #include "vendors/xm.h"
 
+#define RESET_CL "\x1b[0m"
+#define FG_RED "\x1b[31m"
+
 void Help() {
     printf("ipctool, version: ");
     const char *vers = get_git_version();
@@ -35,14 +38,18 @@ void Help() {
         printf("%s+%s\n", get_git_branch(), get_git_revision());
     }
 
-    printf("available options:\n"
+    printf("\nOpenIPC is " FG_RED "asking for your help " RESET_CL
+           "to support development cost and long-term maintenance of what we "
+           "believe will serve a fundamental role in the advancement of a "
+           "stable, flexible and most importantly, Open IP Network Camera "
+           "Framework for users worldwide.\n\n"
+           "Your contribution will help us " FG_RED
+           "advance development proposals forward" RESET_CL
+           ", and interact with the community on a regular basis.\n\n"
+           "  https://openipc.org/contribution/\n\n"
+           "available options:\n"
            "\t--chip_id\n"
            "\t--sensor_id\n"
-           "\t--isp_register\n"
-           "\t--isp_version\n"
-           "\t--isp_build\n"
-           "\t--isp_sequence_number\n"
-           "\t--mpp_info\n"
            "\t--temp\n"
            "\t--dmesg\n"
            "\t--help\n");
@@ -168,11 +175,6 @@ static bool backup_mode() {
 }
 
 int main(int argc, char *argv[]) {
-    isp_register = -1;
-    sprintf(isp_version, "error");
-    sprintf(isp_build_number, "error");
-    sprintf(isp_sequence_number, "error");
-
     if (argc == 1) {
         if (backup_mode())
             return EXIT_SUCCESS;
@@ -210,31 +212,6 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(cmd, "--sensor_id") == 0) {
             if (get_sensor_id())
                 lprintf("%s_%s\n", sensor_id, control);
-            else
-                return EXIT_FAILURE;
-        } else if (strcmp(cmd, "--isp_register") == 0) {
-            if (get_isp_version() == EXIT_SUCCESS)
-                printf("0x%08X\n", isp_register);
-            else
-                return EXIT_FAILURE;
-        } else if (strcmp(cmd, "--isp_version") == 0) {
-            if (get_isp_version() == EXIT_SUCCESS)
-                printf("%s\n", isp_version);
-            else
-                return EXIT_FAILURE;
-        } else if (strcmp(cmd, "--isp_build") == 0) {
-            if (get_isp_version() == EXIT_SUCCESS)
-                printf("%s\n", isp_build_number);
-            else
-                return EXIT_FAILURE;
-        } else if (strcmp(cmd, "--isp_sequence_number") == 0) {
-            if (get_isp_version() == EXIT_SUCCESS)
-                printf("%s\n", isp_sequence_number);
-            else
-                return EXIT_FAILURE;
-        } else if (strcmp(cmd, "--mpp_info") == 0) {
-            if (get_mpp_info() == EXIT_SUCCESS)
-                printf("%s\n", mpp_info);
             else
                 return EXIT_FAILURE;
         } else if (strcmp(cmd, "--temp") == 0) {
