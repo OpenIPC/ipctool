@@ -54,8 +54,8 @@ jobs:
           sudo apt install -y cmake upx-ucl
           cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
           cmake --build build
-          upx build/ipc_chip_info
-          cp build/ipc_chip_info ipc_chip_info-$GIT_HASH
+          upx build/ipctool
+          cp build/ipctool ipctool-$GIT_HASH
         continue-on-error: true
 
       - name: Send warning message to telegram channel
@@ -65,7 +65,7 @@ jobs:
         if: steps.ct-ng-release.outcome != 'success' || steps.build.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
-          TG_NOTIFY="Warning, ipc_chip_info build error..."
+          TG_NOTIFY="Warning, ipctool build error..."
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
@@ -85,8 +85,8 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: "build/ipc_chip_info"
-          asset_name: "ipc_chip_info"
+          file: "build/ipctool"
+          asset_name: "ipctool"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -96,7 +96,7 @@ jobs:
         with:
           args: --acl public-read
         env:
-          FILE: ./ipc_chip_info-${{ env.GIT_HASH }}
+          FILE: ./ipctool-${{ env.GIT_HASH }}
           AWS_REGION: 'eu-north-1'
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -107,7 +107,7 @@ jobs:
         uses: peter-evans/repository-dispatch@v1
         with:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          repository: OpenIPC/ipc_chip_info
+          repository: OpenIPC/ipctool
           event-type: ci-tests
           client-payload: '{"sha": "${{ env.GIT_HASH }}"}'
 
@@ -119,6 +119,4 @@ jobs:
           TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
           TG_HEADER=$(echo -e "\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9C\x85 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendDocument \
-            -F chat_id=$TG_CHANNEL -F document="@build/ipc_chip_info" -F caption="$TG_HEADER"
-
-
+            -F chat_id=$TG_CHANNEL -F document="@build/ipctool" -F caption="$TG_HEADER"

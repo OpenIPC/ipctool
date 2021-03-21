@@ -27,4 +27,4 @@ jobs:
           key: ${{ secrets.CI_KEY }}
           script: |
             SHA=${{ github.event.client_payload.sha }} py.test -v -s --color=yes \
-              ipc_chip_info_tests/ipc_chip_test.py::test_${{ matrix.lab-name }}
+              ipctool_tests/ipctool_test.py::test_${{ matrix.lab-name }}

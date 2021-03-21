@@ -1,6 +1,6 @@
 # IPC chip information
 
-![ipc-chip-info](https://github.com/OpenIPC/ipc_chip_info/workflows/ipc-chip-info/badge.svg)
+![ipc-chip-info](https://github.com/OpenIPC/ipctool/workflows/ipc-chip-info/badge.svg)
 
 Thes basic concept belongs to [@cherov](http://github.com/chertov)(thank you for
 your original utility) and [@nikitos1550](https://github.com/nikitos1550/)(for
@@ -11,14 +11,14 @@ describing ways to do them).
 ## Download
 
 Use [the
-link](https://github.com/OpenIPC/ipc_chip_info/releases/download/latest/ipc_chip_info)
+link](https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool)
 to download latest build (even directly to your camera). The build use `musl` to
 work on vast majority of hardware.
 
 ## Usage
 
 ```
-# ./ipc_chip_info --help
+# ./ipctool --help
     available options:
         --system_id
         --chip_id
@@ -74,21 +74,21 @@ sensors:
 * Determine chip id:
 
     ```
-    root@IVG-HP203Y-AE# ipc_chip_info --chip_id
+    root@IVG-HP203Y-AE# ipctool --chip_id
     hi3516cv300
     ```
 
 * Determine sensor model and control line:
 
     ```
-    root@IVG-HP203Y-AE# ipc_chip_info --sensor_id
+    root@IVG-HP203Y-AE# ipctool --sensor_id
     imx291_i2c
     ```
 
 * Determine HiSilicon SDK internal parameters in runtime:
 
     ```
-    root@IVG-HP203Y-AE# eval $(ipc_chip_info --mpp_info) env | grep HI_
+    root@IVG-HP203Y-AE# eval $(ipctool --mpp_info) env | grep HI_
     HI_CHIPID=0X3516C300
     HI_VERSION=Hi3516CV300_MPP_V1.0.4.0 B050 Release
     ```
@@ -96,14 +96,14 @@ sensors:
 * Get temperature from chip's internal sensor (not all devices supported):
 
     ```
-    root@IVG-HP203Y-AE:~# /utils/sdk/ipc_chip_info --temp
+    root@IVG-HP203Y-AE:~# /utils/sdk/ipctool --temp
     50.69
     ```
 
 * Drop-in replacement of `dmesg` command:
 
     ```
-    root@IVG-HP203Y-AE:~# /utils/sdk/ipc_chip_info --dmesg
+    root@IVG-HP203Y-AE:~# /utils/sdk/ipctool --dmesg
     ```
 
 ## Supported SoCs

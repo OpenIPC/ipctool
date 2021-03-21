@@ -27,7 +27,7 @@
 #include "vendors/xm.h"
 
 void Help() {
-    printf("ipc_chip_info, version: ");
+    printf("ipctool, version: ");
     const char *vers = get_git_version();
     if (*vers) {
         printf("%s\n", vers);

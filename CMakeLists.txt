@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.12)
-project(ipc_chip_info C)
+project(ipctool C)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_FLAGS "-std=gnu99")
@@ -26,7 +26,7 @@ include_directories(
     ./src/
 )
 
-add_executable(ipc_chip_info
+add_executable(ipctool
     src/backup.c
     src/backup.h
     src/chipid.c
@@ -77,5 +77,5 @@ add_executable(ipc_chip_info
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )
 
-target_link_libraries(ipc_chip_info dl m)
-install(TARGETS ipc_chip_info RUNTIME DESTINATION /usr/bin/)
+target_link_libraries(ipctool dl m)
+install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
