@@ -454,10 +454,10 @@ static char *cv100_sensor_clksel(unsigned int sensor_clksel) {
     }
 }
 
-const unsigned int CV100_PERI_CRG12_ADRR = 0x20030030;
+const unsigned int CV100_PERI_CRG12_ADDR = 0x20030030;
 static void hisi_cv100_sensor_clock(cJSON *j_inner) {
     struct CV100_PERI_CRG12 crg12;
-    if (mem_reg(CV100_PERI_CRG12_ADRR, (uint32_t *)&crg12, OP_READ)) {
+    if (mem_reg(CV100_PERI_CRG12_ADDR, (uint32_t *)&crg12, OP_READ)) {
         ADD_PARAM("clock", cv100_sensor_clksel(crg12.sense_cksel));
     }
 }
@@ -743,6 +743,41 @@ static void lvds_code_set(cJSON *j_inner, const char *param,
         ADD_PARAM(param, "LVDS_ENDIAN_BIG");
 }
 
+#define LO(x) x & 0xffff
+#define HI(x) x & 0xffff0000 >> 16
+
+static void cv300_enum_lanes(cJSON *j_inner) {
+    uint32_t addr = 0x11301320;
+    uint32_t end_addr = 0x1130141C;
+
+    cJSON *j_codes = cJSON_AddArrayToObject(j_inner, "syncCode");
+
+    for (int l = 0; l < 4; l++) {
+        char sync_code[4][64] = {0};
+
+        uint32_t reg[8];
+        for (int r = 0; r < 8; r++)
+            mem_reg(addr + 4 * r, &reg[r], OP_READ);
+        addr += 4 * 8;
+
+        snprintf(sync_code[0], 64, "0x%x, 0x%x, 0x%x, 0x%x", LO(reg[0]),
+                 LO(reg[2]), LO(reg[4]), LO(reg[6]));
+        snprintf(sync_code[1], 64, "0x%x, 0x%x, 0x%x, 0x%x", HI(reg[0]),
+                 HI(reg[2]), HI(reg[4]), HI(reg[6]));
+        snprintf(sync_code[2], 64, "0x%x, 0x%x, 0x%x, 0x%x", LO(reg[1]),
+                 LO(reg[3]), LO(reg[4]), LO(reg[6]));
+        snprintf(sync_code[3], 64, "0x%x, 0x%x, 0x%x, 0x%x", HI(reg[1]),
+                 HI(reg[3]), HI(reg[4]), HI(reg[6]));
+
+        cJSON *j_lane = cJSON_CreateArray();
+        cJSON_AddItemToArray(j_lane, cJSON_CreateString(sync_code[0]));
+        cJSON_AddItemToArray(j_lane, cJSON_CreateString(sync_code[1]));
+        cJSON_AddItemToArray(j_lane, cJSON_CreateString(sync_code[2]));
+        cJSON_AddItemToArray(j_lane, cJSON_CreateString(sync_code[3]));
+        cJSON_AddItemToArray(j_codes, j_lane);
+    }
+}
+
 const unsigned int CV300_MISC_CTRL0_ADDR = 0x12030000;
 static void hisi_cv300_sensor_data(cJSON *j_root) {
     cJSON *j_inner = cJSON_CreateObject();
@@ -760,6 +795,13 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
         case CV300_PHY_MIPI_MODE:
             if (!is_lvds)
                 ADD_PARAM("type", "MIPI");
+            /* .mipi_attr =
+            {
+                .raw_data_type = RAW_DATA_12BIT,
+                .wdr_mode      = HI_WDR_MODE_NONE,
+                .lane_id       ={0, 1, 2, 3}
+            }
+            */
 
             size_t lanes = mipi_lanes_num();
 
@@ -777,14 +819,6 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
                     cJSON_AddItemToArray(j_lanes,
                                          cJSON_CreateNumber(lid.lane3_id));
             }
-
-            /* .mipi_attr =
-            {
-                .raw_data_type = RAW_DATA_12BIT,
-                .wdr_mode      = HI_WDR_MODE_NONE,
-                .lane_id       ={0, 1, 2, 3}
-            }
-            */
 
             struct CV300_LVDS0_WDR wdr;
             if (mem_reg(CV300_LVDS0_WDR_ADDR, (uint32_t *)&wdr, OP_READ)) {
@@ -830,6 +864,7 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
                                   lvds0_ctrl.lvds_pix_big_endian);
                     lvds_code_set(j_inner, "syncCodeEndian",
                                   lvds0_ctrl.lvds_code_big_endian);
+                    cv300_enum_lanes(j_inner);
                 }
             }
 
@@ -1026,14 +1061,6 @@ const char *hisi_cv100_get_mii_mux() {
     }
 
     return NULL;
-}
-
-void cv300_enum_lanes() {
-    uint32_t addr = 0x11301320;
-    uint32_t end_addr = 0x1130141C;
-
-    for (;;) {
-    }
 }
 
 const uint32_t CV300_ISP_AF_CFG_ADDR = 0x12200;

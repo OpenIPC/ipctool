@@ -355,6 +355,7 @@ static bool print_item(cJSON *current_item, unsigned char *output_pointer,
     if (!do_ident(true, output_buffer))
         return false;
 
+    int type = current_item->type & 0xFF;
     if (current_item->string) {
         /* print key */
         if (!print_string_ptr((unsigned char *)current_item->string,
@@ -366,7 +367,7 @@ static bool print_item(cJSON *current_item, unsigned char *output_pointer,
         EXTEND_OUT_TO(2);
         OUT_CHAR(':');
 
-        switch (current_item->type & 0xFF) {
+        switch (type) {
         case cJSON_Array:
         case cJSON_Object:
             OUT_CHAR('\n');
@@ -374,6 +375,9 @@ static bool print_item(cJSON *current_item, unsigned char *output_pointer,
         default:
             OUT_CHAR(' ');
         }
+    } else if (!output_buffer->next_dash && type == cJSON_Array) {
+        EXTEND_OUT_TO(1);
+        OUT_CHAR('\n');
     }
 
     if (!print_value(current_item, output_buffer, true)) {
@@ -404,7 +408,8 @@ static cJSON_bool print_array(const cJSON *const item,
     }
 
     bool ident = true;
-    if (((current_element->type) & 0xFF) == cJSON_Object) {
+    int type = current_element->type & 0xFF;
+    if (type == cJSON_Object) {
         ident = false;
     }
 
