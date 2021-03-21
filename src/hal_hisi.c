@@ -455,13 +455,11 @@ static char *cv100_sensor_clksel(unsigned int sensor_clksel) {
 }
 
 const unsigned int CV100_PERI_CRG12_ADRR = 0x20030030;
-const char *hisi_cv100_get_sensor_clock() {
+static void hisi_cv100_sensor_clock(cJSON *j_inner) {
     struct CV100_PERI_CRG12 crg12;
-    int res = mem_reg(CV100_PERI_CRG12_ADRR, (uint32_t *)&crg12, OP_READ);
-    if (res) {
-        return cv100_sensor_clksel(crg12.sense_cksel);
+    if (mem_reg(CV100_PERI_CRG12_ADRR, (uint32_t *)&crg12, OP_READ)) {
+        ADD_PARAM("clock", cv100_sensor_clksel(crg12.sense_cksel));
     }
-    return NULL;
 }
 
 static void hisi_cv100_sensor_data(cJSON *j_root) {
@@ -762,25 +760,23 @@ static char *cv200_cv300_map_sensor_clksel(unsigned int sensor_clksel) {
 }
 
 const unsigned int CV200_PERI_CRG11_ADRR = 0x2003002c;
-const char *hisi_cv200_get_sensor_clock() {
+static void hisi_cv200_sensor_clock(cJSON *j_inner) {
     struct CV200_PERI_CRG11 crg11;
     int res = mem_reg(CV200_PERI_CRG11_ADRR, (uint32_t *)&crg11, OP_READ);
     // consider sensor clock value only when it's enabled
     if (res && crg11.sensor_cken) {
-        return cv200_cv300_map_sensor_clksel(crg11.sensor_cksel);
+        ADD_PARAM("clock", cv200_cv300_map_sensor_clksel(crg11.sensor_cksel));
     }
-    return NULL;
 }
 
 const unsigned int CV300_PERI_CRG11_ADRR = 0x1201002c;
-const char *hisi_cv300_get_sensor_clock() {
+static void hisi_cv300_sensor_clock(cJSON *j_inner) {
     struct CV300_PERI_CRG11 crg11;
     int res = mem_reg(CV300_PERI_CRG11_ADRR, (uint32_t *)&crg11, OP_READ);
     // consider sensor clock value only when it's enabled
     if (res && crg11.sensor_cken) {
-        return cv200_cv300_map_sensor_clksel(crg11.sensor_clksel);
+        ADD_PARAM("clock", cv200_cv300_map_sensor_clksel(crg11.sensor_clksel));
     }
-    return NULL;
 }
 
 enum EV300_MIPI_PHY {
@@ -815,31 +811,35 @@ static void hisi_ev300_sensor_data(cJSON *j_root) {
     cJSON_AddItemToObject(j_root, "data", j_inner);
 }
 
-const char *hisi_ev300_get_sensor_clock() {
+static const char *ev300_map_sensor_clksel(unsigned int sensor0_cksel) {
+    switch (sensor0_cksel) {
+    case 0:
+        return "74.25MHz";
+    case 1:
+        return "72MHz";
+    case 2:
+        return "54MHz";
+    case 3:
+        return "24MHz";
+    case 4:
+        return "37.125MHz";
+    case 5:
+        return "36MHz";
+    case 6:
+        return "27MHz";
+    case 7:
+        return "12MHz";
+    default:
+        return NULL;
+    }
+}
+
+static void hisi_ev300_sensor_clock(cJSON *j_inner) {
     struct EV300_PERI_CRG60 crg60;
     int res = mem_reg(EV300_PERI_CRG60_ADRR, (uint32_t *)&crg60, OP_READ);
-    // consider sensor clock value only when it's enabled
     if (res && crg60.sensor0_cken) {
-        switch (crg60.sensor0_cksel) {
-        case 0:
-            return "74.25MHz";
-        case 1:
-            return "72MHz";
-        case 2:
-            return "54MHz";
-        case 3:
-            return "24MHz";
-        case 4:
-            return "37.125MHz";
-        case 5:
-            return "36MHz";
-        case 6:
-            return "27MHz";
-        case 7:
-            return "12MHz";
-        }
+        ADD_PARAM("clock", ev300_map_sensor_clksel(crg60.sensor0_cksel));
     }
-    return NULL;
 }
 
 bool hisi_ev300_get_die_id(char *buf, ssize_t len) {
@@ -1035,18 +1035,16 @@ static void determine_sensor_data_type(cJSON *j_root) {
     }
 }
 
-static const char *get_sensor_clock() {
+static void determine_sensor_clock(cJSON *j_inner) {
     switch (chip_generation) {
     case HISI_V1:
-        return hisi_cv100_get_sensor_clock();
+        return hisi_cv100_sensor_clock(j_inner);
     case HISI_V2:
-        return hisi_cv200_get_sensor_clock();
+        return hisi_cv200_sensor_clock(j_inner);
     case HISI_V3:
-        return hisi_cv300_get_sensor_clock();
+        return hisi_cv300_sensor_clock(j_inner);
     case HISI_V4:
-        return hisi_ev300_get_sensor_clock();
-    default:
-        return NULL;
+        return hisi_ev300_sensor_clock(j_inner);
     }
 }
 
@@ -1055,12 +1053,7 @@ void hisi_vi_information(cJSON *j_root) {
         return;
 
     determine_sensor_data_type(j_root);
-
-    const char *sensor_clock = get_sensor_clock();
-    if (sensor_clock) {
-        cJSON *j_inner = j_root;
-        ADD_PARAM("clock", sensor_clock);
-    }
+    determine_sensor_clock(j_root);
 }
 
 // for IMX291 1920x1110
