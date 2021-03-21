@@ -588,14 +588,15 @@ struct CV300_PERI_CRG11 {
     unsigned int res2 : 4;
 };
 
-const uint32_t CV300_LVDS0_IMGSIZE_ADDR = 0x11300000 + 0x130C;
+#define CV300_MIPI_BASE 0x11300000
+const uint32_t CV300_LVDS0_IMGSIZE_ADDR = CV300_MIPI_BASE + 0x130C;
 struct LVDS0_IMGSIZE {
     unsigned int lvds_imgwidth_lane : 16;
     unsigned int lvds_imgheight : 16;
 };
 
-const uint32_t CV300_LVDS0_WDR_ADDR = 0x11300000 + 0x1300;
-struct LVDS0_WDR {
+const uint32_t CV300_LVDS0_WDR_ADDR = CV300_MIPI_BASE + 0x1300;
+struct CV300_LVDS0_WDR {
     bool lvds_wdr_en : 1;
     unsigned int res0 : 3;
     unsigned int lvds_wdr_num : 2;
@@ -623,7 +624,7 @@ typedef enum {
     LVDS_ENDIAN_BIG = 0x1,
 } lvds_bit_endian;
 
-const uint32_t CV300_LVDS0_CTRL_ADDR = 0x11300000 + 0x1304;
+const uint32_t CV300_LVDS0_CTRL_ADDR = CV300_MIPI_BASE + 0x1304;
 struct LVDS0_CTRL {
     lvds_sync_mode_e lvds_sync_mode : 1;
     unsigned int res0 : 3;
@@ -637,13 +638,97 @@ struct LVDS0_CTRL {
     unsigned int lvds_split_mode : 3;
 };
 
-const uint32_t CV300_MIPI0_LANES_NUM_ADDR = 0x11300000 + 0x1004;
+const uint32_t CV200_MIPI_LANES_NUM_ADDR = 0x20680000 + 0x1030;
+struct CV200_MIPI_LANES_NUM {
+    unsigned int lane_num : 2;
+};
+
+static size_t cv200_mipi_lanes_num() {
+    struct CV200_MIPI_LANES_NUM lnum;
+    mem_reg(CV200_MIPI_LANES_NUM_ADDR, (uint32_t *)&lnum, OP_READ);
+    return lnum.lane_num + 1;
+}
+
+const uint32_t CV300_MIPI0_LANES_NUM_ADDR = CV300_MIPI_BASE + 0x1004;
 struct CV300_MIPI0_LANES_NUM {
     unsigned int lane_num : 3;
 };
 
-const uint32_t CV300_ALIGN0_LANE_ID_ADDR = 0x11300000 + 0x1600;
-struct ALIGN0_LANE_ID {
+static size_t cv300_mipi_lanes_num() {
+    struct CV300_MIPI0_LANES_NUM lnum;
+    mem_reg(CV300_MIPI0_LANES_NUM_ADDR, (uint32_t *)&lnum, OP_READ);
+    return lnum.lane_num + 1;
+}
+
+const uint32_t EV200_MIPI_LANES_NUM_ADDR = 0x11240000 + 0x1004;
+struct EV200_MIPI_LANES_NUM {
+    unsigned int lane_num : 2;
+};
+
+static size_t ev200_mipi_lanes_num() {
+    struct EV200_MIPI_LANES_NUM lnum;
+    mem_reg(EV200_MIPI_LANES_NUM_ADDR, (uint32_t *)&lnum, OP_READ);
+    return lnum.lane_num + 1;
+}
+
+const uint32_t EV300_MIPI_LANES_NUM_ADDR = 0x11240000 + 0x1004;
+struct EV300_MIPI_LANES_NUM {
+    unsigned int lane_num : 3;
+};
+
+static size_t ev300_mipi_lanes_num() {
+    struct EV300_MIPI_LANES_NUM lnum;
+    mem_reg(EV300_MIPI_LANES_NUM_ADDR, (uint32_t *)&lnum, OP_READ);
+    return lnum.lane_num + 1;
+}
+
+static size_t mipi_lanes_num() {
+    switch (chip_generation) {
+    case HISI_V2:
+        return cv200_mipi_lanes_num();
+    case HISI_V3:
+        return cv300_mipi_lanes_num();
+    case HISI_V4:
+        if (!strcmp(chip_id, "3516EV200"))
+            return ev200_mipi_lanes_num();
+        else
+            return ev300_mipi_lanes_num();
+    }
+    return 0;
+}
+
+#define CV200_MIPI_BASE 0x20680000
+const uint32_t CV200_LANE_ID_LINK0_ADDR = CV200_MIPI_BASE + 0x1014;
+struct CV200_LANE_ID_LINK0 {
+    unsigned int lane0_id : 2;
+    unsigned int res0 : 2;
+    unsigned int lane1_id : 2;
+    unsigned int res1 : 2;
+    unsigned int lane2_id : 2;
+    unsigned int res2 : 2;
+    unsigned int lane3_id : 2;
+    unsigned int res3 : 2;
+};
+
+const uint32_t CV300_ALIGN0_LANE_ID_ADDR = CV300_MIPI_BASE + 0x1600;
+struct CV300_ALIGN0_LANE_ID {
+    unsigned int lane0_id : 4;
+    unsigned int lane1_id : 4;
+    unsigned int lane2_id : 4;
+    unsigned int lane3_id : 4;
+};
+
+#define EV300_MIPI_BASE 0x11240000
+const uint32_t EV200_LANE_ID0_CHN_ADDR = EV300_MIPI_BASE + 0x1800;
+struct EV200_LANE_ID0_CHN {
+    unsigned int lane0_id : 4;
+    unsigned int res0 : 4;
+    unsigned int lane2_id : 4;
+    unsigned int res1 : 4;
+};
+
+const uint32_t EV300_LANE_ID0_CHN_ADDR = EV300_MIPI_BASE + 0x1800;
+struct EV300_LANE_ID0_CHN {
     unsigned int lane0_id : 4;
     unsigned int lane1_id : 4;
     unsigned int lane2_id : 4;
@@ -676,11 +761,9 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
             if (!is_lvds)
                 ADD_PARAM("type", "MIPI");
 
-            struct CV300_MIPI0_LANES_NUM lnum;
-            mem_reg(CV300_MIPI0_LANES_NUM_ADDR, (uint32_t *)&lnum, OP_READ);
-            size_t lanes = lnum.lane_num + 1;
+            size_t lanes = mipi_lanes_num();
 
-            struct ALIGN0_LANE_ID lid;
+            struct CV300_ALIGN0_LANE_ID lid;
             if (mem_reg(CV300_ALIGN0_LANE_ID_ADDR, (uint32_t *)&lid, OP_READ)) {
                 cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "laneId");
                 cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane0_id));
@@ -695,13 +778,24 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
                                          cJSON_CreateNumber(lid.lane3_id));
             }
 
+            /* .mipi_attr =
+            {
+                .raw_data_type = RAW_DATA_12BIT,
+                .wdr_mode      = HI_WDR_MODE_NONE,
+                .lane_id       ={0, 1, 2, 3}
+            }
+            */
+
+            struct CV300_LVDS0_WDR wdr;
+            if (mem_reg(CV300_LVDS0_WDR_ADDR, (uint32_t *)&wdr, OP_READ)) {
+                ADD_PARAM_NUM("lvdsWdrEn", wdr.lvds_wdr_en);
+                ADD_PARAM_NUM("lvdsWdrMode", wdr.lvds_wdr_mode);
+                ADD_PARAM_NUM("lvdsWdrNum", wdr.lvds_wdr_num);
+            }
+
             struct LVDS0_CTRL lvds0_ctrl;
             if (mem_reg(CV300_LVDS0_CTRL_ADDR, (uint32_t *)&lvds0_ctrl,
                         OP_READ)) {
-                if (lvds0_ctrl.lvds_sync_mode == LVDS_SYNC_MODE_SOF)
-                    ADD_PARAM("syncMode", "LVDS_SYNC_MODE_SOF")
-                else
-                    ADD_PARAM("syncMode", "LVDS_SYNC_MODE_SAV");
 
                 const char *raw;
                 switch (lvds0_ctrl.lvds_raw_type) {
@@ -726,10 +820,17 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
                 if (raw)
                     ADD_PARAM("rawDataType", raw);
 
-                lvds_code_set(j_inner, "dataEndian",
-                              lvds0_ctrl.lvds_pix_big_endian);
-                lvds_code_set(j_inner, "syncCodeEndian",
-                              lvds0_ctrl.lvds_code_big_endian);
+                if (is_lvds) {
+                    if (lvds0_ctrl.lvds_sync_mode == LVDS_SYNC_MODE_SOF)
+                        ADD_PARAM("syncMode", "LVDS_SYNC_MODE_SOF")
+                    else
+                        ADD_PARAM("syncMode", "LVDS_SYNC_MODE_SAV");
+
+                    lvds_code_set(j_inner, "dataEndian",
+                                  lvds0_ctrl.lvds_pix_big_endian);
+                    lvds_code_set(j_inner, "syncCodeEndian",
+                                  lvds0_ctrl.lvds_code_big_endian);
+                }
             }
 
             break;

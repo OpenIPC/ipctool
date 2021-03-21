@@ -11,6 +11,12 @@
         cJSON_AddItemToObject(j_inner, param, strval);                         \
     }
 
+#define ADD_PARAM_NUM(param, num)                                              \
+    {                                                                          \
+        cJSON *numval = cJSON_CreateNumber(num);                               \
+        cJSON_AddItemToObject(j_inner, param, numval);                         \
+    }
+
 #define ADD_PARAM_FMT(param, fmt, ...)                                         \
     {                                                                          \
         char val[1024];                                                        \
