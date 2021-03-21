@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cJSON.h"
 #include "cYAML.h"
-#include "cjson/cJSON.h"
 
 #define internal_malloc malloc
 #define internal_free free
@@ -30,9 +30,20 @@ typedef struct {
     cJSON_bool noalloc;
     cJSON_bool format; /* is this print a formatted print */
     internal_hooks hooks;
+    cJSON_bool next_dash;
 } printbuffer;
 
 #define cjson_min(a, b) (((a) < (b)) ? (a) : (b))
+
+#define EXTEND_OUT_TO(length)                                                  \
+    output_pointer = ensure(output_buffer, length);                            \
+    if (output_pointer == NULL) {                                              \
+        return false;                                                          \
+    }
+
+#define OUT_CHAR(c)                                                            \
+    *output_pointer++ = c;                                                     \
+    output_buffer->offset++
 
 /* calculate the new length of the string in a printbuffer and update the offset
  */
@@ -208,6 +219,25 @@ static cJSON_bool print_string_ptr(const unsigned char *const input,
         return false;
     }
 
+#if 1
+    if (!is_value && output_buffer->depth) {
+        size_t ident = (output_buffer->depth - 1) * 2;
+        output = ensure(output_buffer, ident);
+        if (output == NULL) {
+            return false;
+        }
+        for (size_t i = 0; i < ident; i++) {
+            char space = ' ';
+            if (output_buffer->next_dash && i == ident - 2) {
+                space = '-';
+                output_buffer->next_dash = false;
+            }
+            *output++ = space;
+        }
+        output_buffer->offset += ident;
+    }
+#endif
+
     /* empty string */
     if (input == NULL) {
         const char *qstr = "\"\"";
@@ -314,10 +344,10 @@ static cJSON_bool print_string_ptr(const unsigned char *const input,
             }
         }
     }
-    output[++output_length] = '\"';
+    *output_pointer++ = '\"';
     if (is_value)
-        output[++output_length] = '\n';
-    output[++output_length] = '\0';
+        *output_pointer++ = '\n';
+    *output_pointer = '\0';
 
     return true;
 }
@@ -328,7 +358,35 @@ static cJSON_bool print_string(const cJSON *const item, printbuffer *const p) {
 }
 
 static cJSON_bool print_value(const cJSON *const item,
-                              printbuffer *const output_buffer);
+                              printbuffer *const output_buffer, bool newlined);
+
+static bool print_item(cJSON *current_item, unsigned char *output_pointer,
+                       printbuffer *const output_buffer) {
+    /* print key */
+    if (!print_string_ptr((unsigned char *)current_item->string, output_buffer,
+                          false)) {
+        return false;
+    }
+    update_offset(output_buffer);
+
+    EXTEND_OUT_TO(2);
+    OUT_CHAR(':');
+
+    switch (current_item->type & 0xFF) {
+    case cJSON_Array:
+    case cJSON_Object:
+        OUT_CHAR('\n');
+        break;
+    }
+
+    if (!print_value(current_item, output_buffer, false)) {
+        return false;
+    }
+
+    update_offset(output_buffer);
+
+    return true;
+}
 
 /* Render an array to text */
 static cJSON_bool print_array(const cJSON *const item,
@@ -342,33 +400,36 @@ static cJSON_bool print_array(const cJSON *const item,
     }
 
     /* Compose the output array. */
-    length = 1;
+    length = 0;
     output_pointer = ensure(output_buffer, length + 1);
     if (output_pointer == NULL) {
         return false;
     }
 
-    output_buffer->depth += 2;
-    *output_pointer++ = '\n';
+    bool ident = true;
+    if (((current_element->type) & 0xFF) == cJSON_Object) {
+        ident = false;
+    }
+
+    if (ident)
+        output_buffer->depth++;
     output_buffer->offset += length;
 
     while (current_element != NULL) {
-        size_t ident = (output_buffer->depth - 1) * 2;
-        output_pointer = ensure(output_buffer, ident);
-        if (output_pointer == NULL) {
-            return false;
-        }
-        for (size_t i = 0; i < ident; i++) {
-            char space = ' ';
-            if (i == ident - 2) {
-                space = '-';
+        output_buffer->next_dash = true;
+        switch ((current_element->type) & 0xFF) {
+        case cJSON_String:
+            if (!print_string_ptr((unsigned char *)current_element->valuestring,
+                                  output_buffer, false))
+                return false;
+            break;
+        case cJSON_Array:
+            print_item(current_element, output_pointer, output_buffer);
+            break;
+        default:
+            if (!print_value(current_element, output_buffer, true)) {
+                return false;
             }
-            *output_pointer++ = space;
-        }
-        output_buffer->offset += ident;
-
-        if (!print_value(current_element, output_buffer)) {
-            return false;
         }
         update_offset(output_buffer);
         if (current_element->next) {
@@ -390,7 +451,8 @@ static cJSON_bool print_array(const cJSON *const item,
     }
     *output_pointer++ = '\n';
     *output_pointer = '\0';
-    output_buffer->depth -= 2;
+    if (ident)
+        output_buffer->depth--;
 
     return true;
 }
@@ -398,69 +460,25 @@ static cJSON_bool print_array(const cJSON *const item,
 /* Render an object to text. */
 static cJSON_bool print_object(const cJSON *const item,
                                printbuffer *const output_buffer) {
-    unsigned char *output_pointer = NULL;
-    size_t length = 0;
-    cJSON *current_item = item->child;
-
     if (output_buffer == NULL) {
         return false;
     }
 
-    bool non_root = output_buffer->depth;
+    cJSON *current_item = item->child;
 
     /* Compose the output: */
-    length = non_root;
-    output_pointer = ensure(output_buffer, length + 1);
-    if (output_pointer == NULL) {
-        return false;
-    }
+    unsigned char *output_pointer;
+    EXTEND_OUT_TO(0);
 
     output_buffer->depth++;
-    if (non_root)
-        *output_pointer++ = '\n';
-    output_buffer->offset += length;
 
     while (current_item) {
-        size_t ident = (output_buffer->depth - 1) * 2;
-        output_pointer = ensure(output_buffer, ident);
-        if (output_pointer == NULL) {
+        if (!print_item(current_item, output_pointer, output_buffer))
             return false;
-        }
-        for (size_t i = 0; i < ident; i++) {
-            char space = ' ';
-            *output_pointer++ = space;
-        }
-        output_buffer->offset += ident;
-
-        /* print key */
-        if (!print_string_ptr((unsigned char *)current_item->string,
-                              output_buffer, false)) {
-            return false;
-        }
-        update_offset(output_buffer);
-
-        length = 1;
-        output_pointer = ensure(output_buffer, length);
-        if (output_pointer == NULL) {
-            return false;
-        }
-        *output_pointer++ = ':';
-        //*output_pointer++ = '\n';
-        output_buffer->offset += length;
-
-        /* print value */
-        if (!print_value(current_item, output_buffer)) {
-            return false;
-        }
-        update_offset(output_buffer);
-
         current_item = current_item->next;
     }
 
-    output_pointer = ensure(output_buffer, 1);
-    if (output_pointer == NULL) {
-        return false;
-    }
+    EXTEND_OUT_TO(1);
     *output_pointer = '\0';
     output_buffer->depth--;
 
@@ -469,12 +487,31 @@ static cJSON_bool print_object(const cJSON *const item,
 
 /* Render a value to text. */
 static cJSON_bool print_value(const cJSON *const item,
-                              printbuffer *const output_buffer) {
+                              printbuffer *const output_buffer, bool newlined) {
     unsigned char *output = NULL;
 
     if ((item == NULL) || (output_buffer == NULL)) {
         return false;
     }
+
+#if 1
+    if (newlined && output_buffer->depth) {
+        size_t ident = (output_buffer->depth - 1) * 2;
+        output = ensure(output_buffer, ident);
+        if (output == NULL) {
+            return false;
+        }
+        for (size_t i = 0; i < ident; i++) {
+            char space = ' ';
+            if (output_buffer->next_dash && i == ident - 2) {
+                space = '-';
+                output_buffer->next_dash = false;
+            }
+            *output++ = space;
+        }
+        output_buffer->offset += ident;
+    }
+#endif
 
     switch ((item->type) & 0xFF) {
     case cJSON_NULL:
@@ -551,7 +588,7 @@ static unsigned char *print(const cJSON *const item, cJSON_bool format,
     }
 
     /* print the value */
-    if (!print_value(item, buffer)) {
+    if (!print_value(item, buffer, false)) {
         goto fail;
     }
     update_offset(buffer);

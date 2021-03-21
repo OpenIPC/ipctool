@@ -1015,21 +1015,16 @@ const bool hisi_vi_is_not_running(cJSON *j_inner) {
     return false;
 }
 
-static void determine_sensor_data_type(cJSON *j_root) {
-    const char *dtype = NULL;
+static void determine_sensor_data_type(cJSON *j_inner) {
     switch (chip_generation) {
     case HISI_V1:
-        hisi_cv100_sensor_data(j_root);
-        break;
+        return hisi_cv100_sensor_data(j_inner);
     case HISI_V2:
-        hisi_cv200_sensor_data(j_root);
-        break;
+        return hisi_cv200_sensor_data(j_inner);
     case HISI_V3:
-        hisi_cv300_sensor_data(j_root);
-        break;
+        return hisi_cv300_sensor_data(j_inner);
     case HISI_V4:
-        hisi_ev300_sensor_data(j_root);
-        break;
+        return hisi_ev300_sensor_data(j_inner);
     default:
         return;
     }
