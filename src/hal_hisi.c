@@ -354,27 +354,61 @@ struct EV300_PERI_CRG60 {
     unsigned int sensor0_ctrl_srst_req : 1;
 };
 
-const unsigned int EV300_PERI_CRG60_ADRR = 0x120100F0;
+#define CV300_CRG_BASE 0x12040000
+const uint32_t CV300_PERI_CRG12_ADDR = CV300_CRG_BASE + 0x0030;
+struct CV300_PERI_CRG12 {
+    unsigned int apb_sc_sel : 1;
+    unsigned int res0 : 1;
+    unsigned int ddr_sc_sel : 2;
+    unsigned int cpu_sc_sel : 2;
+    unsigned int reserved : 2;
+    unsigned int ddr_clk_div : 2;
+};
+const uint32_t CV300_PERI_CRG11_ADDR = CV300_CRG_BASE + 0x002c;
+const uint32_t CV300_PERI_CRG14_ADDR = CV300_CRG_BASE + 0x0038;
+const uint32_t CV300_PERI_CRG15_ADDR = CV300_CRG_BASE + 0x003c;
+
+static void v3_ensure_sensor_enabled() {
+    struct CV300_PERI_CRG12 crg12;
+    if (mem_reg(CV300_PERI_CRG12_ADDR, (uint32_t *)&crg12, OP_READ)) {
+        if (!crg12.apb_sc_sel) {
+            fprintf(stderr, "Need to start sensor\n");
+            uint32_t val = 3;
+            mem_reg(CV300_PERI_CRG12_ADDR, (uint32_t *)&val, OP_WRITE);
+            mem_reg(CV300_PERI_CRG11_ADDR, (uint32_t *)&val, OP_WRITE);
+            val = 1;
+            mem_reg(CV300_PERI_CRG14_ADDR, (uint32_t *)&val, OP_WRITE);
+            mem_reg(CV300_PERI_CRG15_ADDR, (uint32_t *)&val, OP_WRITE);
+            val = 0xC06800D;
+            mem_reg(0x1201002c, (uint32_t *)&val, OP_WRITE);
+            usleep(100 * 1000);
+            val = 0x406800D;
+            mem_reg(0x1201002c, (uint32_t *)&val, OP_WRITE);
+        }
+    }
+}
+
+const unsigned int EV300_PERI_CRG60_ADDR = 0x120100F0;
 static struct EV300_PERI_CRG60 peri_crg60;
 static bool crg60_changed;
 static void v4_ensure_sensor_enabled() {
     struct EV300_PERI_CRG60 crg60;
-    if (mem_reg(EV300_PERI_CRG60_ADRR, (uint32_t *)&crg60, OP_READ)) {
+    if (mem_reg(EV300_PERI_CRG60_ADDR, (uint32_t *)&crg60, OP_READ)) {
         if (!crg60.sensor0_cken) {
             peri_crg60 = crg60;
             // 1: clock enabled
             crg60.sensor0_cken = true;
             // 0: reset deasserted
             crg60.sensor0_srst_req = false;
-            mem_reg(EV300_PERI_CRG60_ADRR, (uint32_t *)&crg60, OP_WRITE);
+            mem_reg(EV300_PERI_CRG60_ADDR, (uint32_t *)&crg60, OP_WRITE);
             crg60_changed = true;
         }
     }
 }
 
-static void ensure_sensor_restored() {
+static void v4_ensure_sensor_restored() {
     if (crg60_changed) {
-        mem_reg(EV300_PERI_CRG60_ADRR, (uint32_t *)&peri_crg60, OP_WRITE);
+        mem_reg(EV300_PERI_CRG60_ADDR, (uint32_t *)&peri_crg60, OP_WRITE);
     }
 }
 
@@ -389,13 +423,15 @@ static void restore_printk() {
 
 static void hisi_hal_cleanup() {
     if (chip_generation == HISI_V4)
-        ensure_sensor_restored();
+        v4_ensure_sensor_restored();
     restore_printk();
 }
 
 void setup_hal_hisi() {
     disable_printk();
-    if (chip_generation == HISI_V4)
+    if (chip_generation == HISI_V3)
+        v3_ensure_sensor_enabled();
+    else if (chip_generation == HISI_V4)
         v4_ensure_sensor_enabled();
 
     open_sensor_fd = hisi_open_sensor_fd;
@@ -920,20 +956,19 @@ static char *cv200_cv300_map_sensor_clksel(unsigned int sensor_clksel) {
     }
 }
 
-const unsigned int CV200_PERI_CRG11_ADRR = 0x2003002c;
+const unsigned int CV200_PERI_CRG11_ADDR = 0x2003002c;
 static void hisi_cv200_sensor_clock(cJSON *j_inner) {
     struct CV200_PERI_CRG11 crg11;
-    int res = mem_reg(CV200_PERI_CRG11_ADRR, (uint32_t *)&crg11, OP_READ);
+    int res = mem_reg(CV200_PERI_CRG11_ADDR, (uint32_t *)&crg11, OP_READ);
     // consider sensor clock value only when it's enabled
     if (res && crg11.sensor_cken) {
         ADD_PARAM("clock", cv200_cv300_map_sensor_clksel(crg11.sensor_cksel));
     }
 }
 
-const unsigned int CV300_PERI_CRG11_ADRR = 0x1201002c;
 static void hisi_cv300_sensor_clock(cJSON *j_inner) {
     struct CV300_PERI_CRG11 crg11;
-    int res = mem_reg(CV300_PERI_CRG11_ADRR, (uint32_t *)&crg11, OP_READ);
+    int res = mem_reg(CV300_PERI_CRG11_ADDR, (uint32_t *)&crg11, OP_READ);
     // consider sensor clock value only when it's enabled
     if (res && crg11.sensor_cken) {
         ADD_PARAM("clock", cv200_cv300_map_sensor_clksel(crg11.sensor_clksel));
@@ -1046,7 +1081,7 @@ static const char *ev300_map_sensor_clksel(unsigned int sensor0_cksel) {
 
 static void hisi_ev300_sensor_clock(cJSON *j_inner) {
     struct EV300_PERI_CRG60 crg60;
-    int res = mem_reg(EV300_PERI_CRG60_ADRR, (uint32_t *)&crg60, OP_READ);
+    int res = mem_reg(EV300_PERI_CRG60_ADDR, (uint32_t *)&crg60, OP_READ);
     if (res && crg60.sensor0_cken) {
         ADD_PARAM("clock", ev300_map_sensor_clksel(crg60.sensor0_cksel));
     }
