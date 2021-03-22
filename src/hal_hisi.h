@@ -6,6 +6,8 @@
 
 #include <cjson/cJSON.h>
 
+#include "sensors.h"
+
 #define VENDOR_HISI "HiSilicon"
 
 #define HISI_V1 0x35180100
@@ -26,6 +28,6 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
                                 unsigned int reg_addr, unsigned int reg_width,
                                 unsigned int data_width);
 
-void hisi_vi_information(cJSON *j_root);
+void hisi_vi_information(sensor_ctx_t *ctx);
 
 #endif /* HAL_HISI_H */

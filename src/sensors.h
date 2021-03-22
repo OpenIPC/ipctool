@@ -2,8 +2,17 @@
 #define SENSORID_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
-bool get_sensor_id();
+typedef struct {
+    char sensor_id[128];
+    char control[4];
+    uint16_t addr;
+    cJSON *j_sensor;
+    cJSON *j_params;
+} sensor_ctx_t;
+
+bool get_sensor_id(sensor_ctx_t *ctx);
 cJSON *detect_sensors();
 
 #endif /* SENSORID_H */

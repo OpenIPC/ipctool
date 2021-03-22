@@ -1276,12 +1276,12 @@ static void determine_sensor_clock(cJSON *j_inner) {
     }
 }
 
-void hisi_vi_information(cJSON *j_root) {
-    if (hisi_vi_is_not_running(j_root))
+void hisi_vi_information(sensor_ctx_t *ctx) {
+    if (hisi_vi_is_not_running(ctx->j_sensor))
         return;
 
-    determine_sensor_data_type(j_root);
-    determine_sensor_clock(j_root);
+    determine_sensor_data_type(ctx->j_sensor);
+    determine_sensor_clock(ctx->j_sensor);
 }
 
 // for IMX291 1920x1110

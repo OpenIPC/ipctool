@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "chipid.h"
@@ -18,11 +19,64 @@
 #include "sensors.h"
 #include "tools.h"
 
-char sensor_id[128];
-char sensor_manufacturer[128];
-char control[128];
+#define READ(addr) sensor_read_register(fd, i2c_addr, base + addr, 2, 1)
 
-int detect_sony_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
+static int sony_imx291_fps(u_int8_t frsel, u_int16_t hmax) {
+    switch (frsel) {
+    case 2:
+        // 30/25
+        if (hmax == 0x1130)
+            return 30;
+        else if (hmax == 0x14A0)
+            return 25;
+    case 1:
+        // 60/50
+        if (hmax == 0x0898)
+            return 60;
+        else if (hmax == 0x0A50)
+            return 50;
+    case 0:
+        // 120/100
+        if (hmax == 0x044C)
+            return 120;
+        else if (hmax == 0x0528)
+            return 100;
+    }
+    return 0;
+}
+
+static const char *sony_imx291_databus(int odbit) {
+    switch (odbit) {
+    case 0:
+        return "Parallel CMOS SDR";
+    case 0xD:
+        return "LVDS 2 ch";
+    case 0xE:
+        return "LVDS 4 ch";
+    case 0xF:
+        return "LVDS 8 ch";
+    default:
+        return NULL;
+    }
+}
+
+static void sony_imx291_params(sensor_ctx_t *ctx, int fd,
+                               unsigned char i2c_addr, unsigned int base) {
+    cJSON *j_inner = cJSON_CreateObject();
+
+    int adbit = READ(0x5) & 1 ? 12 : 10;
+    ADD_PARAM_NUM("bitness", adbit);
+
+    ADD_PARAM("databus", sony_imx291_databus((READ(0x46) & 0xf0) >> 4));
+
+    int frsel = (READ(9) & 3);
+    int hmax = READ(0x1d) << 8 | READ(0x1c);
+    ADD_PARAM_NUM("fps", sony_imx291_fps(frsel, hmax))
+    ctx->j_params = j_inner;
+}
+
+int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
+                       unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -34,7 +88,7 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
         return false;
 
     if (ret16a > 0 && ((ret16a & 0xfc) == 0x7c)) {
-        sprintf(sensor_id, "IMX335");
+        sprintf(ctx->sensor_id, "IMX335");
         return true;
     }
 
@@ -44,9 +98,9 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
 
         int ret4F = sensor_read_register(fd, i2c_addr, base + 0x4F, 2, 1);
         if (ret4F == 0x07) {
-            sprintf(sensor_id, "IMX323");
+            sprintf(ctx->sensor_id, "IMX323");
         } else {
-            sprintf(sensor_id, "IMX322");
+            sprintf(ctx->sensor_id, "IMX322");
         }
         return true;
     }
@@ -55,13 +109,14 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
     if (ret1dc > 0 && ret1dc != 0xff) {
         switch (ret1dc & 6) {
         case 4:
-            sprintf(sensor_id, "IMX307");
+            sprintf(ctx->sensor_id, "IMX307");
             break;
         case 6:
-            sprintf(sensor_id, "IMX327");
+            sprintf(ctx->sensor_id, "IMX327");
             break;
         default:
-            sprintf(sensor_id, "IMX29%d", ret1dc & 7);
+            sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
+            sony_imx291_params(ctx, fd, i2c_addr, base);
             return true;
         }
         return true;
@@ -72,7 +127,8 @@ int detect_sony_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
 
 // tested on F22, F23, F37, H62, H65
 // TODO(FlyRouter): test on H42, H81
-int detect_soi_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
+int detect_soi_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
+                      unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -86,11 +142,11 @@ int detect_soi_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
     int ver = sensor_read_register(fd, i2c_addr, 0xb, 1, 1);
     switch (pid) {
     case 0xf:
-        sprintf(sensor_id, "JXF%x", ver);
+        sprintf(ctx->sensor_id, "JXF%x", ver);
         return true;
     case 0xa0:
     case 0xa:
-        sprintf(sensor_id, "JXH%x", ver);
+        sprintf(ctx->sensor_id, "JXH%x", ver);
         return true;
     // it can be another sensor type
     case 0:
@@ -104,7 +160,8 @@ int detect_soi_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
 }
 
 // tested on AR0130
-int detect_onsemi_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
+int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
+                         unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -131,12 +188,13 @@ int detect_onsemi_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
     }
 
     if (sid) {
-        sprintf(sensor_id, "AR%04x", sid);
+        sprintf(ctx->sensor_id, "AR%04x", sid);
     }
     return sid;
 }
 
-int detect_smartsens_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
+int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
+                            unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -168,12 +226,12 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
         res = 0x1035;
         break;
     case 0x2232:
-        strcpy(sensor_id, "SC2235P");
+        strcpy(ctx->sensor_id, "SC2235P");
         return true;
     case 0x2235:
         break;
     case 0x2238:
-        strcpy(sensor_id, "SC2315E");
+        strcpy(ctx->sensor_id, "SC2315E");
         return true;
     // Untested
     case 0x2245:
@@ -200,12 +258,13 @@ int detect_smartsens_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
         return false;
     }
 
-    sprintf(sensor_id, "SC%04x", res);
+    sprintf(ctx->sensor_id, "SC%04x", res);
     return true;
 }
 
 // TODO(FlyRouter): test on OV9732
-int detect_omni_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
+int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
+                       unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -243,22 +302,24 @@ int detect_omni_sensor(int fd, unsigned char i2c_addr, unsigned int base) {
                 res);
         return false;
     }
-    sprintf(sensor_id, "OV%04x", res);
+    sprintf(ctx->sensor_id, "OV%04x", res);
 
     return true;
 }
 
-int detect_possible_sensors(int fd,
-                            int (*detect_fn)(int, unsigned char,
-                                             unsigned int base),
-                            int type, unsigned int base) {
+static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
+                                   int (*detect_fn)(sensor_ctx_t *ctx, int,
+                                                    unsigned char,
+                                                    unsigned int base),
+                                   int type, unsigned int base) {
     sensor_addr_t *sdata = possible_i2c_addrs;
 
     while (sdata->sensor_type) {
         if (sdata->sensor_type == type) {
             unsigned char *addr = sdata->addrs;
             while (*addr) {
-                if (detect_fn(fd, *addr, base)) {
+                if (detect_fn(ctx, fd, *addr, base)) {
+                    ctx->addr = *addr;
                     return true;
                 };
                 addr++;
@@ -269,30 +330,32 @@ int detect_possible_sensors(int fd,
     return false;
 }
 
-static bool get_sensor_id_i2c() {
+static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
     bool detected = false;
     int fd = open_sensor_fd();
     if (fd == -1)
         return false;
 
-    if (detect_possible_sensors(fd, detect_soi_sensor, SENSOR_SOI, 0)) {
-        strcpy(sensor_manufacturer, "Silicon Optronics");
+    cJSON *j_inner = ctx->j_sensor;
+
+    if (detect_possible_sensors(ctx, fd, detect_soi_sensor, SENSOR_SOI, 0)) {
+        ADD_PARAM("vendor", "Silicon Optronics");
         detected = true;
-    } else if (detect_possible_sensors(fd, detect_onsemi_sensor, SENSOR_ONSEMI,
-                                       0)) {
-        strcpy(sensor_manufacturer, "ON Semiconductor");
+    } else if (detect_possible_sensors(ctx, fd, detect_onsemi_sensor,
+                                       SENSOR_ONSEMI, 0)) {
+        ADD_PARAM("vendor", "ON Semiconductor");
         detected = true;
-    } else if (detect_possible_sensors(fd, detect_sony_sensor, SENSOR_SONY,
+    } else if (detect_possible_sensors(ctx, fd, detect_sony_sensor, SENSOR_SONY,
                                        0x3000)) {
-        strcpy(sensor_manufacturer, "Sony");
+        ADD_PARAM("vendor", "Sony");
         detected = true;
-    } else if (detect_possible_sensors(fd, detect_omni_sensor,
+    } else if (detect_possible_sensors(ctx, fd, detect_omni_sensor,
                                        SENSOR_OMNIVISION, 0)) {
-        strcpy(sensor_manufacturer, "OmniVision");
+        ADD_PARAM("vendor", "OmniVision");
         detected = true;
-    } else if (detect_possible_sensors(fd, detect_smartsens_sensor,
+    } else if (detect_possible_sensors(ctx, fd, detect_smartsens_sensor,
                                        SENSOR_SMARTSENS, 0)) {
-        strcpy(sensor_manufacturer, "SmartSens");
+        ADD_PARAM("vendor", "SmartSens");
         detected = true;
     }
 
@@ -304,7 +367,7 @@ exit:
 
 int dummy_change_addr(int fd, unsigned char addr) {}
 
-static bool get_sensor_id_spi() {
+static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
     int fd = -1;
 
     // fallback for SPI implemented only for HiSilicon
@@ -321,54 +384,61 @@ static bool get_sensor_id_spi() {
 
     sensor_i2c_change_addr = dummy_change_addr;
 
-    int res = detect_sony_sensor(fd, 0, 0x200);
+    int res = detect_sony_sensor(ctx, fd, 0, 0x200);
     if (res) {
-        strcpy(sensor_manufacturer, "Sony");
+        cJSON *j_inner = ctx->j_sensor;
+        ADD_PARAM("vendor", "Sony");
     }
     close(fd);
     return res;
 }
 
-bool get_sensor_id() {
+bool get_sensor_id(sensor_ctx_t *ctx) {
     // if system wasn't detected previously
     if (!*chip_id) {
         get_system_id();
     }
 
-    bool i2c_detected = get_sensor_id_i2c();
+    bool i2c_detected = get_sensor_id_i2c(ctx);
     if (i2c_detected) {
-        strcpy(control, "i2c");
+        strcpy(ctx->control, "i2c");
         return true;
     }
 
-    bool spi_detected = get_sensor_id_spi();
+    bool spi_detected = get_sensor_id_spi(ctx);
     if (spi_detected) {
-        strcpy(control, "spi");
+        strcpy(ctx->control, "spi");
     }
     return spi_detected;
 }
 
 cJSON *detect_sensors() {
-    if (!get_sensor_id()) {
-        return NULL;
-    }
+    sensor_ctx_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
 
     cJSON *fake_root = cJSON_CreateObject();
     cJSON *j_sensors = cJSON_AddArrayToObject(fake_root, "sensors");
-
-    cJSON *j_sensor = cJSON_CreateObject();
-    cJSON *j_inner = j_sensor;
+    ctx.j_sensor = cJSON_CreateObject();
+    cJSON *j_inner = ctx.j_sensor;
     cJSON_AddItemToArray(j_sensors, j_inner);
-    ADD_PARAM("vendor", sensor_manufacturer);
-    ADD_PARAM("model", sensor_id);
 
+    if (!get_sensor_id(&ctx)) {
+        cJSON_Delete(fake_root);
+        return NULL;
+    }
+
+    ADD_PARAM("model", ctx.sensor_id);
     {
         cJSON *j_inner = cJSON_CreateObject();
-        cJSON_AddItemToObject(j_sensor, "control", j_inner);
-        ADD_PARAM("bus", "0");
-        ADD_PARAM("type", control);
+        cJSON_AddItemToObject(ctx.j_sensor, "control", j_inner);
+        ADD_PARAM_NUM("bus", 0);
+        ADD_PARAM("type", ctx.control);
+        if (ctx.addr)
+            ADD_PARAM_FMT("addr", "0x%x", ctx.addr);
+        if (ctx.j_params)
+            cJSON_AddItemToObject(ctx.j_sensor, "params", ctx.j_params);
 
-        hisi_vi_information(j_sensor);
+        hisi_vi_information(&ctx);
     }
 
     return fake_root;

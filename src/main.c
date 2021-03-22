@@ -212,8 +212,9 @@ int main(int argc, char *argv[]) {
             else
                 return EXIT_FAILURE;
         } else if (strcmp(cmd, "--sensor_id") == 0) {
-            if (get_sensor_id())
-                lprintf("%s_%s\n", sensor_id, control);
+            sensor_ctx_t ctx;
+            if (get_sensor_id(&ctx))
+                lprintf("%s_%s\n", ctx.sensor_id, ctx.control);
             else
                 return EXIT_FAILURE;
         } else if (strcmp(cmd, "--temp") == 0) {
