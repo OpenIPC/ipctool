@@ -11,7 +11,10 @@
 #include "vendors/openwrt.h"
 
 bool is_openwrt_board() {
-    if (!access("/etc/openwrt_version", 0)) {
+    if (!access("/etc/openipc_donaters", 0)) {
+        strcpy(board_manufacturer, "OpenIPC");
+        return true;
+    } else if (!access("/etc/openwrt_version", 0)) {
         strcpy(board_manufacturer, "OpenWrt");
         return true;
     }

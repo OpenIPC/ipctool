@@ -735,6 +735,31 @@ struct EV300_LANE_ID0_CHN {
     unsigned int lane3_id : 4;
 };
 
+static void ev300_enum_lanes(cJSON *j_inner, size_t lanes) {
+    if (!strcmp(chip_id, "3516EV200")) {
+        struct EV200_LANE_ID0_CHN lid;
+        if (mem_reg(EV200_LANE_ID0_CHN_ADDR, (uint32_t *)&lid, OP_READ)) {
+            cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "laneId");
+            cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane0_id));
+            if (lanes > 1)
+                cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane2_id));
+        }
+
+    } else {
+        struct EV300_LANE_ID0_CHN lid;
+        if (mem_reg(EV300_LANE_ID0_CHN_ADDR, (uint32_t *)&lid, OP_READ)) {
+            cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "laneId");
+            cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane0_id));
+            if (lanes > 1)
+                cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane1_id));
+            if (lanes > 2)
+                cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane2_id));
+            if (lanes > 3)
+                cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane3_id));
+        }
+    }
+}
+
 static void lvds_code_set(cJSON *j_inner, const char *param,
                           lvds_bit_endian val) {
     if (val == LVDS_ENDIAN_LITTLE)
@@ -746,7 +771,7 @@ static void lvds_code_set(cJSON *j_inner, const char *param,
 #define LO(x) x & 0xffff
 #define HI(x) x & 0xffff0000 >> 16
 
-static void cv300_enum_lanes(cJSON *j_inner) {
+static void cv300_enum_sync_codes(cJSON *j_inner) {
     uint32_t addr = 0x11301320;
     uint32_t end_addr = 0x1130141C;
 
@@ -864,7 +889,7 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
                                   lvds0_ctrl.lvds_pix_big_endian);
                     lvds_code_set(j_inner, "syncCodeEndian",
                                   lvds0_ctrl.lvds_code_big_endian);
-                    cv300_enum_lanes(j_inner);
+                    cv300_enum_sync_codes(j_inner);
                 }
             }
 
@@ -922,11 +947,44 @@ enum EV300_MIPI_PHY {
     EV300_PHY_RESERVED1
 };
 
+const unsigned int EV300_MISC_CTRL6_ADDR = 0x12028018;
 struct EV300_MISC_CTRL6 {
     enum EV300_MIPI_PHY mipirx0_work_mode : 2;
 };
 
-const unsigned int EV300_MISC_CTRL6_ADDR = 0x12028018;
+const uint32_t EV300_MIPI_IMGSIZE = EV300_MIPI_BASE + 0x1224;
+struct CV300_EV300_MIPI_IMGSIZE {
+    unsigned int mipi_imgwidth : 16;
+    unsigned int mipi_imgheight : 16;
+};
+
+const uint32_t EV300_MIPI_DI_1_ADDR = EV300_MIPI_BASE + 0x1010;
+struct EV300_MIPI_DI_1 {
+    unsigned int di0_dt : 6;
+    unsigned int di0_vc : 2;
+    unsigned int di1_dt : 6;
+    unsigned int di1_vc : 2;
+    unsigned int di2_dt : 6;
+    unsigned int di2_vc : 2;
+    unsigned int di3_dt : 6;
+    unsigned int di3_vc : 2;
+};
+
+static const char *ev300_mipi_raw_data(unsigned int di0_dt) {
+    switch (di0_dt) {
+    case 0x2A:
+        return "DATA_TYPE_RAW_8BIT";
+    case 0x2B:
+        return "DATA_TYPE_RAW_10BIT";
+    case 0x2C:
+        return "DATA_TYPE_RAW_12BIT";
+    case 0x2D:
+        return "DATA_TYPE_RAW_14BIT";
+    default:
+        return NULL;
+    }
+}
+
 static void hisi_ev300_sensor_data(cJSON *j_root) {
     cJSON *j_inner = cJSON_CreateObject();
 
@@ -936,6 +994,22 @@ static void hisi_ev300_sensor_data(cJSON *j_root) {
         switch (ctrl6.mipirx0_work_mode) {
         case EV300_PHY_MIPI_MODE:
             ADD_PARAM("type", "MIPI");
+
+            struct EV300_MIPI_DI_1 di1;
+            mem_reg(EV300_MIPI_DI_1_ADDR, (uint32_t *)&di1, OP_READ);
+            ADD_PARAM("input_data_type", ev300_mipi_raw_data(di1.di0_dt));
+
+            // MIPI_CTRL_MODE_HS
+            // vc_mode
+            // hdr_mode
+
+            size_t lanes = mipi_lanes_num();
+            ev300_enum_lanes(j_inner, lanes);
+
+            struct CV300_EV300_MIPI_IMGSIZE size;
+            mem_reg(EV300_MIPI_IMGSIZE, (uint32_t *)&size, OP_READ);
+            ADD_PARAM_FMT("image", "%dx%d", size.mipi_imgwidth + 1,
+                          size.mipi_imgheight + 1);
             break;
         case EV300_PHY_LVDS_MODE:
             ADD_PARAM("type", "LVDS");

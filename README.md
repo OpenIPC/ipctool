@@ -81,14 +81,6 @@ sensors:
     imx291_i2c
     ```
 
-* Determine HiSilicon SDK internal parameters in runtime:
-
-    ```
-    root@IVG-HP203Y-AE# eval $(ipctool --mpp_info) env | grep HI_
-    HI_CHIPID=0X3516C300
-    HI_VERSION=Hi3516CV300_MPP_V1.0.4.0 B050 Release
-    ```
-
 * Get temperature from chip's internal sensor (not all devices supported):
 
     ```
