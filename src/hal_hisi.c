@@ -354,36 +354,32 @@ struct EV300_PERI_CRG60 {
     unsigned int sensor0_ctrl_srst_req : 1;
 };
 
-#define CV300_CRG_BASE 0x12040000
-const uint32_t CV300_PERI_CRG12_ADDR = CV300_CRG_BASE + 0x0030;
-struct CV300_PERI_CRG12 {
-    unsigned int apb_sc_sel : 1;
-    unsigned int res0 : 1;
-    unsigned int ddr_sc_sel : 2;
-    unsigned int cpu_sc_sel : 2;
-    unsigned int reserved : 2;
-    unsigned int ddr_clk_div : 2;
-};
+#define CV300_MUX_BASE 0x12040000
+#define CV300_CRG_BASE 0x12010000
+
+const uint32_t CV300_MUX30_ADDR = CV300_MUX_BASE + 0x0030;
+const uint32_t CV300_MUX2C_ADDR = CV300_MUX_BASE + 0x002c;
+const uint32_t CV300_MUX14_ADDR = CV300_MUX_BASE + 0x0038;
+const uint32_t CV300_MUX15_ADDR = CV300_MUX_BASE + 0x003c;
+
 const uint32_t CV300_PERI_CRG11_ADDR = CV300_CRG_BASE + 0x002c;
-const uint32_t CV300_PERI_CRG14_ADDR = CV300_CRG_BASE + 0x0038;
-const uint32_t CV300_PERI_CRG15_ADDR = CV300_CRG_BASE + 0x003c;
 
 static void v3_ensure_sensor_enabled() {
-    struct CV300_PERI_CRG12 crg12;
-    if (mem_reg(CV300_PERI_CRG12_ADDR, (uint32_t *)&crg12, OP_READ)) {
-        if (!crg12.apb_sc_sel) {
-            fprintf(stderr, "Need to start sensor\n");
-            uint32_t val = 3;
-            mem_reg(CV300_PERI_CRG12_ADDR, (uint32_t *)&val, OP_WRITE);
-            mem_reg(CV300_PERI_CRG11_ADDR, (uint32_t *)&val, OP_WRITE);
-            val = 1;
-            mem_reg(CV300_PERI_CRG14_ADDR, (uint32_t *)&val, OP_WRITE);
-            mem_reg(CV300_PERI_CRG15_ADDR, (uint32_t *)&val, OP_WRITE);
-            val = 0xC06800D;
-            mem_reg(0x1201002c, (uint32_t *)&val, OP_WRITE);
+    uint32_t reg;
+    if (mem_reg(CV300_MUX30_ADDR, (uint32_t *)&reg, OP_READ)) {
+        if (!reg) {
+            reg = 3;
+            mem_reg(CV300_MUX30_ADDR, (uint32_t *)&reg, OP_WRITE);
+            mem_reg(CV300_MUX2C_ADDR, (uint32_t *)&reg, OP_WRITE);
+            reg = 1;
+            mem_reg(CV300_MUX14_ADDR, (uint32_t *)&reg, OP_WRITE);
+            mem_reg(CV300_MUX15_ADDR, (uint32_t *)&reg, OP_WRITE);
+
+            reg = 0xC06800D;
+            mem_reg(CV300_PERI_CRG11_ADDR, (uint32_t *)&reg, OP_WRITE);
             usleep(100 * 1000);
-            val = 0x406800D;
-            mem_reg(0x1201002c, (uint32_t *)&val, OP_WRITE);
+            reg = 0x406800D;
+            mem_reg(CV300_PERI_CRG11_ADDR, (uint32_t *)&reg, OP_WRITE);
         }
     }
 }
