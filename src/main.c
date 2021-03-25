@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -142,6 +143,7 @@ void print_ram_info() {
 static void generic_system_data() { linux_mem(); }
 
 #define MAX_YAML 1024 * 64
+bool wait_mode = false;
 static bool backup_mode() {
     // prevent double backup creation and don't backup OpenWrt firmware
     if (!udp_lock() || is_openwrt_board())
@@ -153,10 +155,10 @@ static bool backup_mode() {
         exit(1);
     }
 
-    pid_t p = fork();
-    if (p < 0) {
+    pid_t child_pid = fork();
+    if (child_pid < 0) {
         exit(1);
-    } else if (p > 0) {
+    } else if (child_pid > 0) {
         // parent process
         close(fds[0]);
         backup_fp = fdopen(fds[1], "w");
@@ -171,7 +173,7 @@ static bool backup_mode() {
         }
         size_t yaml_sz = ptr - yaml;
         close(fds[0]);
-        do_backup(yaml, yaml_sz);
+        do_backup(yaml, yaml_sz, wait_mode);
         free(yaml);
         return true;
     }
@@ -226,6 +228,10 @@ int main(int argc, char *argv[]) {
             dmesg();
             return 0;
 
+        case 'w':
+            wait_mode = true;
+            break;
+
         case '?':
         default:
             printf("found unknown option\n");
@@ -257,6 +263,15 @@ int main(int argc, char *argv[]) {
     // freezes
     tcdrain(STDOUT_FILENO);
     show_yaml(detect_sensors());
+
+    if (wait_mode && backup_fp) {
+        // trigger child process
+        printf("---\n");
+        printf("state: uploadStart\n");
+        fclose(backup_fp);
+        wait(NULL);
+        printf("state: uploadEnd\n");
+    }
 
     return EXIT_SUCCESS;
 }

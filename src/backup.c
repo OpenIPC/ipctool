@@ -69,7 +69,7 @@ static int map_mtdblocks(span_t *blocks, size_t bl_len) {
     return ctx.count;
 }
 
-void do_backup(const char *yaml, size_t yaml_len) {
+void do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
     nservers_t ns;
     ns.len = 0;
 
@@ -95,5 +95,6 @@ void do_backup(const char *yaml, size_t yaml_len) {
     upload("camware.s3.eu-north-1.amazonaws.com", mac, &ns, blocks, bl_num);
 
     // don't release UDP lock for 30 days
-    sleep(60 * 60 * 24 * 30);
+    if (!wait_mode)
+        sleep(60 * 60 * 24 * 30);
 }
