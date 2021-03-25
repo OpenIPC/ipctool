@@ -120,9 +120,10 @@ static void uboot_setenv(int mtd, uint32_t offset, const char *env,
     uint32_t res_crc = 0;
 
     uboot_copyenv(env);
-    char *newenv = malloc(ENV_LEN);
+    char *newenv = calloc(ENV_LEN, 1);
 
     const char *ptr = uenv + CRC_SZ;
+    char *nptr = newenv + CRC_SZ;
     while (*ptr) {
         if (!strncmp(ptr, key, strlen(key))) {
             char *delim = strchr(ptr, '=');
@@ -137,25 +138,29 @@ static void uboot_setenv(int mtd, uint32_t offset, const char *env,
                     fprintf(stderr, "Nothing will be changed\n");
                     goto bailout;
                 }
-                printf("Use simple case\n");
                 memcpy(oldvalue, newvalue, strlen(newvalue));
                 towrite = uenv;
                 goto rewrite;
+            } else {
+                if (strlen(newvalue) != 0)
+                    nptr += snprintf(nptr, ENV_LEN - (nptr - newenv), "%s=%s",
+                                     key, newvalue) +
+                            1;
             }
-            puts(oldvalue);
+        } else {
+            // copy as-is
+            memcpy(nptr, ptr, strlen(ptr));
+            nptr += strlen(ptr) + 1;
         }
         ptr += strlen(ptr) + 1;
     }
     towrite = newenv;
-    printf("TODO...\n");
-    goto bailout;
 
 rewrite:
     crc32(towrite + CRC_SZ, ENV_LEN - CRC_SZ, &res_crc);
     *(uint32_t *)towrite = res_crc;
 
-    // write towrite data
-    // uboot_printenv(towrite);
+    uboot_printenv(towrite);
     mtd_write(mtd, offset, erasesize, towrite, ENV_LEN);
 
 bailout:
