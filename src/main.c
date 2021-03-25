@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <getopt.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -177,58 +178,85 @@ static bool backup_mode() {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc == 1) {
-        if (backup_mode())
-            return EXIT_SUCCESS;
+    const char *short_options = "";
+    const struct option long_options[] = {
+        {"help", no_argument, NULL, 'h'},
+        {"chip_id", no_argument, NULL, 'c'},
+        {"sensor_id", optional_argument, NULL, 's'},
+        {"temp", optional_argument, NULL, 't'},
+        {"printenv", optional_argument, NULL, 'p'},
+        {"dmesg", optional_argument, NULL, 'd'},
+        {"wait", optional_argument, NULL, 'w'},
+        {NULL, 0, NULL, 0}};
 
-        generic_system_data();
-        if (get_system_id()) {
-            yaml_printf("---\n");
-            if (get_board_id()) {
-                print_board_id();
-            }
-            print_system_id();
-            print_chip_id();
-            show_yaml(detect_ethernet());
-            print_mtd_info();
-            print_ram_info();
-            show_yaml(detect_firmare());
-        } else
-            return EXIT_FAILURE;
+    int rez;
+    int option_index;
 
-        // flush stdout before go to sensor detection to avoid buggy kernel
-        // freezes
-        tcdrain(STDOUT_FILENO);
-        show_yaml(detect_sensors());
+    while ((rez = getopt_long_only(argc, argv, short_options, long_options,
+                                   &option_index)) != -1) {
 
-        return EXIT_SUCCESS;
-    }
+        switch (rez) {
+        case 'h':
+            Help();
+            return 0;
 
-    if (argc == 2) {
-        char *cmd = argv[1];
-        if (strcmp(cmd, "--chip_id") == 0) {
-            if (get_system_id())
-                lprintf("%s%s\n", short_manufacturer, chip_id);
-            else
+        case 'c':
+            if (!get_system_id())
                 return EXIT_FAILURE;
-        } else if (strcmp(cmd, "--sensor_id") == 0) {
+            lprintf("%s%s\n", short_manufacturer, chip_id);
+            return 0;
+
+        case 's': {
             sensor_ctx_t ctx;
-            if (get_sensor_id(&ctx))
-                lprintf("%s_%s\n", ctx.sensor_id, ctx.control);
-            else
+            if (!get_sensor_id(&ctx))
                 return EXIT_FAILURE;
-        } else if (strcmp(cmd, "--temp") == 0) {
+            lprintf("%s_%s\n", ctx.sensor_id, ctx.control);
+            return 0;
+        }
+
+        case 't':
             get_system_id();
             return hisi_get_temp();
-        } else if (strcmp(cmd, "--printenv") == 0) {
+
+        case 'p':
             printenv();
-        } else if (strcmp(cmd, "--dmesg") == 0) {
+            return 0;
+
+        case 'd':
             dmesg();
-        } else
+            return 0;
+
+        case '?':
+        default:
+            printf("found unknown option\n");
             Help();
-        return EXIT_SUCCESS;
+            return EXIT_FAILURE;
+        }
     }
 
-    Help();
+    if (backup_mode())
+        // child process
+        return EXIT_SUCCESS;
+
+    generic_system_data();
+    if (get_system_id()) {
+        yaml_printf("---\n");
+        if (get_board_id()) {
+            print_board_id();
+        }
+        print_system_id();
+        print_chip_id();
+        show_yaml(detect_ethernet());
+        print_mtd_info();
+        print_ram_info();
+        show_yaml(detect_firmare());
+    } else
+        return EXIT_FAILURE;
+
+    // flush stdout before go to sensor detection to avoid buggy kernel
+    // freezes
+    tcdrain(STDOUT_FILENO);
+    show_yaml(detect_sensors());
+
     return EXIT_SUCCESS;
 }
