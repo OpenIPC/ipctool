@@ -56,6 +56,7 @@ void Help() {
            "\t--temp\n"
            "\t--dmesg\n"
            "\t--printenv\n"
+           "\t--setenv key=value\n"
            "\t--help\n");
 }
 
@@ -187,11 +188,12 @@ int main(int argc, char *argv[]) {
     const struct option long_options[] = {
         {"help", no_argument, NULL, 'h'},
         {"chip_id", no_argument, NULL, 'c'},
-        {"sensor_id", optional_argument, NULL, 's'},
-        {"temp", optional_argument, NULL, 't'},
-        {"printenv", optional_argument, NULL, 'p'},
-        {"dmesg", optional_argument, NULL, 'd'},
-        {"wait", optional_argument, NULL, 'w'},
+        {"sensor_id", no_argument, NULL, 's'},
+        {"temp", no_argument, NULL, 't'},
+        {"printenv", no_argument, NULL, 'p'},
+        {"setenv", required_argument, NULL, 'e'},
+        {"dmesg", no_argument, NULL, 'd'},
+        {"wait", no_argument, NULL, 'w'},
         {NULL, 0, NULL, 0}};
 
     int rez;
@@ -225,6 +227,10 @@ int main(int argc, char *argv[]) {
 
         case 'p':
             printenv();
+            return 0;
+
+        case 'e':
+            set_env(optarg);
             return 0;
 
         case 'd':

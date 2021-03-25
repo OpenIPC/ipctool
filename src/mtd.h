@@ -1,16 +1,7 @@
 #ifndef MTD_H
 #define MTD_H
 
-struct mtd_info_user {
-    uint8_t type;
-    uint32_t flags;
-    uint32_t size; // Total size of the MTD
-    uint32_t erasesize;
-    uint32_t oobblock; // Size of OOB blocks (e.g. 512)
-    uint32_t oobsize;  // Amount of OOB data per block (e.g. 16)
-    uint32_t ecctype;
-    uint32_t eccsize;
-};
+#include <mtd/mtd-abi.h>
 
 typedef bool (*cb_mtd)(int i, const char *name, struct mtd_info_user *mtd,
                        void *ctx);
@@ -18,5 +9,7 @@ typedef bool (*cb_mtd)(int i, const char *name, struct mtd_info_user *mtd,
 void print_mtd_info();
 char *open_mtdblock(int i, int *fd, uint32_t size, int flags);
 void enum_mtd_info(void *ctx, cb_mtd cb);
+int mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
+              size_t size);
 
 #endif /* MTD_H */

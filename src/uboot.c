@@ -46,14 +46,14 @@ static void crc32(const void *data, size_t n_bytes, uint32_t *crc) {
         *crc = table[(uint8_t)*crc ^ ((uint8_t *)data)[i]] ^ *crc >> 8;
 }
 
-const int crc_sz = 4;
-// Assume env sole size of 64Kb
-const int env_len = 0x10000;
+#define CRC_SZ 4
+// Assume env only size of 64Kb
+#define ENV_LEN 0x10000
 
 // Detect U-Boot environment area offset
 int uboot_detect_env(void *buf, size_t len) {
     // Jump over memory by step
-    int scan_step = 0x0010000;
+    int scan_step = ENV_LEN;
     int res = -1;
 
     for (int baddr = 0; baddr < len; baddr += scan_step) {
@@ -65,7 +65,7 @@ int uboot_detect_env(void *buf, size_t len) {
 #endif
 
         uint32_t res_crc = 0;
-        crc32(buf + baddr + crc_sz, env_len - crc_sz, &res_crc);
+        crc32(buf + baddr + CRC_SZ, ENV_LEN - CRC_SZ, &res_crc);
         if (res_crc == expected_crc) {
             res = baddr;
             break;
@@ -76,8 +76,8 @@ int uboot_detect_env(void *buf, size_t len) {
 }
 
 // Print environment configuration
-void uboot_printenv(void *buf) {
-    const char *ptr = buf + crc_sz;
+void uboot_printenv(const char *env) {
+    const char *ptr = env + CRC_SZ;
     while (*ptr) {
         puts(ptr);
         ptr += strlen(ptr) + 1;
@@ -85,9 +85,9 @@ void uboot_printenv(void *buf) {
 }
 
 static void *uenv;
-void uboot_copyenv(void *buf) {
-    uenv = malloc(env_len);
-    memcpy(uenv, buf, env_len);
+void uboot_copyenv(const void *buf) {
+    uenv = malloc(ENV_LEN);
+    memcpy(uenv, buf, ENV_LEN);
 }
 
 void uboot_freeenv() {
@@ -103,7 +103,7 @@ const char *uboot_getenv(const char *name) {
     char param[1024];
     snprintf(param, sizeof(param), "%s=", name);
 
-    const char *ptr = uenv + crc_sz;
+    const char *ptr = uenv + CRC_SZ;
     while (*ptr) {
         if (strncmp(ptr, param, strlen(param)) == 0) {
             return ptr + strlen(param);
@@ -113,17 +113,85 @@ const char *uboot_getenv(const char *name) {
     return NULL;
 }
 
-static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
-                        void *ctx) {
+static void uboot_setenv(int mtd, uint32_t offset, const char *env,
+                         const char *key, const char *newvalue,
+                         uint32_t erasesize) {
+    const char *towrite;
+    uint32_t res_crc = 0;
+
+    uboot_copyenv(env);
+    char *newenv = malloc(ENV_LEN);
+
+    const char *ptr = uenv + CRC_SZ;
+    while (*ptr) {
+        if (!strncmp(ptr, key, strlen(key))) {
+            char *delim = strchr(ptr, '=');
+            if (!delim) {
+                fprintf(stderr, "Bad uboot parameter '%s\n'", ptr);
+                goto bailout;
+            }
+            char *oldvalue = delim + 1;
+            // check if old value has same size of new one
+            if (strlen(newvalue) == strlen(oldvalue)) {
+                if (!strcmp(newvalue, oldvalue)) {
+                    fprintf(stderr, "Nothing will be changed\n");
+                    goto bailout;
+                }
+                printf("Use simple case\n");
+                memcpy(oldvalue, newvalue, strlen(newvalue));
+                towrite = uenv;
+                goto rewrite;
+            }
+            puts(oldvalue);
+        }
+        ptr += strlen(ptr) + 1;
+    }
+    towrite = newenv;
+    printf("TODO...\n");
+    goto bailout;
+
+rewrite:
+    crc32(towrite + CRC_SZ, ENV_LEN - CRC_SZ, &res_crc);
+    *(uint32_t *)towrite = res_crc;
+
+    // write towrite data
+    // uboot_printenv(towrite);
+    mtd_write(mtd, offset, erasesize, towrite, ENV_LEN);
+
+bailout:
+    if (newenv)
+        free(newenv);
+}
+
+#define OP_PRINTENV 0
+#define OP_SETENV 1
+
+typedef struct {
+    int op;
+    const char *key;
+    const char *value;
+} ctx_uboot_t;
+
+static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
+                         void *ctx) {
     int fd;
     char *addr = open_mtdblock(i, &fd, mtd->size, 0);
     if (!addr)
         return true;
 
+    ctx_uboot_t *c = (ctx_uboot_t *)ctx;
     if (i < 2) {
         size_t u_off = uboot_detect_env(addr, mtd->size);
         if (u_off != -1) {
-            uboot_printenv(addr + u_off);
+            switch (c->op) {
+            case OP_PRINTENV:
+                uboot_printenv(addr + u_off);
+                break;
+            case OP_SETENV:
+                uboot_setenv(i, u_off, addr + u_off, c->key, c->value,
+                             mtd->erasesize);
+                break;
+            }
             close(fd);
             return false;
         }
@@ -133,4 +201,23 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
-void printenv() { enum_mtd_info(NULL, cb_mtd_info); }
+void printenv() {
+    ctx_uboot_t ctx;
+    ctx.op = OP_PRINTENV;
+    enum_mtd_info(&ctx, cb_uboot_env);
+}
+
+void set_env(const char *arg) {
+    char *delim = strchr(arg, '=');
+    if (!delim || delim == arg) {
+        printf("Usage: setenv key=name\n");
+        exit(2);
+    }
+    *delim = 0;
+
+    ctx_uboot_t ctx;
+    ctx.op = OP_SETENV;
+    ctx.key = arg;
+    ctx.value = delim + 1;
+    enum_mtd_info(&ctx, cb_uboot_env);
+}
