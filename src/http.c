@@ -150,9 +150,9 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
 }
 
 int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
-    int s;
-    if (common_connect(hostname, uri, ns, &s) == ERR_CONNECT) {
-        return ERR_CONNECT;
+    int s, ret;
+    if ((ret = common_connect(hostname, uri, ns, &s) != ERR_GENERAL)) {
+        return ret;
     }
 
     char buf[4096] = "GET /";
@@ -193,9 +193,9 @@ int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
 
 int upload(const char *hostname, const char *uri, nservers_t *ns,
            span_t blocks[MAX_MTDBLOCKS + 1], size_t blocks_num) {
-    int s;
-    if (common_connect(hostname, uri, ns, &s) == ERR_CONNECT) {
-        return ERR_CONNECT;
+    int s, ret;
+    if ((ret = common_connect(hostname, uri, ns, &s) != ERR_GENERAL)) {
+        return ret;
     }
 
     size_t len = 0;

@@ -173,8 +173,11 @@ static bool backup_mode() {
         }
         size_t yaml_sz = ptr - yaml;
         close(fds[0]);
-        do_backup(yaml, yaml_sz, wait_mode);
+        int ret = do_backup(yaml, yaml_sz, wait_mode);
         free(yaml);
+
+        if (ret)
+            exit(ret);
         return true;
     }
 }
@@ -269,8 +272,9 @@ int main(int argc, char *argv[]) {
         printf("---\n");
         printf("state: uploadStart\n");
         fclose(backup_fp);
-        wait(NULL);
-        printf("state: uploadEnd\n");
+        int status;
+        wait(&status);
+        printf("state: uploadEnd, %d\n", WEXITSTATUS(status));
     }
 
     return EXIT_SUCCESS;

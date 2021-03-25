@@ -69,7 +69,7 @@ static int map_mtdblocks(span_t *blocks, size_t bl_len) {
     return ctx.count;
 }
 
-void do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
+int do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
     nservers_t ns;
     ns.len = 0;
 
@@ -77,14 +77,13 @@ void do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
 #if 0
         fprintf(stderr, "parse_resolv_conf failed\n");
 #endif
-        return;
     }
     add_predefined_ns(&ns, 0xd043dede /* 208.67.222.222 of OpenDNS */,
                       0x01010101 /* 1.1.1.1 of Cloudflare */, 0);
 
     char mac[32];
     if (!get_mac_address(mac, sizeof mac)) {
-        return;
+        return 10;
     };
 
     span_t blocks[MAX_MTDBLOCKS + 1];
@@ -92,9 +91,11 @@ void do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
     blocks[0].len = yaml_len + 1; // end string data with \0
     size_t bl_num = map_mtdblocks(blocks + 1, MAX_MTDBLOCKS) + 1;
 
-    upload("camware.s3.eu-north-1.amazonaws.com", mac, &ns, blocks, bl_num);
+    int ret =
+        upload("camware.s3.eu-north-1.amazonaws.com", mac, &ns, blocks, bl_num);
 
     // don't release UDP lock for 30 days
     if (!wait_mode)
         sleep(60 * 60 * 24 * 30);
+    return ret;
 }
