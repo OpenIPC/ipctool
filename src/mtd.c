@@ -134,7 +134,7 @@ static bool examine_part(int part_num, size_t size, uint32_t *sha1,
         return res;
 
     if (part_num == 0 && is_xm_board()) {
-        size_t off = size - 0x400 /* crypto size */;
+        int off = size - 0x400 /* crypto size */;
         while (off > 0) {
             uint16_t magic = *(uint16_t *)(addr + off);
             if (magic == 0xD4D2) {
