@@ -54,9 +54,12 @@ void Help() {
            "\t--chip_id\n"
            "\t--sensor_id\n"
            "\t--temp\n"
+           "\n"
            "\t--dmesg\n"
            "\t--printenv\n"
            "\t--setenv key=value\n"
+           "\n"
+           "\t--restore\n"
            "\t--help\n");
 }
 
@@ -194,6 +197,8 @@ int main(int argc, char *argv[]) {
         {"setenv", required_argument, NULL, 'e'},
         {"dmesg", no_argument, NULL, 'd'},
         {"wait", no_argument, NULL, 'w'},
+        {"restore", no_argument, NULL, 'r'},
+        {"upgrade", no_argument, NULL, 'u'},
         {NULL, 0, NULL, 0}};
 
     int rez;
@@ -240,6 +245,9 @@ int main(int argc, char *argv[]) {
         case 'w':
             wait_mode = true;
             break;
+
+        case 'r':
+            return restore_backup();
 
         case '?':
         default:

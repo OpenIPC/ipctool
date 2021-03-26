@@ -23,6 +23,9 @@
 
 #define UDP_LOCK_PORT 1025
 
+static char mybackups[] = "camware.s3.eu-north-1.amazonaws.com";
+static const char *downcode = "reil9phiFahng8aiPh5Kooshag8eiVae";
+
 bool udp_lock() {
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock == -1)
@@ -69,17 +72,15 @@ static int map_mtdblocks(span_t *blocks, size_t bl_len) {
     return ctx.count;
 }
 
-int do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
-    nservers_t ns;
-    ns.len = 0;
-
-    if (!parse_resolv_conf(&ns)) {
-#if 0
-        fprintf(stderr, "parse_resolv_conf failed\n");
-#endif
-    }
-    add_predefined_ns(&ns, 0xd043dede /* 208.67.222.222 of OpenDNS */,
+#define FILL_NS                                                                \
+    nservers_t ns;                                                             \
+    ns.len = 0;                                                                \
+    parse_resolv_conf(&ns);                                                    \
+    add_predefined_ns(&ns, 0xd043dede /* 208.67.222.222 of OpenDNS */,         \
                       0x01010101 /* 1.1.1.1 of Cloudflare */, 0);
+
+int do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
+    FILL_NS;
 
     char mac[32];
     if (!get_mac_address(mac, sizeof mac)) {
@@ -91,11 +92,47 @@ int do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
     blocks[0].len = yaml_len + 1; // end string data with \0
     size_t bl_num = map_mtdblocks(blocks + 1, MAX_MTDBLOCKS) + 1;
 
-    int ret =
-        upload("camware.s3.eu-north-1.amazonaws.com", mac, &ns, blocks, bl_num);
+    int ret = upload(mybackups, mac, &ns, blocks, bl_num);
 
     // don't release UDP lock for 30 days
     if (!wait_mode)
         sleep(60 * 60 * 24 * 30);
     return ret;
+}
+
+char *download_backup() {
+    FILL_NS;
+
+    char mac[32];
+    if (!get_mac_address(mac, sizeof mac)) {
+        return NULL;
+    };
+
+    int len;
+    char *dwres = download(mybackups, mac, downcode, &ns, &len);
+    int err = HTTP_ERR(dwres);
+    if (err) {
+        switch (err) {
+        case ERR_MALLOC:
+            printf("Tried to allocate %dMb\nNot enough memory\n",
+                   len / 1024 / 1024);
+            break;
+        default:
+            printf("Download error occured: %d\n", HTTP_ERR(dwres));
+        }
+        return NULL;
+    } else {
+        printf("Download is ok\n");
+        return dwres;
+    }
+}
+
+int restore_backup() {
+    char *backup = download_backup();
+
+    if (backup) {
+
+        free(backup);
+    }
+    return 0;
 }

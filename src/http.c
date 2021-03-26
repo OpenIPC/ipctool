@@ -19,20 +19,28 @@
 #include "dns.h"
 #include "http.h"
 
-#define ERR_GENERAL 1
-#define ERR_SOCKET 2
-#define ERR_GETADDRINFO 3
-#define ERR_CONNECT 4
-#define ERR_SEND 5
-#define ERR_USAGE 6
-
 static int get_http_respcode(const char *inpbuf) {
-    char proto[4096], descr[4096];
+    char proto[32], descr[32];
     int code;
 
-    if (sscanf(inpbuf, "%s %d %s", proto, &code, descr) < 2)
+    if (sscanf(inpbuf, "%31s %d %31s", proto, &code, descr) < 2)
         return -1;
     return code;
+}
+
+static int get_http_payload_len(const char *inpbuf, const char *end) {
+    while (end - inpbuf >= 16) {
+        if (!strncmp(inpbuf, "Content-Length: ", 16))
+            return strtol(inpbuf + 16, NULL, 10);
+        for (;;) {
+            if (inpbuf == end)
+                return 0;
+            inpbuf++;
+            if (*(inpbuf - 1) == '\n')
+                break;
+        }
+    }
+    return 0;
 }
 
 int connect_with_timeout(int sockfd, const struct sockaddr *addr,
@@ -149,27 +157,35 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
     return ret;
 }
 
-int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
+#define MAKE_ERROR(err) (char *)(-err)
+
+#define SNPRINTF(...)                                                          \
+    ptr += snprintf(ptr, sizeof(buf) - (ptr - buf), __VA_ARGS__)
+
+char *download(char *hostname, char *uri, const char *useragent, nservers_t *ns,
+               int *len) {
     int s, ret;
     if ((ret = common_connect(hostname, uri, ns, &s) != ERR_GENERAL)) {
-        return ret;
+        return MAKE_ERROR(ret);
     }
 
     char buf[4096] = "GET /";
-    strcpy(buf, "GET /");
+    char *ptr = buf + 5;
     if (uri) {
-        strncat(buf, uri, sizeof(buf) - strlen(buf) - 1);
+        SNPRINTF("%s", uri);
     }
-    strncat(buf, " HTTP/1.0\r\nHost: ", sizeof(buf) - strlen(buf) - 1);
-    strncat(buf, hostname, sizeof(buf) - strlen(buf) - 1);
-    strncat(buf, "\r\n\r\n", sizeof(buf) - strlen(buf) - 1);
-    int tosent = strlen(buf);
-    int nsent = send(s, buf, tosent, 0);
-    if (nsent != tosent)
-        return ERR_SEND;
+    SNPRINTF(" HTTP/1.0\r\nHost: %s\r\n", hostname);
+    if (useragent)
+        SNPRINTF("User-Agent: %s\r\n", useragent);
+    SNPRINTF("\r\n");
+    int tosend = ptr - buf;
+    int nsent = send(s, buf, tosend, 0);
+    if (nsent != tosend)
+        return MAKE_ERROR(ERR_SEND);
 
     int header = 1;
     int nrecvd;
+    char *binbuf;
     while ((nrecvd = recv(s, buf, sizeof(buf), 0))) {
         char *ptr = buf;
         if (header) {
@@ -178,14 +194,27 @@ int download(char *hostname, char *uri, nservers_t *ns, int writefd) {
                 continue;
 
             int rcode = get_http_respcode(buf);
-            if (rcode / 100 != 2)
-                return rcode / 100 * 10 + rcode % 10;
+            if (rcode / 100 != 2) {
+                close(s);
+                return MAKE_ERROR(rcode / 100 * 10 + rcode % 10);
+            }
+            *len = get_http_payload_len(buf, ptr);
+            if (!*len) {
+                fprintf(stderr, "No length found, aborting...\n");
+                close(s);
+                return MAKE_ERROR(ERR_HTTP);
+            }
+            binbuf = malloc(*len);
+            if (!binbuf) {
+                close(s);
+                return MAKE_ERROR(ERR_MALLOC);
+            }
 
             header = 0;
             ptr += 4;
             nrecvd -= ptr - buf;
         }
-        write(writefd, ptr, nrecvd);
+        // write(writefd, ptr, nrecvd);
     }
 
     return 0;

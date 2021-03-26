@@ -124,8 +124,10 @@ static void uboot_setenv(int mtd, uint32_t offset, const char *env,
 
     const char *ptr = uenv + CRC_SZ;
     char *nptr = newenv + CRC_SZ;
+    bool found = false;
     while (*ptr) {
         if (!strncmp(ptr, key, strlen(key))) {
+            found = true;
             char *delim = strchr(ptr, '=');
             if (!delim) {
                 fprintf(stderr, "Bad uboot parameter '%s\n'", ptr);
@@ -153,6 +155,10 @@ static void uboot_setenv(int mtd, uint32_t offset, const char *env,
             nptr += strlen(ptr) + 1;
         }
         ptr += strlen(ptr) + 1;
+    }
+    if (!found) {
+        printf("Need to add new value: %s\n", key);
+        goto bailout;
     }
     towrite = newenv;
 
