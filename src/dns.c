@@ -60,6 +60,9 @@ bool parse_resolv_conf(nservers_t *ns) {
     while ((read = getline(&line, &len, f)) != -1) {
         if (sscanf(line, "nameserver %hhd.%hhd.%hhd.%hhd", &d[0], &d[1], &d[2],
                    &d[3]) == 4) {
+            // skip "nameserver 0.0.0.0"
+            if (*(uint32_t *)d == 0)
+                break;
             if (i == MAX_NSERVERS)
                 break;
             d = (uint8_t *)&ns->ipv4_addr[++i];
@@ -182,8 +185,8 @@ bool resolv_name(nservers_t *ns, const char *hostname, a_records_t *srv) {
                         (struct sockaddr *)&address, &length);
         if (rlen > 0)
             break;
-#if 0
-    fprintf(stderr, "Timeout for %x\n", address.sin_addr.s_addr);
+#if 1
+        fprintf(stderr, "Timeout for %x\n", address.sin_addr.s_addr);
 #endif
     }
 

@@ -163,7 +163,7 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
     ptr += snprintf(ptr, sizeof(buf) - (ptr - buf), __VA_ARGS__)
 
 char *download(char *hostname, char *uri, const char *useragent, nservers_t *ns,
-               int *len) {
+               size_t *len, bool progress) {
     int s, ret;
     if ((ret = common_connect(hostname, uri, ns, &s) != ERR_GENERAL)) {
         return MAKE_ERROR(ret);
@@ -185,7 +185,8 @@ char *download(char *hostname, char *uri, const char *useragent, nservers_t *ns,
 
     int header = 1;
     int nrecvd;
-    char *binbuf;
+    char *binbuf = NULL, *sptr;
+    int percent = 0;
     while ((nrecvd = recv(s, buf, sizeof(buf), 0))) {
         char *ptr = buf;
         if (header) {
@@ -209,15 +210,28 @@ char *download(char *hostname, char *uri, const char *useragent, nservers_t *ns,
                 close(s);
                 return MAKE_ERROR(ERR_MALLOC);
             }
+            sptr = binbuf;
 
             header = 0;
             ptr += 4;
             nrecvd -= ptr - buf;
         }
-        // write(writefd, ptr, nrecvd);
+
+        if (!header) {
+            if (progress) {
+                int np = 100 * (sptr - binbuf) / *len;
+                if (np != percent) {
+                    printf("Downloaded %d%%\r", np);
+                    percent = np;
+                }
+            }
+            // TODO: avoid copying?
+            memcpy(sptr, ptr, nrecvd);
+            sptr += nrecvd;
+        }
     }
 
-    return 0;
+    return binbuf;
 }
 
 int upload(const char *hostname, const char *uri, nservers_t *ns,

@@ -100,7 +100,7 @@ int do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
     return ret;
 }
 
-char *download_backup() {
+char *download_backup(size_t *size) {
     FILL_NS;
 
     char mac[32];
@@ -108,14 +108,13 @@ char *download_backup() {
         return NULL;
     };
 
-    int len;
-    char *dwres = download(mybackups, mac, downcode, &ns, &len);
+    char *dwres = download(mybackups, mac, downcode, &ns, size, true);
     int err = HTTP_ERR(dwres);
     if (err) {
         switch (err) {
         case ERR_MALLOC:
             printf("Tried to allocate %dMb\nNot enough memory\n",
-                   len / 1024 / 1024);
+                   *size / 1024 / 1024);
             break;
         default:
             printf("Download error occured: %d\n", HTTP_ERR(dwres));
@@ -127,10 +126,63 @@ char *download_backup() {
     }
 }
 
+static int yaml_idlvl(char *from, char *start) {
+    int cnt = 0;
+    while (start != --from) {
+        if (*from != ' ')
+            break;
+        cnt++;
+    }
+    return cnt;
+}
+
+static char *yaml_endblock(char *start, int indent) {
+    char *ptr = start;
+    char *prevn = NULL;
+    bool linestart = true;
+    int spaces = 0;
+    int len = strlen(start);
+
+    while (ptr < start + len) {
+        if (linestart) {
+            if (*ptr == ' ') {
+                spaces++;
+            } else {
+                linestart = false;
+                if (spaces <= indent)
+                    break;
+            }
+        }
+        if (*ptr == '\n') {
+            linestart = true;
+            spaces = 0;
+            prevn = ptr;
+        }
+        ptr++;
+    }
+    if (prevn)
+        *prevn = 0;
+    return prevn;
+}
+
 int restore_backup() {
-    char *backup = download_backup();
+    size_t size;
+    char *backup = download_backup(&size);
 
     if (backup) {
+        // TODO: sane YAML parser
+        char *ps = strstr(backup, "partitions:\n");
+        if (!ps) {
+            fprintf(stderr, "Broken backup, aborting...\n");
+            puts(backup);
+            printf("len = %d, ptr = %p\n", size, backup);
+            goto bailout;
+        }
+        printf("partitions indent: %d\n", yaml_idlvl(ps, backup));
+        yaml_endblock(strchr(ps, '\n') + 1, yaml_idlvl(ps, backup));
+        puts(strchr(ps, '\n') + 1);
+
+    bailout:
 
         free(backup);
     }

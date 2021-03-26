@@ -8,7 +8,7 @@ typedef struct {
     size_t len;
 } span_t;
 
-#define HTTP_ERR(err) ((int)err < 0 ? (-(int)err) : 0)
+#define HTTP_ERR(err) ((int)err < 0 && (int)err > -100 ? (-(int)err) : 0)
 
 #define ERR_GENERAL 1
 #define ERR_SOCKET 2
@@ -20,7 +20,7 @@ typedef struct {
 #define ERR_BUTT 10
 
 char *download(char *hostname, char *uri, const char *useragent, nservers_t *ns,
-               int *len);
+               size_t *len, bool progress);
 int upload(const char *hostname, const char *uri, nservers_t *ns,
            span_t blocks[MAX_MTDBLOCKS + 1], size_t len);
 
