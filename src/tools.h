@@ -23,6 +23,8 @@
         snprintf(val, sizeof(val), fmt, __VA_ARGS__);                          \
         ADD_PARAM(param, val);                                                 \
     }
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
 enum REG_OPS { OP_READ, OP_WRITE };
 

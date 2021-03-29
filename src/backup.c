@@ -20,6 +20,7 @@
 #include "http.h"
 #include "mtd.h"
 #include "network.h"
+#include "tools.h"
 
 #define UDP_LOCK_PORT 1025
 
@@ -136,33 +137,58 @@ static int yaml_idlvl(char *from, char *start) {
     return cnt;
 }
 
-static char *yaml_endblock(char *start, int indent) {
+typedef struct {
+    unsigned long size;
+    char sha1[9];
+} mtd_info_t;
+
+static int yaml_parseblock(char *start, int indent, mtd_info_t *mi) {
     char *ptr = start;
-    char *prevn = NULL;
+    char *param = NULL;
     bool linestart = true;
     int spaces = 0;
     int len = strlen(start);
+    bool has_dash = false;
+
+    int i = -1;
+    int rootlvl = -1;
 
     while (ptr < start + len) {
         if (linestart) {
-            if (*ptr == ' ') {
+            if (*ptr == '-')
+                has_dash = true;
+            if (*ptr == ' ' || *ptr == '-') {
                 spaces++;
             } else {
+                if (has_dash) {
+                    if (rootlvl == -1)
+                        rootlvl = spaces;
+                    if (rootlvl == spaces) {
+                        i++;
+                        if (i == MAX_MTDBLOCKS)
+                            break;
+                    }
+                }
                 linestart = false;
                 if (spaces <= indent)
                     break;
+                param = ptr;
             }
         }
         if (*ptr == '\n') {
+            if (param && spaces == rootlvl) {
+                if (!strncmp(param, "size: ", 6))
+                    mi[i].size = strtoul(param + 6, NULL, 16);
+                else if (!strncmp(param, "sha1: ", 6))
+                    memcpy(mi[i].sha1, param + 6, MIN(ptr - param - 6, 8));
+            }
             linestart = true;
             spaces = 0;
-            prevn = ptr;
+            has_dash = false;
         }
         ptr++;
     }
-    if (prevn)
-        *prevn = 0;
-    return prevn;
+    return i;
 }
 
 int restore_backup() {
@@ -178,9 +204,19 @@ int restore_backup() {
             printf("len = %d, ptr = %p\n", size, backup);
             goto bailout;
         }
-        printf("partitions indent: %d\n", yaml_idlvl(ps, backup));
-        yaml_endblock(strchr(ps, '\n') + 1, yaml_idlvl(ps, backup));
-        puts(strchr(ps, '\n') + 1);
+
+        mtd_info_t mi[MAX_MTDBLOCKS];
+        memset(&mi, 0, sizeof(mi));
+        size_t tsize = 0;
+        int n =
+            yaml_parseblock(strchr(ps, '\n') + 1, yaml_idlvl(ps, backup), mi);
+        for (int i = 0; i < n; i++) {
+            tsize += mi[i].size;
+            printf("[%d] 0x%lx\t%s\n", i, mi[i].size, mi[i].sha1);
+        }
+        printf("=====\nTotal size: 0x%x\n", tsize);
+        // TODO: read /proc/mtd, sum size column and check tsize
+        // it will fail first
 
     bailout:
 
