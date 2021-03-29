@@ -221,7 +221,8 @@ char *download(char *hostname, char *uri, const char *useragent, nservers_t *ns,
             if (progress) {
                 int np = 100 * (sptr - binbuf) / *len;
                 if (np != percent) {
-                    printf("Downloaded %d%%\r", np);
+                    printf("Downloading %d%%\r", np);
+                    fflush(stdout);
                     percent = np;
                 }
             }

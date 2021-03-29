@@ -1,6 +1,11 @@
+#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
+// for strnlen
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +25,7 @@
 #include "http.h"
 #include "mtd.h"
 #include "network.h"
+#include "sha1.h"
 #include "tools.h"
 
 #define UDP_LOCK_PORT 1025
@@ -46,11 +52,11 @@ typedef struct {
     size_t count;
     span_t *blocks;
     size_t cap;
-} enum_mtd_ctx;
+} mtd_backup_ctx;
 
-static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
-                        void *ctx) {
-    enum_mtd_ctx *c = (enum_mtd_ctx *)ctx;
+static bool cb_mtd_backup(int i, const char *name, struct mtd_info_user *mtd,
+                          void *ctx) {
+    mtd_backup_ctx *c = (mtd_backup_ctx *)ctx;
 
     int fd;
     char *addr = open_mtdblock(i, &fd, mtd->size, 0);
@@ -64,13 +70,13 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
 }
 
 static int map_mtdblocks(span_t *blocks, size_t bl_len) {
-    enum_mtd_ctx ctx;
-    ctx.blocks = blocks;
-    ctx.cap = bl_len;
-    ctx.count = 0;
+    mtd_backup_ctx mtd;
+    mtd.blocks = blocks;
+    mtd.cap = bl_len;
+    mtd.count = 0;
 
-    enum_mtd_info(&ctx, cb_mtd_info);
-    return ctx.count;
+    enum_mtd_info(&mtd, cb_mtd_backup);
+    return mtd.count;
 }
 
 #define FILL_NS                                                                \
@@ -122,7 +128,7 @@ char *download_backup(size_t *size) {
         }
         return NULL;
     } else {
-        printf("Download is ok\n");
+        printf("Download is ok \n");
         return dwres;
     }
 }
@@ -138,11 +144,14 @@ static int yaml_idlvl(char *from, char *start) {
 }
 
 typedef struct {
+    size_t mtd_offset;
+    size_t file_offset;
     unsigned long size;
     char sha1[9];
-} mtd_info_t;
+    char name[64];
+} stored_mtd_t;
 
-static int yaml_parseblock(char *start, int indent, mtd_info_t *mi) {
+static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
     char *ptr = start;
     char *param = NULL;
     bool linestart = true;
@@ -152,6 +161,7 @@ static int yaml_parseblock(char *start, int indent, mtd_info_t *mi) {
 
     int i = -1;
     int rootlvl = -1;
+    size_t offset = 0;
 
     while (ptr < start + len) {
         if (linestart) {
@@ -177,9 +187,14 @@ static int yaml_parseblock(char *start, int indent, mtd_info_t *mi) {
         }
         if (*ptr == '\n') {
             if (param && spaces == rootlvl) {
-                if (!strncmp(param, "size: ", 6))
+                if (!strncmp(param, "size: ", 6)) {
+                    mi[i].mtd_offset = offset;
                     mi[i].size = strtoul(param + 6, NULL, 16);
-                else if (!strncmp(param, "sha1: ", 6))
+                    offset += mi[i].size;
+                } else if (!strncmp(param, "name: ", 6)) {
+                    memcpy(mi[i].name, param + 6,
+                           MIN(ptr - param - 6, sizeof(mi[i]) - 1));
+                } else if (!strncmp(param, "sha1: ", 6))
                     memcpy(mi[i].sha1, param + 6, MIN(ptr - param - 6, 8));
             }
             linestart = true;
@@ -188,14 +203,35 @@ static int yaml_parseblock(char *start, int indent, mtd_info_t *mi) {
         }
         ptr++;
     }
-    return i;
+    return i + 1;
+}
+
+typedef struct {
+    ssize_t totalsz;
+} mtd_restore_ctx_t;
+
+static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
+                           void *ctx) {
+    mtd_restore_ctx_t *c = (mtd_restore_ctx_t *)ctx;
+    c->totalsz += mtd->size;
+    return true;
 }
 
 int restore_backup() {
+    mtd_restore_ctx_t mtd;
+    mtd.totalsz = 0;
+    enum_mtd_info(&mtd, cb_mtd_restore);
+
     size_t size;
     char *backup = download_backup(&size);
 
     if (backup) {
+        char *pptr = backup + strnlen(backup, size) + 1;
+        if (pptr - backup >= size) {
+            fprintf(stderr, "Broken description found, aborting...\n");
+            goto bailout;
+        }
+
         // TODO: sane YAML parser
         char *ps = strstr(backup, "partitions:\n");
         if (!ps) {
@@ -205,18 +241,59 @@ int restore_backup() {
             goto bailout;
         }
 
-        mtd_info_t mi[MAX_MTDBLOCKS];
-        memset(&mi, 0, sizeof(mi));
+        stored_mtd_t mtdbackup[MAX_MTDBLOCKS];
+        memset(&mtdbackup, 0, sizeof(mtdbackup));
         size_t tsize = 0;
-        int n =
-            yaml_parseblock(strchr(ps, '\n') + 1, yaml_idlvl(ps, backup), mi);
+        int n = yaml_parseblock(strchr(ps, '\n') + 1, yaml_idlvl(ps, backup),
+                                mtdbackup);
         for (int i = 0; i < n; i++) {
-            tsize += mi[i].size;
-            printf("[%d] 0x%lx\t%s\n", i, mi[i].size, mi[i].sha1);
+            tsize += mtdbackup[i].size;
+
+            // check SHA1
+            size_t blen = read_le32(pptr);
+            if (blen != mtdbackup[i].size) {
+                fprintf(stderr, "Broken backup: next block len 0x%x != 0x%lx\n",
+                        blen, mtdbackup[i].size);
+                goto bailout;
+            }
+            pptr += 4;
+            if (pptr + blen - backup > size) {
+                fprintf(stderr, "Early backup end found, aborting...\n");
+                goto bailout;
+            }
+
+            uint32_t sha1;
+            if (*mtdbackup[i].sha1) {
+                printf("Checking %s... %32s\r", mtdbackup[i].name, "");
+                fflush(stdout);
+                char digest[21] = {0};
+                SHA1(digest, pptr, blen);
+                sha1 = ntohl(*(uint32_t *)&digest);
+                snprintf(digest, sizeof(digest), "%.8x", sha1);
+                if (strcmp(digest, mtdbackup[i].sha1)) {
+                    fprintf(stderr,
+                            "SHA1 digest differs for '%s', aborting...\n",
+                            mtdbackup[i].name);
+                    goto bailout;
+                }
+            }
+#if 0
+            fprintf(stderr, "\n[%d] 0x%.8zx\t0x%.8lx\t%s\t%.8x\n", i,
+                    mtdbackup[i].mtd_offset, mtdbackup[i].size,
+                    mtdbackup[i].sha1, sha1);
+#endif
+            // end of sha1 check
+
+            pptr += blen;
         }
-        printf("=====\nTotal size: 0x%x\n", tsize);
-        // TODO: read /proc/mtd, sum size column and check tsize
-        // it will fail first
+        if (tsize != mtd.totalsz) {
+            fprintf(stderr,
+                    "Broken backup: backup size: 0x%x, real flash size: 0x%x\n"
+                    "aborting...\n",
+                    tsize, mtd.totalsz);
+            goto bailout;
+        }
+        printf("Backups were checked\n");
 
     bailout:
 

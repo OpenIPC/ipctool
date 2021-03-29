@@ -162,3 +162,7 @@ exit:
     fclose(f);
     return res;
 }
+
+uint32_t read_le32(const char *ptr) {
+    return *ptr | *(ptr + 1) << 8 | *(ptr + 2) << 16 | *(ptr + 3) << 24;
+}

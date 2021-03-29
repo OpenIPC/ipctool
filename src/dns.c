@@ -173,7 +173,7 @@ bool resolv_name(nservers_t *ns, const char *hostname, a_records_t *srv) {
     ssize_t rlen;
 
     for (int i = 0; i < ns->len; i++) {
-        address.sin_addr.s_addr = ntohl(ns->ipv4_addr[i]);
+        address.sin_addr.s_addr = ns->ipv4_addr[i];
 
         /* Send the packet to DNS server, then request the response */
         sendto(socketfd, packet, packetlen, 0, (struct sockaddr *)&address,
@@ -203,7 +203,7 @@ void add_predefined_ns(nservers_t *ns, ...) {
 
     va_start(ap, ns);
     while ((ipv4_addr = va_arg(ap, uint32_t)) && ns->len < MAX_NSERVERS) {
-        ns->ipv4_addr[ns->len++] = ipv4_addr;
+        ns->ipv4_addr[ns->len++] = htonl(ipv4_addr);
     }
     va_end(ap);
 }
