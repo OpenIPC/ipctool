@@ -46,19 +46,19 @@ static void detect_nor_chip() {
     close(fd);
 }
 
-bool xm_spiflash_checkpasswd(int fd, int password) {
+static bool xm_spiflash_checkpasswd(int fd, int password) {
     assert(fd);
     // XMMTD_CHECKPASSWD
     return ioctl(fd, 0x40044DA2u, &password) >= 0;
 }
 
-bool xm_spiflash_setpasswd(int fd, int password) {
+static bool xm_spiflash_setpasswd(int fd, int password) {
     assert(fd);
     // XMMTD_SETPASSWD
     return ioctl(fd, 0x40044DA1u, &password) >= 0;
 }
 
-bool xm_spiflash_unlock_user(int fd, int data) {
+static bool xm_spiflash_unlock_user(int fd, int data) {
     assert(fd);
     // XMMTD_UNLOCKUSER
     return ioctl(fd, 0x40044DA8u, &data) >= 0;
@@ -74,7 +74,7 @@ static int xm_spiflash_getlockversion(int fd) {
     return 0;
 }
 
-int xm_spiflash_getprotectflag(int fd) {
+static int xm_spiflash_getprotectflag(int fd) {
     assert(fd);
     int num;
     // XMMTD_GETPROTECTFLAG
@@ -82,6 +82,12 @@ int xm_spiflash_getprotectflag(int fd) {
         return num;
     }
     return -1;
+}
+
+static bool xm_spiflash_protectdisabled(int fd, int num) {
+    assert(fd);
+    // XMMTD_PROTECTDISABLED
+    return ioctl(fd, 0x40044DBDu, &num) >= 0;
 }
 
 typedef struct {
@@ -101,8 +107,10 @@ static int pwd;
 
 bool xm_spiflash_unlock_and_erase(int fd, uint32_t offset, uint32_t size) {
     xm_spiflash_checkpasswd(fd, pwd);
-    if (!xm_flash_op(fd, 0x40084da6, offset, size))
-        return false;
+
+    // may fail on XmEnv based boards but then burn will be ok
+    xm_flash_op(fd, 0x40084da6, offset, size);
+
     if (!xm_flash_op(fd, 0x40084d02, offset, size))
         return false;
     return true;
@@ -126,13 +134,15 @@ static bool xm_flash_start(int fd) {
                 // printf("Flag is 1\n");
             }
         } else {
-            // TODO: other cases
-            fprintf(stderr, "Not implemented yet\n");
-            return false;
+            xm_spiflash_checkpasswd(fd, pwd);
+            xm_spiflash_protectdisabled(fd, 0);
+            xm_spiflash_checkpasswd(fd, 0);
         }
         xm_spiflash_checkpasswd(fd, pwd);
-        if (!xm_spiflash_unlock_user(fd, 0))
-            return false;
+
+        // may fail on XmEnv based boards but then burn will be ok
+        xm_spiflash_unlock_user(fd, 0);
+
         xm_spiflash_checkpasswd(fd, 0);
     }
     return true;
