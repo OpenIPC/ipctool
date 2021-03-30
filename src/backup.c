@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <sys/mman.h>
+#include <sys/mount.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -149,6 +150,7 @@ typedef struct {
     unsigned long size;
     char sha1[9];
     char name[64];
+    char *data;
 } stored_mtd_t;
 
 static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
@@ -208,18 +210,47 @@ static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
 
 typedef struct {
     ssize_t totalsz;
+    size_t erasesize;
 } mtd_restore_ctx_t;
 
 static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
                            void *ctx) {
     mtd_restore_ctx_t *c = (mtd_restore_ctx_t *)ctx;
+    if (!c->erasesize)
+        c->erasesize = mtd->erasesize;
     c->totalsz += mtd->size;
     return true;
 }
 
+static bool umount_all() {
+    FILE *fp = fopen("/proc/mounts", "r");
+    if (!fp)
+        return false;
+
+    char mount[80];
+    while (fgets(mount, sizeof mount, fp)) {
+        char path[80], fs[80], attrs[80];
+        int n;
+
+        if (sscanf(mount, "/dev/mtdblock%d %s %s %s", &n, path, fs, attrs)) {
+            if (strstr(attrs, "rw")) {
+                if (umount(path) != 0)
+                    fprintf(stderr, "Cannot umount '%s'\n", path);
+                else
+                    printf("Unmounting %s\n", path);
+            }
+        }
+    }
+
+    fclose(fp);
+    return true;
+}
+
 int restore_backup() {
+    umount_all();
+
     mtd_restore_ctx_t mtd;
-    mtd.totalsz = 0;
+    memset(&mtd, 0, sizeof(mtd));
     enum_mtd_info(&mtd, cb_mtd_restore);
 
     size_t size;
@@ -261,6 +292,7 @@ int restore_backup() {
                 fprintf(stderr, "Early backup end found, aborting...\n");
                 goto bailout;
             }
+            mtdbackup[i].data = pptr;
 
             uint32_t sha1;
             if (*mtdbackup[i].sha1) {
@@ -277,7 +309,7 @@ int restore_backup() {
                     goto bailout;
                 }
             }
-#if 0
+#if 1
             fprintf(stderr, "\n[%d] 0x%.8zx\t0x%.8lx\t%s\t%.8x\n", i,
                     mtdbackup[i].mtd_offset, mtdbackup[i].size,
                     mtdbackup[i].sha1, sha1);
@@ -294,6 +326,20 @@ int restore_backup() {
             goto bailout;
         }
         printf("Backups were checked\n");
+
+        // close all applications and umount rw partitions
+
+        // actual restore
+        for (int i = n - 2; i < n; i++) {
+            printf("Restoring %s\n", mtdbackup[i].name);
+            printf("mtd_write(%d, %x, %x, %p, %lx)\n", i, 0, mtd.erasesize,
+                   mtdbackup[i].data, mtdbackup[i].size);
+            if (mtd_write(i, 0, mtd.erasesize, mtdbackup[i].data,
+                          mtdbackup[i].size)) {
+                fprintf(stderr, "Something went wrong, aborting...\n");
+                goto bailout;
+            };
+        }
 
     bailout:
 

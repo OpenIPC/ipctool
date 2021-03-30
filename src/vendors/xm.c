@@ -1,7 +1,9 @@
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -42,6 +44,104 @@ static void detect_nor_chip() {
     }
 
     close(fd);
+}
+
+bool xm_spiflash_checkpasswd(int fd, int password) {
+    assert(fd);
+    // XMMTD_CHECKPASSWD
+    return ioctl(fd, 0x40044DA2u, &password) >= 0;
+}
+
+bool xm_spiflash_setpasswd(int fd, int password) {
+    assert(fd);
+    // XMMTD_SETPASSWD
+    return ioctl(fd, 0x40044DA1u, &password) >= 0;
+}
+
+bool xm_spiflash_unlock_user(int fd, int data) {
+    assert(fd);
+    // XMMTD_UNLOCKUSER
+    return ioctl(fd, 0x40044DA8u, &data) >= 0;
+}
+
+static int xm_spiflash_getlockversion(int fd) {
+    assert(fd);
+    int num;
+    // XMMTD_GETLOCKVERSION
+    if (ioctl(fd, 0x40044DA0u, &num) >= 0) {
+        return num;
+    }
+    return 0;
+}
+
+int xm_spiflash_getprotectflag(int fd) {
+    assert(fd);
+    int num;
+    // XMMTD_GETPROTECTFLAG
+    if (ioctl(fd, 0x40044dbf, &num) >= 0) {
+        return num;
+    }
+    return -1;
+}
+
+typedef struct {
+    uint32_t offset;
+    uint32_t size;
+} __attribute__((packed)) XmFlashIO;
+
+static bool xm_flash_op(int fd, uint32_t op, uint32_t offset, uint32_t size) {
+    assert(fd);
+    XmFlashIO io;
+    io.offset = offset;
+    io.size = size;
+    return ioctl(fd, op, &io) >= 0;
+}
+
+static int pwd;
+
+bool xm_spiflash_unlock_and_erase(int fd, uint32_t offset, uint32_t size) {
+    xm_spiflash_checkpasswd(fd, pwd);
+    if (!xm_flash_op(fd, 0x40084da6, offset, size))
+        return false;
+    if (!xm_flash_op(fd, 0x40084d02, offset, size))
+        return false;
+    return true;
+}
+
+static int xm_randompasswd() {
+    time_t t = time(0);
+    srand(t);
+    return rand();
+}
+
+static bool xm_flash_start(int fd) {
+    pwd = xm_randompasswd();
+    bool lock_supported = xm_spiflash_getlockversion(fd);
+    if (lock_supported) {
+        if (!xm_spiflash_setpasswd(fd, pwd))
+            return false;
+        int pflag = xm_spiflash_getprotectflag(fd);
+        if (pflag > 0) {
+            if (pflag == 1) {
+                // printf("Flag is 1\n");
+            }
+        } else {
+            // TODO: other cases
+            fprintf(stderr, "Not implemented yet\n");
+            return false;
+        }
+        xm_spiflash_checkpasswd(fd, pwd);
+        if (!xm_spiflash_unlock_user(fd, 0))
+            return false;
+        xm_spiflash_checkpasswd(fd, 0);
+    }
+    return true;
+}
+
+bool xm_flash_init(int fd) {
+    if (!xm_flash_start(fd))
+        return false;
+    return true;
 }
 
 static bool detect_xm_product() {

@@ -253,8 +253,15 @@ int mtd_erase_block(int fd, int offset, int erasesize) {
     mtdEraseInfo.length = erasesize;
     printf("mtd_erase_block(%d, 0x%x, 0x%x)\n", fd, offset, erasesize);
     ioctl(fd, MEMUNLOCK, &mtdEraseInfo);
-    if (ioctl(fd, MEMERASE, &mtdEraseInfo) < 0)
-        return -1;
+    if (ioctl(fd, MEMERASE, &mtdEraseInfo) < 0) {
+        printf("Failed, trying XM specific algorithm...\n");
+        if (!xm_flash_init(fd))
+            return -1;
+        if (!xm_spiflash_unlock_and_erase(fd, offset, erasesize))
+            return -1;
+
+        return 0;
+    }
 
     return 0;
 }
@@ -288,6 +295,7 @@ int mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
 
     if (mtd_erase_block(fd, offset, erasesize)) {
         fprintf(stderr, "Fail to erase +0x%x\n", offset);
+        // xm_spiflash_unlock(fd, 0);
         goto bailout;
     }
 
