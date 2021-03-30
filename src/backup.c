@@ -116,6 +116,7 @@ char *download_backup(size_t *size, char *date) {
     if (!get_mac_address(mac, sizeof mac)) {
         return NULL;
     };
+    printf("Downloading %s firmware\n", mac);
 
     char *dwres = download(mybackups, mac, downcode, &ns, size, date, true);
     int err = HTTP_ERR(dwres);
@@ -147,7 +148,6 @@ static int yaml_idlvl(char *from, char *start) {
 
 typedef struct {
     size_t mtd_offset;
-    size_t file_offset;
     unsigned long size;
     char sha1[9];
     char name[64];
@@ -212,6 +212,7 @@ static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
 typedef struct {
     ssize_t totalsz;
     size_t erasesize;
+    size_t blocks[MAX_MTDBLOCKS];
 } mtd_restore_ctx_t;
 
 static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
@@ -219,6 +220,7 @@ static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
     mtd_restore_ctx_t *c = (mtd_restore_ctx_t *)ctx;
     if (!c->erasesize)
         c->erasesize = mtd->erasesize;
+    c->blocks[i] = mtd->size;
     c->totalsz += mtd->size;
     return true;
 }
@@ -260,6 +262,25 @@ static void print_flash_progress(int cur, int max, char status) {
     bar[max] = 0;
     printf("Flashing [%s]\r", bar);
     fflush(stdout);
+}
+
+static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
+                           stored_mtd_t *mtdbackup, mtd_restore_ctx_t *mtd) {
+    size_t find_off = mtdbackup[old_num].mtd_offset + old_offset;
+    size_t cur_off = 0;
+    for (int i = 0; i < MAX_MTDBLOCKS; i++) {
+        if (!mtd->blocks[i])
+            return -1;
+        if (mtd->blocks[i] + cur_off > find_off) {
+            *new_offset = find_off - cur_off;
+            // printf("[%.8x] Map %d,%.8x -> %d,%.8x\n", find_off, old_num,
+            // find_off,
+            //       i, *new_offset);
+            return i;
+        }
+        cur_off += mtd->blocks[i];
+    }
+    return -1;
 }
 
 int restore_backup() {
@@ -356,21 +377,27 @@ int restore_backup() {
         // close all applications and umount rw partitions
 
         // actual restore
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < 3; i++) {
             printf("Restoring %s\n", mtdbackup[i].name);
             size_t chunk = mtd.erasesize;
             int cnt = mtdbackup[i].size / chunk;
             for (int c = 0; c < cnt; c++) {
                 // printf("[Chunk #%d]: \n", c);
                 print_flash_progress(c, cnt, 'e');
-                // printf("mtd_write(%d, %x, %x, %p, %zx)\n", i, c*chunk,
-                // mtd.erasesize, mtdbackup[i].data + c*chunk,
-                //              chunk);
-                if (mtd_write(i, c * chunk, mtd.erasesize,
+                size_t this_offset;
+                int newi = map_old_new_mtd(i, c * chunk, &this_offset,
+                                           mtdbackup, &mtd);
+                if (newi == -1) {
+                    fprintf(stderr, "Offset algorithm error, aborting...\n");
+                    goto bailout;
+                }
+                // printf("mtd_write(%d, %x, %x, %p, %zx)\n", newi, this_offset,
+                //       mtd.erasesize, mtdbackup[i].data + c * chunk, chunk);
+                if (mtd_write(newi, this_offset, mtd.erasesize,
                               mtdbackup[i].data + c * chunk, chunk)) {
                     fprintf(stderr, "\nSomething went wrong, aborting...\n");
                     goto bailout;
-                };
+                }
             }
             print_flash_progress(cnt, cnt, 'e');
             printf("\n");
