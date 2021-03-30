@@ -28,6 +28,26 @@ static int get_http_respcode(const char *inpbuf) {
     return code;
 }
 
+static void get_http_date(const char *inpbuf, const char *end, char *buf) {
+    while (end - inpbuf >= 15) {
+        if (!strncmp(inpbuf, "Last-Modified: ", 15)) {
+            const char *ptr = inpbuf + 15;
+            for (int i = 0; i < DATE_BUF_LEN; i++) {
+                if (ptr[i] == '\n')
+                    break;
+                buf[i] = ptr[i];
+            }
+        }
+        for (;;) {
+            if (inpbuf == end)
+                return;
+            inpbuf++;
+            if (*(inpbuf - 1) == '\n')
+                break;
+        }
+    }
+}
+
 static int get_http_payload_len(const char *inpbuf, const char *end) {
     while (end - inpbuf >= 16) {
         if (!strncmp(inpbuf, "Content-Length: ", 16))
@@ -163,7 +183,7 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
     ptr += snprintf(ptr, sizeof(buf) - (ptr - buf), __VA_ARGS__)
 
 char *download(char *hostname, char *uri, const char *useragent, nservers_t *ns,
-               size_t *len, bool progress) {
+               size_t *len, char *date, bool progress) {
     int s, ret;
     if ((ret = common_connect(hostname, uri, ns, &s) != ERR_GENERAL)) {
         return MAKE_ERROR(ret);
@@ -205,6 +225,7 @@ char *download(char *hostname, char *uri, const char *useragent, nservers_t *ns,
                 close(s);
                 return MAKE_ERROR(ERR_HTTP);
             }
+            get_http_date(buf, ptr, date);
             binbuf = malloc(*len);
             if (!binbuf) {
                 close(s);

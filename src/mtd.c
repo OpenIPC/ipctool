@@ -246,31 +246,37 @@ void print_mtd_info() {
     yaml_printf("    size: %dM\n", ctx.totalsz / 1024 / 1024);
 }
 
+// static bool xm_inited;
+
 int mtd_erase_block(int fd, int offset, int erasesize) {
     struct erase_info_user mtdEraseInfo;
 
     mtdEraseInfo.start = offset;
     mtdEraseInfo.length = erasesize;
-    printf("mtd_erase_block(%d, 0x%x, 0x%x)\n", fd, offset, erasesize);
+    // printf("mtd_erase_block(%d, 0x%x, 0x%x)\n", fd, offset, erasesize);
     ioctl(fd, MEMUNLOCK, &mtdEraseInfo);
-    if (ioctl(fd, MEMERASE, &mtdEraseInfo) < 0) {
-        printf("Failed, trying XM specific algorithm...\n");
-        if (!xm_flash_init(fd))
-            return -1;
-        if (!xm_spiflash_unlock_and_erase(fd, offset, erasesize))
-            return -1;
 
-        return 0;
+    if (ioctl(fd, MEMERASE, &mtdEraseInfo) < 0) {
+        if (is_xm_board()) {
+            // printf("Failed, trying XM specific algorithm...\n");
+            if (!xm_flash_init(fd))
+                return -1;
+            if (!xm_spiflash_unlock_and_erase(fd, offset, erasesize))
+                return -1;
+
+            // xm_inited = true;
+            return 0;
+        }
     }
 
     return 0;
 }
 
 int mtd_write_block(int fd, int offset, const char *data, size_t size) {
-    fprintf(stderr, "Seeking on mtd device to: %zu\n", offset);
+    // fprintf(stderr, "Seeking on mtd device to: %x\n", offset);
     lseek(fd, offset, SEEK_SET);
 
-    fprintf(stderr, "Writing buffer sized: %zu\n", size);
+    // fprintf(stderr, "Writing buffer sized: %x\n", size);
     write(fd, data, size);
 
     return 0;

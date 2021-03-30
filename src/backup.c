@@ -15,6 +15,7 @@
 #include <netdb.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
+#include <sys/reboot.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -108,7 +109,7 @@ int do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
     return ret;
 }
 
-char *download_backup(size_t *size) {
+char *download_backup(size_t *size, char *date) {
     FILL_NS;
 
     char mac[32];
@@ -116,7 +117,7 @@ char *download_backup(size_t *size) {
         return NULL;
     };
 
-    char *dwres = download(mybackups, mac, downcode, &ns, size, true);
+    char *dwres = download(mybackups, mac, downcode, &ns, size, date, true);
     int err = HTTP_ERR(dwres);
     if (err) {
         switch (err) {
@@ -246,7 +247,23 @@ static bool umount_all() {
     return true;
 }
 
+static void print_flash_progress(int cur, int max, char status) {
+    char *bar = alloca(max) + 1;
+    for (int i = 0; i < max; i++) {
+        if (cur == i)
+            bar[i] = status;
+        else if (i < cur)
+            bar[i] = 'w';
+        else
+            bar[i] = '.';
+    }
+    bar[max] = 0;
+    printf("Flashing [%s]\r", bar);
+    fflush(stdout);
+}
+
 int restore_backup() {
+    printf("Restoring the latest backup from the cloud\n\n");
     umount_all();
 
     mtd_restore_ctx_t mtd;
@@ -254,7 +271,8 @@ int restore_backup() {
     enum_mtd_info(&mtd, cb_mtd_restore);
 
     size_t size;
-    char *backup = download_backup(&size);
+    char date[DATE_BUF_LEN] = {0};
+    char *backup = download_backup(&size, date);
 
     if (backup) {
         char *pptr = backup + strnlen(backup, size) + 1;
@@ -262,6 +280,14 @@ int restore_backup() {
             fprintf(stderr, "Broken description found, aborting...\n");
             goto bailout;
         }
+
+        if (*date)
+            printf("Found backup made on %s\n", date);
+
+        printf("Are you sure to proceed? (y/n)? ");
+        char ch = getchar();
+        if (ch != 'y')
+            goto bailout;
 
         // TODO: sane YAML parser
         char *ps = strstr(backup, "partitions:\n");
@@ -330,16 +356,28 @@ int restore_backup() {
         // close all applications and umount rw partitions
 
         // actual restore
-        for (int i = n - 2; i < n; i++) {
+        for (int i = 0; i < n; i++) {
             printf("Restoring %s\n", mtdbackup[i].name);
-            printf("mtd_write(%d, %x, %x, %p, %lx)\n", i, 0, mtd.erasesize,
-                   mtdbackup[i].data, mtdbackup[i].size);
-            if (mtd_write(i, 0, mtd.erasesize, mtdbackup[i].data,
-                          mtdbackup[i].size)) {
-                fprintf(stderr, "Something went wrong, aborting...\n");
-                goto bailout;
-            };
+            size_t chunk = mtd.erasesize;
+            int cnt = mtdbackup[i].size / chunk;
+            for (int c = 0; c < cnt; c++) {
+                // printf("[Chunk #%d]: \n", c);
+                print_flash_progress(c, cnt, 'e');
+                // printf("mtd_write(%d, %x, %x, %p, %zx)\n", i, c*chunk,
+                // mtd.erasesize, mtdbackup[i].data + c*chunk,
+                //              chunk);
+                if (mtd_write(i, c * chunk, mtd.erasesize,
+                              mtdbackup[i].data + c * chunk, chunk)) {
+                    fprintf(stderr, "\nSomething went wrong, aborting...\n");
+                    goto bailout;
+                };
+            }
+            print_flash_progress(cnt, cnt, 'e');
+            printf("\n");
         }
+
+        printf("System will be restarted...\n");
+        reboot(RB_AUTOBOOT);
 
     bailout:
 
