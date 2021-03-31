@@ -377,7 +377,7 @@ int restore_backup() {
         // close all applications and umount rw partitions
 
         // actual restore
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < n; i++) {
             printf("Restoring %s\n", mtdbackup[i].name);
             size_t chunk = mtd.erasesize;
             int cnt = mtdbackup[i].size / chunk;
