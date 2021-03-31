@@ -302,6 +302,44 @@ static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
     return -1;
 }
 
+static bool do_flash(const char *backup, stored_mtd_t *mtdbackup,
+                     mtd_restore_ctx_t *mtd) {
+    for (int i = 0; i < MAX_MTDBLOCKS; i++) {
+        if (!*mtdbackup[i].name)
+            continue;
+
+        printf("Restoring %s\n", mtdbackup[i].name);
+        size_t chunk = mtd->erasesize;
+        int cnt = mtdbackup[i].size / chunk;
+        for (int c = 0; c < cnt; c++) {
+            size_t this_offset;
+            int newi =
+                map_old_new_mtd(i, c * chunk, &this_offset, mtdbackup, mtd);
+            if (newi == -1) {
+                fprintf(stderr, "\nOffset algorithm error, aborting...\n");
+                return false;
+            }
+            char op = 'e';
+            // skip env
+            if (mtd->env_dev == newi && mtd->env_offset == this_offset)
+                op = 's';
+            print_flash_progress(c, cnt, op);
+            // printf("mtd_write(%d, %x, %x, %p, %zx)\n", newi, this_offset,
+            //       mtd.erasesize, mtdbackup[i].data + c * chunk, chunk);
+            if (op != 's')
+                if (mtd_write(newi, this_offset, mtd->erasesize,
+                              mtdbackup[i].data + c * chunk, chunk)) {
+                    fprintf(stderr, "\nSomething went wrong, aborting...\n");
+                    return false;
+                }
+        }
+        print_flash_progress(cnt, cnt, 'e');
+        printf("\n");
+    }
+
+    return true;
+}
+
 int restore_backup(bool skip_env, bool force) {
     const char *uboot_env = "  U-Boot env overwrite will be skipped";
     printf("Restoring the latest backup from the cloud\n%s\n",
@@ -399,7 +437,7 @@ int restore_backup(bool skip_env, bool force) {
                 }
             }
 #if 1
-            fprintf(stderr, "\n[%d] 0x%.8zx\t0x%.8lx\t%s\t%.8x\n", i,
+            fprintf(stderr, "\n[%d] 0x%.8zx\t0x%.8lx\t%8s\t%.8x\n", i,
                     mtdbackup[i].mtd_offset, mtdbackup[i].size,
                     mtdbackup[i].sha1, sha1);
 #endif
@@ -416,37 +454,8 @@ int restore_backup(bool skip_env, bool force) {
         }
         printf("Backups were checked\n");
 
-        // actual restore
-        for (int i = 0; i < n; i++) {
-            printf("Restoring %s\n", mtdbackup[i].name);
-            size_t chunk = mtd.erasesize;
-            int cnt = mtdbackup[i].size / chunk;
-            for (int c = 0; c < cnt; c++) {
-                size_t this_offset;
-                int newi = map_old_new_mtd(i, c * chunk, &this_offset,
-                                           mtdbackup, &mtd);
-                if (newi == -1) {
-                    fprintf(stderr, "Offset algorithm error, aborting...\n");
-                    goto bailout;
-                }
-                char op = 'e';
-                // skip env
-                if (mtd.env_dev == newi && mtd.env_offset == this_offset)
-                    op = 's';
-                print_flash_progress(c, cnt, op);
-                // printf("mtd_write(%d, %x, %x, %p, %zx)\n", newi, this_offset,
-                //       mtd.erasesize, mtdbackup[i].data + c * chunk, chunk);
-                if (op != 's')
-                    if (mtd_write(newi, this_offset, mtd.erasesize,
-                                  mtdbackup[i].data + c * chunk, chunk)) {
-                        fprintf(stderr,
-                                "\nSomething went wrong, aborting...\n");
-                        goto bailout;
-                    }
-            }
-            print_flash_progress(cnt, cnt, 'e');
-            printf("\n");
-        }
+        if (!do_flash(backup, mtdbackup, &mtd))
+            goto bailout;
 
         printf("System will be restarted...\n");
         reboot(RB_AUTOBOOT);
