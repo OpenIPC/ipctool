@@ -261,6 +261,9 @@ int main(int argc, char *argv[]) {
         case 'r':
             return restore_backup(skip_env, force);
 
+        case 'u':
+            return do_upgrade(force);
+
         case '?':
         default:
             printf("found unknown option\n");

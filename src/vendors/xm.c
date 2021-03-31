@@ -181,17 +181,11 @@ static bool extract_cloud_id() {
 }
 
 static void extract_netip_creds(char username[64], char pwd[64]) {
-    FILE *fp = fopen("/mnt/mtd/Config/Account1", "r");
-    if (!fp)
-        return;
+    size_t len;
+    char *config = file_to_buf("/mnt/mtd/Config/Account1", &len);
+    if (!config)
+        goto bailout;
 
-    fseek(fp, 0, SEEK_END);
-    size_t len = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    char *config = malloc(len);
-    fread(config, 1, len, fp);
-    fclose(fp);
     cJSON *json = cJSON_ParseWithLength(config, len);
     if (json == NULL)
         goto bailout;

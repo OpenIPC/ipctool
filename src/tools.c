@@ -166,3 +166,21 @@ exit:
 uint32_t read_le32(const char *ptr) {
     return *ptr | *(ptr + 1) << 8 | *(ptr + 2) << 16 | *(ptr + 3) << 24;
 }
+
+char *file_to_buf(const char *filename, size_t *len) {
+    FILE *fp = fopen(filename, "rb");
+    if (!fp)
+        return NULL;
+
+    fseek(fp, 0, SEEK_END);
+    *len = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *buf = malloc(*len);
+    if (!buf)
+        return NULL;
+    fread(buf, 1, *len, fp);
+    fclose(fp);
+
+    return buf;
+}

@@ -149,8 +149,8 @@ static int yaml_idlvl(char *from, char *start) {
 }
 
 typedef struct {
-    size_t mtd_offset;
-    unsigned long size;
+    size_t off_flashb;
+    size_t size;
     char sha1[9];
     char name[64];
     char *data;
@@ -193,7 +193,7 @@ static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
         if (*ptr == '\n') {
             if (param && spaces == rootlvl) {
                 if (!strncmp(param, "size: ", 6)) {
-                    mi[i].mtd_offset = offset;
+                    mi[i].off_flashb = offset;
                     mi[i].size = strtoul(param + 6, NULL, 16);
                     offset += mi[i].size;
                 } else if (!strncmp(param, "name: ", 6)) {
@@ -285,7 +285,7 @@ static void print_flash_progress(int cur, int max, char status) {
 
 static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
                            stored_mtd_t *mtdbackup, mtd_restore_ctx_t *mtd) {
-    size_t find_off = mtdbackup[old_num].mtd_offset + old_offset;
+    size_t find_off = mtdbackup[old_num].off_flashb + old_offset;
     size_t cur_off = 0;
     for (int i = 0; i < MAX_MTDBLOCKS; i++) {
         if (!mtd->blocks[i])
@@ -302,8 +302,10 @@ static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
     return -1;
 }
 
-static bool do_flash(const char *backup, stored_mtd_t *mtdbackup,
-                     mtd_restore_ctx_t *mtd) {
+// uncomment this if you want to simulate flash write
+//#define NO_FLASH
+
+static bool do_flash(stored_mtd_t *mtdbackup, mtd_restore_ctx_t *mtd) {
     for (int i = 0; i < MAX_MTDBLOCKS; i++) {
         if (!*mtdbackup[i].name)
             continue;
@@ -323,15 +325,18 @@ static bool do_flash(const char *backup, stored_mtd_t *mtdbackup,
             // skip env
             if (mtd->env_dev == newi && mtd->env_offset == this_offset)
                 op = 's';
+#ifdef NO_FLASH
+            printf("mtd_write(%d, %x, %x, %p, %zx)\n", newi, this_offset,
+                   mtd->erasesize, mtdbackup[i].data + c * chunk, chunk);
+#else
             print_flash_progress(c, cnt, op);
-            // printf("mtd_write(%d, %x, %x, %p, %zx)\n", newi, this_offset,
-            //       mtd.erasesize, mtdbackup[i].data + c * chunk, chunk);
             if (op != 's')
                 if (mtd_write(newi, this_offset, mtd->erasesize,
                               mtdbackup[i].data + c * chunk, chunk)) {
                     fprintf(stderr, "\nSomething went wrong, aborting...\n");
                     return false;
                 }
+#endif
         }
         print_flash_progress(cnt, cnt, 'e');
         printf("\n");
@@ -340,19 +345,29 @@ static bool do_flash(const char *backup, stored_mtd_t *mtdbackup,
     return true;
 }
 
+static bool free_resources(bool force) {
+    if (is_xm_board()) {
+        if (!xm_kill_stuff(force)) {
+            fprintf(stderr, "aborting...\n");
+            return false;
+        }
+    }
+    umount_all();
+    return true;
+}
+
+static void reboot_with_msg() {
+    printf("System will be restarted...\n");
+    reboot(RB_AUTOBOOT);
+}
+
 int restore_backup(bool skip_env, bool force) {
     const char *uboot_env = "  U-Boot env overwrite will be skipped";
     printf("Restoring the latest backup from the cloud\n%s\n",
            skip_env ? uboot_env : "");
 
-    // close all applications, disable watchdog and umount rw partitions
-    if (is_xm_board()) {
-        if (!xm_kill_stuff(force)) {
-            fprintf(stderr, "aboring...\n");
-            return 1;
-        }
-    }
-    umount_all();
+    if (!free_resources(force))
+        return 1;
 
     mtd_restore_ctx_t mtd;
     memset(&mtd, 0, sizeof(mtd));
@@ -410,7 +425,7 @@ int restore_backup(bool skip_env, bool force) {
             // check SHA1
             size_t blen = read_le32(pptr);
             if (blen != mtdbackup[i].size) {
-                fprintf(stderr, "Broken backup: next block len 0x%x != 0x%lx\n",
+                fprintf(stderr, "Broken backup: next block len 0x%x != 0x%zx\n",
                         blen, mtdbackup[i].size);
                 goto bailout;
             }
@@ -435,11 +450,14 @@ int restore_backup(bool skip_env, bool force) {
                             mtdbackup[i].name);
                     goto bailout;
                 }
+            } else {
+                printf("Not checked (no SHA1)\r");
+                fflush(stdout);
             }
 #if 1
-            fprintf(stderr, "\n[%d] 0x%.8zx\t0x%.8lx\t%8s\t%.8x\n", i,
-                    mtdbackup[i].mtd_offset, mtdbackup[i].size,
-                    mtdbackup[i].sha1, sha1);
+            fprintf(stderr, "\n[%d] 0x%.8zx\t0x%.8zx\t%8.8s\t%.8x\n", i,
+                    mtdbackup[i].off_flashb, mtdbackup[i].size,
+                    *mtdbackup[i].sha1 ? mtdbackup[i].sha1 : "n/a", sha1);
 #endif
             // end of sha1 check
 
@@ -454,15 +472,50 @@ int restore_backup(bool skip_env, bool force) {
         }
         printf("Backups were checked\n");
 
-        if (!do_flash(backup, mtdbackup, &mtd))
+        if (!do_flash(mtdbackup, &mtd))
             goto bailout;
 
-        printf("System will be restarted...\n");
-        reboot(RB_AUTOBOOT);
+        reboot_with_msg();
 
     bailout:
 
         free(backup);
     }
+    return 0;
+}
+
+int do_upgrade(bool force) {
+    if (!free_resources(force))
+        return 1;
+
+    mtd_restore_ctx_t mtd;
+    memset(&mtd, 0, sizeof(mtd));
+    enum_mtd_info(&mtd, cb_mtd_restore);
+
+    stored_mtd_t mtdbackup[MAX_MTDBLOCKS];
+    memset(&mtdbackup, 0, sizeof(mtdbackup));
+
+    mtdbackup[0].data = file_to_buf("/utils/mtdblock3", &mtdbackup[0].size);
+    printf("%p, size: %d bytes\n", mtdbackup[0].data, mtdbackup[0].size);
+
+    char digest[21] = {0};
+    SHA1(digest, mtdbackup[0].data, mtdbackup[0].size);
+    uint32_t sha1 = ntohl(*(uint32_t *)&digest);
+    printf("SHA1: %.8x\n", sha1);
+
+    strcpy(mtdbackup[0].name, "uImage");
+    mtdbackup[0].off_flashb = 0x50000;
+
+    mtdbackup[1].data = file_to_buf("/utils/mtdblock4", &mtdbackup[1].size);
+    strcpy(mtdbackup[1].name, "rootfs");
+    mtdbackup[1].off_flashb = 0x450000;
+    // mtdbackup[1].size = 0x500000;
+    printf("%p, size: %d bytes\n", mtdbackup[1].data, mtdbackup[1].size);
+
+    if (!do_flash(mtdbackup, &mtd)) {
+        printf("BAD\n");
+    }
+    reboot_with_msg();
+
     return 0;
 }

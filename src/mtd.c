@@ -253,7 +253,6 @@ int mtd_erase_block(int fd, int offset, int erasesize) {
 
     mtdEraseInfo.start = offset;
     mtdEraseInfo.length = erasesize;
-    // printf("mtd_erase_block(%d, 0x%x, 0x%x)\n", fd, offset, erasesize);
     ioctl(fd, MEMUNLOCK, &mtdEraseInfo);
 
     if (ioctl(fd, MEMERASE, &mtdEraseInfo) < 0) {
@@ -301,7 +300,6 @@ int mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
 
     if (mtd_erase_block(fd, offset, erasesize)) {
         fprintf(stderr, "Fail to erase +0x%x\n", offset);
-        // xm_spiflash_unlock(fd, 0);
         goto bailout;
     }
 
