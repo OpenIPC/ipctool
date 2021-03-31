@@ -191,7 +191,7 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
         return true;
 
     ctx_uboot_t *c = (ctx_uboot_t *)ctx;
-    if (i < 2) {
+    if (i < ENV_MTD_NUM) {
         size_t u_off = uboot_detect_env(addr, mtd->size);
         if (u_off != -1) {
             switch (c->op) {

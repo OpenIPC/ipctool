@@ -26,6 +26,9 @@ work on vast majority of hardware.
         --temp
         --dmesg
         --printenv
+        --setenv
+        --wait
+        [--skip-env] --restore
         --help
 
     (or run without params to get full available information)

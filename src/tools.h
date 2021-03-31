@@ -4,6 +4,7 @@
 #include <regex.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <sys/syscall.h>
 
 #define ADD_PARAM(param, val)                                                  \
     {                                                                          \
@@ -41,5 +42,7 @@ uint32_t read_le32(const char *ptr);
 extern __ssize_t getline(char **__restrict __lineptr, size_t *__restrict __n,
                          FILE *__restrict __stream) __wur;
 #endif
+
+#define delete_module(mod, flags) syscall(__NR_delete_module, mod, flags)
 
 #endif /* TOOLS_H */

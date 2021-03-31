@@ -59,7 +59,7 @@ void Help() {
            "\t--printenv\n"
            "\t--setenv key=value\n"
            "\n"
-           "\t--restore\n"
+           "\t[--skip-env] [--force] --restore\n"
            "\t--help\n");
 }
 
@@ -198,11 +198,15 @@ int main(int argc, char *argv[]) {
         {"dmesg", no_argument, NULL, 'd'},
         {"wait", no_argument, NULL, 'w'},
         {"restore", no_argument, NULL, 'r'},
+        {"skip-env", no_argument, NULL, '0'},
+        {"force", no_argument, NULL, 'f'},
         {"upgrade", no_argument, NULL, 'u'},
         {NULL, 0, NULL, 0}};
 
     int rez;
     int option_index;
+    bool skip_env = false;
+    bool force = false;
 
     while ((rez = getopt_long_only(argc, argv, short_options, long_options,
                                    &option_index)) != -1) {
@@ -246,8 +250,16 @@ int main(int argc, char *argv[]) {
             wait_mode = true;
             break;
 
+        case '0':
+            skip_env = true;
+            break;
+
+        case 'f':
+            force = true;
+            break;
+
         case 'r':
-            return restore_backup();
+            return restore_backup(skip_env, force);
 
         case '?':
         default:

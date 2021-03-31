@@ -29,6 +29,8 @@
 #include "network.h"
 #include "sha1.h"
 #include "tools.h"
+#include "uboot.h"
+#include "vendors/xm.h"
 
 #define UDP_LOCK_PORT 1025
 
@@ -213,6 +215,9 @@ typedef struct {
     ssize_t totalsz;
     size_t erasesize;
     size_t blocks[MAX_MTDBLOCKS];
+    bool skip_env;
+    int env_dev;
+    size_t env_offset;
 } mtd_restore_ctx_t;
 
 static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
@@ -220,6 +225,20 @@ static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
     mtd_restore_ctx_t *c = (mtd_restore_ctx_t *)ctx;
     if (!c->erasesize)
         c->erasesize = mtd->erasesize;
+
+    if (c->env_dev == -1 && i < ENV_MTD_NUM) {
+        int fd;
+        char *addr = open_mtdblock(i, &fd, mtd->size, 0);
+        if (!addr)
+            return true;
+        size_t u_off = uboot_detect_env(addr, mtd->size);
+        if (u_off != -1) {
+            c->env_dev = i;
+            c->env_offset = u_off;
+        }
+        close(fd);
+    }
+
     c->blocks[i] = mtd->size;
     c->totalsz += mtd->size;
     return true;
@@ -283,13 +302,36 @@ static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
     return -1;
 }
 
-int restore_backup() {
-    printf("Restoring the latest backup from the cloud\n\n");
+int restore_backup(bool skip_env, bool force) {
+    const char *uboot_env = "  U-Boot env overwrite will be skipped";
+    printf("Restoring the latest backup from the cloud\n%s\n",
+           skip_env ? uboot_env : "");
+
+    // close all applications, disable watchdog and umount rw partitions
+    if (is_xm_board()) {
+        if (!xm_kill_stuff(force)) {
+            fprintf(stderr, "aboring...\n");
+            return 1;
+        }
+    }
     umount_all();
 
     mtd_restore_ctx_t mtd;
     memset(&mtd, 0, sizeof(mtd));
+    if (skip_env) {
+        mtd.skip_env = skip_env;
+        mtd.env_dev = -1;
+    }
     enum_mtd_info(&mtd, cb_mtd_restore);
+    if (skip_env) {
+        if (mtd.env_dev != -1)
+            printf("U-Boot env detected at #%d/0x%x\n", mtd.env_dev,
+                   mtd.env_offset);
+        else {
+            fprintf(stderr, "No U-Boot env found, aborting...\n");
+            return -1;
+        }
+    }
 
     size_t size;
     char date[DATE_BUF_LEN] = {0};
@@ -374,16 +416,12 @@ int restore_backup() {
         }
         printf("Backups were checked\n");
 
-        // close all applications and umount rw partitions
-
         // actual restore
         for (int i = 0; i < n; i++) {
             printf("Restoring %s\n", mtdbackup[i].name);
             size_t chunk = mtd.erasesize;
             int cnt = mtdbackup[i].size / chunk;
             for (int c = 0; c < cnt; c++) {
-                // printf("[Chunk #%d]: \n", c);
-                print_flash_progress(c, cnt, 'e');
                 size_t this_offset;
                 int newi = map_old_new_mtd(i, c * chunk, &this_offset,
                                            mtdbackup, &mtd);
@@ -391,13 +429,20 @@ int restore_backup() {
                     fprintf(stderr, "Offset algorithm error, aborting...\n");
                     goto bailout;
                 }
+                char op = 'e';
+                // skip env
+                if (mtd.env_dev == newi && mtd.env_offset == this_offset)
+                    op = 's';
+                print_flash_progress(c, cnt, op);
                 // printf("mtd_write(%d, %x, %x, %p, %zx)\n", newi, this_offset,
                 //       mtd.erasesize, mtdbackup[i].data + c * chunk, chunk);
-                if (mtd_write(newi, this_offset, mtd.erasesize,
-                              mtdbackup[i].data + c * chunk, chunk)) {
-                    fprintf(stderr, "\nSomething went wrong, aborting...\n");
-                    goto bailout;
-                }
+                if (op != 's')
+                    if (mtd_write(newi, this_offset, mtd.erasesize,
+                                  mtdbackup[i].data + c * chunk, chunk)) {
+                        fprintf(stderr,
+                                "\nSomething went wrong, aborting...\n");
+                        goto bailout;
+                    }
             }
             print_flash_progress(cnt, cnt, 'e');
             printf("\n");

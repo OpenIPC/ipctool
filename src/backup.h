@@ -3,6 +3,6 @@
 
 bool udp_lock();
 int do_backup(const char *yaml, size_t yaml_len, bool wait_mode);
-int restore_backup();
+int restore_backup(bool skip_env, bool force);
 
 #endif /* BACKUP_H */

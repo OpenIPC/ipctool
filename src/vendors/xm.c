@@ -6,12 +6,15 @@
 #include <time.h>
 
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
 #include "cjson/cJSON.h"
 
 #include "chipid.h"
+#include "firmware.h"
+#include "hal_hisi.h"
 #include "tools.h"
 #include "vendors/xm.h"
 
@@ -223,4 +226,60 @@ void gather_xm_board_info() {
     detect_xm_product();
     extract_cloud_id();
     detect_nor_chip();
+}
+
+static uint32_t CV200_WDG_CONTROL = 0x20040000 + 0x0008;
+static uint32_t CV300_WDG_CONTROL = 0x12080000 + 0x0008;
+static uint32_t EV300_WDG_CONTROL = 0x12030000 + 0x0008;
+
+static bool xm_disable_watchdog() {
+    get_system_id();
+    uint32_t zero = 0;
+    switch (chip_generation) {
+    case HISI_V1:
+    case HISI_V2:
+        mem_reg(CV200_WDG_CONTROL, &zero, OP_WRITE);
+        break;
+    case HISI_V3:
+        delete_module("xm_watchdog", 0);
+        mem_reg(CV300_WDG_CONTROL, &zero, OP_WRITE);
+        break;
+    case HISI_V4:
+        delete_module("hi3516ev200_wdt", 0);
+        mem_reg(EV300_WDG_CONTROL, &zero, OP_WRITE);
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
+bool xm_kill_stuff(bool force) {
+    char proc[255] = {0};
+    pid_t gpid = get_god_pid(proc, sizeof(proc));
+    if (strcmp(proc, "Sofia")) {
+        fprintf(stderr, "There was no Sofia process detected\n");
+        if (!force) {
+            printf("Use --force switch to skip the check\n");
+            return false;
+        }
+    } else {
+        kill(gpid, SIGINT);
+        if (!xm_disable_watchdog()) {
+            fprintf(stderr, "Cannot disarm watchdog\n");
+            return false;
+        }
+
+        int downcount = 2 * 60;
+        printf("Sofia has been terminated\n"
+               "Waiting for watchdog checking\n");
+        for (int i = downcount; i > 0; i--) {
+            printf("%d seconds %5s\r", i, "");
+            fflush(stdout);
+            sleep(1);
+        }
+        printf("Done %32s\n", "");
+    }
+
+    return true;
 }

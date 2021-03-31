@@ -1,6 +1,8 @@
 #ifndef UBOOT_H
 #define UBOOT_H
 
+#define ENV_MTD_NUM 2
+
 #include <stdlib.h>
 
 int uboot_detect_env(void *buf, size_t len);
