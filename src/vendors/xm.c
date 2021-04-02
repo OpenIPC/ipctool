@@ -266,7 +266,7 @@ bool xm_kill_stuff(bool force) {
 
         int downcount = 2 * 60;
         printf("Sofia has been terminated\n"
-               "Waiting for watchdog checking\n");
+               "Ensuring everything shutdown\n");
         for (int i = downcount; i > 0; i--) {
             printf("%d seconds %5s\r", i, "");
             fflush(stdout);

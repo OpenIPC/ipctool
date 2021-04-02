@@ -305,12 +305,13 @@ static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
 // uncomment this if you want to simulate flash write
 //#define NO_FLASH
 
-static bool do_flash(stored_mtd_t *mtdbackup, mtd_restore_ctx_t *mtd) {
+static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
+                     mtd_restore_ctx_t *mtd) {
     for (int i = 0; i < MAX_MTDBLOCKS; i++) {
         if (!*mtdbackup[i].name)
             continue;
 
-        printf("Restoring %s\n", mtdbackup[i].name);
+        printf("%s %s\n", phase, mtdbackup[i].name);
         size_t chunk = mtd->erasesize;
         int cnt = mtdbackup[i].size / chunk;
         for (int c = 0; c < cnt; c++) {
@@ -437,10 +438,10 @@ int restore_backup(bool skip_env, bool force) {
             mtdbackup[i].data = pptr;
 
             uint32_t sha1;
+            char digest[21] = {0};
             if (*mtdbackup[i].sha1) {
                 printf("Checking %s... %32s\r", mtdbackup[i].name, "");
                 fflush(stdout);
-                char digest[21] = {0};
                 SHA1(digest, pptr, blen);
                 sha1 = ntohl(*(uint32_t *)&digest);
                 snprintf(digest, sizeof(digest), "%.8x", sha1);
@@ -455,9 +456,9 @@ int restore_backup(bool skip_env, bool force) {
                 fflush(stdout);
             }
 #if 1
-            fprintf(stderr, "\n[%d] 0x%.8zx\t0x%.8zx\t%8.8s\t%.8x\n", i,
+            fprintf(stderr, "\n[%d] 0x%.8zx\t0x%.8zx\t%8.8s\t%.8s\n", i,
                     mtdbackup[i].off_flashb, mtdbackup[i].size,
-                    *mtdbackup[i].sha1 ? mtdbackup[i].sha1 : "n/a", sha1);
+                    *mtdbackup[i].sha1 ? mtdbackup[i].sha1 : "n/a", digest);
 #endif
             // end of sha1 check
 
@@ -472,7 +473,7 @@ int restore_backup(bool skip_env, bool force) {
         }
         printf("Backups were checked\n");
 
-        if (!do_flash(mtdbackup, &mtd))
+        if (!do_flash("Restoring", mtdbackup, &mtd))
             goto bailout;
 
         reboot_with_msg();
@@ -512,9 +513,17 @@ int do_upgrade(bool force) {
     // mtdbackup[1].size = 0x500000;
     printf("%p, size: %d bytes\n", mtdbackup[1].data, mtdbackup[1].size);
 
-    if (!do_flash(mtdbackup, &mtd)) {
+    if (!do_flash("Upgrading", mtdbackup, &mtd)) {
         printf("BAD\n");
     }
+    set_env(strdup("bootcmd=sf probe 0; sf read 0x42000000 0x50000 0x400000; "
+                   "bootm 0x42000000"));
+    set_env(strdup("bootargs=totalmem=128M mem=48M ethaddr=${ethaddr} "
+                   "sensor=sc2135 console=ttyAMA0,115200 panic=20 "
+                   "root=/dev/mtdblock4 rootfstype=squashfs "
+                   "mtdparts=hi_sfc:192k(boot),64k(env),64k(gap),4096k(kernel),"
+                   "5120k(rootfs),-(rootfs_data)"));
+    // printenv();
     reboot_with_msg();
 
     return 0;

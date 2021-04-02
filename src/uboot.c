@@ -86,8 +86,10 @@ void uboot_printenv(const char *env) {
 
 static void *uenv;
 void uboot_copyenv(const void *buf) {
-    uenv = malloc(ENV_LEN);
-    memcpy(uenv, buf, ENV_LEN);
+    if (!uenv) {
+        uenv = malloc(ENV_LEN);
+        memcpy(uenv, buf, ENV_LEN);
+    }
 }
 
 void uboot_freeenv() {
@@ -168,6 +170,8 @@ rewrite:
 
     uboot_printenv(towrite);
     mtd_write(mtd, offset, erasesize, towrite, ENV_LEN);
+    if (uenv != towrite)
+        memcpy(uenv, towrite, ENV_LEN);
 
 bailout:
     if (newenv)
