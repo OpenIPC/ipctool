@@ -496,7 +496,15 @@ int do_upgrade(bool force) {
     stored_mtd_t mtdbackup[MAX_MTDBLOCKS];
     memset(&mtdbackup, 0, sizeof(mtdbackup));
 
-    mtdbackup[0].data = file_to_buf("/utils/mtdblock3", &mtdbackup[0].size);
+    size_t len;
+    mtdbackup[0].size = 0x400000;
+    mtdbackup[0].data = malloc(mtdbackup[0].size);
+    assert(mtdbackup[0].data);
+    memset(mtdbackup[0].data, 0xff, mtdbackup[0].size);
+    fread_to_buf("/utils/uImage.wrt", mtdbackup[0].data, mtdbackup[0].size,
+                 &len);
+    strcpy(mtdbackup[0].name, "kernel");
+    mtdbackup[0].off_flashb = 0x50000;
     printf("%p, size: %d bytes\n", mtdbackup[0].data, mtdbackup[0].size);
 
     char digest[21] = {0};
@@ -504,26 +512,40 @@ int do_upgrade(bool force) {
     uint32_t sha1 = ntohl(*(uint32_t *)&digest);
     printf("SHA1: %.8x\n", sha1);
 
-    strcpy(mtdbackup[0].name, "uImage");
-    mtdbackup[0].off_flashb = 0x50000;
-
-    mtdbackup[1].data = file_to_buf("/utils/mtdblock4", &mtdbackup[1].size);
+    mtdbackup[1].size = 0x500000;
+    mtdbackup[1].data = malloc(mtdbackup[1].size);
+    assert(mtdbackup[1].data);
+    memset(mtdbackup[1].data, 0xff, mtdbackup[1].size);
+    fread_to_buf("/utils/root.wrt", mtdbackup[1].data, mtdbackup[1].size, &len);
     strcpy(mtdbackup[1].name, "rootfs");
-    mtdbackup[1].off_flashb = 0x450000;
-    // mtdbackup[1].size = 0x500000;
     printf("%p, size: %d bytes\n", mtdbackup[1].data, mtdbackup[1].size);
+    mtdbackup[1].off_flashb = 0x450000;
 
     if (!do_flash("Upgrading", mtdbackup, &mtd)) {
         printf("BAD\n");
     }
-    set_env(strdup("bootcmd=sf probe 0; sf read 0x42000000 0x50000 0x400000; "
-                   "bootm 0x42000000"));
-    set_env(strdup("bootargs=totalmem=128M mem=48M ethaddr=${ethaddr} "
-                   "sensor=sc2135 console=ttyAMA0,115200 panic=20 "
-                   "root=/dev/mtdblock4 rootfstype=squashfs "
-                   "mtdparts=hi_sfc:192k(boot),64k(env),64k(gap),4096k(kernel),"
-                   "5120k(rootfs),-(rootfs_data)"));
-    // printenv();
+
+    uint32_t ram_start = 0x42000000;
+
+    char cmd[1024];
+
+    snprintf(cmd, sizeof(cmd),
+             "bootcmd=setenv setargs setenv bootargs ${bootargs}; run setargs; "
+             "sf probe 0; sf read 0x%x 0x%x 0x%x; "
+             "bootm 0x%x",
+             // kernel params
+             ram_start, mtdbackup[0].off_flashb, mtdbackup[0].size, ram_start);
+    puts(cmd);
+    set_env(cmd);
+
+    snprintf(cmd, sizeof(cmd),
+             "bootargs=totalmem=$(totalmem:-0M) mem=48M ethaddr=$(ethaddr) "
+             "sensor=$(sensor:-auto) console=ttyAMA0,115200 panic=20 "
+             "root=/dev/mtdblock4 rootfstype=squashfs "
+             "mtdparts=hi_sfc:192k(boot),64k(env),64k(gap),4096k(kernel),"
+             "5120k(rootfs),-(rootfs_data)");
+    puts(cmd);
+    set_env(cmd);
     reboot_with_msg();
 
     return 0;

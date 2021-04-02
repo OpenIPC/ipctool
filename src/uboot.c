@@ -168,7 +168,6 @@ rewrite:
     crc32(towrite + CRC_SZ, ENV_LEN - CRC_SZ, &res_crc);
     *(uint32_t *)towrite = res_crc;
 
-    uboot_printenv(towrite);
     mtd_write(mtd, offset, erasesize, towrite, ENV_LEN);
     if (uenv != towrite)
         memcpy(uenv, towrite, ENV_LEN);

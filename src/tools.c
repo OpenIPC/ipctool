@@ -167,7 +167,8 @@ uint32_t read_le32(const char *ptr) {
     return *ptr | *(ptr + 1) << 8 | *(ptr + 2) << 16 | *(ptr + 3) << 24;
 }
 
-char *file_to_buf(const char *filename, size_t *len) {
+char *fread_to_buf(const char *filename, char *buf, size_t bufsz, size_t *len) {
+    printf("fread_to_buf('%s', %p, %d, %p)\n", filename, buf, bufsz, len);
     FILE *fp = fopen(filename, "rb");
     if (!fp)
         return NULL;
@@ -176,11 +177,19 @@ char *file_to_buf(const char *filename, size_t *len) {
     *len = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    char *buf = malloc(*len);
-    if (!buf)
-        return NULL;
-    fread(buf, 1, *len, fp);
+    if (!buf) {
+        buf = malloc(*len);
+        if (!buf)
+            return NULL;
+        bufsz = *len;
+    }
+
+    fread(buf, 1, MIN(*len, bufsz), fp);
     fclose(fp);
 
     return buf;
+}
+
+char *file_to_buf(const char *filename, size_t *len) {
+    return fread_to_buf(filename, NULL, 0, len);
 }
