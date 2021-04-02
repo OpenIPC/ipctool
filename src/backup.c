@@ -539,8 +539,8 @@ int do_upgrade(bool force) {
     set_env(cmd);
 
     snprintf(cmd, sizeof(cmd),
-             "bootargs=totalmem=$(totalmem:-0M) mem=48M ethaddr=$(ethaddr) "
-             "sensor=$(sensor:-auto) console=ttyAMA0,115200 panic=20 "
+             "bootargs=mem=${osmem} ethaddr=${ethaddr} "
+             "sensor=${sensor:-auto} console=ttyAMA0,115200 panic=20 "
              "root=/dev/mtdblock4 rootfstype=squashfs "
              "mtdparts=hi_sfc:192k(boot),64k(env),64k(gap),4096k(kernel),"
              "5120k(rootfs),-(rootfs_data)");
