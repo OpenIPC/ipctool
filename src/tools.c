@@ -182,7 +182,8 @@ char *fread_to_buf(const char *filename, char *buf, size_t bufsz, size_t *len) {
         if (!buf)
             return NULL;
         bufsz = *len;
-    }
+    } else if (*len > bufsz)
+        return NULL;
 
     fread(buf, 1, MIN(*len, bufsz), fp);
     fclose(fp);

@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
             return 0;
 
         case 'e':
-            set_env(optarg);
+            cmd_set_env(optarg);
             return 0;
 
         case 'd':

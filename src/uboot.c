@@ -117,7 +117,7 @@ const char *uboot_getenv(const char *name) {
 
 static void uboot_setenv(int mtd, uint32_t offset, const char *env,
                          const char *key, const char *newvalue,
-                         uint32_t erasesize) {
+                         uint32_t erasesize, bool to_flash) {
     const char *towrite;
     uint32_t res_crc = 0;
 
@@ -168,7 +168,8 @@ rewrite:
     crc32(towrite + CRC_SZ, ENV_LEN - CRC_SZ, &res_crc);
     *(uint32_t *)towrite = res_crc;
 
-    mtd_write(mtd, offset, erasesize, towrite, ENV_LEN);
+    if (to_flash)
+        mtd_write(mtd, offset, erasesize, towrite, ENV_LEN);
     if (uenv != towrite)
         memcpy(uenv, towrite, ENV_LEN);
 
@@ -184,6 +185,7 @@ typedef struct {
     int op;
     const char *key;
     const char *value;
+    bool to_flash;
 } ctx_uboot_t;
 
 static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
@@ -203,7 +205,7 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
                 break;
             case OP_SETENV:
                 uboot_setenv(i, u_off, addr + u_off, c->key, c->value,
-                             mtd->erasesize);
+                             mtd->erasesize, c->to_flash);
                 break;
             }
             close(fd);
@@ -221,17 +223,21 @@ void printenv() {
     enum_mtd_info(&ctx, cb_uboot_env);
 }
 
-void set_env(const char *arg) {
+void set_env_param(const char *key, const char *value, bool to_flash) {
+    ctx_uboot_t ctx;
+    ctx.op = OP_SETENV;
+    ctx.key = key;
+    ctx.value = value;
+    ctx.to_flash = to_flash;
+    enum_mtd_info(&ctx, cb_uboot_env);
+}
+
+void cmd_set_env(char *arg) {
     char *delim = strchr(arg, '=');
     if (!delim || delim == arg) {
         printf("Usage: setenv key=name\n");
         exit(2);
     }
     *delim = 0;
-
-    ctx_uboot_t ctx;
-    ctx.op = OP_SETENV;
-    ctx.key = arg;
-    ctx.value = delim + 1;
-    enum_mtd_info(&ctx, cb_uboot_env);
+    set_env_param(arg, delim + 1, true);
 }

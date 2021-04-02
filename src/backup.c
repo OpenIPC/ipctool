@@ -244,27 +244,35 @@ static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
+static void umount_fs(const char *path) {
+    if (umount(path) != 0)
+        fprintf(stderr, "Cannot umount '%s'\n", path);
+    else
+        printf("Unmounting %s\n", path);
+}
+
 static bool umount_all() {
+    sync();
+
     FILE *fp = fopen("/proc/mounts", "r");
     if (!fp)
         return false;
 
     char mount[80];
     while (fgets(mount, sizeof mount, fp)) {
-        char path[80], fs[80], attrs[80];
+        char dev[80], path[80], fs[80], attrs[80];
         int n;
 
-        if (sscanf(mount, "/dev/mtdblock%d %s %s %s", &n, path, fs, attrs)) {
-            if (strstr(attrs, "rw")) {
-                if (umount(path) != 0)
-                    fprintf(stderr, "Cannot umount '%s'\n", path);
-                else
-                    printf("Unmounting %s\n", path);
-            }
+        if (sscanf(mount, "%s %s %s %s", dev, path, fs, attrs)) {
+            if (!strncmp(dev, "/dev/mtdblock", 13) && strstr(attrs, "rw"))
+                umount_fs(path);
+            else if (!strcmp(fs, "squashfs"))
+                umount_fs(path);
         }
     }
 
     fclose(fp);
+    sync();
     return true;
 }
 
@@ -485,6 +493,13 @@ int restore_backup(bool skip_env, bool force) {
     return 0;
 }
 
+static u_int32_t ceil_up(u_int32_t n, u_int32_t offset) {
+    u_int32_t d = n - n % offset;
+    if (n % offset)
+        d += offset;
+    return d;
+}
+
 int do_upgrade(bool force) {
     if (!free_resources(force))
         return 1;
@@ -496,8 +511,11 @@ int do_upgrade(bool force) {
     stored_mtd_t mtdbackup[MAX_MTDBLOCKS];
     memset(&mtdbackup, 0, sizeof(mtdbackup));
 
+    // offset from U-Boot
+    uint32_t goff = 0x50000;
+
     size_t len;
-    mtdbackup[0].size = 0x400000;
+    mtdbackup[0].size = ceil_up(0x400000, mtd.erasesize);
     mtdbackup[0].data = malloc(mtdbackup[0].size);
     assert(mtdbackup[0].data);
     memset(mtdbackup[0].data, 0xff, mtdbackup[0].size);
@@ -512,7 +530,7 @@ int do_upgrade(bool force) {
     uint32_t sha1 = ntohl(*(uint32_t *)&digest);
     printf("SHA1: %.8x\n", sha1);
 
-    mtdbackup[1].size = 0x500000;
+    mtdbackup[1].size = ceil_up(0x500000, mtd.erasesize);
     mtdbackup[1].data = malloc(mtdbackup[1].size);
     assert(mtdbackup[1].data);
     memset(mtdbackup[1].data, 0xff, mtdbackup[1].size);
@@ -527,25 +545,25 @@ int do_upgrade(bool force) {
 
     uint32_t ram_start = 0x42000000;
 
-    char cmd[1024];
+    char value[1024];
 
-    snprintf(cmd, sizeof(cmd),
-             "bootcmd=setenv setargs setenv bootargs ${bootargs}; run setargs; "
+    snprintf(value, sizeof(value),
+             "setenv setargs setenv bootargs ${bootargs}; run setargs; "
              "sf probe 0; sf read 0x%x 0x%x 0x%x; "
              "bootm 0x%x",
              // kernel params
              ram_start, mtdbackup[0].off_flashb, mtdbackup[0].size, ram_start);
-    puts(cmd);
-    set_env(cmd);
+    puts(value);
+    set_env_param("bootcmd", value, false);
 
-    snprintf(cmd, sizeof(cmd),
-             "bootargs=mem=${osmem} ethaddr=${ethaddr} "
+    snprintf(value, sizeof(value),
+             "mem=${osmem} ethaddr=${ethaddr} "
              "sensor=${sensor:-auto} console=ttyAMA0,115200 panic=20 "
              "root=/dev/mtdblock4 rootfstype=squashfs "
              "mtdparts=hi_sfc:192k(boot),64k(env),64k(gap),4096k(kernel),"
              "5120k(rootfs),-(rootfs_data)");
-    puts(cmd);
-    set_env(cmd);
+    puts(value);
+    set_env_param("bootargs", value, true /* need to write as last */);
     reboot_with_msg();
 
     return 0;

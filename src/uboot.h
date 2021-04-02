@@ -10,6 +10,7 @@ const char *uboot_getenv(const char *name);
 void uboot_freeenv();
 void uboot_copyenv(const void *buf);
 void printenv();
-void set_env(const char *option);
+void cmd_set_env(char *option);
+void set_env_param(const char *key, const char *value, bool to_flash);
 
 #endif /* UBOOT_H */
