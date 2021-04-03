@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include "backup.h"
+#include "cjson/cJSON.h"
 #include "dns.h"
 #include "http.h"
 #include "mtd.h"
@@ -504,6 +505,23 @@ static void add_mtdpart(char *dst, const char *name, uint32_t size) {
              size / 1024, name);
 }
 
+#define ASSERT_JSON(obj)                                                       \
+    if (!obj) {                                                                \
+        const char *error_ptr = cJSON_GetErrorPtr();                           \
+        if (error_ptr) {                                                       \
+            fprintf(stderr, "Error before: %s\n", error_ptr);                  \
+        }                                                                      \
+        ret = 1;                                                               \
+        goto bailout;                                                          \
+    }
+
+#define JSON_CHECK(obj, type)                                                  \
+    if (!obj || !cJSON_Is##type(obj)) {                                        \
+        fprintf(stderr, "Error parsing json\n");                               \
+        ret = 2;                                                               \
+        goto bailout;                                                          \
+    }
+
 int do_upgrade(bool force) {
     if (!free_resources(force))
         return 1;
@@ -514,35 +532,70 @@ int do_upgrade(bool force) {
 
     stored_mtd_t mtdbackup[MAX_MTDBLOCKS];
     memset(&mtdbackup, 0, sizeof(mtdbackup));
-    char mtdparts[MAX_MTDPARTS];
-    const char *mtdparts_pr = "mtdparts=hi_sfc:192k(boot),64k(env),";
-    strcpy(mtdparts, mtdparts_pr);
+    char mtdparts[MAX_MTDPARTS] = {0};
+
+    int ret = 0;
+    size_t len;
+    char *jsond = file_to_buf("/utils/update.json", &len);
+    assert(jsond);
+
+    cJSON *json = cJSON_ParseWithLength(jsond, len);
+    ASSERT_JSON(json);
+    const cJSON *mtdparts_pr =
+        cJSON_GetObjectItemCaseSensitive(json, "mtdPrefix");
+    if (mtdparts_pr && cJSON_IsString(mtdparts_pr))
+        strcpy(mtdparts, mtdparts_pr->valuestring);
 
     // offset from U-Boot
     uint32_t goff = 0x40000;
-    uint32_t psize = 0;
+    uint32_t payload;
 
-    // psize = 0x400000;
-    mtdbackup[0].off_flashb = goff;
-    mtdbackup[0].data = fread_to_buf("/utils/uImage.wrt", &mtdbackup[0].size,
-                                     psize ? psize : mtd.erasesize);
-    strcpy(mtdbackup[0].name, "kernel");
-    add_mtdpart(mtdparts, mtdbackup[0].name, mtdbackup[0].size);
-    printf("%p, size: %d bytes\n", mtdbackup[0].data, mtdbackup[0].size);
-    goff += mtdbackup[0].size;
+    const cJSON *parts = cJSON_GetObjectItemCaseSensitive(json, "partitions");
+    ASSERT_JSON(parts);
+    const cJSON *part;
+    int i = 0;
+    cJSON_ArrayForEach(part, parts) {
+        cJSON *jname = cJSON_GetObjectItemCaseSensitive(part, "name");
+        JSON_CHECK(jname, String);
+        strcpy(mtdbackup[i].name, jname->valuestring);
 
-    char digest[21] = {0};
-    SHA1(digest, mtdbackup[0].data, mtdbackup[0].size);
-    uint32_t sha1 = ntohl(*(uint32_t *)&digest);
-    printf("SHA1: %.8x\n", sha1);
+        uint32_t psize = 0;
+        cJSON *jpsize = cJSON_GetObjectItemCaseSensitive(part, "partitionSize");
+        if (jpsize) {
+            if (cJSON_IsNumber(jpsize))
+                psize = jpsize->valueint;
+            else if (cJSON_IsString(jpsize))
+                psize = strtol(jpsize->valuestring, 0, 16);
+        }
 
-    // psize = 0x500000;
-    mtdbackup[1].off_flashb = goff;
-    mtdbackup[1].data = fread_to_buf("/utils/root.wrt", &mtdbackup[1].size,
-                                     psize ? psize : mtd.erasesize);
-    strcpy(mtdbackup[1].name, "rootfs");
-    add_mtdpart(mtdparts, mtdbackup[1].name, mtdbackup[1].size);
-    printf("%p, size: %d bytes\n", mtdbackup[1].data, mtdbackup[1].size);
+        mtdbackup[i].off_flashb = goff;
+        cJSON *jfile = cJSON_GetObjectItemCaseSensitive(part, "file");
+        JSON_CHECK(jfile, String);
+        mtdbackup[i].data =
+            fread_to_buf(jfile->valuestring, &mtdbackup[i].size,
+                         psize ? psize : mtd.erasesize, &payload);
+        assert(mtdbackup[i].data);
+        if (psize && psize < mtdbackup[i].size) {
+            fprintf(stderr,
+                    "image 0x%x doesn't fit to 0x%x partition, aborting...\n",
+                    mtdbackup[i].size, psize);
+            ret = 1;
+            goto bailout;
+        }
+        add_mtdpart(mtdparts, mtdbackup[i].name, mtdbackup[i].size);
+        printf("%p, size: %d bytes\n", mtdbackup[i].data, mtdbackup[i].size);
+        goff += mtdbackup[i].size;
+
+        cJSON *jsha1 = cJSON_GetObjectItemCaseSensitive(part, "sha1");
+        if (jsha1 && cJSON_IsString(jsha1)) {
+            char digest[21] = {0};
+            SHA1(digest, mtdbackup[i].data, payload);
+            uint32_t sha1 = ntohl(*(uint32_t *)&digest);
+            printf("SHA1: %.8x, size: %d\n", sha1, payload);
+        }
+
+        i++;
+    }
 
     snprintf(mtdparts + strlen(mtdparts), MAX_MTDPARTS - strlen(mtdparts),
              ",-(rootfs_data)");
@@ -568,11 +621,15 @@ int do_upgrade(bool force) {
              "mem=${osmem} ethaddr=${ethaddr} "
              "sensor=${sensor:-auto} console=ttyAMA0,115200 panic=20 "
              "root=/dev/mtdblock3 rootfstype=squashfs "
-             "%s",
+             "mtdparts=%s",
              mtdparts);
     puts(value);
     set_env_param("bootargs", value, true /* need to write as last */);
     reboot_with_msg();
 
-    return 0;
+    // only makes sense for memleak detection
+bailout:
+    cJSON_Delete(json);
+
+    return ret;
 }

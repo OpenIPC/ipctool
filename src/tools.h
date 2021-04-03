@@ -37,7 +37,8 @@ bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
 void dmesg();
 uint32_t read_le32(const char *ptr);
 char *file_to_buf(const char *filename, size_t *len);
-char *fread_to_buf(const char *filename, size_t *len, uint32_t round_up);
+char *fread_to_buf(const char *filename, size_t *len, uint32_t round_up,
+                   size_t *payloadsz);
 
 // avoid warnings for old compilers
 #if __GNUC__ < 7

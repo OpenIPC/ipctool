@@ -89,12 +89,18 @@ static const char *get_hisi_chip_id(uint32_t reg) {
     case 0x3518E200:
         chip_generation = HISI_V2;
         return "3518EV200";
+    case 0x3536D100:
+        chip_generation = HISI_V2;
+        return "3536DV100";
     case 0x3520D100:
         return "3520DV200";
     case 0x35210100:
         return "3521V100";
     case 0x3559A100:
         return "3559AV100";
+    case 0xbda9d100:
+        chip_generation = HISI_V3;
+        return "3536CV100";
     default:
         fprintf(stderr, "get_chip_id() got unexpected 0x%x\n", reg);
         return "unknown";
@@ -133,7 +139,7 @@ bool detect_system() {
     case 0x12040000:
         SC_CTRL_base = 0x12020000;
         break;
-    // hi3536
+    // hi3536c
     case 0x12080000:
         SC_CTRL_base = 0x12050000;
         break;

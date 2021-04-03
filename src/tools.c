@@ -174,7 +174,8 @@ static u_int32_t ceil_up(u_int32_t n, u_int32_t offset) {
     return d;
 }
 
-char *fread_to_buf(const char *filename, size_t *bs, uint32_t round_up) {
+char *fread_to_buf(const char *filename, size_t *bs, uint32_t round_up,
+                   size_t *payloadsz) {
     FILE *fp = fopen(filename, "rb");
     if (!fp)
         return NULL;
@@ -183,12 +184,9 @@ char *fread_to_buf(const char *filename, size_t *bs, uint32_t round_up) {
     size_t len = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    if (!*bs)
-        *bs = len;
+    *bs = len;
     if (round_up) {
-        printf("len: %d\n", *bs);
         *bs = ceil_up(*bs, round_up);
-        printf("round_up: %d\n", *bs);
     }
 
     char *buf = malloc(*bs);
@@ -196,14 +194,15 @@ char *fread_to_buf(const char *filename, size_t *bs, uint32_t round_up) {
         return NULL;
 
     len = fread(buf, 1, len, fp);
-    printf("read = %d\n", len);
     memset(buf + len, 0xff, *bs - len);
-    printf("memset(%d, %d, %d)\n", len, 0xff, *bs - len);
     fclose(fp);
+
+    if (payloadsz)
+        *payloadsz = len;
 
     return buf;
 }
 
 char *file_to_buf(const char *filename, size_t *len) {
-    return fread_to_buf(filename, len, 0);
+    return fread_to_buf(filename, len, 0, NULL);
 }
