@@ -89,10 +89,12 @@ static const char *get_hisi_chip_id(uint32_t reg) {
     case 0x3518E200:
         chip_generation = HISI_V2;
         return "3518EV200";
-    case 0x3559A100:
-        return "3559AV100";
+    case 0x3520D100:
+        return "3520DV200";
     case 0x35210100:
         return "3521V100";
+    case 0x3559A100:
+        return "3559AV100";
     default:
         fprintf(stderr, "get_chip_id() got unexpected 0x%x\n", reg);
         return "unknown";
@@ -160,7 +162,7 @@ bool detect_system() {
              SC_CTRL_base        // Offset to base address
         );
     if (sc_ctrl_map == MAP_FAILED) {
-        printf("sc_ctrl_map mmap error %p\n", (int*)sc_ctrl_map);
+        printf("sc_ctrl_map mmap error %p\n", (int *)sc_ctrl_map);
         printf("Error: %s (%d)\n", strerror(errno), errno);
         close(mem_fd);
         return false;

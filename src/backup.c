@@ -515,15 +515,17 @@ int do_upgrade(bool force) {
     stored_mtd_t mtdbackup[MAX_MTDBLOCKS];
     memset(&mtdbackup, 0, sizeof(mtdbackup));
     char mtdparts[MAX_MTDPARTS];
-    const char *mtdparts_pr = "mtdparts=hi_sfc:192k(boot),64k(env),64k(gap),";
+    const char *mtdparts_pr = "mtdparts=hi_sfc:192k(boot),64k(env),";
     strcpy(mtdparts, mtdparts_pr);
 
     // offset from U-Boot
-    uint32_t goff = 0x50000;
+    uint32_t goff = 0x40000;
+    uint32_t psize = 0;
 
+    // psize = 0x400000;
     mtdbackup[0].off_flashb = goff;
-    mtdbackup[0].data =
-        fread_to_buf("/utils/uImage.wrt", &mtdbackup[0].size, mtd.erasesize);
+    mtdbackup[0].data = fread_to_buf("/utils/uImage.wrt", &mtdbackup[0].size,
+                                     psize ? psize : mtd.erasesize);
     strcpy(mtdbackup[0].name, "kernel");
     add_mtdpart(mtdparts, mtdbackup[0].name, mtdbackup[0].size);
     printf("%p, size: %d bytes\n", mtdbackup[0].data, mtdbackup[0].size);
@@ -534,9 +536,10 @@ int do_upgrade(bool force) {
     uint32_t sha1 = ntohl(*(uint32_t *)&digest);
     printf("SHA1: %.8x\n", sha1);
 
+    // psize = 0x500000;
     mtdbackup[1].off_flashb = goff;
-    mtdbackup[1].data =
-        fread_to_buf("/utils/root.wrt", &mtdbackup[1].size, mtd.erasesize);
+    mtdbackup[1].data = fread_to_buf("/utils/root.wrt", &mtdbackup[1].size,
+                                     psize ? psize : mtd.erasesize);
     strcpy(mtdbackup[1].name, "rootfs");
     add_mtdpart(mtdparts, mtdbackup[1].name, mtdbackup[1].size);
     printf("%p, size: %d bytes\n", mtdbackup[1].data, mtdbackup[1].size);
@@ -564,7 +567,7 @@ int do_upgrade(bool force) {
     snprintf(value, sizeof(value),
              "mem=${osmem} ethaddr=${ethaddr} "
              "sensor=${sensor:-auto} console=ttyAMA0,115200 panic=20 "
-             "root=/dev/mtdblock4 rootfstype=squashfs "
+             "root=/dev/mtdblock3 rootfstype=squashfs "
              "%s",
              mtdparts);
     puts(value);
