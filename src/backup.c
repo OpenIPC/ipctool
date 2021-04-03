@@ -530,8 +530,8 @@ int do_upgrade(bool force) {
     memset(&mtd, 0, sizeof(mtd));
     enum_mtd_info(&mtd, cb_mtd_restore);
 
-    stored_mtd_t mtdbackup[MAX_MTDBLOCKS];
-    memset(&mtdbackup, 0, sizeof(mtdbackup));
+    stored_mtd_t mtdwrite[MAX_MTDBLOCKS];
+    memset(&mtdwrite, 0, sizeof(mtdwrite));
     char mtdparts[MAX_MTDPARTS] = {0};
 
     int ret = 0;
@@ -557,7 +557,7 @@ int do_upgrade(bool force) {
     cJSON_ArrayForEach(part, parts) {
         cJSON *jname = cJSON_GetObjectItemCaseSensitive(part, "name");
         JSON_CHECK(jname, String);
-        strcpy(mtdbackup[i].name, jname->valuestring);
+        strcpy(mtdwrite[i].name, jname->valuestring);
 
         uint32_t psize = 0;
         cJSON *jpsize = cJSON_GetObjectItemCaseSensitive(part, "partitionSize");
@@ -568,40 +568,47 @@ int do_upgrade(bool force) {
                 psize = strtol(jpsize->valuestring, 0, 16);
         }
 
-        mtdbackup[i].off_flashb = goff;
+        mtdwrite[i].off_flashb = goff;
         cJSON *jfile = cJSON_GetObjectItemCaseSensitive(part, "file");
         JSON_CHECK(jfile, String);
-        mtdbackup[i].data =
-            fread_to_buf(jfile->valuestring, &mtdbackup[i].size,
+        mtdwrite[i].data =
+            fread_to_buf(jfile->valuestring, &mtdwrite[i].size,
                          psize ? psize : mtd.erasesize, &payload);
-        assert(mtdbackup[i].data);
-        if (psize && psize < mtdbackup[i].size) {
+        assert(mtdwrite[i].data);
+        if (psize && psize < mtdwrite[i].size) {
             fprintf(stderr,
                     "image 0x%x doesn't fit to 0x%x partition, aborting...\n",
-                    mtdbackup[i].size, psize);
+                    mtdwrite[i].size, psize);
             ret = 1;
             goto bailout;
         }
-        add_mtdpart(mtdparts, mtdbackup[i].name, mtdbackup[i].size);
-        printf("%p, size: %d bytes\n", mtdbackup[i].data, mtdbackup[i].size);
-        goff += mtdbackup[i].size;
+        add_mtdpart(mtdparts, mtdwrite[i].name, mtdwrite[i].size);
+        printf("%p, size: %d bytes\n", mtdwrite[i].data, mtdwrite[i].size);
+        goff += mtdwrite[i].size;
 
         cJSON *jsha1 = cJSON_GetObjectItemCaseSensitive(part, "sha1");
         if (jsha1 && cJSON_IsString(jsha1)) {
             char digest[21] = {0};
-            SHA1(digest, mtdbackup[i].data, payload);
+            SHA1(digest, mtdwrite[i].data, payload);
             uint32_t sha1 = ntohl(*(uint32_t *)&digest);
-            printf("SHA1: %.8x, size: %d\n", sha1, payload);
+            snprintf(digest, sizeof(digest), "%.8x", sha1);
+            if (strcmp(digest, jsha1->valuestring)) {
+                fprintf(stderr, "SHA1 digest differs for '%s', aborting...\n",
+                        mtdwrite[i].name);
+                ret = 3;
+                goto bailout;
+            }
         }
-
         i++;
     }
 
     snprintf(mtdparts + strlen(mtdparts), MAX_MTDPARTS - strlen(mtdparts),
              ",-(rootfs_data)");
 
-    if (!do_flash("Upgrading", mtdbackup, &mtd)) {
+    if (!do_flash("Upgrading", mtdwrite, &mtd)) {
         printf("BAD\n");
+        ret = 4;
+        goto bailout;
     }
 
     uint32_t ram_start = 0x42000000;
@@ -613,8 +620,7 @@ int do_upgrade(bool force) {
              "sf probe 0; sf read 0x%x 0x%x 0x%x; "
              "bootm 0x%x",
              // kernel params
-             ram_start, mtdbackup[0].off_flashb, mtdbackup[0].size, ram_start);
-    puts(value);
+             ram_start, mtdwrite[0].off_flashb, mtdwrite[0].size, ram_start);
     set_env_param("bootcmd", value, false);
 
     snprintf(value, sizeof(value),
@@ -623,7 +629,6 @@ int do_upgrade(bool force) {
              "root=/dev/mtdblock3 rootfstype=squashfs "
              "mtdparts=%s",
              mtdparts);
-    puts(value);
     set_env_param("bootargs", value, true /* need to write as last */);
     reboot_with_msg();
 
