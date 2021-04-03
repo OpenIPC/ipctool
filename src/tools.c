@@ -167,30 +167,43 @@ uint32_t read_le32(const char *ptr) {
     return *ptr | *(ptr + 1) << 8 | *(ptr + 2) << 16 | *(ptr + 3) << 24;
 }
 
-char *fread_to_buf(const char *filename, char *buf, size_t bufsz, size_t *len) {
-    printf("fread_to_buf('%s', %p, %d, %p)\n", filename, buf, bufsz, len);
+static u_int32_t ceil_up(u_int32_t n, u_int32_t offset) {
+    u_int32_t d = n - n % offset;
+    if (n % offset)
+        d += offset;
+    return d;
+}
+
+char *fread_to_buf(const char *filename, size_t *bs, uint32_t round_up) {
     FILE *fp = fopen(filename, "rb");
     if (!fp)
         return NULL;
 
     fseek(fp, 0, SEEK_END);
-    *len = ftell(fp);
+    size_t len = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    if (!buf) {
-        buf = malloc(*len);
-        if (!buf)
-            return NULL;
-        bufsz = *len;
-    } else if (*len > bufsz)
+    if (!*bs)
+        *bs = len;
+    if (round_up) {
+        printf("len: %d\n", *bs);
+        *bs = ceil_up(*bs, round_up);
+        printf("round_up: %d\n", *bs);
+    }
+
+    char *buf = malloc(*bs);
+    if (!buf)
         return NULL;
 
-    fread(buf, 1, MIN(*len, bufsz), fp);
+    len = fread(buf, 1, len, fp);
+    printf("read = %d\n", len);
+    memset(buf + len, 0xff, *bs - len);
+    printf("memset(%d, %d, %d)\n", len, 0xff, *bs - len);
     fclose(fp);
 
     return buf;
 }
 
 char *file_to_buf(const char *filename, size_t *len) {
-    return fread_to_buf(filename, NULL, 0, len);
+    return fread_to_buf(filename, len, 0);
 }

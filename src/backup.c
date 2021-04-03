@@ -493,13 +493,6 @@ int restore_backup(bool skip_env, bool force) {
     return 0;
 }
 
-static u_int32_t ceil_up(u_int32_t n, u_int32_t offset) {
-    u_int32_t d = n - n % offset;
-    if (n % offset)
-        d += offset;
-    return d;
-}
-
 #define MAX_MTDPARTS 1024
 static void add_mtdpart(char *dst, const char *name, uint32_t size) {
     size_t len = strlen(dst);
@@ -528,29 +521,22 @@ int do_upgrade(bool force) {
     // offset from U-Boot
     uint32_t goff = 0x50000;
 
-    size_t len;
-    mtdbackup[0].off_flashb = 0x50000;
-    mtdbackup[0].size = ceil_up(0x400000, mtd.erasesize);
-    mtdbackup[0].data = malloc(mtdbackup[0].size);
-    assert(mtdbackup[0].data);
-    memset(mtdbackup[0].data, 0xff, mtdbackup[0].size);
-    fread_to_buf("/utils/uImage.wrt", mtdbackup[0].data, mtdbackup[0].size,
-                 &len);
+    mtdbackup[0].off_flashb = goff;
+    mtdbackup[0].data =
+        fread_to_buf("/utils/uImage.wrt", &mtdbackup[0].size, mtd.erasesize);
     strcpy(mtdbackup[0].name, "kernel");
     add_mtdpart(mtdparts, mtdbackup[0].name, mtdbackup[0].size);
     printf("%p, size: %d bytes\n", mtdbackup[0].data, mtdbackup[0].size);
+    goff += mtdbackup[0].size;
 
     char digest[21] = {0};
     SHA1(digest, mtdbackup[0].data, mtdbackup[0].size);
     uint32_t sha1 = ntohl(*(uint32_t *)&digest);
     printf("SHA1: %.8x\n", sha1);
 
-    mtdbackup[1].off_flashb = 0x450000;
-    mtdbackup[1].size = ceil_up(0x500000, mtd.erasesize);
-    mtdbackup[1].data = malloc(mtdbackup[1].size);
-    assert(mtdbackup[1].data);
-    memset(mtdbackup[1].data, 0xff, mtdbackup[1].size);
-    fread_to_buf("/utils/root.wrt", mtdbackup[1].data, mtdbackup[1].size, &len);
+    mtdbackup[1].off_flashb = goff;
+    mtdbackup[1].data =
+        fread_to_buf("/utils/root.wrt", &mtdbackup[1].size, mtd.erasesize);
     strcpy(mtdbackup[1].name, "rootfs");
     add_mtdpart(mtdparts, mtdbackup[1].name, mtdbackup[1].size);
     printf("%p, size: %d bytes\n", mtdbackup[1].data, mtdbackup[1].size);
