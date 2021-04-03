@@ -167,8 +167,8 @@ uint32_t read_le32(const char *ptr) {
     return *ptr | *(ptr + 1) << 8 | *(ptr + 2) << 16 | *(ptr + 3) << 24;
 }
 
-static u_int32_t ceil_up(u_int32_t n, u_int32_t offset) {
-    u_int32_t d = n - n % offset;
+static uint32_t ceil_up(uint32_t n, uint32_t offset) {
+    uint32_t d = n - n % offset;
     if (n % offset)
         d += offset;
     return d;
