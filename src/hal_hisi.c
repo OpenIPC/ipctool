@@ -1115,7 +1115,7 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
     return 0;
 }
 
-int hisi_get_temp() {
+float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
     case HISI_V2:
@@ -1131,11 +1131,10 @@ int hisi_get_temp() {
         tempo = ((tempo - 117) / 798) * 165 - 40;
         break;
     default:
-        return EXIT_FAILURE;
+        return NAN;
     }
-    printf("%.2f\n", tempo);
 
-    return EXIT_SUCCESS;
+    return tempo;
 }
 
 // muxctrl_reg23 is a multiplexing control register for the MII_TXCK pin.

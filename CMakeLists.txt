@@ -26,7 +26,17 @@ include_directories(
     ./src/
 )
 
+set(HW_SRC
+    src/hal_common.c
+    src/hal_common.h
+    src/hal_hisi.c
+    src/hal_hisi.h
+    src/hal_xm.c
+    src/hal_xm.h
+    )
+
 add_executable(ipctool
+    ${HW_SRC}
     src/backup.c
     src/backup.h
     src/chipid.c
@@ -38,12 +48,6 @@ add_executable(ipctool
     src/fake_symbols.c
     src/firmware.c
     src/firmware.h
-    src/hal_common.c
-    src/hal_common.h
-    src/hal_hisi.c
-    src/hal_hisi.h
-    src/hal_xm.c
-    src/hal_xm.h
     src/http.c
     src/http.h
     src/main.c
@@ -79,3 +83,10 @@ add_executable(ipctool
 
 target_link_libraries(ipctool dl m)
 install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
+
+add_library(ipchw
+    ${HW_SRC}
+    src/sensors.c
+    )
+
+add_executable(ipcinfo example/ipcinfo.c)

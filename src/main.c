@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <getopt.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -216,23 +217,32 @@ int main(int argc, char *argv[]) {
             Help();
             return 0;
 
-        case 'c':
-            if (!get_system_id())
+        case 'c': {
+            const char *chipid = getchipid();
+            if (!chipid)
                 return EXIT_FAILURE;
-            lprintf("%s%s\n", short_manufacturer, chip_id);
-            return 0;
-
-        case 's': {
-            sensor_ctx_t ctx;
-            if (!get_sensor_id(&ctx))
-                return EXIT_FAILURE;
-            lprintf("%s_%s\n", ctx.sensor_id, ctx.control);
-            return 0;
+            puts(chipid);
+            return EXIT_SUCCESS;
         }
 
-        case 't':
-            get_system_id();
-            return hisi_get_temp();
+        case 's': {
+            const char *sensor = getsensoridentity();
+            if (!sensor)
+                return EXIT_FAILURE;
+            puts(sensor);
+            return EXIT_SUCCESS;
+        }
+
+        case 't': {
+            getchipid();
+            float temp = hisi_get_temp();
+            if (isnan(temp)) {
+                fprintf(stderr, "Temperature cannot be retrieved\n");
+                return EXIT_FAILURE;
+            }
+            printf("%.2f\n", temp);
+            return EXIT_SUCCESS;
+        }
 
         case 'p':
             printenv();
@@ -277,7 +287,7 @@ int main(int argc, char *argv[]) {
         return EXIT_SUCCESS;
 
     generic_system_data();
-    if (get_system_id()) {
+    if (getchipid()) {
         yaml_printf("---\n");
         if (get_board_id()) {
             print_board_id();

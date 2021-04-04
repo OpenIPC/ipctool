@@ -21,8 +21,6 @@ extern char sensor_manufacturer[128];
 extern char mpp_info[1024];
 extern char nor_chip[128];
 
-bool get_system_id();
-int get_isp_version();
-int get_mpp_info();
+const char *getchipid();
 
 #endif /* CHIPID_H */

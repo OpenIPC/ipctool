@@ -12,7 +12,7 @@ typedef struct {
     cJSON *j_params;
 } sensor_ctx_t;
 
-bool get_sensor_id(sensor_ctx_t *ctx);
+const char *getsensoridentity();
 cJSON *detect_sensors();
 
 #endif /* SENSORID_H */

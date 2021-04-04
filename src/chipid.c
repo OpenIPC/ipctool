@@ -30,7 +30,7 @@ char short_manufacturer[128];
 char mpp_info[1024];
 char nor_chip[128];
 
-long get_uart0_address() {
+static long get_uart0_address() {
     char buf[256];
 
     bool res = get_regex_line_from_file(
@@ -107,7 +107,7 @@ static const char *get_hisi_chip_id(uint32_t reg) {
     }
 }
 
-bool detect_xm510() {
+static bool detect_xm510() {
     char buf[256];
 
     bool res = get_regex_line_from_file("/proc/cpuinfo", "^Hardware.+(xm.+)",
@@ -125,7 +125,7 @@ bool detect_xm510() {
     return true;
 }
 
-bool detect_system() {
+static bool hw_detect_system() {
     uint32_t SC_CTRL_base;
 
     long uart_base = get_uart0_address();
@@ -225,10 +225,16 @@ bool detect_system() {
     return true;
 }
 
-bool get_system_id() {
-    if (!detect_system()) {
-        return false;
+static char sysid[255];
+const char *getchipid() {
+    // if system wasn't detected previously
+    if (*sysid)
+        return sysid;
+
+    if (!hw_detect_system()) {
+        return NULL;
     };
     setup_hal_drivers();
-    return true;
+    lsnprintf(sysid, sizeof(sysid), "%s%s", short_manufacturer, chip_id);
+    return sysid;
 }

@@ -87,12 +87,10 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
     return true;
 }
 
-void lprintf(char *fmt, ...) {
-    char buf[BUFSIZ];
-
+void lsnprintf(char *buf, size_t n, char *fmt, ...) {
     va_list argptr;
     va_start(argptr, fmt);
-    vsnprintf(buf, sizeof buf, fmt, argptr);
+    vsnprintf(buf, n, fmt, argptr);
     va_end(argptr);
 
     char *ptr = buf;
@@ -100,7 +98,6 @@ void lprintf(char *fmt, ...) {
         *ptr = tolower(*ptr);
         ptr++;
     }
-    printf("%s", buf);
 }
 
 #define SYSLOG_ACTION_READ_ALL 3
