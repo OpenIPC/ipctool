@@ -231,9 +231,8 @@ const char *getchipid() {
     if (*sysid)
         return sysid;
 
-    if (!hw_detect_system()) {
+    if (!hw_detect_system())
         return NULL;
-    };
     setup_hal_drivers();
     lsnprintf(sysid, sizeof(sysid), "%s%s", short_manufacturer, chip_id);
     return sysid;

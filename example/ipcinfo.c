@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
         case 'h':
             Help();
             return 0;
-#if 0
+
         case 'c': {
             const char *chipid = getchipid();
             if (!chipid)
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
         }
 
         case 't': {
-            float temp = hwgettemp();
+            float temp = gethwtemp();
             if (isnan(temp)) {
                 fprintf(stderr, "Temperature cannot be retrieved\n");
                 return EXIT_FAILURE;
@@ -79,7 +79,9 @@ int main(int argc, char **argv) {
             printf("%.2f\n", temp);
             return EXIT_SUCCESS;
         }
-#endif
         }
     }
+
+    Help();
+    return 0;
 }

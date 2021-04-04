@@ -26,23 +26,31 @@ include_directories(
     ./src/
 )
 
-set(HW_SRC
+set(COMMON_LIB_SRC
     src/hal_common.c
     src/hal_common.h
     src/hal_hisi.c
     src/hal_hisi.h
     src/hal_xm.c
     src/hal_xm.h
+
+    src/chipid.c
+    src/chipid.h
     src/hwinfo.c
     src/hwinfo.h
+    src/ram.c
+    src/ram.h
+    src/sensors.c
+    src/sensors.h
+    src/tools.c
+    src/tools.h
+    src/version.h
     )
 
 add_executable(ipctool
-    ${HW_SRC}
+    ${COMMON_LIB_SRC}
     src/backup.c
     src/backup.h
-    src/chipid.c
-    src/chipid.h
     src/dns.c
     src/dns.h
     src/ethernet.c
@@ -57,18 +65,11 @@ add_executable(ipctool
     src/mtd.h
     src/network.c
     src/network.h
-    src/ram.c
-    src/ram.h
-    src/sensors.c
-    src/sensors.h
     src/sha1.c
     src/sha1.h
     src/stack.c
-    src/tools.c
-    src/tools.h
     src/uboot.c
     src/uboot.h
-    src/version.h
 
     src/cjson/cJSON.c
     src/cjson/cJSON.h
@@ -87,13 +88,14 @@ target_link_libraries(ipctool m)
 install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
 
 add_library(ipchw
-    ${HW_SRC}
-    src/sensors.c
+    ${COMMON_LIB_SRC}
     )
+target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY)
+target_link_libraries(ipchw m)
 
 add_executable(ipcinfo
     example/ipcinfo.c
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
     )
 target_include_directories(ipcinfo PUBLIC include)
-target_link_libraries(ipcinfo m ipchw)
+target_link_libraries(ipcinfo ipchw)

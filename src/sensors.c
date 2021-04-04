@@ -21,6 +21,8 @@
 
 #define READ(addr) sensor_read_register(fd, i2c_addr, base + addr, 2, 1)
 
+#ifndef STANDALONE_LIBRARY
+
 static int sony_imx291_fps(u_int8_t frsel, u_int16_t hmax) {
     switch (frsel) {
     case 2:
@@ -75,6 +77,8 @@ static void sony_imx291_params(sensor_ctx_t *ctx, int fd,
     ctx->j_params = j_inner;
 }
 
+#endif
+
 static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
                               unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
@@ -116,7 +120,9 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
             break;
         default:
             sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
+#ifndef STANDALONE_LIBRARY
             sony_imx291_params(ctx, fd, i2c_addr, base);
+#endif
             return true;
         }
         return true;
@@ -336,26 +342,24 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
     if (fd == -1)
         return false;
 
-    cJSON *j_inner = ctx->j_sensor;
-
     if (detect_possible_sensors(ctx, fd, detect_soi_sensor, SENSOR_SOI, 0)) {
-        ADD_PARAM("vendor", "Silicon Optronics");
+        strcpy(ctx->vendor, "Silicon Optronics");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_onsemi_sensor,
                                        SENSOR_ONSEMI, 0)) {
-        ADD_PARAM("vendor", "ON Semiconductor");
+        strcpy(ctx->vendor, "ON Semiconductor");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_sony_sensor, SENSOR_SONY,
                                        0x3000)) {
-        ADD_PARAM("vendor", "Sony");
+        strcpy(ctx->vendor, "Sony");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_omni_sensor,
                                        SENSOR_OMNIVISION, 0)) {
-        ADD_PARAM("vendor", "OmniVision");
+        strcpy(ctx->vendor, "OmniVision");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_smartsens_sensor,
                                        SENSOR_SMARTSENS, 0)) {
-        ADD_PARAM("vendor", "SmartSens");
+        strcpy(ctx->vendor, "SmartSens");
         detected = true;
     }
 
@@ -386,8 +390,7 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
 
     int res = detect_sony_sensor(ctx, fd, 0, 0x200);
     if (res) {
-        cJSON *j_inner = ctx->j_sensor;
-        ADD_PARAM("vendor", "Sony");
+        strcpy(ctx->vendor, "Sony");
     }
     close(fd);
     return res;
@@ -410,6 +413,8 @@ static bool getsensorid(sensor_ctx_t *ctx) {
     return spi_detected;
 }
 
+#ifndef STANDALONE_LIBRARY
+
 cJSON *detect_sensors() {
     sensor_ctx_t ctx;
     memset(&ctx, 0, sizeof(ctx));
@@ -425,6 +430,7 @@ cJSON *detect_sensors() {
         return NULL;
     }
 
+    ADD_PARAM("vendor", ctx.vendor);
     ADD_PARAM("model", ctx.sensor_id);
     {
         cJSON *j_inner = cJSON_CreateObject();
@@ -441,6 +447,8 @@ cJSON *detect_sensors() {
 
     return fake_root;
 }
+
+#endif
 
 static char sensor_indentity[16];
 const char *getsensoridentity() {

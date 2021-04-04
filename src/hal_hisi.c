@@ -465,6 +465,48 @@ int hisi_SYS_DRV_GetChipId() {
     return id;
 }
 
+static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
+                              uint32_t prep_addr, uint32_t prep_val) {
+    uint32_t val;
+
+    if (mem_reg(prep_addr, &val, OP_READ)) {
+        if (!val) {
+            val = prep_val;
+            mem_reg(prep_addr, &val, OP_WRITE);
+            usleep(100000);
+        }
+    }
+
+    if (mem_reg(read_addr, &val, OP_READ)) {
+        return val & ((1 << temp_bitness) - 1);
+    }
+    return 0;
+}
+
+static float hisi_get_temp() {
+    float tempo;
+    switch (chip_generation) {
+    case HISI_V2:
+        tempo = hisi_reg_temp(0x20270114, 8, 0x20270110, 0x60FA0000);
+        tempo = ((tempo * 180) / 256) - 40;
+        break;
+    case HISI_V3:
+        tempo = hisi_reg_temp(0x120300A4, 16, 0x1203009C, 0x60FA0000);
+        tempo = ((tempo - 125.0) / 806) * 165 - 40;
+        break;
+    case HISI_V4:
+        tempo = hisi_reg_temp(0x120280BC, 16, 0x120280B4, 0xC3200000);
+        tempo = ((tempo - 117) / 798) * 165 - 40;
+        break;
+    default:
+        return NAN;
+    }
+
+    return tempo;
+}
+
+#ifndef STANDALONE_LIBRARY
+
 struct CV100_PERI_CRG12 {
     unsigned int sense_cksel : 3;
 };
@@ -1100,46 +1142,6 @@ bool hisi_ev300_get_die_id(char *buf, ssize_t len) {
     return true;
 }
 
-static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
-                              uint32_t prep_addr, uint32_t prep_val) {
-    uint32_t val;
-
-    if (mem_reg(prep_addr, &val, OP_READ)) {
-        if (!val) {
-            val = prep_val;
-            mem_reg(prep_addr, &val, OP_WRITE);
-            usleep(100000);
-        }
-    }
-
-    if (mem_reg(read_addr, &val, OP_READ)) {
-        return val & ((1 << temp_bitness) - 1);
-    }
-    return 0;
-}
-
-static float hisi_get_temp() {
-    float tempo;
-    switch (chip_generation) {
-    case HISI_V2:
-        tempo = hisi_reg_temp(0x20270114, 8, 0x20270110, 0x60FA0000);
-        tempo = ((tempo * 180) / 256) - 40;
-        break;
-    case HISI_V3:
-        tempo = hisi_reg_temp(0x120300A4, 16, 0x1203009C, 0x60FA0000);
-        tempo = ((tempo - 125.0) / 806) * 165 - 40;
-        break;
-    case HISI_V4:
-        tempo = hisi_reg_temp(0x120280BC, 16, 0x120280B4, 0xC3200000);
-        tempo = ((tempo - 117) / 798) * 165 - 40;
-        break;
-    default:
-        return NAN;
-    }
-
-    return tempo;
-}
-
 // muxctrl_reg23 is a multiplexing control register for the MII_TXCK pin.
 struct CV100_MUXCTRL_REG23 {
     unsigned int muxctrl_reg23 : 2;
@@ -1300,3 +1302,4 @@ struct PT_OFFSET {
 };
 
 // PT_UNIFY_TIMING_CFG
+#endif
