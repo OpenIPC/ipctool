@@ -97,7 +97,6 @@ if(NOT ONLY_LIBRARY)
 
     target_link_libraries(ipctool m)
     install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
-    install(TARGETS ipcinfo RUNTIME DESTINATION /usr/bin/)
 
     add_executable(ipcinfo
         example/ipcinfo.c
@@ -105,4 +104,5 @@ if(NOT ONLY_LIBRARY)
         )
     target_include_directories(ipcinfo PUBLIC include)
     target_link_libraries(ipcinfo ipchw)
+    install(TARGETS ipcinfo RUNTIME DESTINATION /usr/bin/)
 endif()
