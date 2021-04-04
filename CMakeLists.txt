@@ -47,8 +47,7 @@ set(COMMON_LIB_SRC
     src/version.h
     )
 
-add_executable(ipctool
-    ${COMMON_LIB_SRC}
+set(IPCTOOL_SRC
     src/backup.c
     src/backup.h
     src/dns.c
@@ -82,10 +81,7 @@ add_executable(ipctool
     src/vendors/xm.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
-)
-
-target_link_libraries(ipctool m)
-install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
+    )
 
 add_library(ipchw
     ${COMMON_LIB_SRC}
@@ -93,9 +89,19 @@ add_library(ipchw
 target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY)
 target_link_libraries(ipchw m)
 
-add_executable(ipcinfo
-    example/ipcinfo.c
-    ${CMAKE_CURRENT_BINARY_DIR}/version.c
+if(NOT ONLY_LIBRARY)
+    add_executable(ipctool
+        ${IPCTOOL_SRC}
+        ${COMMON_LIB_SRC}
     )
-target_include_directories(ipcinfo PUBLIC include)
-target_link_libraries(ipcinfo ipchw)
+
+    target_link_libraries(ipctool m)
+    install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
+
+    add_executable(ipcinfo
+        example/ipcinfo.c
+        ${CMAKE_CURRENT_BINARY_DIR}/version.c
+        )
+    target_include_directories(ipcinfo PUBLIC include)
+    target_link_libraries(ipcinfo ipchw)
+endif()
