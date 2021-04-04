@@ -31,6 +31,7 @@ extern int (*sensor_write_register)(int fd, unsigned char i2c_addr,
                                     unsigned int reg_addr,
                                     unsigned int reg_width, unsigned int data,
                                     unsigned int data_width);
+extern float (*hal_temperature)();
 extern void (*hal_cleanup)();
 
 void setup_hal_drivers();

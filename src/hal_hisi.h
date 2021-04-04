@@ -19,7 +19,6 @@
 int hisi_SYS_DRV_GetChipId();
 const char *hisi_cv100_get_mii_mux();
 bool hisi_ev300_get_die_id(char *buf, ssize_t len);
-float hisi_get_temp();
 
 int sony_ssp_read_register(int fd, unsigned char i2c_addr,
                            unsigned int reg_addr, unsigned int reg_width,

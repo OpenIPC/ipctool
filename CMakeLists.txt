@@ -33,6 +33,8 @@ set(HW_SRC
     src/hal_hisi.h
     src/hal_xm.c
     src/hal_xm.h
+    src/hwinfo.c
+    src/hwinfo.h
     )
 
 add_executable(ipctool
@@ -81,7 +83,7 @@ add_executable(ipctool
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
 )
 
-target_link_libraries(ipctool dl m)
+target_link_libraries(ipctool m)
 install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
 
 add_library(ipchw
@@ -89,4 +91,9 @@ add_library(ipchw
     src/sensors.c
     )
 
-add_executable(ipcinfo example/ipcinfo.c)
+add_executable(ipcinfo
+    example/ipcinfo.c
+    ${CMAKE_CURRENT_BINARY_DIR}/version.c
+    )
+target_include_directories(ipcinfo PUBLIC include)
+target_link_libraries(ipcinfo m ipchw)

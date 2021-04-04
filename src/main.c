@@ -19,6 +19,7 @@
 #include "ethernet.h"
 #include "firmware.h"
 #include "hal_hisi.h"
+#include "hwinfo.h"
 #include "mtd.h"
 #include "network.h"
 #include "ram.h"
@@ -234,8 +235,7 @@ int main(int argc, char *argv[]) {
         }
 
         case 't': {
-            getchipid();
-            float temp = hisi_get_temp();
+            float temp = gethwtemp();
             if (isnan(temp)) {
                 fprintf(stderr, "Temperature cannot be retrieved\n");
                 return EXIT_FAILURE;

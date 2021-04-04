@@ -29,6 +29,8 @@ sensor_addr_t hisi_possible_i2c_addrs[] = {
     {SENSOR_ONSEMI, onsemi_addrs},   {SENSOR_SMARTSENS, ssens_addrs},
     {SENSOR_OMNIVISION, omni_addrs}, {0, NULL}};
 
+static float hisi_get_temp();
+
 int hisi_open_sensor_fd() {
     int adapter_nr = 0; /* probably dynamically determined */
     char filename[FILENAME_MAX];
@@ -448,6 +450,7 @@ void setup_hal_hisi() {
     possible_i2c_addrs = hisi_possible_i2c_addrs;
     strcpy(short_manufacturer, "HI");
     hisi_mmz_total();
+    hal_temperature = hisi_get_temp;
 }
 
 int hisi_SYS_DRV_GetChipId() {
@@ -1115,7 +1118,7 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
     return 0;
 }
 
-float hisi_get_temp() {
+static float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
     case HISI_V2:
