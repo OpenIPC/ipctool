@@ -83,7 +83,7 @@ set(IPCTOOL_SRC
     ${CMAKE_CURRENT_BINARY_DIR}/version.c
     )
 
-add_library(ipchw
+add_library(ipchw STATIC
     ${COMMON_LIB_SRC}
     )
 target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY)
