@@ -615,6 +615,10 @@ int do_upgrade(bool force) {
 
     char value[1024];
 
+    cJSON *josmem = cJSON_GetObjectItemCaseSensitive(json, "osmem");
+    if (josmem && cJSON_IsString(josmem))
+        set_env_param("osmem", josmem->valuestring, false);
+
     snprintf(value, sizeof(value),
              "setenv setargs setenv bootargs ${bootargs}; run setargs; "
              "sf probe 0; sf read 0x%x 0x%x 0x%x; "
@@ -624,11 +628,15 @@ int do_upgrade(bool force) {
     set_env_param("bootcmd", value, false);
 
     snprintf(value, sizeof(value),
-             "mem=${osmem} ethaddr=${ethaddr} "
-             "sensor=${sensor:-auto} console=ttyAMA0,115200 panic=20 "
+             "mem=${osmem} console=ttyAMA0,115200 panic=20 "
              "root=/dev/mtdblock3 rootfstype=squashfs "
              "mtdparts=%s",
              mtdparts);
+    cJSON *jaddcmdline =
+        cJSON_GetObjectItemCaseSensitive(json, "additionalCmdline");
+    if (jaddcmdline && cJSON_IsString(jaddcmdline))
+        snprintf(value + strlen(value), sizeof(value) - strlen(value), " %s",
+                 jaddcmdline->valuestring);
     set_env_param("bootargs", value, true /* need to write as last */);
     reboot_with_msg();
 
