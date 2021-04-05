@@ -7,7 +7,7 @@
 typedef struct {
     char sensor_id[128];
     char control[4];
-    char vendor[16];
+    char vendor[32];
     uint16_t addr;
     cJSON *j_sensor;
     cJSON *j_params;
