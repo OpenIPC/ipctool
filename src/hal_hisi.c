@@ -293,9 +293,9 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
     tx_buf[1] = reg_addr & 0xff;
     tx_buf[2] = 0;
     memset(mesg, 0, sizeof(mesg));
-    mesg[0].tx_buf = (__u64)&tx_buf;
+    mesg[0].tx_buf = (__u64)((__u32)&tx_buf);
     mesg[0].len = 3;
-    mesg[0].rx_buf = (__u64)&rx_buf;
+    mesg[0].rx_buf = (__u64)((__u32)&rx_buf);
     mesg[0].cs_change = 1;
 
     ret = ioctl(fd, SPI_IOC_MESSAGE(1), mesg);
