@@ -29,12 +29,20 @@ void linux_mem() { parse_meminfo(&mem); }
 
 unsigned long kernel_mem() { return mem.MemTotal; }
 
-static uint32_t rounded_num(uint32_t n) {
+uint32_t rounded_num(uint32_t n) {
     int i;
     for (i = 0; n; i++) {
         n /= 2;
     }
     return 1 << i;
+}
+
+void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
+    if (!strcmp(VENDOR_HISI, chip_manufacturer))
+        *total_mem = hisi_totalmem(media_mem);
+
+    if (!total_mem)
+        *total_mem = kernel_mem();
 }
 
 cJSON *detect_ram() {
@@ -44,12 +52,7 @@ cJSON *detect_ram() {
 
     unsigned long media_mem;
     uint32_t total_mem;
-
-    if (!strcmp(VENDOR_HISI, chip_manufacturer))
-        total_mem = hisi_totalmem(&media_mem);
-
-    if (!total_mem)
-        total_mem = kernel_mem();
+    hal_ram(&media_mem, &total_mem);
     ADD_PARAM_FMT("total", "%uM", rounded_num(total_mem / 1024));
 
     if (media_mem)

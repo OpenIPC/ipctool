@@ -23,11 +23,13 @@
 #include <unistd.h>
 
 #include "backup.h"
+#include "chipid.h"
 #include "cjson/cJSON.h"
 #include "dns.h"
 #include "http.h"
 #include "mtd.h"
 #include "network.h"
+#include "ram.h"
 #include "sha1.h"
 #include "tools.h"
 #include "uboot.h"
@@ -523,6 +525,7 @@ static void add_mtdpart(char *dst, const char *name, uint32_t size) {
     }
 
 int do_upgrade(bool force) {
+    getchipid();
     if (!free_resources(force))
         return 1;
 
@@ -545,6 +548,17 @@ int do_upgrade(bool force) {
         cJSON_GetObjectItemCaseSensitive(json, "mtdPrefix");
     if (mtdparts_pr && cJSON_IsString(mtdparts_pr))
         strcpy(mtdparts, mtdparts_pr->valuestring);
+
+    const cJSON *setTotalMem =
+        cJSON_GetObjectItemCaseSensitive(json, "setTotalMem");
+    char total_mem[32] = {0};
+    if (setTotalMem && cJSON_IsBool(setTotalMem) && cJSON_IsTrue(setTotalMem)) {
+        unsigned long mmem;
+        uint32_t tmem;
+        hal_ram(&mmem, &tmem);
+        snprintf(total_mem, sizeof(total_mem), "%uM\n",
+                 rounded_num(tmem / 1024));
+    }
 
     // offset from U-Boot
     uint32_t goff = 0x40000;
@@ -618,6 +632,8 @@ int do_upgrade(bool force) {
     cJSON *josmem = cJSON_GetObjectItemCaseSensitive(json, "osmem");
     if (josmem && cJSON_IsString(josmem))
         set_env_param("osmem", josmem->valuestring, false);
+    if (*total_mem)
+        set_env_param("totalmem", total_mem, false);
 
     snprintf(value, sizeof(value),
              "setenv setargs setenv bootargs ${bootargs}; run setargs; "
