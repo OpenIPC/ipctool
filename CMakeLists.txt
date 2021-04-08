@@ -38,8 +38,6 @@ set(COMMON_LIB_SRC
     src/chipid.h
     src/hwinfo.c
     src/hwinfo.h
-    src/ram.c
-    src/ram.h
     src/sensors.c
     src/sensors.h
     src/tools.c
@@ -64,6 +62,8 @@ set(IPCTOOL_SRC
     src/mtd.h
     src/network.c
     src/network.h
+    src/ram.c
+    src/ram.h
     src/sha1.c
     src/sha1.h
     src/stack.c
@@ -75,6 +75,12 @@ set(IPCTOOL_SRC
     src/cjson/cYAML.c
     src/cjson/cYAML.h
 
+    src/vendors/buildroot.c
+    src/vendors/buildroot.h
+    src/vendors/linux.c
+    src/vendors/linux.h
+    src/vendors/openipc.c
+    src/vendors/openipc.h
     src/vendors/openwrt.c
     src/vendors/openwrt.h
     src/vendors/xm.c

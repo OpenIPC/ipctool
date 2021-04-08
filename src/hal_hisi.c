@@ -307,28 +307,19 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
     return rx_buf[2];
 }
 
-uint32_t rounded_num(uint32_t n) {
-    int i;
-    for (i = 0; n; i++) {
-        n /= 2;
-    }
-    return 1 << i;
-}
-
-static bool hisi_mmz_total() {
+static unsigned long hisi_media_mem() {
     char buf[256];
 
     if (!get_regex_line_from_file("/proc/media-mem", "total size=([0-9]+)KB",
                                   buf, sizeof(buf))) {
-        return false;
+        return 0;
     }
-    unsigned long media_mem = strtoul(buf, NULL, 10);
-    uint32_t total_mem = (media_mem + kernel_mem()) / 1024;
-    sprintf(ram_specific + strlen(ram_specific), "  total: %uM\n",
-            rounded_num(total_mem));
-    sprintf(ram_specific + strlen(ram_specific), "  media: %luM\n",
-            media_mem / 1024);
-    return true;
+    return strtoul(buf, NULL, 10);
+}
+
+uint32_t hisi_totalmem(unsigned long *media_mem) {
+    *media_mem = hisi_media_mem();
+    return *media_mem + kernel_mem();
 }
 
 static char printk_state[16];
@@ -453,7 +444,6 @@ void setup_hal_hisi() {
     }
     possible_i2c_addrs = hisi_possible_i2c_addrs;
     strcpy(short_manufacturer, "HI");
-    hisi_mmz_total();
     hal_temperature = hisi_get_temp;
 }
 

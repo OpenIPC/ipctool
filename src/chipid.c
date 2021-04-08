@@ -22,7 +22,6 @@ char board_id[128];
 char board_ver[128];
 char board_manufacturer[128];
 char board_specific[1024];
-char ram_specific[1024];
 int chip_generation;
 char chip_id[128];
 char chip_manufacturer[128];

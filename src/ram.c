@@ -1,6 +1,10 @@
 #include <stdio.h>
+#include <string.h>
 
+#include "chipid.h"
+#include "hal_hisi.h"
 #include "ram.h"
+#include "tools.h"
 
 typedef struct meminfo {
     unsigned long MemTotal;
@@ -24,3 +28,32 @@ static void parse_meminfo(struct meminfo *g) {
 void linux_mem() { parse_meminfo(&mem); }
 
 unsigned long kernel_mem() { return mem.MemTotal; }
+
+static uint32_t rounded_num(uint32_t n) {
+    int i;
+    for (i = 0; n; i++) {
+        n /= 2;
+    }
+    return 1 << i;
+}
+
+cJSON *detect_ram() {
+    cJSON *fake_root = cJSON_CreateObject();
+    cJSON *j_inner = cJSON_CreateObject();
+    cJSON_AddItemToObject(fake_root, "ram", j_inner);
+
+    unsigned long media_mem;
+    uint32_t total_mem;
+
+    if (!strcmp(VENDOR_HISI, chip_manufacturer))
+        total_mem = hisi_totalmem(&media_mem);
+
+    if (!total_mem)
+        total_mem = kernel_mem();
+    ADD_PARAM_FMT("total", "%uM", rounded_num(total_mem / 1024));
+
+    if (media_mem)
+        ADD_PARAM_FMT("media", "%luM", media_mem / 1024);
+
+    return fake_root;
+}

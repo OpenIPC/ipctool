@@ -28,6 +28,7 @@
 #include "uboot.h"
 #include "version.h"
 
+#include "vendors/openipc.h"
 #include "vendors/openwrt.h"
 #include "vendors/xm.h"
 
@@ -140,19 +141,13 @@ bool get_board_id() {
     return false;
 }
 
-void print_ram_info() {
-    if (strlen(ram_specific)) {
-        yaml_printf("ram:\n%s", ram_specific);
-    }
-}
-
 static void generic_system_data() { linux_mem(); }
 
 #define MAX_YAML 1024 * 64
 bool wait_mode = false;
 static bool backup_mode() {
     // prevent double backup creation and don't backup OpenWrt firmware
-    if (!udp_lock() || is_openwrt_board())
+    if (!udp_lock() || is_openipc_board())
         return false;
 
     int fds[2];
@@ -296,7 +291,7 @@ int main(int argc, char *argv[]) {
         print_chip_id();
         show_yaml(detect_ethernet());
         print_mtd_info();
-        print_ram_info();
+        show_yaml(detect_ram());
         show_yaml(detect_firmare());
     } else
         return EXIT_FAILURE;
