@@ -4,6 +4,7 @@
 #include <regex.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <sys/syscall.h>
 
 #define ADD_PARAM(param, val)                                                  \

@@ -83,6 +83,8 @@ set(IPCTOOL_SRC
     src/vendors/openipc.h
     src/vendors/openwrt.c
     src/vendors/openwrt.h
+    src/vendors/hankvision.c
+    src/vendors/hankvision.h
     src/vendors/xm.c
     src/vendors/xm.h
 

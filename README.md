@@ -2,10 +2,10 @@
 
 ![ipc-chip-info](https://github.com/OpenIPC/ipctool/workflows/ipc-chip-info/badge.svg)
 
-Thes basic concept belongs to [@cherov](http://github.com/chertov)(thank you for
-your original utility) and [@nikitos1550](https://github.com/nikitos1550/)(for
+Thes basic concept belongs to [@cherov](http://github.com/chertov) (thank you for
+your original utility) and [@nikitos1550](https://github.com/nikitos1550/) (for
 cute YAML format for describing hardware). A warm welcome also to [Igor
-Zalatov](https://github.com/ZigFisher)(for suggestions for new features and
+Zalatov] (https://github.com/ZigFisher)(for suggestions for new features and
 describing ways to do them).
 
 ## Download
@@ -107,6 +107,15 @@ Tested on:
 |Xiongmai|XM510, XM530|
 
 Please test on your device to help us extend the list.
+
+## Supported boards
+
+Tested on:
+
+|Manufacturer|Models|
+|---|---|
+|XM | Huge amount |
+|Hankvision | V6202IR-IMX327 |
 
 ## Supported sensors
 
