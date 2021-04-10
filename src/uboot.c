@@ -159,8 +159,8 @@ static void uboot_setenv(int mtd, uint32_t offset, const char *env,
         ptr += strlen(ptr) + 1;
     }
     if (!found) {
-        printf("Need to add new value: %s\n", key);
-        goto bailout;
+        // Need to add new value
+        snprintf(nptr, ENV_LEN - (nptr - newenv), "%s=%s", key, newvalue);
     }
     towrite = newenv;
 
