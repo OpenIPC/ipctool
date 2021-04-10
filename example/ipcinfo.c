@@ -30,7 +30,8 @@ void Help() {
            "  https://openipc.org/contribution/\n\n"
            "available options:\n"
            "\t--chip_id\n"
-           "\t--sensor_id\n"
+           "\t--long_sensor\n"
+           "\t--short_sensor\n"
            "\t--temp\n"
            "\t--help\n");
 }
@@ -38,11 +39,13 @@ void Help() {
 int main(int argc, char **argv) {
 
     const char *short_options = "";
-    const struct option long_options[] = {{"help", no_argument, NULL, 'h'},
-                                          {"chip_id", no_argument, NULL, 'c'},
-                                          {"sensor_id", no_argument, NULL, 's'},
-                                          {"temp", no_argument, NULL, 't'},
-                                          {NULL, 0, NULL, 0}};
+    const struct option long_options[] = {
+        {"help", no_argument, NULL, 'h'},
+        {"chip_id", no_argument, NULL, 'c'},
+        {"long_sensor", no_argument, NULL, 'l'},
+        {"short_sensor", no_argument, NULL, 's'},
+        {"temp", no_argument, NULL, 't'},
+        {NULL, 0, NULL, 0}};
 
     int rez;
     int option_index;
@@ -62,8 +65,16 @@ int main(int argc, char **argv) {
             return EXIT_SUCCESS;
         }
 
-        case 's': {
+        case 'l': {
             const char *sensor = getsensoridentity();
+            if (!sensor)
+                return EXIT_FAILURE;
+            puts(sensor);
+            return EXIT_SUCCESS;
+        }
+
+        case 's': {
+            const char *sensor = getsensorshort();
             if (!sensor)
                 return EXIT_FAILURE;
             puts(sensor);

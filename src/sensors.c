@@ -459,3 +459,11 @@ const char *getsensoridentity() {
               ctx.sensor_id, ctx.control);
     return sensor_indentity;
 }
+
+const char *getsensorshort() {
+    sensor_ctx_t ctx;
+    if (!getsensorid(&ctx))
+        return NULL;
+    lsnprintf(sensor_indentity, sizeof(sensor_indentity), "%s", ctx.sensor_id);
+    return sensor_indentity;
+}
