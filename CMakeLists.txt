@@ -13,14 +13,19 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s -Os -ffunction-sections -Wl,--gc-sections -DNDEBUG")
 endif()
 
-# Add a custom command that produces version.cpp, plus
-# a dummy output that's not actually produced, in order
-# to force version.cmake to always be re-run before the build
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/version.c
-           ${CMAKE_CURRENT_BINARY_DIR}/_version.c
-    COMMAND ${CMAKE_COMMAND} -P
-            ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
+if(NOT SKIP_VERSION)
+    set(VERSION_SRC ${CMAKE_CURRENT_BINARY_DIR}/version.c)
+    # Add a custom command that produces version.c, plus
+    # a dummy output that's not actually produced, in order
+    # to force version.cmake to always be re-run before the build
+    add_custom_command(
+        OUTPUT ${VERSION_SRC}
+               ${CMAKE_CURRENT_BINARY_DIR}/_version.c
+        COMMAND ${CMAKE_COMMAND} -P
+                ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
+else()
+    add_definitions(-DSKIP_VERSION)
+endif()
 
 include_directories(
     ./src/
@@ -88,7 +93,7 @@ set(IPCTOOL_SRC
     src/vendors/xm.c
     src/vendors/xm.h
 
-    ${CMAKE_CURRENT_BINARY_DIR}/version.c
+    ${VERSION_SRC}
     )
 
 add_library(ipchw STATIC
@@ -108,7 +113,7 @@ if(NOT ONLY_LIBRARY)
 
     add_executable(ipcinfo
         example/ipcinfo.c
-        ${CMAKE_CURRENT_BINARY_DIR}/version.c
+        ${VERSION_SRC}
         )
     target_include_directories(ipcinfo PUBLIC include)
     target_link_libraries(ipcinfo ipchw)

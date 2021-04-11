@@ -37,13 +37,15 @@
 #define FG_RED "\x1b[31m"
 
 void Help() {
+#ifndef SKIP_VERSION
     printf("ipctool, version: ");
     const char *vers = get_git_version();
     if (*vers) {
-        printf("%s\n", vers);
+        puts(vers);
     } else {
         printf("%s+%s\n", get_git_branch(), get_git_revision());
     }
+#endif
 
     printf("\nOpenIPC is " FG_RED "asking for your help " RESET_CL
            "to support development cost and long-term maintenance of what we "
