@@ -38,10 +38,11 @@ uint32_t rounded_num(uint32_t n) {
 }
 
 void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
+    linux_mem();
     if (!strcmp(VENDOR_HISI, chip_manufacturer))
         *total_mem = hisi_totalmem(media_mem);
 
-    if (!total_mem)
+    if (!*total_mem)
         *total_mem = kernel_mem();
 }
 

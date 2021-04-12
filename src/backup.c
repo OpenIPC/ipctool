@@ -556,8 +556,7 @@ int do_upgrade(bool force) {
         unsigned long mmem;
         uint32_t tmem;
         hal_ram(&mmem, &tmem);
-        snprintf(total_mem, sizeof(total_mem), "%uM\n",
-                 rounded_num(tmem / 1024));
+        snprintf(total_mem, sizeof(total_mem), "%uM", rounded_num(tmem / 1024));
     }
 
     // offset from U-Boot
@@ -631,9 +630,9 @@ int do_upgrade(bool force) {
 
     cJSON *josmem = cJSON_GetObjectItemCaseSensitive(json, "osmem");
     if (josmem && cJSON_IsString(josmem))
-        set_env_param("osmem", josmem->valuestring, false);
+        set_env_param("osmem", josmem->valuestring, FOP_RAM);
     if (*total_mem)
-        set_env_param("totalmem", total_mem, false);
+        set_env_param("totalmem", total_mem, FOP_RAM);
 
     snprintf(value, sizeof(value),
              "setenv setargs setenv bootargs ${bootargs}; run setargs; "
@@ -641,7 +640,7 @@ int do_upgrade(bool force) {
              "bootm 0x%x",
              // kernel params
              ram_start, mtdwrite[0].off_flashb, mtdwrite[0].size, ram_start);
-    set_env_param("bootcmd", value, false);
+    set_env_param("bootcmd", value, FOP_RAM);
 
     snprintf(value, sizeof(value),
              "mem=${osmem} console=ttyAMA0,115200 panic=20 "
@@ -653,7 +652,7 @@ int do_upgrade(bool force) {
     if (jaddcmdline && cJSON_IsString(jaddcmdline))
         snprintf(value + strlen(value), sizeof(value) - strlen(value), " %s",
                  jaddcmdline->valuestring);
-    set_env_param("bootargs", value, true /* need to write as last */);
+    set_env_param("bootargs", value, FOP_ROM);
     reboot_with_msg();
 
     // only makes sense for memleak detection

@@ -117,7 +117,7 @@ const char *uboot_getenv(const char *name) {
 
 static void uboot_setenv(int mtd, uint32_t offset, const char *env,
                          const char *key, const char *newvalue,
-                         uint32_t erasesize, bool to_flash) {
+                         uint32_t erasesize, enum FLASH_OP fop) {
     const char *towrite;
     uint32_t res_crc = 0;
 
@@ -139,8 +139,15 @@ static void uboot_setenv(int mtd, uint32_t offset, const char *env,
             // check if old value has same size of new one
             if (strlen(newvalue) == strlen(oldvalue)) {
                 if (!strcmp(newvalue, oldvalue)) {
-                    fprintf(stderr, "Nothing will be changed\n");
-                    goto bailout;
+                    switch (fop) {
+                    case FOP_INTERACTIVE:
+                        fprintf(stderr, "Nothing will be changed\n");
+                    case FOP_RAM:
+                        goto bailout;
+                    case FOP_ROM:
+                        towrite = uenv;
+                        goto rewrite;
+                    }
                 }
                 memcpy(oldvalue, newvalue, strlen(newvalue));
                 towrite = uenv;
@@ -165,11 +172,11 @@ static void uboot_setenv(int mtd, uint32_t offset, const char *env,
     towrite = newenv;
 
 rewrite:
-    crc32(towrite + CRC_SZ, ENV_LEN - CRC_SZ, &res_crc);
-    *(uint32_t *)towrite = res_crc;
-
-    if (to_flash)
+    if (fop == FOP_INTERACTIVE || fop == FOP_ROM) {
+        crc32(towrite + CRC_SZ, ENV_LEN - CRC_SZ, &res_crc);
+        *(uint32_t *)towrite = res_crc;
         mtd_write(mtd, offset, erasesize, towrite, ENV_LEN);
+    }
     if (uenv != towrite)
         memcpy(uenv, towrite, ENV_LEN);
 
@@ -185,7 +192,7 @@ typedef struct {
     int op;
     const char *key;
     const char *value;
-    bool to_flash;
+    enum FLASH_OP fop;
 } ctx_uboot_t;
 
 static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
@@ -205,7 +212,7 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
                 break;
             case OP_SETENV:
                 uboot_setenv(i, u_off, addr + u_off, c->key, c->value,
-                             mtd->erasesize, c->to_flash);
+                             mtd->erasesize, c->fop);
                 break;
             }
             close(fd);
@@ -223,12 +230,12 @@ void printenv() {
     enum_mtd_info(&ctx, cb_uboot_env);
 }
 
-void set_env_param(const char *key, const char *value, bool to_flash) {
+void set_env_param(const char *key, const char *value, enum FLASH_OP fop) {
     ctx_uboot_t ctx;
     ctx.op = OP_SETENV;
     ctx.key = key;
     ctx.value = value;
-    ctx.to_flash = to_flash;
+    ctx.fop = fop;
     enum_mtd_info(&ctx, cb_uboot_env);
 }
 
@@ -239,5 +246,5 @@ void cmd_set_env(char *arg) {
         exit(2);
     }
     *delim = 0;
-    set_env_param(arg, delim + 1, true);
+    set_env_param(arg, delim + 1, FOP_INTERACTIVE);
 }
