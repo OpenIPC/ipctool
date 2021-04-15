@@ -317,9 +317,23 @@ static unsigned long hisi_media_mem() {
     return strtoul(buf, NULL, 10);
 }
 
+static bool is_cma_allocator() {
+    char buf[64];
+    if (get_regex_line_from_file("/proc/cmdline", "mmz_allocator=(.+)", buf,
+                                 sizeof(buf))) {
+        if (!strcmp(buf, "cma"))
+            return true;
+    }
+
+    return false;
+}
+
 uint32_t hisi_totalmem(unsigned long *media_mem) {
     *media_mem = hisi_media_mem();
-    return *media_mem + kernel_mem();
+    if (is_cma_allocator())
+        return kernel_mem();
+    else
+        return *media_mem + kernel_mem();
 }
 
 static char printk_state[16];
