@@ -559,6 +559,12 @@ int do_upgrade(bool force) {
         snprintf(total_mem, sizeof(total_mem), "%uM", rounded_num(tmem / 1024));
     }
 
+    char kernel_mem[32] = {0};
+    const cJSON *kernelMem =
+        cJSON_GetObjectItemCaseSensitive(json, "kernelMem");
+    if (kernelMem && cJSON_IsString(kernelMem))
+        strncpy(kernel_mem, kernelMem->valuestring, sizeof(kernel_mem));
+
     // offset from U-Boot
     uint32_t goff = 0x40000;
     uint32_t payload;
@@ -643,10 +649,10 @@ int do_upgrade(bool force) {
     set_env_param("bootcmd", value, FOP_RAM);
 
     snprintf(value, sizeof(value),
-             "mem=${osmem} console=ttyAMA0,115200 panic=20 "
+             "mem=%s console=ttyAMA0,115200 panic=20 "
              "root=/dev/mtdblock3 rootfstype=squashfs "
              "mtdparts=%s",
-             mtdparts);
+             *kernel_mem ? kernel_mem : "${osmem}", mtdparts);
     cJSON *jaddcmdline =
         cJSON_GetObjectItemCaseSensitive(json, "additionalCmdline");
     if (jaddcmdline && cJSON_IsString(jaddcmdline))
