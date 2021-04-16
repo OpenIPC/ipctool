@@ -76,7 +76,7 @@ static void get_god_app(cJSON *j_inner) {
     char sname[1024];
     pid_t godpid;
 
-    if ((godpid = get_god_pid(NULL, 0) > 0)) {
+    if ((godpid = get_god_pid(NULL, 0)) > 0) {
         snprintf(sname, sizeof(sname), "/proc/%d/cmdline", godpid);
         FILE *fp = fopen(sname, "r");
         if (!fp)
