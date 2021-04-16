@@ -26,6 +26,7 @@
 #include "chipid.h"
 #include "cjson/cJSON.h"
 #include "dns.h"
+#include "hal_hisi.h"
 #include "http.h"
 #include "mtd.h"
 #include "network.h"
@@ -524,8 +525,27 @@ static void add_mtdpart(char *dst, const char *name, uint32_t size) {
         goto bailout;                                                          \
     }
 
-int do_upgrade(bool force) {
+static uint32_t platform_ramstart() {
+    switch (chip_generation) {
+    case HISI_V1:
+    case HISI_V2:
+    case HISI_V3:
+        return 0x82000000;
+    case HISI_V4:
+        return 0x42000000;
+    default:
+        return 0;
+    }
+}
+
+int do_upgrade(const char *filename, bool force) {
     getchipid();
+    uint32_t ram_start = platform_ramstart();
+    if (!ram_start) {
+        fprintf(stderr, "Platform unknown.\n");
+        return 1;
+    }
+
     if (!free_resources(force))
         return 1;
 
@@ -539,7 +559,9 @@ int do_upgrade(bool force) {
 
     int ret = 0;
     size_t len;
-    char *jsond = file_to_buf("/utils/update.json", &len);
+    if (!filename)
+        filename = "/utils/update.json";
+    char *jsond = file_to_buf(filename, &len);
     assert(jsond);
 
     cJSON *json = cJSON_ParseWithLength(jsond, len);
@@ -629,8 +651,6 @@ int do_upgrade(bool force) {
         ret = 4;
         goto bailout;
     }
-
-    uint32_t ram_start = 0x42000000;
 
     char value[1024];
 

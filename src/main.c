@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
         {"restore", no_argument, NULL, 'r'},
         {"skip-env", no_argument, NULL, '0'},
         {"force", no_argument, NULL, 'f'},
-        {"upgrade", no_argument, NULL, 'u'},
+        {"upgrade", optional_argument, NULL, 'u'},
         {NULL, 0, NULL, 0}};
 
     int rez;
@@ -277,7 +277,7 @@ int main(int argc, char *argv[]) {
             return restore_backup(skip_env, force);
 
         case 'u':
-            return do_upgrade(force);
+            return do_upgrade(optarg, force);
 
         case '?':
         default:
