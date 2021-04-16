@@ -1296,6 +1296,32 @@ void hisi_vi_information(sensor_ctx_t *ctx) {
     determine_sensor_clock(ctx->j_sensor);
 }
 
+#define CV100_FMC_BASE 0x10010000
+
+const uint32_t CV100_GLOBAL_CONFIG = 0x0100;
+struct CV100_GLOBAL_CONFIG {
+    unsigned int mode : 1;
+    bool wp_en : 1;
+    unsigned int flash_addr_mode : 1;
+};
+
+#define CV200_FMC_BASE 0x10010000
+#define CV300_FMC_BASE 0x10000000
+#define EV300_FMC_BASE 0x10000000
+
+const uint32_t CV200_FMC_CFG = CV200_FMC_BASE + 0;
+const uint32_t CV300_FMC_CFG = CV300_FMC_BASE + 0;
+const uint32_t EV300_FMC_CFG = EV300_FMC_BASE + 0;
+struct FMC_CFG {
+    unsigned int op_mode : 1;
+    unsigned int flash_sel : 2;
+    unsigned int page_size : 2;
+    unsigned int ecc_type : 3;
+    unsigned int block_size : 2;
+    unsigned int spi_nor_addr_mode : 1;
+    unsigned int spi_nand_sel : 2;
+};
+
 // for IMX291 1920x1110
 struct PT_SIZE {
     unsigned int width : 16;
