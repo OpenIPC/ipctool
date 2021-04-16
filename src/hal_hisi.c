@@ -1322,6 +1322,46 @@ struct FMC_CFG {
     unsigned int spi_nand_sel : 2;
 };
 
+static const char *hisi_flash_mode(unsigned int value) {
+    switch (value) {
+    case 0:
+        return "3-byte";
+    case 1:
+        return "4-byte";
+    defautl:
+        return NULL;
+    }
+}
+
+static const char *hisi_fmc_mode(uint32_t addr) {
+    struct FMC_CFG val;
+    if (mem_reg(addr, (uint32_t *)&val, OP_READ))
+        return (hisi_flash_mode(val.spi_nor_addr_mode));
+}
+
+void hisi_detect_fmc() {
+    const char *mode = NULL;
+    switch (chip_generation) {
+    case HISI_V1: {
+        struct CV100_GLOBAL_CONFIG val;
+        if (mem_reg(CV100_GLOBAL_CONFIG, (uint32_t *)&val, OP_READ))
+            mode = hisi_flash_mode(val.flash_addr_mode);
+        break;
+    }
+    case HISI_V2:
+        mode = hisi_fmc_mode(CV200_FMC_CFG);
+        break;
+    case HISI_V3:
+        mode = hisi_fmc_mode(CV300_FMC_CFG);
+        break;
+    case HISI_V4:
+        mode = hisi_fmc_mode(EV300_FMC_CFG);
+        break;
+    }
+    if (mode)
+        printf("    addrMode: %s\n", mode);
+}
+
 // for IMX291 1920x1110
 struct PT_SIZE {
     unsigned int width : 16;

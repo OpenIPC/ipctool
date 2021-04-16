@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include "chipid.h"
+#include "hal_hisi.h"
 #include "mtd.h"
 #include "sha1.h"
 #include "tools.h"
@@ -244,6 +245,8 @@ void print_mtd_info() {
     enum_mtd_info(&ctx, cb_mtd_info);
 
     yaml_printf("    size: %dM\n", ctx.totalsz / 1024 / 1024);
+    if (!strcmp(VENDOR_HISI, chip_manufacturer))
+        hisi_detect_fmc();
 }
 
 // static bool xm_inited;
