@@ -561,6 +561,8 @@ int do_upgrade(const char *filename, bool force) {
     size_t len;
     if (!filename)
         filename = "/utils/update.json";
+    else
+        printf("Using %s as update descriptor\n", filename);
     char *jsond = file_to_buf(filename, &len);
     assert(jsond);
 
@@ -587,8 +589,20 @@ int do_upgrade(const char *filename, bool force) {
     if (kernelMem && cJSON_IsString(kernelMem))
         strncpy(kernel_mem, kernelMem->valuestring, sizeof(kernel_mem));
 
+    const cJSON *skip_envs = cJSON_GetObjectItemCaseSensitive(json, "skip");
+    if (skip_envs && cJSON_IsArray(skip_envs)) {
+    }
+
     // offset from U-Boot
-    uint32_t goff = 0x40000;
+    uint32_t goff = 0;
+    const cJSON *offset = cJSON_GetObjectItemCaseSensitive(json, "offset");
+    if (offset && cJSON_IsString(offset)) {
+        goff = strtol(offset->valuestring, 0, 16);
+        printf("Using offset: %#X\n", goff);
+    } else {
+        fprintf(stderr, "offset should be set.\n");
+        return 1;
+    }
     uint32_t payload;
 
     const cJSON *parts = cJSON_GetObjectItemCaseSensitive(json, "partitions");
