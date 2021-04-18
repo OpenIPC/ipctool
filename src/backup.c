@@ -249,9 +249,10 @@ static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
 }
 
 static void umount_fs(const char *path) {
-    if (umount(path) != 0)
-        fprintf(stderr, "Cannot umount '%s'\n", path);
-    else
+    if (umount(path) != 0) {
+        fprintf(stderr, "Cannot umount '%s', aborting...\n", path);
+        exit(1);
+    } else
         printf("Unmounting %s\n", path);
 }
 
@@ -671,8 +672,10 @@ int do_upgrade(const char *filename, bool force) {
     cJSON *josmem = cJSON_GetObjectItemCaseSensitive(json, "osmem");
     if (josmem && cJSON_IsString(josmem))
         set_env_param("osmem", josmem->valuestring, FOP_RAM);
-    if (*total_mem)
+    if (*total_mem) {
         set_env_param("totalmem", total_mem, FOP_RAM);
+        printf("set_env_param: total_mem=%s\n", total_mem);
+    }
 
     snprintf(value, sizeof(value),
              "setenv setargs setenv bootargs ${bootargs}; run setargs; "
