@@ -249,7 +249,11 @@ static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
 }
 
 static void umount_fs(const char *path) {
-    if (umount(path) != 0) {
+    // skip root
+    if (!strcmp(path, "/"))
+        return;
+
+    if (umount2(path, MNT_FORCE | MNT_DETACH) != 0) {
         fprintf(stderr, "Cannot umount '%s', aborting...\n", path);
         exit(1);
     } else
@@ -271,7 +275,7 @@ static bool umount_all() {
         if (sscanf(mount, "%s %s %s %s", dev, path, fs, attrs)) {
             if (!strncmp(dev, "/dev/mtdblock", 13) && strstr(attrs, "rw"))
                 umount_fs(path);
-            else if (!strcmp(fs, "squashfs"))
+            else if (!strcmp(fs, "squashfs") || (!strcmp(fs, "cramfs")))
                 umount_fs(path);
         }
     }
