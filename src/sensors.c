@@ -255,6 +255,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         break;
     case 0x5300:
         break;
+    case 0xcb10:
+        res = 0x2239;
+        break;
     case 0:
     case 0xffff:
         // SC1135 catches here
