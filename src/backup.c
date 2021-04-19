@@ -543,6 +543,25 @@ static uint32_t platform_ramstart() {
     }
 }
 
+static void handle_signal(int signal) {
+    printf("Ignore %s\n", strsignal(signal));
+}
+
+static void skip_signals() {
+    struct sigaction sa = {
+        .sa_handler = &handle_signal,
+        // Restart the system call, if at all possible
+        .sa_flags = SA_RESTART,
+    };
+    // Block every signal during the handler
+    sigfillset(&sa.sa_mask);
+    sigaction(SIGHUP, &sa, NULL);
+    // Danger area, use only in production for sure
+#if 0
+	sigaction(SIGKILL, &sa, NULL);
+#endif
+}
+
 int do_upgrade(const char *filename, bool force) {
     getchipid();
     uint32_t ram_start = platform_ramstart();
@@ -553,6 +572,8 @@ int do_upgrade(const char *filename, bool force) {
 
     if (!free_resources(force))
         return 1;
+
+    skip_signals();
 
     mtd_restore_ctx_t mtd;
     memset(&mtd, 0, sizeof(mtd));
