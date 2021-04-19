@@ -47,32 +47,40 @@ static void crc32(const void *data, size_t n_bytes, uint32_t *crc) {
 }
 
 #define CRC_SZ 4
-// Assume env only size of 64Kb
-#define ENV_LEN 0x10000
+
+// By default use 0x10000 but then can be changed after detection
+size_t env_len = 0x10000;
 
 // Detect U-Boot environment area offset
 int uboot_detect_env(void *buf, size_t len) {
+    size_t possible_lens[] = {0x10000, 0x40000};
+
     // Jump over memory by step
-    int scan_step = ENV_LEN;
-    int res = -1;
+    int scan_step = 0x10000;
 
     for (int baddr = 0; baddr < len; baddr += scan_step) {
         uint32_t expected_crc = *(int *)(buf + baddr);
 
-#if 0
-        printf("Detecting at 0x%x, CRC is 0x%x\n", baddr,
-               *(int *)(buf + baddr));
+        for (int i = 0; i < sizeof(possible_lens) / sizeof(possible_lens[0]);
+             i++) {
+            if (possible_lens[i] + baddr > len)
+                continue;
+
+#if 1
+            printf("Detecting at %#x with len %#x CRC is %#x\n", baddr,
+                   possible_lens[i], *(int *)(buf + baddr));
 #endif
 
-        uint32_t res_crc = 0;
-        crc32(buf + baddr + CRC_SZ, ENV_LEN - CRC_SZ, &res_crc);
-        if (res_crc == expected_crc) {
-            res = baddr;
-            break;
+            uint32_t res_crc = 0;
+            crc32(buf + baddr + CRC_SZ, possible_lens[i] - CRC_SZ, &res_crc);
+            if (res_crc == expected_crc) {
+                env_len = possible_lens[i];
+                return baddr;
+            }
         }
     }
 
-    return res;
+    return -1;
 }
 
 // Print environment configuration
@@ -87,8 +95,8 @@ void uboot_printenv(const char *env) {
 static void *uenv;
 void uboot_copyenv(const void *buf) {
     if (!uenv) {
-        uenv = malloc(ENV_LEN);
-        memcpy(uenv, buf, ENV_LEN);
+        uenv = malloc(env_len);
+        memcpy(uenv, buf, env_len);
     }
 }
 
@@ -122,7 +130,7 @@ static void uboot_setenv(int mtd, uint32_t offset, const char *env,
     uint32_t res_crc = 0;
 
     uboot_copyenv(env);
-    char *newenv = calloc(ENV_LEN, 1);
+    char *newenv = calloc(env_len, 1);
 
     const char *ptr = uenv + CRC_SZ;
     char *nptr = newenv + CRC_SZ;
@@ -154,7 +162,7 @@ static void uboot_setenv(int mtd, uint32_t offset, const char *env,
                 goto rewrite;
             } else {
                 if (strlen(newvalue) != 0)
-                    nptr += snprintf(nptr, ENV_LEN - (nptr - newenv), "%s=%s",
+                    nptr += snprintf(nptr, env_len - (nptr - newenv), "%s=%s",
                                      key, newvalue) +
                             1;
             }
@@ -167,18 +175,18 @@ static void uboot_setenv(int mtd, uint32_t offset, const char *env,
     }
     if (!found) {
         // Need to add new value
-        snprintf(nptr, ENV_LEN - (nptr - newenv), "%s=%s", key, newvalue);
+        snprintf(nptr, env_len - (nptr - newenv), "%s=%s", key, newvalue);
     }
     towrite = newenv;
 
 rewrite:
     if (fop == FOP_INTERACTIVE || fop == FOP_ROM) {
-        crc32(towrite + CRC_SZ, ENV_LEN - CRC_SZ, &res_crc);
+        crc32(towrite + CRC_SZ, env_len - CRC_SZ, &res_crc);
         *(uint32_t *)towrite = res_crc;
-        mtd_write(mtd, offset, erasesize, towrite, ENV_LEN);
+        mtd_write(mtd, offset, erasesize, towrite, env_len);
     }
     if (uenv != towrite)
-        memcpy(uenv, towrite, ENV_LEN);
+        memcpy(uenv, towrite, env_len);
 
 bailout:
     if (newenv)
