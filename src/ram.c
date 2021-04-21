@@ -39,7 +39,6 @@ uint32_t rounded_num(uint32_t n) {
 
 void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
     linux_mem();
-    *total_mem = 0;
     if (!strcmp(VENDOR_HISI, chip_manufacturer))
         *total_mem = hisi_totalmem(media_mem);
 
@@ -52,8 +51,8 @@ cJSON *detect_ram() {
     cJSON *j_inner = cJSON_CreateObject();
     cJSON_AddItemToObject(fake_root, "ram", j_inner);
 
-    unsigned long media_mem;
-    uint32_t total_mem;
+    unsigned long media_mem = 0;
+    uint32_t total_mem = 0;
     hal_ram(&media_mem, &total_mem);
     ADD_PARAM_FMT("total", "%uM", rounded_num(total_mem / 1024));
 

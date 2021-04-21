@@ -124,6 +124,16 @@ static bool detect_xiongmai() {
     return true;
 }
 
+static bool detect_sstar() {
+    uint32_t val;
+    if (mem_reg(0x1f003c00, &val, OP_READ)) {
+        snprintf(chip_id, sizeof(chip_id), "id %#x", val);
+        chip_generation = val;
+        return true;
+    }
+    return false;
+}
+
 static bool detect_generic() {
     char buf[256];
 
@@ -133,6 +143,8 @@ static bool detect_generic() {
         return false;
     }
     strcpy(chip_manufacturer, buf);
+    if (!strcmp(chip_manufacturer, "SStar"))
+        return detect_sstar();
     strcpy(chip_id, "unknown");
     return true;
 }
