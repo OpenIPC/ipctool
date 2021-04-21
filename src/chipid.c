@@ -106,7 +106,7 @@ static const char *get_hisi_chip_id(uint32_t reg) {
     }
 }
 
-static bool detect_xm510() {
+static bool detect_xiongmai() {
     char buf[256];
 
     bool res = get_regex_line_from_file("/proc/cpuinfo", "^Hardware.+(xm.+)",
@@ -124,29 +124,20 @@ static bool detect_xm510() {
     return true;
 }
 
-static bool hw_detect_system() {
-    uint32_t SC_CTRL_base;
+static bool detect_generic() {
+    char buf[256];
 
-    long uart_base = get_uart0_address();
-    switch (uart_base) {
-    // xm510
-    case 0x10030000:
-        return detect_xm510();
-    // hi3516cv300
-    case 0x12100000:
-    // hi3516ev200
-    case 0x12040000:
-        SC_CTRL_base = 0x12020000;
-        break;
-    // hi3536c
-    case 0x12080000:
-        SC_CTRL_base = 0x12050000;
-        break;
-    // hi3518ev200
-    default:
-        SC_CTRL_base = 0x20050000;
+    bool res = get_regex_line_from_file("/proc/cpuinfo", "Hardware.+: (\\w+)",
+                                        buf, sizeof(buf));
+    if (!res) {
+        return false;
     }
+    strcpy(chip_manufacturer, buf);
+    strcpy(chip_id, "unknown");
+    return true;
+}
 
+static bool detect_hisilicon(uint32_t SC_CTRL_base) {
     int mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (mem_fd < 0) {
         printf("can't open /dev/mem \n");
@@ -222,6 +213,31 @@ static bool hw_detect_system() {
 
     strcpy(chip_manufacturer, VENDOR_HISI);
     return true;
+}
+
+static bool hw_detect_system() {
+    long uart_base = get_uart0_address();
+    switch (uart_base) {
+    // xm510
+    case 0x10030000:
+        return detect_xiongmai();
+    // hi3516cv300
+    case 0x12100000:
+    // hi3516ev200
+    case 0x12040000:
+        return detect_hisilicon(0x12020000);
+    // hi3536c
+    case 0x12080000:
+        return detect_hisilicon(0x12050000);
+        break;
+    // hi3516cv100
+    // hi3518ev200
+    case 0x20080000:
+        return detect_hisilicon(0x20050000);
+        break;
+    default:
+        return detect_generic();
+    }
 }
 
 static char sysid[255];
