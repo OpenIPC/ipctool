@@ -66,7 +66,7 @@ int uboot_detect_env(void *buf, size_t len) {
             if (possible_lens[i] + baddr > len)
                 continue;
 
-#if 1
+#if 0
             printf("Detecting at %#x with len %#x CRC is %#x\n", baddr,
                    possible_lens[i], *(int *)(buf + baddr));
 #endif
