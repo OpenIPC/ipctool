@@ -26,9 +26,11 @@ static void parse_meminfo(struct meminfo *g) {
     fclose(fp);
 }
 
-void linux_mem() { parse_meminfo(&mem); }
-
-unsigned long kernel_mem() { return mem.MemTotal; }
+unsigned long kernel_mem() {
+    if (!mem.MemTotal)
+        parse_meminfo(&mem);
+    return mem.MemTotal;
+}
 
 uint32_t rounded_num(uint32_t n) {
     int i;
@@ -39,7 +41,6 @@ uint32_t rounded_num(uint32_t n) {
 }
 
 void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
-    linux_mem();
     if (!strcmp(VENDOR_HISI, chip_manufacturer))
         *total_mem = hisi_totalmem(media_mem);
     else if (!strcmp(VENDOR_XM, chip_manufacturer))

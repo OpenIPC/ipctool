@@ -151,8 +151,6 @@ bool get_board_id() {
     return false;
 }
 
-static void generic_system_data() { linux_mem(); }
-
 #define MAX_YAML 1024 * 64
 bool wait_mode = false;
 static bool backup_mode() {
@@ -291,7 +289,6 @@ int main(int argc, char *argv[]) {
         // child process
         return EXIT_SUCCESS;
 
-    generic_system_data();
     if (getchipid()) {
         yaml_printf("---\n");
         if (get_board_id()) {
