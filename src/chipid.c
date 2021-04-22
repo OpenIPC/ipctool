@@ -24,7 +24,6 @@ int chip_generation;
 char chip_id[128];
 char chip_manufacturer[128];
 char short_manufacturer[128];
-char mpp_info[1024];
 char nor_chip[128];
 
 static long get_uart0_address() {

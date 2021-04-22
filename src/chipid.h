@@ -17,7 +17,6 @@ extern char short_manufacturer[128];
 extern char control[128];
 extern char sensor_id[128];
 extern char sensor_manufacturer[128];
-extern char mpp_info[1024];
 extern char nor_chip[128];
 
 const char *getchipid();

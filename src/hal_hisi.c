@@ -545,7 +545,7 @@ static const char *get_hisi_chip_id(uint32_t reg) {
         chip_generation = HISI_V3;
         return "3536CV100";
     default:
-        fprintf(stderr, "get_chip_id() got unexpected 0x%x\n", reg);
+        fprintf(stderr, "get_hisi_chip_id() got unexpected 0x%x\n", reg);
         return "unknown";
     }
 }
