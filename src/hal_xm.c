@@ -146,6 +146,11 @@ bool xm_detect_cpu() {
         *ptr = toupper(*ptr);
         ptr++;
     }
+    unsigned long media_mem = 0;
+    uint32_t totalmem = rounded_num(xm_totalmem(&media_mem) / 1024);
+    if (!strcmp(chip_id, "XM530") && totalmem == 128)
+        strcpy(chip_id, "XM550");
+
     strcpy(chip_manufacturer, VENDOR_XM);
     return true;
 }

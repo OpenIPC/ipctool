@@ -39,5 +39,8 @@ void setup_hal_hisi();
 void setup_hal_xm();
 int common_open_sensor_fd(const char *dev_name);
 int common_sensor_i2c_change_addr(int fd, unsigned char addr);
+unsigned long kernel_mem();
+void hal_ram(unsigned long *media_mem, uint32_t *total_mem);
+uint32_t rounded_num(uint32_t n);
 
 #endif /* HAL_COMMON_H */
