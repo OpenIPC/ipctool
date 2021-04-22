@@ -160,7 +160,7 @@ bool xm_flash_init(int fd) {
 static bool detect_xm_product() {
     char buf[256];
 
-    if (!get_regex_line_from_file("/usr/bin/ProductDefinition",
+    if (!get_regex_line_from_file("/mnt/custom/ProductDefinition",
                                   "\"Hardware\" : \"(.+)\"", buf,
                                   sizeof(buf))) {
         return false;

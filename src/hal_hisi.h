@@ -31,5 +31,6 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
 void hisi_vi_information(sensor_ctx_t *ctx);
 uint32_t hisi_totalmem(unsigned long *media_mem);
 void hisi_detect_fmc();
+bool hisi_detect_cpu(uint32_t SC_CTRL_base);
 
 #endif /* HAL_HISI_H */

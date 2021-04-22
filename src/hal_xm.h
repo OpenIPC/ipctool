@@ -24,5 +24,6 @@ int xm_sensor_write_register(int fd, unsigned char i2c_addr,
                              unsigned int reg_addr, unsigned int reg_width,
                              unsigned int data, unsigned int data_width);
 uint32_t xm_totalmem(unsigned long *media_mem);
+bool xm_detect_cpu();
 
 #endif /* HAL_XM_H */

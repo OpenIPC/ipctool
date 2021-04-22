@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,6 +6,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include "chipid.h"
 #include "hal_common.h"
 #include "ram.h"
 #include "tools.h"
@@ -128,4 +130,22 @@ exit:
 uint32_t xm_totalmem(unsigned long *media_mem) {
     *media_mem = xm_media_mem();
     return *media_mem + kernel_mem();
+}
+
+bool xm_detect_cpu() {
+    char buf[256];
+
+    bool res = get_regex_line_from_file("/proc/cpuinfo", "^Hardware.+(xm.+)",
+                                        buf, sizeof(buf));
+    if (!res) {
+        return false;
+    }
+    strncpy(chip_id, buf, sizeof(chip_id));
+    char *ptr = chip_id;
+    while (*ptr) {
+        *ptr = toupper(*ptr);
+        ptr++;
+    }
+    strcpy(chip_manufacturer, VENDOR_XM);
+    return true;
 }
