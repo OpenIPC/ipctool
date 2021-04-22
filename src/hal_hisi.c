@@ -336,27 +336,6 @@ uint32_t hisi_totalmem(unsigned long *media_mem) {
         return *media_mem + kernel_mem();
 }
 
-static char printk_state[16];
-#define PRINTK_FILE "/proc/sys/kernel/printk"
-static void disable_printk() {
-    if (*printk_state)
-        return;
-
-    FILE *fp = fopen(PRINTK_FILE, "rw+");
-    if (!fp)
-        return;
-    const char *ret;
-    ret = fgets(printk_state, sizeof(printk_state) - 1, fp);
-    // We cannot use rewind() here
-    fclose(fp);
-    if (!ret)
-        return;
-
-    fp = fopen(PRINTK_FILE, "w");
-    fprintf(fp, "0 0 0 0\n");
-    fclose(fp);
-}
-
 struct EV300_PERI_CRG60 {
     bool sensor0_cken : 1;
     unsigned int sensor0_srst_req : 1;
@@ -417,15 +396,6 @@ static void v4_ensure_sensor_restored() {
     if (crg60_changed) {
         mem_reg(EV300_PERI_CRG60_ADDR, (uint32_t *)&peri_crg60, OP_WRITE);
     }
-}
-
-static void restore_printk() {
-    if (!*printk_state)
-        return;
-
-    FILE *fp = fopen(PRINTK_FILE, "w");
-    fprintf(fp, "%s", printk_state);
-    fclose(fp);
 }
 
 static void hisi_hal_cleanup() {

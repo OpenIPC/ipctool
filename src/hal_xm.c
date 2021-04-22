@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "hal_common.h"
+#include "tools.h"
 
 static unsigned char sony_addrs[] = {0x1a, 0};
 static unsigned char onsemi_addrs[] = {0x10, 0};
@@ -68,9 +69,10 @@ int xm_sensor_write_register(int fd, unsigned char i2c_addr,
     return 0;
 }
 
-static void xm_hal_cleanup() {}
+static void xm_hal_cleanup() { restore_printk(); }
 
 void setup_hal_xm() {
+    disable_printk();
     open_sensor_fd = xm_open_sensor_fd;
     close_sensor_fd = xm_close_sensor_fd;
     sensor_i2c_change_addr = common_sensor_i2c_change_addr;

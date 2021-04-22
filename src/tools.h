@@ -40,6 +40,8 @@ uint32_t read_le32(const char *ptr);
 char *file_to_buf(const char *filename, size_t *len);
 char *fread_to_buf(const char *filename, size_t *len, uint32_t round_up,
                    size_t *payloadsz);
+void restore_printk();
+void disable_printk();
 
 // avoid warnings for old compilers
 #if __GNUC__ < 7

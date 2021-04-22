@@ -203,3 +203,33 @@ char *fread_to_buf(const char *filename, size_t *bs, uint32_t round_up,
 char *file_to_buf(const char *filename, size_t *len) {
     return fread_to_buf(filename, len, 0, NULL);
 }
+
+static char printk_state[16];
+#define PRINTK_FILE "/proc/sys/kernel/printk"
+void disable_printk() {
+    if (*printk_state)
+        return;
+
+    FILE *fp = fopen(PRINTK_FILE, "rw+");
+    if (!fp)
+        return;
+    const char *ret;
+    ret = fgets(printk_state, sizeof(printk_state) - 1, fp);
+    // We cannot use rewind() here
+    fclose(fp);
+    if (!ret)
+        return;
+
+    fp = fopen(PRINTK_FILE, "w");
+    fprintf(fp, "0 0 0 0\n");
+    fclose(fp);
+}
+
+void restore_printk() {
+    if (!*printk_state)
+        return;
+
+    FILE *fp = fopen(PRINTK_FILE, "w");
+    fprintf(fp, "%s", printk_state);
+    fclose(fp);
+}
