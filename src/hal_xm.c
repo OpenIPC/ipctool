@@ -68,6 +68,8 @@ int xm_sensor_write_register(int fd, unsigned char i2c_addr,
     return 0;
 }
 
+static void xm_hal_cleanup() {}
+
 void setup_hal_xm() {
     open_sensor_fd = xm_open_sensor_fd;
     close_sensor_fd = xm_close_sensor_fd;
@@ -75,4 +77,5 @@ void setup_hal_xm() {
     sensor_read_register = xm_sensor_read_register;
     sensor_write_register = xm_sensor_write_register;
     possible_i2c_addrs = xm_possible_i2c_addrs;
+    hal_cleanup = xm_hal_cleanup;
 }
