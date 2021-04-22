@@ -1,10 +1,12 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <sys/ioctl.h>
 #include <unistd.h>
 
 #include "hal_common.h"
+#include "ram.h"
 #include "tools.h"
 
 static unsigned char sony_addrs[] = {0x1a, 0};
@@ -80,4 +82,50 @@ void setup_hal_xm() {
     sensor_write_register = xm_sensor_write_register;
     possible_i2c_addrs = xm_possible_i2c_addrs;
     hal_cleanup = xm_hal_cleanup;
+}
+
+static unsigned long xm_media_mem() {
+    FILE *f = fopen("/proc/umap/mmz", "r");
+    if (!f)
+        return 0;
+
+    unsigned long mmem = 0;
+    regex_t regex;
+    regmatch_t matches[3];
+    if (!compile_regex(&regex, "\\[(0x[0-9a-f]+)-+(0x[0-9a-f]+)\\]"))
+        goto exit;
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    while ((read = getline(&line, &len, f)) != -1) {
+        if (regexec(&regex, line, sizeof(matches) / sizeof(matches[0]),
+                    (regmatch_t *)&matches, 0) == 0) {
+            regoff_t start = matches[1].rm_so;
+            regoff_t end = matches[1].rm_eo;
+            line[end] = 0;
+            unsigned long memstart = strtoul(line + start, NULL, 16);
+
+            start = matches[2].rm_so;
+            end = matches[2].rm_eo;
+            line[end] = 0;
+            unsigned long memend = strtoul(line + start, NULL, 16);
+
+            mmem = (memend - memstart) / 1024;
+            break;
+        }
+    }
+    if (line)
+        free(line);
+
+exit:
+    regfree(&regex);
+    fclose(f);
+    return mmem;
+}
+
+uint32_t xm_totalmem(unsigned long *media_mem) {
+    *media_mem = xm_media_mem();
+    return *media_mem + kernel_mem();
 }

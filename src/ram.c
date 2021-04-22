@@ -3,6 +3,7 @@
 
 #include "chipid.h"
 #include "hal_hisi.h"
+#include "hal_xm.h"
 #include "ram.h"
 #include "tools.h"
 
@@ -41,6 +42,8 @@ void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
     linux_mem();
     if (!strcmp(VENDOR_HISI, chip_manufacturer))
         *total_mem = hisi_totalmem(media_mem);
+    else if (!strcmp(VENDOR_XM, chip_manufacturer))
+        *total_mem = xm_totalmem(media_mem);
 
     if (!*total_mem)
         *total_mem = kernel_mem();
