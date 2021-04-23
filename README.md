@@ -2,18 +2,18 @@
 
 ![ipc-chip-info](https://github.com/OpenIPC/ipctool/workflows/ipc-chip-info/badge.svg)
 
-Thes basic concept belongs to [@cherov](http://github.com/chertov) (thank you for
+Thes basic concept belongs to [@chertov](http://github.com/chertov) (thank you for
 your original utility) and [@nikitos1550](https://github.com/nikitos1550/) (for
 cute YAML format for describing hardware). A warm welcome also to [Igor
-Zalatov] (https://github.com/ZigFisher)(for suggestions for new features and
+Zalatov](https://github.com/ZigFisher) (for suggestions for new features and
 describing ways to do them).
 
 ## Download
 
 Use [the
 link](https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool)
-to download latest build (even directly to your camera). The build use `musl` to
-work on vast majority of hardware.
+to download latest build (even directly to your camera). The build uses `musl`
+C library to work on vast majority of hardware.
 
 ## Usage
 
@@ -35,7 +35,7 @@ work on vast majority of hardware.
 ```
 
 When run without parameters utility produces YAML with all hardware-specific
-information about given IPC:
+information about given IP-camera or DVR:
 
 ```yaml
 ---
@@ -103,8 +103,8 @@ Tested on:
 
 |Manufacturer|Models|
 |---|---|
-|[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|hi3516cv100/200/300, hi3516ev100/200/300|
-|Xiongmai|XM510, XM530|
+|[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|Hi3516CV100/200/300, Hi3516EV100/200/300|
+|Xiongmai|XM510, XM530, XM550|
 
 Please test on your device to help us extend the list.
 
@@ -114,7 +114,7 @@ Tested on:
 
 |Manufacturer|Models|
 |---|---|
-|XM | Huge amount |
+|Xiongmai| Various models |
 |Hankvision | V6202IR-IMX327 |
 
 ## Supported sensors
