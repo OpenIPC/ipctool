@@ -104,6 +104,7 @@ Tested on:
 |Manufacturer|Models|
 |---|---|
 |[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|Hi3516CV100/200/300, Hi3516EV100/200/300|
+|SigmaStar|SSC335|
 |Xiongmai|XM510, XM530, XM550|
 
 Please test on your device to help us extend the list.
