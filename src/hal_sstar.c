@@ -1,8 +1,10 @@
 #include "hal_sstar.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "chipid.h"
+#include "hal_common.h"
 #include "tools.h"
 
 bool sstar_detect_cpu() {
@@ -13,4 +15,19 @@ bool sstar_detect_cpu() {
         return true;
     }
     return false;
+}
+
+static unsigned long sstar_media_mem() {
+    char buf[256];
+
+    if (!get_regex_line_from_file("/proc/cmdline",
+                                  "mma_heap=.+sz=(0x[0-9A-Fa-f]+)", buf,
+                                  sizeof(buf)))
+        return 0;
+    return strtoul(buf, NULL, 16) / 1024;
+}
+
+unsigned long sstar_totalmem(unsigned long *media_mem) {
+    *media_mem = sstar_media_mem();
+    return *media_mem + kernel_mem();
 }

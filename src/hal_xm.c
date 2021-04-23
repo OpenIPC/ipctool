@@ -127,7 +127,7 @@ exit:
     return mmem;
 }
 
-uint32_t xm_totalmem(unsigned long *media_mem) {
+unsigned long xm_totalmem(unsigned long *media_mem) {
     *media_mem = xm_media_mem();
     return *media_mem + kernel_mem();
 }

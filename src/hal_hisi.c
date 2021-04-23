@@ -330,7 +330,7 @@ static bool is_cma_allocator() {
     return false;
 }
 
-uint32_t hisi_totalmem(unsigned long *media_mem) {
+unsigned long hisi_totalmem(unsigned long *media_mem) {
     *media_mem = hisi_media_mem();
     if (is_cma_allocator())
         return kernel_mem();

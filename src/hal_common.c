@@ -93,6 +93,8 @@ void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
         *total_mem = hisi_totalmem(media_mem);
     else if (!strcmp(VENDOR_XM, chip_manufacturer))
         *total_mem = xm_totalmem(media_mem);
+    else if (!strcmp(VENDOR_SSTAR, chip_manufacturer))
+        *total_mem = sstar_totalmem(media_mem);
 
     if (!*total_mem)
         *total_mem = kernel_mem();

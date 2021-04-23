@@ -47,7 +47,7 @@ static bool generic_detect_cpu() {
         return false;
     }
     strcpy(chip_manufacturer, buf);
-    if (!strcmp(chip_manufacturer, "SStar"))
+    if (!strcmp(chip_manufacturer, VENDOR_SSTAR))
         return sstar_detect_cpu();
     strcpy(chip_id, "unknown");
     return true;
