@@ -180,6 +180,17 @@ static bool extract_cloud_id() {
     return true;
 }
 
+static bool extract_snsType() {
+    char buf[256];
+
+    if (!get_regex_line_from_file("/mnt/mtd/Config/SensorType.bat",
+                                  "snsType:([0-9]+)", buf, sizeof(buf))) {
+        return false;
+    }
+    sprintf(board_specific + strlen(board_specific), "  snsType: %s\n", buf);
+    return true;
+}
+
 static void extract_netip_creds(char username[64], char pwd[64]) {
     size_t len;
     char *config = file_to_buf("/mnt/mtd/Config/Account1", &len);
@@ -220,6 +231,7 @@ void gather_xm_board_info() {
 
     detect_xm_product();
     extract_cloud_id();
+    extract_snsType();
     detect_nor_chip();
 }
 
