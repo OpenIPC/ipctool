@@ -204,7 +204,7 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    // xm_i2c_write(0x103, 1);
+    // xm_i2c_write(0x103, 1); // reset all registers (2 times and then delay)
     // msDelay(100);
 
     // could be 0x3005 for SC1035, SC1145, SC1135
@@ -221,43 +221,72 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
 
     int res = high << 8 | lower;
     switch (res) {
+    case 0x1235:
+        // Untested
+        break;
+    case 0x1245:
+        // Untested
+        {
+            int sw = sensor_read_register(fd, i2c_addr, 0x3020, 2, 1);
+            sprintf(ctx->sensor_id, "SC2145H_%c", sw == 2 ? 'A' : 'B');
+            return true;
+        }
     case 0x2032:
     case 0x2135:
         res = 0x2135;
         break;
+    case 0x2145:
+        // Untested
+        break;
     case 0x2045:
         break;
-    // Untested
     case 0x2210:
+        // (Untested) aka fake Aptina AR0130
         res = 0x1035;
         break;
-    case 0x2232:
-        strcpy(ctx->sensor_id, "SC2235P");
+    case 0x2232: {
+        if (sensor_read_register(fd, i2c_addr, 0x3109, 2, 1) == 0x20)
+            strcpy(ctx->sensor_id, "SC2235E");
+        else // 0x01
+            strcpy(ctx->sensor_id, "SC2235P");
         return true;
+    }
     case 0x2235:
         break;
     case 0x2238:
+        // aka SC4239Р and SC307E
         strcpy(ctx->sensor_id, "SC2315E");
         return true;
-    // Untested
     case 0x2245:
+        // Untested
         res = 0x1145;
         break;
     case 0x2311:
         res = 0x2315;
         break;
-    // Untested
-    case 0x3235:
-        res = 0x5239;
+    case 0x3035:
         break;
-    // Untested
+    case 0x3235:
+        // Untested
+        res = 0x4236;
+        break;
     case 0x5235:
+        // Untested
         break;
     case 0x5300:
-        break;
+        strcpy(ctx->sensor_id, "SC335E");
+        return true;
     case 0xcb10:
         res = 0x2239;
         break;
+    case 0xcb14:
+        // Untested
+        res = 0x2335;
+        break;
+    case 0xcc05:
+        // Untested
+        strcpy(ctx->sensor_id, "AUGE");
+        return true;
     case 0:
     case 0xffff:
         // SC1135 catches here
