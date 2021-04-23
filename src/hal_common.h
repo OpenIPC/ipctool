@@ -2,6 +2,7 @@
 #define HAL_COMMON_H
 
 #include "hal_hisi.h"
+#include "hal_sstar.h"
 #include "hal_xm.h"
 
 enum SENSORS {

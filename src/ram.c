@@ -3,8 +3,6 @@
 
 #include "chipid.h"
 #include "hal_common.h"
-#include "hal_hisi.h"
-#include "hal_xm.h"
 #include "ram.h"
 #include "tools.h"
 

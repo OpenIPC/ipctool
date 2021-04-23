@@ -27,7 +27,6 @@
 #include "cjson/cJSON.h"
 #include "dns.h"
 #include "hal_common.h"
-#include "hal_hisi.h"
 #include "http.h"
 #include "mtd.h"
 #include "network.h"

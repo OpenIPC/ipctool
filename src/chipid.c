@@ -38,16 +38,6 @@ static long get_uart0_address() {
     return strtol(buf, NULL, 16);
 }
 
-static bool sstar_detect_cpu() {
-    uint32_t val;
-    if (mem_reg(0x1f003c00, &val, OP_READ)) {
-        snprintf(chip_id, sizeof(chip_id), "id %#x", val);
-        chip_generation = val;
-        return true;
-    }
-    return false;
-}
-
 static bool generic_detect_cpu() {
     char buf[256];
 
