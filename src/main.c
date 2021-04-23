@@ -28,6 +28,7 @@
 #include "uboot.h"
 #include "version.h"
 
+#include "vendors/buildroot.h"
 #include "vendors/hankvision.h"
 #include "vendors/openipc.h"
 #include "vendors/openwrt.h"
@@ -140,11 +141,10 @@ bool get_board_id() {
     } else if (is_openwrt_board()) {
         gather_openwrt_board_info();
         return true;
-    }
-    //    } else if (is_br_board()) {
-    //        gather_openwrt_board_info();
-    //        return true;
-    else if (is_hankvision_board()) {
+    } else if (is_br_board()) {
+        gather_br_board_info();
+        return true;
+    } else if (is_hankvision_board()) {
         gather_hankvision_board_info();
         return true;
     }

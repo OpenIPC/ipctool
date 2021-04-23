@@ -19,7 +19,7 @@
 #include "vendors/xm.h"
 
 bool is_xm_board() {
-    if (!access("/proc/xm/xminfo", 0)) {
+    if (!access("/mnt/mtd/Config/Account1", 0)) {
         strcpy(board_manufacturer, "Xiongmai");
         return true;
     }
@@ -209,7 +209,8 @@ static void extract_netip_creds(char username[64], char pwd[64]) {
 
 bailout:
     free(config);
-    cJSON_Delete(json);
+    if (json)
+        cJSON_Delete(json);
 }
 
 void gather_xm_board_info() {
