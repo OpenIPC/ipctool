@@ -16,8 +16,11 @@ static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char omni_addrs[] = {0x6c, 0};
 static unsigned char onsemi_addrs[] = {0x20, 0};
 
-sensor_addr_t sstar_possible_i2c_addrs[] = {
-    {SENSOR_SONY, sony_addrs}, {SENSOR_SMARTSENS, ssens_addrs}, {0, NULL}};
+sensor_addr_t sstar_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
+                                            {SENSOR_SMARTSENS, ssens_addrs},
+                                            {SENSOR_ONSEMI, onsemi_addrs},
+                                            {SENSOR_OMNIVISION, omni_addrs},
+                                            {0, NULL}};
 
 bool sstar_detect_cpu() {
     uint32_t val;
@@ -57,46 +60,60 @@ int sstar_sensor_i2c_change_addr(int fd, unsigned char addr) {
 }
 
 static int sstar_i2c_write(int fd, unsigned char slave_addr,
-                           unsigned char *reg_addr, unsigned char reg_cnt) {
+                           unsigned char *reg_addr, unsigned char red_width) {
     unsigned int data_size = 0;
 
-    data_size = reg_cnt * sizeof(unsigned char);
-    if (write(fd, reg_addr, data_size) != data_size) {
-        return -1;
-    }
+    data_size = red_width * sizeof(unsigned char);
     return 0;
 }
 
 int sstar_sensor_write_register(int fd, unsigned char i2c_addr,
                                 unsigned int reg_addr, unsigned int reg_width,
-                                unsigned int data, unsigned int data_width) {}
+                                unsigned int data, unsigned int data_width) {
+    char buf[2];
 
-static int sstar_i2c_read(int fd, unsigned char slave_addr,
-                          unsigned char *reg_addr, unsigned char reg_cnt,
-                          unsigned char *value, unsigned char value_cnt) {
-    unsigned int data_size = 0;
-
-    data_size = reg_cnt * sizeof(unsigned char);
-    if (write(fd, reg_addr, data_size) != data_size) {
-        return -1;
-    }
-    data_size = value_cnt * sizeof(unsigned char);
-    int n;
-    if ((n = read(fd, value, data_size)) != data_size) {
-        return -1;
+    if (reg_width == 2) {
+        buf[0] = (reg_addr >> 8) & 0xff;
+        buf[1] = reg_addr & 0xff;
+    } else {
+        buf[0] = reg_addr & 0xff;
     }
 
+    if (write(fd, buf, data_width) != data_width) {
+        return -1;
+    }
     return 0;
 }
 
 int sstar_sensor_read_register(int fd, unsigned char i2c_addr,
                                unsigned int reg_addr, unsigned int reg_width,
                                unsigned int data_width) {
-    uint16_t raddr = ntohs(reg_addr);
-    uint8_t val = 0;
-    sstar_i2c_read(fd, i2c_addr, (unsigned char *)&raddr, reg_width,
-                   (unsigned char *)&val, data_width);
-    return val;
+    char recvbuf[4];
+    unsigned int data;
+
+    if (reg_width == 2) {
+        recvbuf[0] = (reg_addr >> 8) & 0xff;
+        recvbuf[1] = reg_addr & 0xff;
+    } else {
+        recvbuf[0] = reg_addr & 0xff;
+    }
+
+    int data_size = reg_width * sizeof(unsigned char);
+    if (write(fd, recvbuf, data_size) != data_size) {
+        return -1;
+    }
+
+    data_size = data_width * sizeof(unsigned char);
+    if (read(fd, recvbuf, data_size) != data_size) {
+        return -1;
+    }
+
+    if (data_width == 2) {
+        data = recvbuf[0] | (recvbuf[1] << 8);
+    } else
+        data = recvbuf[0];
+
+    return data;
 }
 
 static void sstar_hal_cleanup() {}
