@@ -1,9 +1,9 @@
 # IPC chip information
 
-![ipc-chip-info](https://github.com/OpenIPC/ipctool/workflows/ipc-chip-info/badge.svg)
+[![ipctool-build](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml/badge.svg)](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml)
 
-Thes basic concept belongs to [@chertov](http://github.com/chertov) (thank you for
-your original utility) and [@nikitos1550](https://github.com/nikitos1550/) (for
+This basic concept belongs to [Maxim Chertov](http://github.com/chertov) (thank you for
+your original utility) and [Nikita Orlov](https://github.com/nikitos1550/) (for
 cute YAML format for describing hardware). A warm welcome also to [Igor
 Zalatov](https://github.com/ZigFisher) (for suggestions for new features and
 describing ways to do them).
@@ -15,21 +15,36 @@ link](https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool)
 to download latest build (even directly to your camera). The build uses `musl`
 C library to work on vast majority of hardware.
 
+### Alternative launch methods
+
+* *Public NFS server* (in case your camera firmware includes NFS client
+    support, proven to work on XM cameras):
+
+    ```console
+    $ mount -o nolock 95.217.179.189:/srv/ro /utils/
+    $ /utils/ipctool
+    ```
+
+* *Using telnet/console and uget utility*: basically convert small `uget` binary
+  into `echo`/`printf` chunks and deploy to `/tmp` partition. Read
+  [more in documentation](https://github.com/widgetii/uget)
+
 ## Usage
 
-```
-# ./ipctool --help
+```console
+# ipctool
     available options:
-        --system_id
-        --chip_id
-        --sensor_id
-        --temp
-        --dmesg
-        --printenv
-        --setenv
-        --wait
-        [--skip-env] --restore
-        --help
+
+	--chip_id
+	--sensor_id
+	--temp
+
+	--dmesg
+	--printenv
+	--setenv key=value
+
+	[--skip-env] [--force] --restore
+	--help
 
     (or run without params to get full available information)
 ```
@@ -72,29 +87,38 @@ sensors:
 
 * Determine chip id:
 
-    ```
-    root@IVG-HP203Y-AE# ipctool --chip_id
+    ```console
+    # ipctool --chip_id
     hi3516cv300
     ```
 
 * Determine sensor model and control line:
 
-    ```
-    root@IVG-HP203Y-AE# ipctool --sensor_id
+    ```console
+    # ipctool --sensor_id
     imx291_i2c
     ```
 
 * Get temperature from chip's internal sensor (not all devices supported):
 
-    ```
-    root@IVG-HP203Y-AE:~# /utils/sdk/ipctool --temp
+    ```console
+    # ipctool --temp
     50.69
     ```
 
+### As reverse engineering tool
+
 * Drop-in replacement of `dmesg` command:
 
+    ```console
+    # ipctool --dmesg
     ```
-    root@IVG-HP203Y-AE:~# /utils/sdk/ipctool --dmesg
+
+* Drop-in replacement of `fw_printenv` and `fw_setenv` commands:
+
+    ```console
+    # ipctool --printenv | grep bootargs
+    # ipctool --setenv bootargs="mem=\${osmem} mtdparts=hi_sfc:256k(boot),64k(env),2048k(kernel),5120k(rootfs),-(rootfs_data)"
     ```
 
 ## Supported SoCs
@@ -104,8 +128,8 @@ Tested on:
 |Manufacturer|Models|
 |---|---|
 |[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|Hi3516CV100/200/300, Hi3516EV100/200/300|
-|SigmaStar|SSC335|
-|Xiongmai|XM510, XM530, XM550|
+|[SigmaStar](http://linux-chenxing.org/)|SSC335|
+|[Xiongmai](http://www.xiongmaitech.com/product)|XM510, XM530, XM550|
 
 Please test on your device to help us extend the list.
 
@@ -125,9 +149,9 @@ Tested on:
 |Manufacturer           |Models                                 |
 |-----------------------|---------------------------------------|
 |Silicon Optronics, Inc.|JX-F22, JX-F23, JX-F37, JX-H62, JX-H65 |
-|Sony                   |IMX291, IMX307, IMX322, IMX323, IMX335 |
+|Sony                   |IMX291, IMX307, IMX322, IMX323, IMX327, IMX335 |
 |ON Semiconductor       |AR0130, AR0237                         |
-|SmartSens              |SC2135, SC2235, SC2235P, SC5300        |
+|SmartSens              |SC2135, SC2235, SC2235P, SC307E, SC335E |
 |OmniVision             |OV9712                                 |
 
 Please test on your device to help us extend the list.
