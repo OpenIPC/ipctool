@@ -7,5 +7,6 @@
 
 bool sstar_detect_cpu();
 unsigned long sstar_totalmem(unsigned long *media_mem);
+void setup_hal_sstar();
 
 #endif /* HAL_SSTAR_H */

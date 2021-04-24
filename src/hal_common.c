@@ -53,6 +53,8 @@ void setup_hal_drivers() {
         setup_hal_hisi();
     else if (!strcmp(VENDOR_XM, chip_manufacturer))
         setup_hal_xm();
+    else if (!strcmp(VENDOR_SSTAR, chip_manufacturer))
+        setup_hal_sstar();
 }
 
 typedef struct meminfo {
