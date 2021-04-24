@@ -1,4 +1,4 @@
-name: ipc-chip-build
+name: ipctool-build
 
 on:
   push:

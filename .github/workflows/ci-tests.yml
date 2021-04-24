@@ -1,4 +1,4 @@
-name: ipc-chip-tests
+name: ipctool-tests
 
 on:
   repository_dispatch:
