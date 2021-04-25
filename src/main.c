@@ -32,6 +32,7 @@
 #include "vendors/hankvision.h"
 #include "vendors/openipc.h"
 #include "vendors/openwrt.h"
+#include "vendors/ruision.h"
 #include "vendors/xm.h"
 
 #define RESET_CL "\x1b[0m"
@@ -143,6 +144,9 @@ bool get_board_id() {
         return true;
     } else if (is_br_board()) {
         gather_br_board_info();
+        return true;
+    } else if (is_ruision_board()) {
+        gather_ruision_board_info();
         return true;
     } else if (is_hankvision_board()) {
         gather_hankvision_board_info();

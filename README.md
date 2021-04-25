@@ -162,6 +162,7 @@ Tested on:
 |---|---|
 |Xiongmai| Various models |
 |Hankvision | V6202IR-IMX327 |
+|Ruision | RS-H649F-A0 |
 
 ## Supported sensors
 
