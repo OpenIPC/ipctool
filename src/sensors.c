@@ -282,6 +282,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         // Untested
         res = 0x2335;
         break;
+    case 0xcb17:
+        res = 0x2232;
+        break;
     case 0xcc05:
         // Untested
         strcpy(ctx->sensor_id, "AUGE");
