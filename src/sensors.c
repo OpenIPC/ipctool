@@ -108,6 +108,14 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
         return true;
     }
 
+    // from IMX415 datasheet, p.46
+    // 3B00h, Set to "2Eh", default value after reset is 28h
+    int ret3b00 = sensor_read_register(fd, i2c_addr, base + 0xB00, 2, 1);
+    if (ret3b00 == 0x2e || ret3b00 == 0x28) {
+        sprintf(ctx->sensor_id, "IMX415");
+        return true;
+    }
+
     int ret1dc = sensor_read_register(fd, i2c_addr, base + 0x1DC, 2, 1);
     if (ret1dc > 0 && ret1dc != 0xff) {
         switch (ret1dc & 6) {

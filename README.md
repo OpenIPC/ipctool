@@ -171,9 +171,9 @@ Tested on:
 |Manufacturer           |Models                                 |
 |-----------------------|---------------------------------------|
 |Silicon Optronics, Inc.|JX-F22, JX-F23, JX-F37, JX-H62, JX-H65, JX-K05 |
-|Sony                   |IMX291, IMX307, IMX322, IMX323, IMX327, IMX335 |
+|Sony                   |IMX291, IMX307, IMX322, IMX323, IMX327, IMX335, IMX415 |
 |ON Semiconductor       |AR0130, AR0237                         |
-|SmartSens              |SC2135, SC2235, SC2235P, SC307E, SC335E |
+|SmartSens              |SC2135, SC2232, SC2235, SC2235P, SC2239, SC2315e (SC307E, SC4239Р), SC335E (SC5300) |
 |OmniVision             |OV9712                                 |
 
 Please test on your device to help us extend the list.
