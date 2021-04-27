@@ -116,8 +116,10 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
         return true;
     }
 
+    // may accidentally return 0 but not to be IMX291 actually. need to
+    // workaround such case
     int ret1dc = sensor_read_register(fd, i2c_addr, base + 0x1DC, 2, 1);
-    if (ret1dc > 0 && ret1dc != 0xff) {
+    if (ret1dc != 0xff) {
         switch (ret1dc & 6) {
         case 4:
             sprintf(ctx->sensor_id, "IMX307");
