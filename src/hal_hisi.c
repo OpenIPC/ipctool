@@ -515,6 +515,8 @@ static const char *get_hisi_chip_id(uint32_t reg) {
         return "3516AV200";
     case 0x35190101:
         return "3519V101";
+    case 0x3516A300:
+        return "3516AV300";
     case 0x3516C300:
         chip_generation = HISI_V3;
         return "3516CV300";

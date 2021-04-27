@@ -244,7 +244,8 @@ void print_mtd_info() {
     parse_partitions(ctx.mpoints);
     enum_mtd_info(&ctx, cb_mtd_info);
 
-    yaml_printf("    size: %dM\n", ctx.totalsz / 1024 / 1024);
+    if (ctx.totalsz)
+        yaml_printf("    size: %dM\n", ctx.totalsz / 1024 / 1024);
     if (!strcmp(VENDOR_HISI, chip_manufacturer))
         hisi_detect_fmc();
 }
