@@ -130,7 +130,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     return false;
 }
 
-// tested on F22, F23, F37, H62, H65
+// tested on F22, F23, F37, H62, H65, K05
 // TODO(FlyRouter): test on H42, H81
 static int detect_soi_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
                              unsigned int base) {
@@ -152,6 +152,9 @@ static int detect_soi_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     case 0xa0:
     case 0xa:
         sprintf(ctx->sensor_id, "JXH%x", ver);
+        return true;
+    case 0x5:
+        sprintf(ctx->sensor_id, "JXK%.2x", ver);
         return true;
     // it can be another sensor type
     case 0:
