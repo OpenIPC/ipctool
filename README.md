@@ -131,6 +131,16 @@ sensors:
     50.69
     ```
 
+### As backup/restore tool
+
+* Save full backup with YAML metadata into specific file:
+
+    ```console
+    # mount -o nolock mynfsserver:/srv /var/utils
+    # ipctool --backup /var/utils/mybackup-00:12:17:83:d6:39
+    # sync
+    ```
+
 ### As reverse engineering tool
 
 * Drop-in replacement of `dmesg` command:

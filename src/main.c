@@ -67,6 +67,7 @@ void Help() {
            "\t--printenv\n"
            "\t--setenv key=value\n"
            "\n"
+           "\t--backup <filename>\n"
            "\t[--skip-env] [--force] --restore\n"
            "\t--help\n");
 }
@@ -157,6 +158,7 @@ bool get_board_id() {
 
 #define MAX_YAML 1024 * 64
 bool wait_mode = false;
+const char *backup_file;
 static bool backup_mode() {
     // prevent double backup creation and don't backup OpenWrt firmware
     if (!udp_lock() || is_openipc_board())
@@ -186,7 +188,7 @@ static bool backup_mode() {
         }
         size_t yaml_sz = ptr - yaml;
         close(fds[0]);
-        int ret = do_backup(yaml, yaml_sz, wait_mode);
+        int ret = do_backup(yaml, yaml_sz, wait_mode, backup_file);
         free(yaml);
 
         if (ret)
@@ -206,6 +208,7 @@ int main(int argc, char *argv[]) {
         {"setenv", required_argument, NULL, 'e'},
         {"dmesg", no_argument, NULL, 'd'},
         {"wait", no_argument, NULL, 'w'},
+        {"backup", required_argument, NULL, 'b'},
         {"restore", no_argument, NULL, 'r'},
         {"skip-env", no_argument, NULL, '0'},
         {"force", no_argument, NULL, 'f'},
@@ -275,15 +278,20 @@ int main(int argc, char *argv[]) {
             force = true;
             break;
 
+        case 'b':
+            backup_file = optarg;
+            wait_mode = true;
+            break;
+
         case 'r':
             return restore_backup(skip_env, force);
 
         case 'u':
             return do_upgrade(optarg, force);
 
-        case '?':
         default:
             printf("found unknown option\n");
+        case '?':
             Help();
             return EXIT_FAILURE;
         }
@@ -315,11 +323,12 @@ int main(int argc, char *argv[]) {
     if (wait_mode && backup_fp) {
         // trigger child process
         printf("---\n");
-        printf("state: uploadStart\n");
+        printf("state: %sStart\n", backup_file ? "save" : "upload");
         fclose(backup_fp);
         int status;
         wait(&status);
-        printf("state: uploadEnd, %d\n", WEXITSTATUS(status));
+        printf("state: %sEnd, %d\n", backup_file ? "save" : "upload",
+               WEXITSTATUS(status));
     }
 
     return EXIT_SUCCESS;

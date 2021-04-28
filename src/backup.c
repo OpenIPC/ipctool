@@ -86,6 +86,41 @@ static int map_mtdblocks(span_t *blocks, size_t bl_len) {
     return mtd.count;
 }
 
+int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
+              size_t blocks_num) {
+    FILE *fp = fopen(filename, "wb+");
+    if (!fp) {
+        fprintf(stderr, "Error writing %s, aborting\n");
+        return 1;
+    }
+
+    size_t len = 0;
+    for (int i = 0; i < blocks_num; i++) {
+        len += blocks[i].len;
+        // add len header
+        if (i)
+            len += sizeof(uint32_t);
+    }
+
+    for (int i = 0; i < blocks_num; i++) {
+        if (i) {
+            uint32_t len_header = blocks[i].len;
+            fwrite(&len_header, 1, sizeof(len_header), fp);
+        }
+
+        int nbytes = fwrite(blocks[i].data, 1, blocks[i].len, fp);
+        if (nbytes == -1)
+            break;
+#if 1
+        printf("[%d] written %d bytes\n", i, nbytes);
+#endif
+    }
+
+    fclose(fp);
+
+    return 0;
+}
+
 #define FILL_NS                                                                \
     nservers_t ns;                                                             \
     ns.len = 0;                                                                \
@@ -93,7 +128,8 @@ static int map_mtdblocks(span_t *blocks, size_t bl_len) {
     add_predefined_ns(&ns, 0xd043dede /* 208.67.222.222 of OpenDNS */,         \
                       0x01010101 /* 1.1.1.1 of Cloudflare */, 0);
 
-int do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
+int do_backup(const char *yaml, size_t yaml_len, bool wait_mode,
+              const char *filename) {
     FILL_NS;
 
     char mac[32];
@@ -106,10 +142,14 @@ int do_backup(const char *yaml, size_t yaml_len, bool wait_mode) {
     blocks[0].len = yaml_len + 1; // end string data with \0
     size_t bl_num = map_mtdblocks(blocks + 1, MAX_MTDBLOCKS) + 1;
 
-    int ret = upload(mybackups, mac, &ns, blocks, bl_num);
+    int ret;
+    if (filename)
+        ret = save_file(filename, blocks, bl_num);
+    else
+        ret = upload(mybackups, mac, &ns, blocks, bl_num);
 
-    // don't release UDP lock for 30 days
-    if (!wait_mode)
+    // don't release UDP lock for 30 days to prevent to do often snapshots
+    if (!filename && !wait_mode)
         sleep(60 * 60 * 24 * 30);
     return ret;
 }
