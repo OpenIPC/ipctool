@@ -348,8 +348,8 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
 #else
             print_flash_progress(c, cnt, op);
             if (op != 's')
-                if (mtd_write(newi, this_offset, mtd->erasesize,
-                              mtdbackup[i].data + c * chunk, chunk)) {
+                if (!mtd_write(newi, this_offset, mtd->erasesize,
+                               mtdbackup[i].data + c * chunk, chunk)) {
                     fprintf(stderr, "\nSomething went wrong, aborting...\n");
                     return false;
                 }
@@ -655,15 +655,16 @@ int do_upgrade(const char *filename, bool force) {
             fread_to_buf(jfile->valuestring, &mtdwrite[i].size,
                          psize ? psize : mtd.erasesize, &payload);
         assert(mtdwrite[i].data);
+        fprintf(stderr, "read %s into memory\n", jfile->valuestring);
         if (psize && psize < mtdwrite[i].size) {
             fprintf(stderr,
-                    "image 0x%x doesn't fit to 0x%x partition, aborting...\n",
+                    "image 0x%zx doesn't fit to 0x%x partition, aborting...\n",
                     mtdwrite[i].size, psize);
             ret = 1;
             goto bailout;
         }
         add_mtdpart(mtdparts, mtdwrite[i].name, mtdwrite[i].size);
-        printf("%p, size: %d bytes\n", mtdwrite[i].data, mtdwrite[i].size);
+        printf("\t%p, size: %zu bytes\n", mtdwrite[i].data, mtdwrite[i].size);
         goff += mtdwrite[i].size;
 
         cJSON *jsha1 = cJSON_GetObjectItemCaseSensitive(part, "sha1");
@@ -686,7 +687,7 @@ int do_upgrade(const char *filename, bool force) {
              ",-(rootfs_data)");
 
     if (!do_flash("Upgrading", mtdwrite, &mtd)) {
-        printf("BAD\n");
+        printf("Early exit, check the logs\n");
         ret = 4;
         goto bailout;
     }
@@ -703,7 +704,7 @@ int do_upgrade(const char *filename, bool force) {
 
     snprintf(value, sizeof(value),
              "setenv setargs setenv bootargs ${bootargs}; run setargs; "
-             "sf probe 0; sf read 0x%x 0x%x 0x%x; "
+             "sf probe 0; sf read 0x%x 0x%zx 0x%zx; "
              "bootm 0x%x",
              // kernel params
              ram_start, mtdwrite[0].off_flashb, mtdwrite[0].size, ram_start);

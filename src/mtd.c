@@ -261,7 +261,7 @@ int mtd_erase_block(int fd, int offset, int erasesize) {
 
     if (ioctl(fd, MEMERASE, &mtdEraseInfo) < 0) {
         if (is_xm_board()) {
-            // printf("Failed, trying XM specific algorithm...\n");
+            printf("Failed, trying XM specific algorithm...\n");
             if (!xm_flash_init(fd))
                 return -1;
             if (!xm_spiflash_unlock_and_erase(fd, offset, erasesize))
@@ -269,7 +269,8 @@ int mtd_erase_block(int fd, int offset, int erasesize) {
 
             // xm_inited = true;
             return 0;
-        }
+        } else
+            return -1;
     }
 
     return 0;
@@ -294,16 +295,18 @@ static int mtd_open(int mtd) {
     return open(dev, flags);
 }
 
-int mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
-              size_t size) {
+bool mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
+               size_t size) {
     int fd = mtd_open(mtd);
     if (fd < 0) {
         fprintf(stderr, "Could not open mtd device: %d\n", mtd);
-        return -1;
+        return false;
     }
 
+    bool ret = true;
     if (mtd_erase_block(fd, offset, erasesize)) {
         fprintf(stderr, "Fail to erase +0x%x\n", offset);
+        ret = false;
         goto bailout;
     }
 
@@ -312,5 +315,5 @@ int mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
 bailout:
     close(fd);
 
-    return 0;
+    return ret;
 }

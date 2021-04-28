@@ -19,8 +19,14 @@
 #include "vendors/xm.h"
 
 bool is_xm_board() {
+    // crucial to keep detection status in memory for deal with XM flash ops
+    static bool detected;
+    if (detected)
+        return detected;
+
     if (!access("/mnt/mtd/Config/Account1", 0)) {
         strcpy(board_manufacturer, "Xiongmai");
+        detected = true;
         return true;
     }
     return false;

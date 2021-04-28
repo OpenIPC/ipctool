@@ -1,6 +1,10 @@
 # IPC chip information
 
-[![ipctool-build](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml/badge.svg)](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml)
+[![Build](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml/badge.svg)](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml)
+![GitHub repo size](https://img.shields.io/github/repo-size/OpenIPC/ipctool)
+![GitHub issues](https://img.shields.io/github/issues/OpenIPC/ipctool)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/OpenIPC/ipctool)
+[![License](https://img.shields.io/github/license/OpenIPC/ipctool)](https://opensource.org/licenses/MIT)
 
 This basic concept belongs to [Maxim Chertov](http://github.com/chertov) (thank you for
 your original utility) and [Nikita Orlov](https://github.com/nikitos1550/) (for
