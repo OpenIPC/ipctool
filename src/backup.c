@@ -596,8 +596,8 @@ static void skip_signals() {
     sigfillset(&sa.sa_mask);
     sigaction(SIGHUP, &sa, NULL);
     // Danger area, use only in production for sure
-#if 0
-	sigaction(SIGKILL, &sa, NULL);
+#if 1
+    sigaction(SIGKILL, &sa, NULL);
 #endif
 }
 

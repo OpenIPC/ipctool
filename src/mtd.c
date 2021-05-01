@@ -262,11 +262,14 @@ int mtd_erase_block(int fd, int offset, int erasesize) {
     if (ioctl(fd, MEMERASE, &mtdEraseInfo) < 0) {
         if (is_xm_board()) {
             printf("Failed, trying XM specific algorithm...\n");
-            if (!xm_flash_init(fd))
+            if (!xm_flash_init(fd)) {
+                fprintf(stderr, "xm_flash_init error\n");
                 return -1;
-            if (!xm_spiflash_unlock_and_erase(fd, offset, erasesize))
+            }
+            if (!xm_spiflash_unlock_and_erase(fd, offset, erasesize)) {
+                fprintf(stderr, "xm_spiflash_unlock_and_erase error\n");
                 return -1;
-
+            }
             // xm_inited = true;
             return 0;
         } else
