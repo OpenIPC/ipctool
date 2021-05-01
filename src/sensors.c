@@ -15,6 +15,7 @@
 #include "chipid.h"
 #include "cjson/cJSON.h"
 #include "hal_common.h"
+#include "hal_xm.h"
 #include "sensors.h"
 #include "tools.h"
 
@@ -116,25 +117,39 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
         return true;
     }
 
-    // may accidentally return 0 but not to be IMX291 actually. need to
-    // workaround such case
     int ret1dc = sensor_read_register(fd, i2c_addr, base + 0x1DC, 2, 1);
     if (ret1dc != 0xff) {
         switch (ret1dc & 6) {
         case 4:
             sprintf(ctx->sensor_id, "IMX307");
-            break;
+            return true;
         case 6:
             sprintf(ctx->sensor_id, "IMX327");
-            break;
-        default:
-            sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
+            return true;
+        default: {
+            int ret3010 = sensor_read_register(fd, i2c_addr, base + 0x10, 2, 1);
+            if (ret3010 == 0x21) {
+                sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
 #ifndef STANDALONE_LIBRARY
-            sony_imx291_params(ctx, fd, i2c_addr, base);
+                sony_imx291_params(ctx, fd, i2c_addr, base);
 #endif
+                return true;
+            }
+        }
+        }
+    }
+
+    int ret31e0 = sensor_read_register(fd, i2c_addr, base + 0x1E0, 2, 1);
+    printf("Debug [ret31e0]: %#X\n", ret31e0);
+    if (ret31e0 > 0) {
+        uint8_t val = (0xc0 & ret31e0) >> 6;
+        if (val == 3) {
+            sprintf(ctx->sensor_id, "IMX224");
+            return true;
+        } else if (val == 0) {
+            sprintf(ctx->sensor_id, "IMX225");
             return true;
         }
-        return true;
     }
 
     return false;
