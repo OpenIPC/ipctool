@@ -68,7 +68,7 @@ void Help() {
            "\t--setenv key=value\n"
            "\n"
            "\t--backup <filename>\n"
-           "\t[--skip-env] [--force] --restore\n"
+           "\t[--skip-env] [--force] --restore [mac]\n"
            "\t--help\n");
 }
 
@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
         {"dmesg", no_argument, NULL, 'd'},
         {"wait", no_argument, NULL, 'w'},
         {"backup", required_argument, NULL, 'b'},
-        {"restore", no_argument, NULL, 'r'},
+        {"restore", optional_argument, NULL, 'r'},
         {"skip-env", no_argument, NULL, '0'},
         {"force", no_argument, NULL, 'f'},
         {"upgrade", optional_argument, NULL, 'u'},
@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
             break;
 
         case 'r':
-            return restore_backup(skip_env, force);
+            return restore_backup(optarg, skip_env, force);
 
         case 'u':
             return do_upgrade(optarg, force);

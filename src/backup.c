@@ -154,13 +154,9 @@ int do_backup(const char *yaml, size_t yaml_len, bool wait_mode,
     return ret;
 }
 
-char *download_backup(size_t *size, char *date) {
+char *download_backup(const char *mac, size_t *size, char *date) {
     FILL_NS;
 
-    char mac[32];
-    if (!get_mac_address(mac, sizeof mac)) {
-        return NULL;
-    };
     printf("Downloading %s firmware\n", mac);
 
     char *dwres = download(mybackups, mac, downcode, &ns, size, date, true);
@@ -418,7 +414,7 @@ static void reboot_with_msg() {
     reboot(RB_AUTOBOOT);
 }
 
-int restore_backup(bool skip_env, bool force) {
+int restore_backup(const char *arg, bool skip_env, bool force) {
     const char *uboot_env = "  U-Boot env overwrite will be skipped";
     printf("Restoring the latest backup from the cloud\n%s\n",
            skip_env ? uboot_env : "");
@@ -445,7 +441,14 @@ int restore_backup(bool skip_env, bool force) {
 
     size_t size;
     char date[DATE_BUF_LEN] = {0};
-    char *backup = download_backup(&size, date);
+    char *backup;
+    if (arg == NULL) {
+        char mac[32];
+        if (!get_mac_address(mac, sizeof mac))
+            return 1;
+        backup = download_backup(mac, &size, date);
+    } else
+        backup = download_backup(arg, &size, date);
 
     if (backup) {
         char *pptr = backup + strnlen(backup, size) + 1;
