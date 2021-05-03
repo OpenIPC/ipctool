@@ -68,7 +68,7 @@ void Help() {
            "\t--setenv key=value\n"
            "\n"
            "\t--backup <filename>\n"
-           "\t[--skip-env] [--force] --restore [mac]\n"
+           "\t[--skip-env] [--force] --restore=[mac]\n"
            "\t--help\n");
 }
 

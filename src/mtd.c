@@ -261,7 +261,7 @@ int mtd_erase_block(int fd, int offset, int erasesize) {
 
     if (ioctl(fd, MEMERASE, &mtdEraseInfo) < 0) {
         if (is_xm_board()) {
-            printf("Failed, trying XM specific algorithm...\n");
+            printf("Erase failed, trying XM specific algorithm...\n");
             if (!xm_flash_init(fd)) {
                 fprintf(stderr, "xm_flash_init error\n");
                 return -1;

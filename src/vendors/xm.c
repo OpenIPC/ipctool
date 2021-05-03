@@ -24,7 +24,8 @@ bool is_xm_board() {
     if (detected)
         return detected;
 
-    if (!access("/mnt/mtd/Config/Account1", 0)) {
+    if (!access("/mnt/mtd/Config/Account1", 0) ||
+        !access("/proc/xm/xminfo", 0)) {
         strcpy(board_manufacturer, "Xiongmai");
         detected = true;
         return true;
