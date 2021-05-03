@@ -460,7 +460,7 @@ int restore_backup(const char *arg, bool skip_env, bool force) {
         if (*date)
             printf("Found backup made on %s\n", date);
 
-        printf("Are you sure to proceed? (y/n)? ");
+        fprintf(stderr, "Are you sure to proceed? (y/n)? ");
         char ch = getchar();
         if (ch != 'y')
             goto bailout;
