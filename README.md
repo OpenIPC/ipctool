@@ -1,6 +1,7 @@
 # IPC chip information
 
 [![Build](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml/badge.svg)](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml)
+[![CI status](https://img.shields.io/github/downloads/OpenIPC/ipctool/total.svg)](https://github.com/OpenIPC/ipctool/releases)
 ![GitHub repo size](https://img.shields.io/github/repo-size/OpenIPC/ipctool)
 ![GitHub issues](https://img.shields.io/github/issues/OpenIPC/ipctool)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/OpenIPC/ipctool)
