@@ -163,7 +163,7 @@ Tested on:
 
 |Manufacturer|Models|
 |---|---|
-|[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|Hi3516CV100/200/300, Hi3516EV100/200/300|
+|[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|Hi3516CV100/200/300, Hi3516EV100/200/300, Hi3516DV300|
 |[SigmaStar](http://linux-chenxing.org/)|SSC335|
 |[Xiongmai](http://www.xiongmaitech.com/product)|XM510, XM530, XM550|
 
