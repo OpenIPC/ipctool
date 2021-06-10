@@ -33,6 +33,7 @@
 #include "sha1.h"
 #include "tools.h"
 #include "uboot.h"
+#include "vendors/common.h"
 #include "vendors/xm.h"
 
 #define UDP_LOCK_PORT 1025
@@ -605,7 +606,21 @@ static void skip_signals() {
 }
 
 int do_upgrade(const char *filename, bool force) {
-    getchipid();
+    if (!getchipid()) {
+        fprintf(stderr, "Chip has not been detected\n");
+        return 1;
+    }
+
+    get_board_id();
+    char board[1024] = {0};
+    if (*board_manufacturer) {
+        strcpy(board, board_manufacturer);
+    }
+    if (*board_id) {
+        strcat(board, "-");
+        strcat(board, board_id);
+    }
+
     uint32_t ram_start = platform_ramstart();
     if (!ram_start) {
         fprintf(stderr, "Platform unknown.\n");
@@ -744,6 +759,8 @@ int do_upgrade(const char *filename, bool force) {
         set_env_param("totalmem", total_mem, FOP_RAM);
         printf("set_env_param: total_mem=%s\n", total_mem);
     }
+    if (*board)
+        set_env_param("original", board, FOP_RAM);
 
     snprintf(value, sizeof(value),
              "setenv setargs setenv bootargs ${bootargs}; run setargs; "
@@ -753,11 +770,12 @@ int do_upgrade(const char *filename, bool force) {
              ram_start, mtdwrite[0].off_flashb, mtdwrite[0].size, ram_start);
     set_env_param("bootcmd", value, FOP_RAM);
 
+    int root_part = 3;
     snprintf(value, sizeof(value),
              "mem=%s console=ttyAMA0,115200 panic=20 "
-             "root=/dev/mtdblock3 rootfstype=squashfs "
+             "root=/dev/mtdblock%d rootfstype=squashfs "
              "mtdparts=%s",
-             *kernel_mem ? kernel_mem : "${osmem}", mtdparts);
+             *kernel_mem ? kernel_mem : "${osmem}", root_part, mtdparts);
     cJSON *jaddcmdline =
         cJSON_GetObjectItemCaseSensitive(json, "additionalCmdline");
     if (jaddcmdline && cJSON_IsString(jaddcmdline))

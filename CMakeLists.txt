@@ -84,6 +84,9 @@ set(IPCTOOL_SRC
 
     src/vendors/buildroot.c
     src/vendors/buildroot.h
+    src/vendors/buildroot.h
+    src/vendors/common.c
+    src/vendors/common.h
     src/vendors/hankvision.c
     src/vendors/hankvision.h
     src/vendors/linux.c
