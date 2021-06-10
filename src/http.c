@@ -182,8 +182,8 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
 #define SNPRINTF(...)                                                          \
     ptr += snprintf(ptr, sizeof(buf) - (ptr - buf), __VA_ARGS__)
 
-char *download(char *hostname, char *uri, const char *useragent, nservers_t *ns,
-               size_t *len, char *date, bool progress) {
+char *download(char *hostname, const char *uri, const char *useragent,
+               nservers_t *ns, size_t *len, char *date, bool progress) {
     int s, ret;
     if ((ret = common_connect(hostname, uri, ns, &s) != ERR_GENERAL)) {
         return MAKE_ERROR(ret);

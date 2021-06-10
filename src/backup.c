@@ -90,7 +90,7 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
               size_t blocks_num) {
     FILE *fp = fopen(filename, "wb+");
     if (!fp) {
-        fprintf(stderr, "Error writing %s, aborting\n");
+        fprintf(stderr, "Error writing '%s', aborting\n", filename);
         return 1;
     }
 

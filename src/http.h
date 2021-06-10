@@ -21,8 +21,8 @@ typedef struct {
 
 #define DATE_BUF_LEN 32
 
-char *download(char *hostname, char *uri, const char *useragent, nservers_t *ns,
-               size_t *len, char *date, bool progress);
+char *download(char *hostname, const char *uri, const char *useragent,
+               nservers_t *ns, size_t *len, char *date, bool progress);
 int upload(const char *hostname, const char *uri, nservers_t *ns,
            span_t blocks[MAX_MTDBLOCKS + 1], size_t len);
 
