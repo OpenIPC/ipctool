@@ -251,14 +251,26 @@ static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
     return i + 1;
 }
 
+#define MAX_NAME 32
 typedef struct {
     ssize_t totalsz;
     size_t erasesize;
-    size_t blocks[MAX_MTDBLOCKS];
+    struct {
+        char name[MAX_NAME];
+        size_t size;
+    } part[MAX_MTDBLOCKS];
     bool skip_env;
     int env_dev;
     size_t env_offset;
 } mtd_restore_ctx_t;
+
+static size_t mtd_size_by_name(mtd_restore_ctx_t *ctx, const char *name) {
+    for (int i = 0; i < MAX_MTDBLOCKS; i++) {
+        if (!strcmp(ctx->part[i].name, name))
+            return ctx->part[i].size;
+    }
+    return -1;
+}
 
 static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
                            void *ctx) {
@@ -279,7 +291,8 @@ static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
         close(fd);
     }
 
-    c->blocks[i] = mtd->size;
+    strncpy(c->part[i].name, name, MAX_NAME);
+    c->part[i].size = mtd->size;
     c->totalsz += mtd->size;
     return true;
 }
@@ -341,16 +354,16 @@ static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
     size_t find_off = mtdbackup[old_num].off_flashb + old_offset;
     size_t cur_off = 0;
     for (int i = 0; i < MAX_MTDBLOCKS; i++) {
-        if (!mtd->blocks[i])
+        if (!mtd->part[i].size)
             return -1;
-        if (mtd->blocks[i] + cur_off > find_off) {
+        if (mtd->part[i].size + cur_off > find_off) {
             *new_offset = find_off - cur_off;
             // printf("[%.8x] Map %d,%.8x -> %d,%.8x\n", find_off, old_num,
             // find_off,
             //       i, *new_offset);
             return i;
         }
-        cur_off += mtd->blocks[i];
+        cur_off += mtd->part[i].size;
     }
     return -1;
 }
@@ -617,7 +630,7 @@ int do_upgrade(const char *filename, bool force) {
         strcpy(board, board_manufacturer);
     }
     if (*board_id) {
-        strcat(board, "-");
+        strcat(board, " ");
         strcat(board, board_id);
     }
 
@@ -649,12 +662,31 @@ int do_upgrade(const char *filename, bool force) {
     char *jsond = file_to_buf(filename, &len);
     assert(jsond);
 
+    int curr_mtd_part = 0;
     cJSON *json = cJSON_ParseWithLength(jsond, len);
     ASSERT_JSON(json);
     const cJSON *mtdparts_pr =
         cJSON_GetObjectItemCaseSensitive(json, "mtdPrefix");
-    if (mtdparts_pr && cJSON_IsString(mtdparts_pr))
+    if (mtdparts_pr && cJSON_IsString(mtdparts_pr)) {
         strcpy(mtdparts, mtdparts_pr->valuestring);
+        const char *ptr = mtdparts;
+        bool comma_encounted = false;
+        int part_len = 0;
+        while (*ptr) {
+            if (*ptr == ':')
+                comma_encounted = true;
+            else if (comma_encounted) {
+                if (*ptr == ',')
+                    part_len = 0;
+                else {
+                    if (part_len == 1)
+                        curr_mtd_part++;
+                    part_len++;
+                }
+            }
+            ptr++;
+        }
+    }
 
     const cJSON *setTotalMem =
         cJSON_GetObjectItemCaseSensitive(json, "setTotalMem");
@@ -672,19 +704,30 @@ int do_upgrade(const char *filename, bool force) {
     if (kernelMem && cJSON_IsString(kernelMem))
         strncpy(kernel_mem, kernelMem->valuestring, sizeof(kernel_mem));
 
+    // offset from flash start
+    uint32_t goff = 0;
     const cJSON *skip_envs = cJSON_GetObjectItemCaseSensitive(json, "skip");
     if (skip_envs && cJSON_IsArray(skip_envs)) {
+        const cJSON *skip_env = NULL;
+        cJSON_ArrayForEach(skip_env, skip_envs) {
+            if (cJSON_IsString(skip_env)) {
+                const char *name = skip_env->valuestring;
+                size_t size = mtd_size_by_name(&mtd, name);
+                if (size != -1) {
+                    add_mtdpart(mtdparts, name, size);
+                    curr_mtd_part++;
+                    goff += size;
+                    printf("skipped original partition %s sized %#x\n", name,
+                           size);
+                }
+            }
+        }
     }
 
-    // offset from U-Boot
-    uint32_t goff = 0;
     const cJSON *offset = cJSON_GetObjectItemCaseSensitive(json, "offset");
     if (offset && cJSON_IsString(offset)) {
         goff = strtol(offset->valuestring, 0, 16);
         printf("Using offset: %#X\n", goff);
-    } else {
-        fprintf(stderr, "offset should be set.\n");
-        return 1;
     }
     uint32_t payload;
 
@@ -692,6 +735,7 @@ int do_upgrade(const char *filename, bool force) {
     ASSERT_JSON(parts);
     const cJSON *part;
     int i = 0;
+    int root_part = -1;
     cJSON_ArrayForEach(part, parts) {
         cJSON *jname = cJSON_GetObjectItemCaseSensitive(part, "name");
         JSON_CHECK(jname, String);
@@ -722,6 +766,10 @@ int do_upgrade(const char *filename, bool force) {
             goto bailout;
         }
         add_mtdpart(mtdparts, mtdwrite[i].name, mtdwrite[i].size);
+        if (!strcmp(mtdwrite[i].name, "rootfs")) {
+            root_part = curr_mtd_part;
+        }
+        curr_mtd_part++;
         printf("\t%p, size: %zu bytes\n", mtdwrite[i].data, mtdwrite[i].size);
         goff += mtdwrite[i].size;
 
@@ -739,6 +787,11 @@ int do_upgrade(const char *filename, bool force) {
             }
         }
         i++;
+    }
+
+    if (root_part == -1) {
+        fprintf(stderr, "Cannot proceed with unknown root fs partition\n");
+        return 1;
     }
 
     snprintf(mtdparts + strlen(mtdparts), MAX_MTDPARTS - strlen(mtdparts),
@@ -770,7 +823,6 @@ int do_upgrade(const char *filename, bool force) {
              ram_start, mtdwrite[0].off_flashb, mtdwrite[0].size, ram_start);
     set_env_param("bootcmd", value, FOP_RAM);
 
-    int root_part = 3;
     snprintf(value, sizeof(value),
              "mem=%s console=ttyAMA0,115200 panic=20 "
              "root=/dev/mtdblock%d rootfstype=squashfs "
