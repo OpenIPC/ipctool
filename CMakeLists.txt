@@ -99,6 +99,8 @@ set(IPCTOOL_SRC
     src/vendors/ruision.h
     src/vendors/xm.c
     src/vendors/xm.h
+    src/vendors/sstar.c
+    src/vendors/sstar.h
 
     ${VERSION_SRC}
     )

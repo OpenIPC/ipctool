@@ -8,6 +8,7 @@
 #include "vendors/openwrt.h"
 #include "vendors/ruision.h"
 #include "vendors/xm.h"
+#include "vendors/sstar.h"
 
 bool get_board_id() {
     if (is_xm_board()) {
@@ -24,6 +25,9 @@ bool get_board_id() {
         return true;
     } else if (is_hankvision_board()) {
         gather_hankvision_board_info();
+        return true;
+    } else if (is_sstar_board()) {
+        gather_sstar_board_info();
         return true;
     }
     return false;

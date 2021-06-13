@@ -118,6 +118,17 @@ int sstar_sensor_read_register(int fd, unsigned char i2c_addr,
 
 static void sstar_hal_cleanup() {}
 
+float sstar_get_temp()
+{
+    float ret = -237.0;
+    char buf[16];
+    if(get_regex_line_from_file("/sys/class/mstar/msys/TEMP_R", "Temperature\\s+(.+)", buf, sizeof(buf)))
+    {
+        ret = strtof(buf, NULL);
+    }
+    return ret;
+}
+
 void setup_hal_sstar() {
     open_sensor_fd = sstar_open_sensor_fd;
     close_sensor_fd = sstar_close_sensor_fd;
@@ -126,4 +137,6 @@ void setup_hal_sstar() {
     sensor_write_register = sstar_sensor_write_register;
     possible_i2c_addrs = sstar_possible_i2c_addrs;
     hal_cleanup = sstar_hal_cleanup;
+    if(!access("/sys/class/mstar/msys/TEMP_R", R_OK))
+        hal_temperature = sstar_get_temp;
 }
