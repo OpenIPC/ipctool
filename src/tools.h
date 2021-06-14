@@ -42,6 +42,7 @@ char *fread_to_buf(const char *filename, size_t *len, uint32_t round_up,
                    size_t *payloadsz);
 void restore_printk();
 void disable_printk();
+uint32_t ceil_up(uint32_t n, uint32_t offset);
 
 // avoid warnings for old compilers
 #if __GNUC__ < 7

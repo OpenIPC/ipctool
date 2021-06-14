@@ -658,13 +658,20 @@ int do_upgrade(const char *filename, bool force) {
     if (!filename)
         filename = "/utils/update.json";
     else
-        printf("Using %s as update descriptor\n", filename);
+        printf("Using '%s' as update descriptor\n", filename);
     char *jsond = file_to_buf(filename, &len);
-    assert(jsond);
+    if (!jsond) {
+        fprintf(stderr, "'%s' is not found\n", filename);
+        return 1;
+    }
 
     int curr_mtd_part = 0;
-    cJSON *json = cJSON_ParseWithLength(jsond, len);
+    size_t json_size = strlen(jsond);
+    cJSON *json = cJSON_ParseWithLength(jsond, json_size);
     ASSERT_JSON(json);
+
+    char *read_ptr = jsond + json_size + 1;
+
     const cJSON *mtdparts_pr =
         cJSON_GetObjectItemCaseSensitive(json, "mtdPrefix");
     if (mtdparts_pr && cJSON_IsString(mtdparts_pr)) {
@@ -752,12 +759,29 @@ int do_upgrade(const char *filename, bool force) {
 
         mtdwrite[i].off_flashb = goff;
         cJSON *jfile = cJSON_GetObjectItemCaseSensitive(part, "file");
-        JSON_CHECK(jfile, String);
-        mtdwrite[i].data =
-            fread_to_buf(jfile->valuestring, &mtdwrite[i].size,
-                         psize ? psize : mtd.erasesize, &payload);
-        assert(mtdwrite[i].data);
-        fprintf(stderr, "read %s into memory\n", jfile->valuestring);
+        if (jfile) {
+            JSON_CHECK(jfile, String);
+            mtdwrite[i].data =
+                fread_to_buf(jfile->valuestring, &mtdwrite[i].size,
+                             psize ? psize : mtd.erasesize, &payload);
+            assert(mtdwrite[i].data);
+            fprintf(stderr, "read %s into memory\n", jfile->valuestring);
+        } else {
+            cJSON *jpayload =
+                cJSON_GetObjectItemCaseSensitive(part, "payloadSize");
+            if (!jpayload || !cJSON_IsNumber(jpayload)) {
+                fprintf(stderr, "Bad payload size\n");
+                return 1;
+            }
+            payload = jpayload->valueint;
+            mtdwrite[i].size = ceil_up(payload, psize ? psize : mtd.erasesize);
+            mtdwrite[i].data = malloc(mtdwrite[i].size);
+            memcpy(mtdwrite[i].data, read_ptr, payload);
+            memset(mtdwrite[i].data + payload, 0xff,
+                   mtdwrite[i].size - payload);
+            read_ptr += payload;
+        }
+
         if (psize && psize < mtdwrite[i].size) {
             fprintf(stderr,
                     "image 0x%zx doesn't fit to 0x%x partition, aborting...\n",
@@ -788,6 +812,7 @@ int do_upgrade(const char *filename, bool force) {
         }
         i++;
     }
+    free(jsond);
 
     if (root_part == -1) {
         fprintf(stderr, "Cannot proceed with unknown root fs partition\n");
