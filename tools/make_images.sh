@@ -2,6 +2,7 @@
 
 PACK=--pack
 
+# EV300
 wget -qO-  \
   https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz \
   | tar xvfz - -C /tmp
@@ -11,3 +12,16 @@ wget -qO-  \
   -o upgrade.ev300 $PACK \
   -i \
   --cma 'mmz=anonymous,0,0x42000000,96M mmz_allocator=cma'
+
+# CV300
+wget -P /tmp \
+  https://github.com/OpenIPC/chaos_calmer/releases/download/latest/openwrt-hi35xx-16ev100-u-boot.bin
+wget -P /tmp \
+  https://github.com/OpenIPC/chaos_calmer/releases/download/latest/openwrt-hi35xx-16ev100-default-uImage
+wget -P /tmp \
+  https://github.com/OpenIPC/chaos_calmer/releases/download/latest/openwrt-hi35xx-16ev100-default-root.squashfs
+./upgrade_bundle.py \
+  --boot /tmp/openwrt-hi35xx-16ev100-u-boot.bin \
+  --kernel /tmp/openwrt-hi35xx-16ev100-default-uImage \
+  --rootfs /tmp/openwrt-hi35xx-16ev100-default-root.squashfs \
+  -o upgrade.cv300 $PACK

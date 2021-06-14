@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -249,20 +250,26 @@ static uint32_t EV300_WDG_CONTROL = 0x12030000 + 0x0008;
 static bool xm_disable_watchdog() {
     getchipid();
     uint32_t zero = 0;
+    int ret = 0;
     switch (chip_generation) {
     case HISI_V1:
     case HISI_V2:
         mem_reg(CV200_WDG_CONTROL, &zero, OP_WRITE);
         break;
     case HISI_V3:
-        delete_module("xm_watchdog", 0);
+        ret = delete_module("xm_watchdog", 0);
+        printf("delete_module = %d\n", ret);
         mem_reg(CV300_WDG_CONTROL, &zero, OP_WRITE);
         break;
     case HISI_V4:
-        delete_module("hi3516ev200_wdt", 0);
+        ret = delete_module("hi3516ev200_wdt", 0);
         mem_reg(EV300_WDG_CONTROL, &zero, OP_WRITE);
         break;
     default:
+        return false;
+    }
+    if (ret == -1) {
+        fprintf(stderr, "delete_module, errno: %s\n", strerror(errno));
         return false;
     }
     return true;
