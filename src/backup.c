@@ -474,9 +474,10 @@ int restore_backup(const char *arg, bool skip_env, bool force) {
         if (*date)
             printf("Found backup made on %s\n", date);
 
+        char c;
         fprintf(stderr, "Are you sure to proceed? (y/n)? ");
-        char ch = getchar();
-        if (ch != 'y')
+        scanf(" %c", &c);
+        if (c != 'y')
             goto bailout;
 
         // TODO: sane YAML parser
@@ -539,10 +540,13 @@ int restore_backup(const char *arg, bool skip_env, bool force) {
         }
         if (tsize != mtd.totalsz) {
             fprintf(stderr,
-                    "Broken backup: backup size: 0x%x, real flash size: 0x%x\n"
-                    "aborting...\n",
+                    "Broken backup: backup size: 0x%x, real flash size: 0x%x\n",
                     tsize, mtd.totalsz);
-            goto bailout;
+            char c;
+            fprintf(stderr, "Are you sure to proceed? (y/n)? ");
+            scanf(" %c", &c);
+            if (c != 'y')
+                goto bailout;
         }
         printf("Backups were checked\n");
 
