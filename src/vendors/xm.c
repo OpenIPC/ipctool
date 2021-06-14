@@ -258,7 +258,6 @@ static bool xm_disable_watchdog() {
         break;
     case HISI_V3:
         ret = delete_module("xm_watchdog", 0);
-        printf("delete_module = %d\n", ret);
         mem_reg(CV300_WDG_CONTROL, &zero, OP_WRITE);
         break;
     case HISI_V4:
@@ -286,14 +285,15 @@ bool xm_kill_stuff(bool force) {
         }
     } else {
         kill(gpid, SIGINT);
+        printf("Sofia has been terminated, waiting for watchdog...\n");
+        sleep(5);
         if (!xm_disable_watchdog()) {
             fprintf(stderr, "Cannot disarm watchdog\n");
             return false;
         }
 
         int downcount = 2 * 60;
-        printf("Sofia has been terminated\n"
-               "Ensuring everything shutdown\n");
+        printf("Ensuring everything shutdown\n");
         for (int i = downcount; i > 0; i--) {
             printf("%d seconds %5s\r", i, "");
             fflush(stdout);
