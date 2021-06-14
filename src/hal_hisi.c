@@ -977,7 +977,7 @@ static void cv300_enum_sync_codes(cJSON *j_inner) {
     uint32_t addr = 0x11301320;
     uint32_t end_addr = 0x1130141C;
 
-    cJSON *j_codes = cJSON_AddArrayToObject(j_inner, "syncCode");
+    cJSON *j_codes = cJSON_AddArrayToObject(j_inner, "sync-code");
 
     for (int l = 0; l < 4; l++) {
         char sync_code[4][64] = {0};
@@ -1049,9 +1049,9 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
 
             struct CV300_LVDS0_WDR wdr;
             if (mem_reg(CV300_LVDS0_WDR_ADDR, (uint32_t *)&wdr, OP_READ)) {
-                ADD_PARAM_NUM("lvdsWdrEn", wdr.lvds_wdr_en);
-                ADD_PARAM_NUM("lvdsWdrMode", wdr.lvds_wdr_mode);
-                ADD_PARAM_NUM("lvdsWdrNum", wdr.lvds_wdr_num);
+                ADD_PARAM_NUM("lvds-wdr-en", wdr.lvds_wdr_en);
+                ADD_PARAM_NUM("lvds-wdr-mode", wdr.lvds_wdr_mode);
+                ADD_PARAM_NUM("lvds-wdr-num", wdr.lvds_wdr_num);
             }
 
             struct LVDS0_CTRL lvds0_ctrl;

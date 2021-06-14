@@ -80,33 +80,111 @@ information about given IP-camera or DVR:
 
 ```yaml
 ---
+board:
+  vendor: Xiongmai
+  model: 50H20L
+  cloudId: 3beae2b40d84f889
 chip:
   vendor: HiSilicon
-  model: 3516CV200
+  model: 3516CV300
 ethernet:
-  mac: "00:12:17:83:d6:39"
+  mac: "00:12:89:12:88:e1"
+  u-mdio-phyaddr: 1
+  phy-id: 0x001cc816
+  d-mdio-phyaddr: 0
 rom:
   - type: nor
-    size: 8M
     block: 64K
+    chip:
+      name: "w25q128"
+      id: 0xef4018
     partitions:
       - name: boot
-        size: 0x50000
-      - name: kernel
-        size: 0x380000
-      - name: rootfs
-        size: 0x150000
-      - name: rootfs_data
+        size: 0x30000
+        sha1: 7a7a83e9
+        contains:
+          - name: xmcrypto
+            offset: 0x1fc00
+          - name: uboot-env
+            offset: 0x20000
+      - name: romfs
         size: 0x2e0000
+        path: /,squashfs
+        sha1: 62529dab
+      - name: user
+        size: 0x300000
+        path: /usr,squashfs
+        sha1: cbb7e9ca
+      - name: web
+        size: 0x160000
+        path: /mnt/custom/data/Fonts,squashfs
+        sha1: 48140b3b
+      - name: custom
+        size: 0x40000
+        path: /mnt/custom,cramfs
+        sha1: fb72a5f5
+      - name: mtd
+        size: 0x50000
+        path: /mnt/mtd,jffs2,rw
+    size: 8M
+    addr-mode: 3-byte
+ram:
+  total: 128M
+  media: 72M
+firmware:
+  u-boot: "2010.06-svn1098 (Jun 11 2018 - 13:17:42)"
+  kernel: "3.18.20 (Thu Jul 5 14:44:19 CST 2018)"
+  toolchain: gcc version 4.9.4 20150629 (prerelease) (Hisilicon_v500_20170922) 
+  libc: uClibc 0.9.33.2
+  sdk: "Hi3516CV300_MPP_V1.0.0.0 B010 Release (Jun 22 2018, 19:22:22)"
+  god-app: /usr/bin/Sofia
 sensors:
-  - vendor: Sony
-    model: IMX323
-    control:
-      bus: 0
-      type: i2c
-    data:
-      type: DC
-    clock: 24MHz
+- vendor: Sony
+  model: IMX291
+  control:
+    bus: 0
+    type: i2c
+    addr: 0x34
+  params:
+    bitness: 12
+    databus: LVDS 4 ch
+    fps: 30
+  data:
+    type: LVDS
+    lane-id:
+    - 0
+    - 1
+    - 2
+    - 3
+    lvds-wdr-en: 0
+    lvds-wdr-mode: 0
+    lvds-wdr-num: 0
+    raw-data-type: RAW_DATA_12BIT
+    sync-mode: LVDS_SYNC_MODE_SAV
+    data-endian: LVDS_ENDIAN_BIG
+    sync-code-endian: LVDS_ENDIAN_BIG
+    sync-code:
+    - 
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+    - 
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+    - 
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+    - 
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+      - 0xab0, 0xb60, 0x800, 0x9d0
+  clock: 37.125MHz
 ```
 
 ### In your own scripts
