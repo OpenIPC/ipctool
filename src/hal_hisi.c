@@ -941,7 +941,7 @@ static void ev300_enum_lanes(cJSON *j_inner, size_t lanes) {
     if (!strcmp(chip_id, "3516EV200")) {
         struct EV200_LANE_ID0_CHN lid;
         if (mem_reg(EV200_LANE_ID0_CHN_ADDR, (uint32_t *)&lid, OP_READ)) {
-            cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "laneId");
+            cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "lane-id");
             cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane0_id));
             if (lanes > 1)
                 cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane2_id));
@@ -950,7 +950,7 @@ static void ev300_enum_lanes(cJSON *j_inner, size_t lanes) {
     } else {
         struct EV300_LANE_ID0_CHN lid;
         if (mem_reg(EV300_LANE_ID0_CHN_ADDR, (uint32_t *)&lid, OP_READ)) {
-            cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "laneId");
+            cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "lane-id");
             cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane0_id));
             if (lanes > 1)
                 cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane1_id));
@@ -1034,7 +1034,7 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
 
             struct CV300_ALIGN0_LANE_ID lid;
             if (mem_reg(CV300_ALIGN0_LANE_ID_ADDR, (uint32_t *)&lid, OP_READ)) {
-                cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "laneId");
+                cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "lane-id");
                 cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane0_id));
                 if (lanes > 1)
                     cJSON_AddItemToArray(j_lanes,
@@ -1079,17 +1079,17 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
                     raw = NULL;
                 }
                 if (raw)
-                    ADD_PARAM("rawDataType", raw);
+                    ADD_PARAM("raw-data-type", raw);
 
                 if (is_lvds) {
                     if (lvds0_ctrl.lvds_sync_mode == LVDS_SYNC_MODE_SOF)
-                        ADD_PARAM("syncMode", "LVDS_SYNC_MODE_SOF")
+                        ADD_PARAM("sync-mode", "LVDS_SYNC_MODE_SOF")
                     else
-                        ADD_PARAM("syncMode", "LVDS_SYNC_MODE_SAV");
+                        ADD_PARAM("sync-mode", "LVDS_SYNC_MODE_SAV");
 
-                    lvds_code_set(j_inner, "dataEndian",
+                    lvds_code_set(j_inner, "data-endian",
                                   lvds0_ctrl.lvds_pix_big_endian);
-                    lvds_code_set(j_inner, "syncCodeEndian",
+                    lvds_code_set(j_inner, "sync-code-endian",
                                   lvds0_ctrl.lvds_code_big_endian);
                     cv300_enum_sync_codes(j_inner);
                 }
@@ -1198,7 +1198,7 @@ static void hisi_ev300_sensor_data(cJSON *j_root) {
 
             struct EV300_MIPI_DI_1 di1;
             mem_reg(EV300_MIPI_DI_1_ADDR, (uint32_t *)&di1, OP_READ);
-            ADD_PARAM("input_data_type", ev300_mipi_raw_data(di1.di0_dt));
+            ADD_PARAM("input-data-type", ev300_mipi_raw_data(di1.di0_dt));
 
             // MIPI_CTRL_MODE_HS
             // vc_mode
@@ -1369,7 +1369,7 @@ const bool hisi_vi_is_not_running(cJSON *j_inner) {
     struct PT_INTF_MOD reg;
     if (mem_reg(addr, (uint32_t *)&reg, OP_READ)) {
         if (!reg.enable)
-            ADD_PARAM("viState", "down");
+            ADD_PARAM("vi-state", "down");
 
         return !reg.enable;
     }
@@ -1476,7 +1476,7 @@ void hisi_detect_fmc() {
         break;
     }
     if (mode)
-        printf("    addrMode: %s\n", mode);
+        printf("    addr-mode: %s\n", mode);
 }
 
 // for IMX291 1920x1110
