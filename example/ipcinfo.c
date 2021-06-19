@@ -1,7 +1,14 @@
+#include <assert.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 #include <ipchw.h>
 
@@ -35,7 +42,61 @@ void Help() {
            "\t--long_sensor\n"
            "\t--short_sensor\n"
            "\t--temp\n"
+           "\t--xm_mac\n"
            "\t--help\n");
+}
+
+static bool try_for_xmmac(int i, size_t size) {
+    char filepath[80];
+
+    snprintf(filepath, sizeof(filepath), "/dev/mtdblock%d", i);
+    int fd = open(filepath, O_RDONLY);
+    if (fd < 0) {
+        printf("\n\"%s \" could not open\n", filepath);
+        return false;
+    }
+
+    const char *part = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (part == MAP_FAILED) {
+        printf("Mapping Failed\n");
+        return false;
+    }
+
+    for (size_t off = 0xfc00; off < size; off += 0x10000) {
+        const char *ptr = part + off;
+
+        uint16_t header = *(uint16_t *)ptr;
+        if (header != 0xd4d2)
+            continue;
+
+        printf("%02x:%02x:%02x:%02x:%02x:%02x\n", ptr[0x379 + 0] - 1,
+               ptr[0x37b] - 3, ptr[0x37d] - 5, ptr[0x37f] - 7, ptr[0x381] - 9,
+               ptr[0x383] - 11);
+        return true;
+    }
+
+    close(fd);
+
+    return false;
+}
+
+static int xm_mac() {
+    FILE *fp;
+    char dev[80], name[80];
+    int i, es, ee;
+
+    if ((fp = fopen("/proc/mtd", "r"))) {
+        while (fgets(dev, sizeof dev, fp)) {
+            name[0] = 0;
+            if (sscanf(dev, "mtd%d: %x %x \"%64[^\"]\"", &i, &es, &ee, name)) {
+                printf("mtdblock%d %x\n", i, es);
+                if (try_for_xmmac(i, es))
+                    return EXIT_SUCCESS;
+            }
+        }
+        fclose(fp);
+    }
+    return EXIT_FAILURE;
 }
 
 int main(int argc, char **argv) {
@@ -47,6 +108,7 @@ int main(int argc, char **argv) {
         {"long_sensor", no_argument, NULL, 'l'},
         {"short_sensor", no_argument, NULL, 's'},
         {"temp", no_argument, NULL, 't'},
+        {"xm_mac", no_argument, NULL, 'x'},
         {NULL, 0, NULL, 0}};
 
     int rez;
@@ -92,6 +154,9 @@ int main(int argc, char **argv) {
             printf("%.2f\n", temp);
             return EXIT_SUCCESS;
         }
+
+        case 'x':
+            return xm_mac();
         }
     }
 
