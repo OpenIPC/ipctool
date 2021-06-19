@@ -89,7 +89,6 @@ static int xm_mac() {
         while (fgets(dev, sizeof dev, fp)) {
             name[0] = 0;
             if (sscanf(dev, "mtd%d: %x %x \"%64[^\"]\"", &i, &es, &ee, name)) {
-                printf("mtdblock%d %x\n", i, es);
                 if (try_for_xmmac(i, es))
                     return EXIT_SUCCESS;
             }
