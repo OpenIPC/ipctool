@@ -321,7 +321,7 @@ static unsigned long hisi_media_mem() {
 
 static bool is_cma_allocator() {
     char buf[64];
-    if (get_regex_line_from_file("/proc/cmdline", "mmz_allocator=(.+)", buf,
+    if (get_regex_line_from_file("/proc/cmdline", "mmz_allocator=(\\w+)", buf,
                                  sizeof(buf))) {
         if (!strcmp(buf, "cma"))
             return true;
