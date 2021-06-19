@@ -15,13 +15,13 @@ wget -qO-  \
 
 # CV300
 wget -P /tmp \
-  https://github.com/OpenIPC/chaos_calmer/releases/download/latest/openwrt-hi35xx-16ev100-u-boot.bin
+  https://github.com/OpenIPC/chaos_calmer/releases/download/latest/openwrt-hi35xx-16cv300-u-boot.bin
 wget -P /tmp \
-  https://github.com/OpenIPC/chaos_calmer/releases/download/latest/openwrt-hi35xx-16ev100-default-uImage
+  https://github.com/OpenIPC/chaos_calmer/releases/download/latest/openwrt-hi35xx-16cv300-default-uImage
 wget -P /tmp \
-  https://github.com/OpenIPC/chaos_calmer/releases/download/latest/openwrt-hi35xx-16ev100-default-root.squashfs
+  https://github.com/OpenIPC/chaos_calmer/releases/download/latest/openwrt-hi35xx-16cv300-default-root.squashfs
 ./upgrade_bundle.py \
-  --boot /tmp/openwrt-hi35xx-16ev100-u-boot.bin \
-  --kernel /tmp/openwrt-hi35xx-16ev100-default-uImage \
-  --rootfs /tmp/openwrt-hi35xx-16ev100-default-root.squashfs \
+  --boot /tmp/openwrt-hi35xx-16cv300-u-boot.bin \
+  --kernel /tmp/openwrt-hi35xx-16cv300-default-uImage \
+  --rootfs /tmp/openwrt-hi35xx-16cv300-default-root.squashfs \
   -o upgrade.cv300 $PACK
