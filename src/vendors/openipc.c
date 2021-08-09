@@ -8,7 +8,8 @@
 #include "chipid.h"
 
 bool is_openipc_board() {
-    if (!access("/etc/openipc_donaters", 0)) {
+    if (!access("/etc/openipc_donaters", 0) ||
+        !(access("/etc/openipc_donators", 0))) {
         strcpy(board_manufacturer, "OpenIPC");
         return true;
     }
