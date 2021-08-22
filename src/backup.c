@@ -457,10 +457,16 @@ int restore_backup(const char *arg, bool skip_env, bool force) {
     char date[DATE_BUF_LEN] = {0};
     char *backup;
     if (arg == NULL) {
-        char mac[32];
-        if (!get_mac_address(mac, sizeof mac))
-            return 1;
-        backup = download_backup(mac, &size, date);
+        if (access(arg, 0)) {
+            char mac[32];
+            if (!get_mac_address(mac, sizeof mac))
+                return 1;
+            backup = download_backup(mac, &size, date);
+        } else {
+            fprintf(stderr, "Loading backup from file %s...\n", arg);
+
+            backup = file_to_buf(arg, &size);
+        }
     } else
         backup = download_backup(arg, &size, date);
 
