@@ -544,7 +544,6 @@ static const char *get_hisi_chip_id(uint32_t reg) {
     case 0x3559A100:
         return "3559AV100";
     case 0xbda9d100:
-        chip_generation = HISI_V3;
         return "3536CV100";
     default:
         fprintf(stderr, "get_hisi_chip_id() got unexpected 0x%x\n", reg);
