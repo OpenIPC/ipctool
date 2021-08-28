@@ -534,6 +534,9 @@ static const char *get_hisi_chip_id(uint32_t reg) {
     case 0x3518E200:
         chip_generation = HISI_V2;
         return "3518EV200";
+    case 0x3518E300:
+        chip_generation = HISI_V4;
+        return "3518EV300";
     case 0x3536D100:
         chip_generation = HISI_V2;
         return "3536DV100";
