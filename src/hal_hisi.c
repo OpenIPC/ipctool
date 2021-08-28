@@ -24,7 +24,7 @@ static unsigned char sony_addrs[] = {0x34, 0};
 static unsigned char soi_addrs[] = {0x80, 0};
 static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char ssens_addrs[] = {0x60, 0};
-static unsigned char omni_addrs[] = {0x60, 0};
+static unsigned char omni_addrs[] = {0x60, 0x78, 0x7a, 0x34, 0};
 
 sensor_addr_t hisi_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},       {SENSOR_SOI, soi_addrs},
