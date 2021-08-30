@@ -430,8 +430,7 @@ static void reboot_with_msg() {
 
 int restore_backup(const char *arg, bool skip_env, bool force) {
     const char *uboot_env = "  U-Boot env overwrite will be skipped";
-    printf("Restoring the latest backup from the cloud\n%s\n",
-           skip_env ? uboot_env : "");
+    printf("Restoring the backup\n%s\n", skip_env ? uboot_env : "");
 
     if (!free_resources(force))
         return 1;
@@ -457,18 +456,22 @@ int restore_backup(const char *arg, bool skip_env, bool force) {
     char date[DATE_BUF_LEN] = {0};
     char *backup;
     if (arg == NULL) {
+        char mac[32];
+        if (!get_mac_address(mac, sizeof mac))
+            return 1;
+        fprintf(stderr, "Downloading latest backup from the cloud\n");
+        backup = download_backup(mac, &size, date);
+    } else {
         if (access(arg, 0)) {
-            char mac[32];
-            if (!get_mac_address(mac, sizeof mac))
-                return 1;
-            backup = download_backup(mac, &size, date);
+            fprintf(stderr,
+                    "Downloading backup from the cloud by specified name\n");
+            backup = download_backup(arg, &size, date);
         } else {
             fprintf(stderr, "Loading backup from file %s...\n", arg);
 
             backup = file_to_buf(arg, &size);
         }
-    } else
-        backup = download_backup(arg, &size, date);
+    }
 
     if (backup) {
         char *pptr = backup + strnlen(backup, size) + 1;
