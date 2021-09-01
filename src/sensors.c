@@ -295,7 +295,6 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0x3035:
         break;
     case 0x3235:
-        // Untested
         res = 0x4236;
         break;
     case 0x5235:
