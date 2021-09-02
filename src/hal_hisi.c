@@ -156,7 +156,7 @@ int hisi_sensor_write_register(int fd, unsigned char i2c_addr,
         idx++;
     }
 
-    ret = write(fd, buf, (reg_addr + data));
+    ret = write(fd, buf, reg_width + data_width);
     if (ret < 0) {
         printf("I2C_WRITE error!\n");
         return -1;
