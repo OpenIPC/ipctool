@@ -303,6 +303,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0x5300:
         strcpy(ctx->sensor_id, "SC335E");
         return true;
+    case 0xcb07:
+        strcpy(ctx->sensor_id, "SC2232H");
+        return true;
     case 0xcb10:
         res = 0x2239;
         break;
