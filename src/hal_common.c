@@ -49,10 +49,12 @@ bool common_close_sensor_fd(int fd) {
 int common_sensor_i2c_change_addr(int fd, unsigned char addr) { return 0; }
 
 void setup_hal_drivers() {
-    if (!strcmp(VENDOR_HISI, chip_manufacturer) ||
-        (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_id == '7'))
+    if (!strcmp(VENDOR_HISI, chip_manufacturer))
         setup_hal_hisi();
-    else if (!strcmp(VENDOR_XM, chip_manufacturer))
+    else if (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_id == '7') {
+        setup_hal_hisi();
+        strcpy(short_manufacturer, "GK");
+    } else if (!strcmp(VENDOR_XM, chip_manufacturer))
         setup_hal_xm();
     else if (!strcmp(VENDOR_SSTAR, chip_manufacturer))
         setup_hal_sstar();
