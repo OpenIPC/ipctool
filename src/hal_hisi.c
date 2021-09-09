@@ -562,10 +562,10 @@ static const char *get_hisi_chip_id(uint32_t reg) {
         // former 3516EV300
         chip_generation = HISI_V4;
         return "7205V300";
-    case 0x72050100:
+    case 0x76050100:
         // former 3516DV200
         chip_generation = HISI_V4;
-        return "7205V100";
+        return "7605V100";
     default:
         fprintf(stderr, "get_hisi_chip_id() got unexpected 0x%x\n", reg);
         return "unknown";
