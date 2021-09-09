@@ -8,7 +8,7 @@
 #include "chipid.h"
 #include "hal_common.h"
 
-sensor_addr_t* possible_i2c_addrs;
+sensor_addr_t *possible_i2c_addrs;
 
 int (*open_sensor_fd)();
 void (*close_sensor_fd)(int fd);
@@ -49,7 +49,8 @@ bool common_close_sensor_fd(int fd) {
 int common_sensor_i2c_change_addr(int fd, unsigned char addr) { return 0; }
 
 void setup_hal_drivers() {
-    if (!strcmp(VENDOR_HISI, chip_manufacturer))
+    if (!strcmp(VENDOR_HISI, chip_manufacturer) ||
+        (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_id == '7'))
         setup_hal_hisi();
     else if (!strcmp(VENDOR_XM, chip_manufacturer))
         setup_hal_xm();

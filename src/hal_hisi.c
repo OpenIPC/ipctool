@@ -647,7 +647,7 @@ bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
     }
 
     if (*chip_id == '7')
-        strcpy(chip_manufacturer, "Goke");
+        strcpy(chip_manufacturer, VENDOR_GOKE);
     else
         strcpy(chip_manufacturer, VENDOR_HISI);
 
