@@ -550,6 +550,22 @@ static const char *get_hisi_chip_id(uint32_t reg) {
         return "3559AV100";
     case 0xbda9d100:
         return "3536CV100";
+    case 0x72050200:
+        // former 3516EV200
+        chip_generation = HISI_V4;
+        return "7205V200";
+    case 0x72020300:
+        // former 3518EV300
+        chip_generation = HISI_V4;
+        return "7202V300";
+    case 0x72050300:
+        // former 3516EV300
+        chip_generation = HISI_V4;
+        return "7205V300";
+    case 0x72050100:
+        // former 3516DV200
+        chip_generation = HISI_V4;
+        return "7205V100";
     default:
         fprintf(stderr, "get_hisi_chip_id() got unexpected 0x%x\n", reg);
         return "unknown";
@@ -630,7 +646,11 @@ bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
             }
     }
 
-    strcpy(chip_manufacturer, VENDOR_HISI);
+    if (*chip_id == '7')
+        strcpy(chip_manufacturer, "Goke");
+    else
+        strcpy(chip_manufacturer, VENDOR_HISI);
+
     return true;
 }
 
