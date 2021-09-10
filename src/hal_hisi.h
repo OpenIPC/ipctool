@@ -10,6 +10,7 @@
 #include "sensors.h"
 
 #define VENDOR_HISI "HiSilicon"
+#define VENDOR_GOKE "Goke"
 
 #define HISI_V1 0x35180100
 #define HISI_V2 0x3518E200
