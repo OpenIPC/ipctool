@@ -324,6 +324,18 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         // Untested
         strcpy(ctx->sensor_id, "SC3335");
         return true;
+    case 0xcd01:
+        // Untested
+        strcpy(ctx->sensor_id, "SC4335P");
+        return true;
+    case 0xCD2E:
+        // Untested
+        strcpy(ctx->sensor_id, "SC401AI");
+        return true;
+    case 0xCE1F:
+        // Untested
+        strcpy(ctx->sensor_id, "SC501AI");
+        return true;
     case 0:
     case 0xffff:
         // SC1135 catches here
