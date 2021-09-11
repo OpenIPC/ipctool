@@ -36,6 +36,8 @@ set(COMMON_LIB_SRC
     src/hal_common.h
     src/hal_hisi.c
     src/hal_hisi.h
+    src/hal_novatek.c
+    src/hal_novatek.h
     src/hal_sstar.c
     src/hal_sstar.h
     src/hal_xm.c
