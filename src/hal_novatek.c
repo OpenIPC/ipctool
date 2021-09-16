@@ -25,8 +25,13 @@ sensor_addr_t novatek_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
                                               {0, NULL}};
 
 bool novatek_detect_cpu() {
-    // TODO
-    return false;
+    char buf[256];
+
+    if (!get_regex_line_from_file("/proc/device-tree/model",
+                                  "Novatek ([A-Z]+[0-9]+)", buf, sizeof(buf)))
+        return false;
+    strncpy(chip_id, buf, sizeof(chip_id) - 1);
+    return true;
 }
 
 static unsigned long novatek_media_mem() {

@@ -49,6 +49,8 @@ static bool generic_detect_cpu() {
     strcpy(chip_manufacturer, buf);
     if (!strcmp(chip_manufacturer, VENDOR_SSTAR))
         return sstar_detect_cpu();
+    else if (!strcmp(chip_manufacturer, VENDOR_NOVATEK))
+        return novatek_detect_cpu();
     strcpy(chip_id, "unknown");
     return true;
 }
