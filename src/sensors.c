@@ -337,6 +337,10 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         // XM
         strcpy(ctx->sensor_id, "SC401AI");
         return true;
+    case 0xce1a:
+        // XM
+        strcpy(ctx->sensor_id, "SC5332");
+        return true;
     case 0xce1f:
         // XM
         strcpy(ctx->sensor_id, "SC501AI");
