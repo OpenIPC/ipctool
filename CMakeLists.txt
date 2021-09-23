@@ -84,8 +84,9 @@ set(IPCTOOL_SRC
     src/cjson/cYAML.c
     src/cjson/cYAML.h
 
+    src/vendors/anjoy.c
+    src/vendors/anjoy.h
     src/vendors/buildroot.c
-    src/vendors/buildroot.h
     src/vendors/buildroot.h
     src/vendors/common.c
     src/vendors/common.h

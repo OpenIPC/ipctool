@@ -211,27 +211,20 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
-/*
- * Anjoy weird partition order:
-  0x000000000000-0x000000020000 : "BOOT"
-  0x000000040000-0x0000001d0000 : "KERNEL"
-  0x0000001d0000-0x0000007b0000 : "SYSTEM"
-  0x000000020000-0x000000040000 : "UBOOT"
-  0x0000007b0000-0x000000800000 : "DATA"
-*/
-
 #define MAX_MTD 10
+
+struct mtd_entry {
+    int i;
+    char name[80];
+    struct mtd_info_user mtd;
+    bool valid;
+};
 
 void enum_mtd_info(void *ctx, cb_mtd cb) {
     FILE *fp;
-    char dev[80], name[80];
+    char dev[80];
     int n = 0, es, ee;
-    struct {
-        int i;
-        char name[80];
-        struct mtd_info_user mtd;
-        bool valid;
-    } mtds[MAX_MTD] = {0};
+    struct mtd_entry mtds[MAX_MTD] = {0};
 
     if ((fp = fopen("/proc/mtd", "r"))) {
         while (fgets(dev, sizeof dev, fp)) {
@@ -240,24 +233,48 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
                 snprintf(dev, sizeof dev, "/dev/mtd%d", mtds[n].i);
                 int devfd = open(dev, O_RDWR);
                 if (devfd < 0)
-                    continue;
+                    goto skip;
 
                 if (ioctl(devfd, MEMGETINFO, &mtds[n].mtd) >= 0)
                     mtds[n].valid = true;
 
                 close(devfd);
+            skip:
+                n++;
+                if (n == MAX_MTD)
+                    break;
             }
-            n++;
-            if (n == MAX_MTD)
-                break;
         }
 
         fclose(fp);
     }
 
-    for (int i = 0; i < n; i++)
-        if (!cb(mtds[i].i, mtds[i].name, &mtds[i].mtd, ctx))
+    /*
+     * Check if fix weird Anjoy partition order:
+      0x000000000000-0x000000020000 : "BOOT"
+      0x000000040000-0x0000001d0000 : "KERNEL"
+      0x0000001d0000-0x0000007b0000 : "SYSTEM"
+      0x000000020000-0x000000040000 : "UBOOT"
+      0x0000007b0000-0x000000800000 : "DATA"
+    */
+    if (!strcmp("BOOT", mtds[0].name) && !strcmp("KERNEL", mtds[1].name) &&
+        !strcmp("SYSTEM", mtds[2].name) && !strcmp("UBOOT", mtds[3].name) &&
+        !strcmp("DATA", mtds[4].name)) {
+        // kind of partitions sort to make them right order:
+        // tmp <- (3) UBOOT
+        // 3 <- (2) SYSTEM
+        // 2 <- (1) KERNEL
+        // 1 <- tmp
+        struct mtd_entry tmp = mtds[3];
+        mtds[3] = mtds[2];
+        mtds[2] = mtds[1];
+        mtds[1] = tmp;
+    }
+
+    for (int i = 0; i < n; i++) {
+        if (mtds[i].valid && !cb(mtds[i].i, mtds[i].name, &mtds[i].mtd, ctx))
             break;
+    }
 }
 
 void print_mtd_info() {

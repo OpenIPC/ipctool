@@ -40,7 +40,7 @@ static void append_board_param(char *fname, char *dst, char *fmt, fmt_option_t f
     char buf[255];
     FILE *fp = NULL;
     if (!access(fname, R_OK)) {
-        if (fp = fopen(fname, "rb")) {
+        if ((fp = fopen(fname, "rb"))) {
             memset(buf, 0, sizeof(buf));
             if (fread(buf, 1, sizeof(buf), fp) > 0) {
                 if (fmt_option & str_rtrim)
