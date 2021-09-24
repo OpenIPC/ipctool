@@ -10,13 +10,13 @@
 #include <linux/ioctl.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
-#include <sys/mman.h>
 #include <sys/resource.h>
 #include <unistd.h>
 
 #include "chipid.h"
 #include "cjson/cJSON.h"
 #include "hal_common.h"
+#include "mmap.h"
 #include "ram.h"
 #include "tools.h"
 

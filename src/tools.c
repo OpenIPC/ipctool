@@ -8,9 +8,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/klog.h>
-#include <sys/mman.h>
 #include <unistd.h>
 
+#include "mmap.h"
 #include "tools.h"
 
 #define MAX_ERROR_MSG 0x1000

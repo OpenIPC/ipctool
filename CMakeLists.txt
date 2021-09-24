@@ -47,6 +47,7 @@ set(COMMON_LIB_SRC
     src/chipid.h
     src/hwinfo.c
     src/hwinfo.h
+    src/mmap.h
     src/sensors.c
     src/sensors.h
     src/tools.c
