@@ -96,7 +96,7 @@ uint32_t rounded_num(uint32_t n) {
 }
 
 void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
-    if (!strcmp(VENDOR_HISI, chip_manufacturer))
+    if (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_id == '7')
         *total_mem = hisi_totalmem(media_mem);
     else if (!strcmp(VENDOR_XM, chip_manufacturer))
         *total_mem = xm_totalmem(media_mem);
