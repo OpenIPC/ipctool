@@ -403,6 +403,44 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     return true;
 }
 
+static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
+                                unsigned char i2c_addr, unsigned int base) {
+    if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    int prod_msb = sensor_read_register(fd, i2c_addr, 0xf0, 1, 1);
+    // early break
+    if (prod_msb == -1)
+        return false;
+
+    int prod_lsb = sensor_read_register(fd, i2c_addr, 0xf1, 1, 1);
+    if (prod_lsb == -1)
+        return false;
+    int res = prod_msb << 8 | prod_lsb;
+
+    if (!res)
+        return false;
+
+    switch (res) {
+    case 0x2023:
+        res = 0x2023;
+        break;
+    case 0x2053:
+        res = 0x2053;
+        break;
+    case 0x2063:
+        res = 0x2063;
+        break;
+    default:
+        fprintf(stderr, "Error: unexpected value for GalaxyCore == 0x%x\n", res);
+    }
+
+    if (res) {
+        sprintf(ctx->sensor_id, "GC%04x", res);
+    }
+    return res;
+}
+
 static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int (*detect_fn)(sensor_ctx_t *ctx, int,
                                                     unsigned char,
@@ -451,8 +489,11 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
                                        SENSOR_SMARTSENS, 0)) {
         strcpy(ctx->vendor, "SmartSens");
         detected = true;
+    } else if (detect_possible_sensors(ctx, fd, detect_galaxycore_sensor,
+                                       SENSOR_GALAXYCORE, 0)) {
+        strcpy(ctx->vendor, "GalaxyCore");
+        detected = true;
     }
-
 exit:
     close_sensor_fd(fd);
     hal_cleanup();

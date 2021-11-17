@@ -13,6 +13,7 @@ enum SENSORS {
     SENSOR_SMARTSENS,
     SENSOR_OMNIVISION,
     SENSOR_BRIGATES,
+    SENSOR_GALAXYCORE,
 };
 
 typedef struct {
