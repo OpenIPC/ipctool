@@ -5,7 +5,6 @@
 #include "vendors/anjoy.h"
 #include "vendors/buildroot.h"
 #include "vendors/hankvision.h"
-#include "vendors/openipc.h"
 #include "vendors/openwrt.h"
 #include "vendors/ruision.h"
 #include "vendors/sstar.h"

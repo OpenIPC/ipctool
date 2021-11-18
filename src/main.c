@@ -20,6 +20,7 @@
 #include "firmware.h"
 #include "hal_hisi.h"
 #include "hwinfo.h"
+#include "i2c.h"
 #include "mtd.h"
 #include "network.h"
 #include "ram.h"
@@ -28,8 +29,8 @@
 #include "uboot.h"
 #include "version.h"
 
+#include "vendors/buildroot.h"
 #include "vendors/common.h"
-#include "vendors/openipc.h"
 
 #define RESET_CL "\x1b[0m"
 #define FG_RED "\x1b[31m"
@@ -37,12 +38,13 @@
 void Help() {
 #ifndef SKIP_VERSION
     printf("ipctool, version: ");
+
     const char *vers = get_git_version();
-    if (*vers) {
-        puts(vers);
-    } else {
-        printf("%s+%s\n", get_git_branch(), get_git_revision());
-    }
+    if (*vers)
+        printf("%s , built on %s\n", vers, get_builddate());
+    else
+        printf("%s+%s, built on %s\n", get_git_branch(), get_git_revision(),
+               get_builddate());
 #endif
 
     printf("\nOpenIPC is " FG_RED "asking for your help " RESET_CL
@@ -176,19 +178,20 @@ static bool backup_mode() {
 int main(int argc, char *argv[]) {
     const char *short_options = "";
     const struct option long_options[] = {
-        {"help", no_argument, NULL, 'h'},
-        {"chip_id", no_argument, NULL, 'c'},
-        {"sensor_id", no_argument, NULL, 's'},
-        {"temp", no_argument, NULL, 't'},
-        {"printenv", no_argument, NULL, 'p'},
-        {"setenv", required_argument, NULL, 'e'},
-        {"dmesg", no_argument, NULL, 'd'},
-        {"wait", no_argument, NULL, 'w'},
         {"backup", required_argument, NULL, 'b'},
-        {"restore", optional_argument, NULL, 'r'},
-        {"skip-env", no_argument, NULL, '0'},
+        {"chip_id", no_argument, NULL, 'c'},
+        {"dmesg", no_argument, NULL, 'd'},
         {"force", no_argument, NULL, 'f'},
+        {"help", no_argument, NULL, 'h'},
+        {"printenv", no_argument, NULL, 'p'},
+        {"restore", optional_argument, NULL, 'r'},
+        {"sensor_id", no_argument, NULL, 's'},
+        {"setenv", required_argument, NULL, 'e'},
+        {"i2cget", required_argument, NULL, '1'},
+        {"skip-env", no_argument, NULL, '0'},
+        {"temp", no_argument, NULL, 't'},
         {"upgrade", optional_argument, NULL, 'u'},
+        {"wait", no_argument, NULL, 'w'},
         {NULL, 0, NULL, 0}};
 
     int rez;
@@ -249,6 +252,10 @@ int main(int argc, char *argv[]) {
         case '0':
             skip_env = true;
             break;
+
+        case '1':
+            i2cget(optarg);
+            return 0;
 
         case 'f':
             force = true;

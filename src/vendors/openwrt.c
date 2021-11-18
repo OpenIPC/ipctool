@@ -8,13 +8,11 @@
 
 #include "chipid.h"
 #include "tools.h"
-#include "vendors/openipc.h"
 #include "vendors/openwrt.h"
 
 bool is_openwrt_board() {
     if (!access("/etc/openwrt_version", 0)) {
-        if (!is_openipc_board())
-            strcpy(board_manufacturer, "OpenWrt");
+        strcpy(board_manufacturer, "OpenWrt");
         return true;
     }
     return false;
