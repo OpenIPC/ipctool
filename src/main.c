@@ -183,11 +183,12 @@ int main(int argc, char *argv[]) {
         {"dmesg", no_argument, NULL, 'd'},
         {"force", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
+        {"i2cdump", required_argument, NULL, '2'},
+        {"i2cget", required_argument, NULL, '1'},
         {"printenv", no_argument, NULL, 'p'},
         {"restore", optional_argument, NULL, 'r'},
         {"sensor_id", no_argument, NULL, 's'},
         {"setenv", required_argument, NULL, 'e'},
-        {"i2cget", required_argument, NULL, '1'},
         {"skip-env", no_argument, NULL, '0'},
         {"temp", no_argument, NULL, 't'},
         {"upgrade", optional_argument, NULL, 'u'},
@@ -254,7 +255,11 @@ int main(int argc, char *argv[]) {
             break;
 
         case '1':
-            i2cget(optarg);
+            i2cget(optarg, argv);
+            return 0;
+
+        case '2':
+            i2cdump(optarg, argv);
             return 0;
 
         case 'f':
