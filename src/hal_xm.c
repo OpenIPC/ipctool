@@ -13,7 +13,7 @@
 
 static unsigned char sony_addrs[] = {0x1a, 0};
 static unsigned char onsemi_addrs[] = {0x10, 0};
-static unsigned char soi_addrs[] = {0x30, 0};
+static unsigned char soi_addrs[] = {0x30, 0x40, 0};
 static unsigned char ssens_addrs[] = {0x30, 0};
 static unsigned char omni_addrs[] = {0x36, 0};
 // only for reference, used in XM510
