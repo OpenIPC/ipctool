@@ -20,6 +20,4 @@ int munmap(void *__addr, size_t __len);
 #define mmap64 mmap
 #endif
 
-void *mmap_file(int fd, off_t *file_size);
-
 #endif /* MMAP_H */
