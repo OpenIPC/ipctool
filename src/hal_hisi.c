@@ -494,10 +494,12 @@ static const char *get_chip_id35180100() {
     switch (dvrid) {
     case 0x3516C100:
         return "3516CV100";
-    case 0x3518E100:
-        return "3518EV100";
     case 0x3518A100:
         return "3518AV100";
+    case 0x3518C100:
+        return "3518CV100";
+    case 0x3518E100:
+        return "3518EV100";
     default:
         fprintf(stderr,
                 "get_chip_id35180100() got unexpected 0x%x for 3518?v100\n"
