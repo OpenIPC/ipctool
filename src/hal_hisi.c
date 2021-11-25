@@ -1475,7 +1475,7 @@ static const char *hisi_flash_mode(unsigned int value) {
         return "3-byte";
     case 1:
         return "4-byte";
-    defautl:
+    default:
         return NULL;
     }
 }

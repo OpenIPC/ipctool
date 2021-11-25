@@ -62,10 +62,10 @@ int sstar_sensor_i2c_change_addr(int fd, unsigned char addr) {
 }
 
 static int sstar_i2c_write(int fd, unsigned char slave_addr,
-                           unsigned char *reg_addr, unsigned char red_width) {
+                           unsigned char *reg_addr, unsigned char reg_width) {
     unsigned int data_size = 0;
 
-    data_size = red_width * sizeof(unsigned char);
+    data_size = reg_width * sizeof(unsigned char);
     return 0;
 }
 
