@@ -1,4 +1,4 @@
-# IPC chip information
+# IP camera hardware checking tool
 
 [![Build](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml/badge.svg)](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml)
 [![CI status](https://img.shields.io/github/downloads/OpenIPC/ipctool/total.svg)](https://github.com/OpenIPC/ipctool/releases)
