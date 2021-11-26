@@ -59,17 +59,21 @@ void Help() {
 
    printf("Usage:  ipctool [OPTION]\n"
            "Where:\n"
-           "  -c, --chip_id\t\t\tread chip id\n"
-           "  -s, --sensor_id\t\tread sensor model and control line\n"
-           "  -t, --temp\t\t\tread chip temperature (where supported)\n"
-           "  -d, --dmesg\t\t\tdrop-in replacement for dmesg\n"
-           "  -p, --printenv\t\tdrop-in replacement for fw_printenv\n"
-           "  -e, --setenv key=value\tdrop-in replacement for fw_setenv\n"
-           "  -b, --backup=<filename>\tsave backup into a file\n"
-           "  -r, --restore[=mac]\t\trestore from backup\n"
-           "     [-0, --skip-env]\t\tskip environment\n"
-           "     [-f, --force]\t\tenforce\n"
-           "  -h, --help\t\t\tthis help\n");
+           "  -c, --chip_id             read chip id\n"
+           "  -s, --sensor_id           read sensor model and control line\n"
+           "  -t, --temp                read chip temperature (where supported)\n"
+           "  -d, --dmesg               drop-in replacement for dmesg\n"
+           "  -p, --printenv            drop-in replacement for fw_printenv\n"
+           "  -e, --setenv key=value    drop-in replacement for fw_setenv\n"
+           "  -b, --backup=<filename>   save backup into a file\n"
+           "  -r, --restore[=mac]       restore from backup\n"
+           "     [-0, --skip-env]       skip environment\n"
+           "     [-f, --force]          enforce\n"
+           "  --i2cget <device address> <register>\n"
+           "                            read data from I2C device\n"
+           "  --i2cdump <device address> <from register> <to register>\n"
+           "                            dump data from I2C device\n"
+           "  -h, --help                this help\n");
 }
 
 // backup mode pipe end
