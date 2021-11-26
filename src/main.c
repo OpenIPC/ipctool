@@ -47,27 +47,29 @@ void Help() {
                get_builddate());
 #endif
 
-    printf("\nOpenIPC is " FG_RED "asking for your help " RESET_CL
-           "to support development cost and long-term maintenance of what we "
-           "believe will serve a fundamental role in the advancement of a "
-           "stable, flexible and most importantly, Open IP Network Camera "
-           "Framework for users worldwide.\n\n"
-           "Your contribution will help us " FG_RED
-           "advance development proposals forward" RESET_CL
-           ", and interact with the community on a regular basis.\n\n"
-           "  https://openipc.org/contribution/\n\n"
-           "available options:\n"
-           "\t--chip_id\n"
-           "\t--sensor_id\n"
-           "\t--temp\n"
-           "\n"
-           "\t--dmesg\n"
-           "\t--printenv\n"
-           "\t--setenv key=value\n"
-           "\n"
-           "\t--backup=<filename>\n"
-           "\t[--skip-env] [--force] --restore=[mac]\n"
-           "\t--help\n");
+#ifndef SKIP_FUNDING
+    printf("\n" FG_RED "OpenIPC is asking for your help!" RESET_CL
+           "\nPlease help the Team of OpenIPC project to cover the cost of development"
+           "\nand long-term maintenance of what we believe will be a stable, flexible"
+           "\nOpen IP Network Camera Framework for users worldwide.\n"
+           "\nYour contribution could help us to advance the development and keep you"
+           "\nupdated on improvements and new features more regularly.\n"
+           "\nPlease visit https://openipc.org/sponsor/ to learn more. Thank you.\n\n");
+#endif
+
+   printf("Usage:  ipctool [OPTION]\n"
+           "Where:\n"
+           "  -c, --chip_id\t\t\tread chip id\n"
+           "  -s, --sensor_id\t\tread sensor model and control line\n"
+           "  -t, --temp\t\t\tread chip temperature (where supported)\n"
+           "  -d, --dmesg\t\t\tdrop-in replacement for dmesg\n"
+           "  -p, --printenv\t\tdrop-in replacement for fw_printenv\n"
+           "  -e, --setenv key=value\tdrop-in replacement for fw_setenv\n"
+           "  -b, --backup=<filename>\tsave backup into a file\n"
+           "  -r, --restore[=mac]\t\trestore from backup\n"
+           "     [-0, --skip-env]\t\tskip environment\n"
+           "     [-f, --force]\t\tenforce\n"
+           "  -h, --help\t\t\tthis help\n");
 }
 
 // backup mode pipe end
@@ -178,22 +180,23 @@ static bool backup_mode() {
 int main(int argc, char *argv[]) {
     const char *short_options = "";
     const struct option long_options[] = {
-        {"backup", required_argument, NULL, 'b'},
-        {"chip_id", no_argument, NULL, 'c'},
-        {"dmesg", no_argument, NULL, 'd'},
-        {"force", no_argument, NULL, 'f'},
-        {"help", no_argument, NULL, 'h'},
-        {"i2cdump", required_argument, NULL, '2'},
-        {"i2cget", required_argument, NULL, '1'},
-        {"printenv", no_argument, NULL, 'p'},
-        {"restore", optional_argument, NULL, 'r'},
-        {"sensor_id", no_argument, NULL, 's'},
-        {"setenv", required_argument, NULL, 'e'},
-        {"skip-env", no_argument, NULL, '0'},
-        {"temp", no_argument, NULL, 't'},
-        {"upgrade", optional_argument, NULL, 'u'},
-        {"wait", no_argument, NULL, 'w'},
-        {NULL, 0, NULL, 0}};
+        {"backup",    required_argument, NULL, 'b'},
+        {"chip_id",   no_argument,       NULL, 'c'},
+        {"dmesg",     no_argument,       NULL, 'd'},
+        {"force",     no_argument,       NULL, 'f'},
+        {"help",      no_argument,       NULL, 'h'},
+        {"i2cdump",   required_argument, NULL, '2'},
+        {"i2cget",    required_argument, NULL, '1'},
+        {"printenv",  no_argument,       NULL, 'p'},
+        {"restore",   optional_argument, NULL, 'r'},
+        {"sensor_id", no_argument,       NULL, 's'},
+        {"setenv",    required_argument, NULL, 'e'},
+        {"skip-env",  no_argument,       NULL, '0'},
+        {"temp",      no_argument,       NULL, 't'},
+        {"upgrade",   optional_argument, NULL, 'u'},
+        {"wait",      no_argument,       NULL, 'w'},
+        {NULL,        0,                 NULL, 0}
+    };
 
     int rez;
     int option_index;
