@@ -441,6 +441,40 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     return res;
 }
 
+static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
+                                unsigned char i2c_addr, unsigned int base) {
+    if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    int prod_msb = sensor_read_register(fd, i2c_addr, 0xfa, 1, 1);
+    // early break
+    if (prod_msb == -1)
+        return false;
+
+    int prod_lsb = sensor_read_register(fd, i2c_addr, 0xfb, 1, 1);
+    if (prod_lsb == -1)
+        return false;
+    int res = prod_msb << 8 | prod_lsb;
+
+    if (!res)
+        return false;
+
+    switch (res) {
+    // hax, sensor doesnt seem to have id register
+    case 0x2073:
+    case 0x0000:
+        res = 0x2305;
+        break;
+    default:
+        fprintf(stderr, "Error: unexpected value for SuperPix == 0x%x\n", res);
+    }
+
+    if (res) {
+        sprintf(ctx->sensor_id, "SP%04x", res);
+    }
+    return res;
+}
+
 static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int (*detect_fn)(sensor_ctx_t *ctx, int,
                                                     unsigned char,
@@ -492,6 +526,10 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
     } else if (detect_possible_sensors(ctx, fd, detect_galaxycore_sensor,
                                        SENSOR_GALAXYCORE, 0)) {
         strcpy(ctx->vendor, "GalaxyCore");
+        detected = true;
+    } else if (detect_possible_sensors(ctx, fd, detect_superpix_sensor,
+                                       SENSOR_SUPERPIX, 0)) {
+        strcpy(ctx->vendor, "SuperPix");
         detected = true;
     }
 exit:
