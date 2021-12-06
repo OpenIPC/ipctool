@@ -38,6 +38,9 @@ void i2cget(char *arg, char *argv[]) {
 
     unsigned char i2c_addr = strtoul(addr, 0, 16);
     unsigned int reg_addr = strtoul(reg, 0, 16);
+
+    sensor_i2c_change_addr(fd, i2c_addr);
+
     int res = sensor_read_register(fd, i2c_addr, reg_addr,
                                    reg_addr > 0xff ? 2 : 1, 1);
     printf("%#x\n", res);
@@ -81,6 +84,8 @@ void i2cdump(char *arg, char *argv[]) {
     unsigned char i2c_addr = strtoul(addr, 0, 16);
     unsigned int from_reg_addr = strtoul(from_reg, 0, 16);
     unsigned int to_reg_addr = strtoul(to_reg, 0, 16);
+
+    sensor_i2c_change_addr(fd, i2c_addr);
 
     for (int i = from_reg_addr; i < to_reg_addr; i++) {
         int res = sensor_read_register(fd, i2c_addr, i, i > 0xff ? 2 : 1, 1);
