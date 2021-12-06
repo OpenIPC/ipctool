@@ -360,7 +360,6 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     return true;
 }
 
-// TODO(FlyRouter): test on OV9732
 static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
                               unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
@@ -373,10 +372,17 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     // early break
     if (prod_msb == -1)
         return false;
+    // Nasty hack, OV9732 has bus width 2, might break something
+    if (prod_msb == 0)
+        prod_msb = sensor_read_register(fd, i2c_addr, 0x300A, 2, 1);
 
     int prod_lsb = sensor_read_register(fd, i2c_addr, 0x300B, 1, 1);
     if (prod_lsb == -1)
         return false;
+
+    if (prod_lsb == 0)
+        prod_lsb = sensor_read_register(fd, i2c_addr, 0x300B, 2, 1);
+
     int res = prod_msb << 8 | prod_lsb;
 
     // skip empty result
@@ -513,13 +519,13 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
                                        SENSOR_ONSEMI, 0)) {
         strcpy(ctx->vendor, "ON Semiconductor");
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_sony_sensor, SENSOR_SONY,
-                                       0x3000)) {
-        strcpy(ctx->vendor, "Sony");
-        detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_omni_sensor,
                                        SENSOR_OMNIVISION, 0)) {
         strcpy(ctx->vendor, "OmniVision");
+        detected = true;
+    } else if (detect_possible_sensors(ctx, fd, detect_sony_sensor, SENSOR_SONY,
+                                       0x3000)) {
+        strcpy(ctx->vendor, "Sony");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_smartsens_sensor,
                                        SENSOR_SMARTSENS, 0)) {
