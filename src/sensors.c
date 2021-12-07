@@ -185,8 +185,10 @@ static int detect_soi_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     case 0xff:
         return false;
     default:
+#ifndef STANDALONE_LIBRARY
         fprintf(stderr, "Error: unexpected value for SOI == 0x%x\n",
                 (pid << 8) + ver);
+#endif
         return false;
     }
 }
@@ -216,7 +218,10 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
         // no response
         break;
     default:
+#ifndef STANDALONE_LIBRARY
         fprintf(stderr, "Error: unexpected value for Aptina == 0x%x\n", pid);
+#endif
+	return false;
     }
 
     if (sid) {
@@ -352,7 +357,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         // SC1135 catches here
         return false;
     default:
+#ifndef STANDALONE_LIBRARY
         fprintf(stderr, "Error: unexpected value for SmartSens == 0x%x\n", res);
+#endif
         return false;
     }
 
@@ -402,8 +409,10 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     case 0xffff:
         return false;
     default:
+#ifndef STANDALONE_LIBRARY
         fprintf(stderr, "Error: unexpected value for OmniVision == 0x%x\n",
                 res);
+#endif
         return false;
     }
     sprintf(ctx->sensor_id, "OV%04x", res);
@@ -440,7 +449,10 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
         res = 0x2063;
         break;
     default:
+#ifndef STANDALONE_LIBRARY
         fprintf(stderr, "Error: unexpected value for GalaxyCore == 0x%x\n", res);
+#endif
+	return false;
     }
 
     if (res) {
@@ -474,7 +486,10 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
         res = 0x2305;
         break;
     default:
+#ifndef STANDALONE_LIBRARY
         fprintf(stderr, "Error: unexpected value for SuperPix == 0x%x\n", res);
+#endif
+	return false;
     }
 
     if (res) {
