@@ -50,6 +50,10 @@ void i2cget(char *arg, char *argv[]) {
 }
 
 void i2cdump(char *arg, char *argv[]) {
+    char ascii[17];
+    size_t i, j;
+    ascii[16] = '\0';
+
     while (*argv != arg) {
         if (!*argv)
             break;
@@ -85,11 +89,35 @@ void i2cdump(char *arg, char *argv[]) {
     unsigned int from_reg_addr = strtoul(from_reg, 0, 16);
     unsigned int to_reg_addr = strtoul(to_reg, 0, 16);
 
+
     sensor_i2c_change_addr(fd, i2c_addr);
 
-    for (int i = from_reg_addr; i < to_reg_addr; i++) {
+    int size = to_reg_addr-from_reg_addr;
+    for (i = from_reg_addr; i < to_reg_addr; ++i) {
         int res = sensor_read_register(fd, i2c_addr, i, i > 0xff ? 2 : 1, 1);
-        printf("%#x %#x\n", i, res);
+        if (i == from_reg_addr)
+            printf("%x: ", i);
+        printf("%02X ", res);
+        if (res >= ' ' && res <= '~') {
+            ascii[i % 16] = res;
+        } else {
+            ascii[i % 16] = '.';
+        }
+        if ((i + 1) % 8 == 0 || i + 1 == size) {
+            printf(" ");
+            if ((i + 1) % 16 == 0) {
+                printf("|  %s \n%x: ", ascii, i+1);
+            } else if (i + 1 == size) {
+                ascii[(i + 1) % 16] = '\0';
+                if ((i + 1) % 16 <= 8) {
+                    printf(" ");
+                }
+                for (j = (i + 1) % 16; j < 16; ++j) {
+                    printf("   ");
+                }
+                printf("|  %s \n", ascii);
+            }
+        }
     }
 
     close_sensor_fd(fd);
