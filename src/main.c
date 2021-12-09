@@ -182,7 +182,7 @@ static bool backup_mode() {
 }
 
 int main(int argc, char *argv[]) {
-    const char *short_options = "";
+    const char *short_options = "bcdfhprsetuw:0:1:2";
     const struct option long_options[] = {
         {"backup",    required_argument, NULL, 'b'},
         {"chip_id",   no_argument,       NULL, 'c'},
