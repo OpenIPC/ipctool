@@ -372,23 +372,26 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    // sensor_write_register(0x103, 1);
-    // sensor_read_register(0x302A) != 0xA0
+    if (sensor_read_register(fd, i2c_addr, 0x300A, 2, 1) == 0x97 &&
+        sensor_read_register(fd, i2c_addr, 0x300B, 2, 1) == 0x32) {
+        sprintf(ctx->sensor_id, "OV9732");
+        return true;
+    }
+
+    // Check OmniVision ManufacturerID
+    int mfg_msb = sensor_read_register(fd, i2c_addr, 0x301C, 1, 1);
+    int mfg_lsb = sensor_read_register(fd, i2c_addr, 0x301D, 1, 1);
+    if (mfg_msb == -1 || mfg_lsb == -1 || mfg_msb != 0x7f || mfg_lsb != 0xa2)
+        return false;
 
     int prod_msb = sensor_read_register(fd, i2c_addr, 0x300A, 1, 1);
     // early break
     if (prod_msb == -1)
         return false;
-    // Nasty hack, OV9732 has bus width 2, might break something
-    if (prod_msb == 0)
-        prod_msb = sensor_read_register(fd, i2c_addr, 0x300A, 2, 1);
 
     int prod_lsb = sensor_read_register(fd, i2c_addr, 0x300B, 1, 1);
     if (prod_lsb == -1)
         return false;
-
-    if (prod_lsb == 0)
-        prod_lsb = sensor_read_register(fd, i2c_addr, 0x300B, 2, 1);
 
     int res = prod_msb << 8 | prod_lsb;
 

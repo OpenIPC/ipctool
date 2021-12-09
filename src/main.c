@@ -202,15 +202,15 @@ int main(int argc, char *argv[]) {
         {NULL,        0,                 NULL, 0}
     };
 
-    int rez;
+    int res;
     int option_index;
     bool skip_env = false;
     bool force = false;
 
-    while ((rez = getopt_long_only(argc, argv, short_options, long_options,
+    while ((res = getopt_long_only(argc, argv, short_options, long_options,
                                    &option_index)) != -1) {
 
-        switch (rez) {
+        switch (res) {
         case 'h':
             Help();
             return 0;
