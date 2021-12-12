@@ -1,3 +1,5 @@
+![OpenIPC Logo](https://cdn.themactep.com/images/logo_openipc.png)
+
 # IP camera hardware checking tool
 
 [![Build](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml/badge.svg)](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml)
