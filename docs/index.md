@@ -24,7 +24,6 @@ If you like our work, please consider supporting us on [Opencollective](https://
 [![Backers](https://opencollective.com/openipc/tiers/backer/badge.svg?label=backer&color=brightgreen)](https://opencollective.com/openipc)
 [![Backers](https://opencollective.com/openipc/tiers/badge.svg)](https://opencollective.com/openipc)
 
-[![Backers](https://opencollective.com/openipc/tiers/backer.svg?avatarHeight=36)](https://opencollective.com/openipc#support)
 
 ### Thanks a lot !!!
 
