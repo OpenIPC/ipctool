@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <poll.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
