@@ -562,7 +562,9 @@ int restore_backup(const char *arg, bool skip_env, bool force) {
         if (!do_flash("Restoring", mtdbackup, &mtd))
             goto bailout;
 
+#ifndef NO_FLASH
         reboot_with_msg();
+#endif
 
     bailout:
 
