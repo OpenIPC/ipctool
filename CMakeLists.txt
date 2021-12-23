@@ -4,6 +4,8 @@ project(ipctool C)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_FLAGS "-std=gnu99")
 
+cmake_policy(SET CMP0069 NEW)
+
 if(NOT BUILD_SHARED_LIBS)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
     set(CMAKE_C_FLAGS "-static ${CMAKE_C_FLAGS}")
