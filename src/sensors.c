@@ -139,18 +139,6 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
         }
     }
 
-    int ret31e0 = sensor_read_register(fd, i2c_addr, base + 0x1E0, 2, 1);
-    if (ret31e0 > 0) {
-        uint8_t val = (0xc0 & ret31e0) >> 6;
-        if (val == 3) {
-            sprintf(ctx->sensor_id, "IMX224");
-            return true;
-        } else if (val == 0) {
-            sprintf(ctx->sensor_id, "IMX225");
-            return true;
-        }
-    }
-
     return false;
 }
 
