@@ -2,6 +2,7 @@
 #define I2C_H
 
 void i2cget(char *arg, char *argv[]);
+void i2cset(char *arg, char *argv[]);
 void i2cdump(char *arg, char *argv[]);
 
 #endif /* I2C_H */

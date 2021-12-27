@@ -182,7 +182,7 @@ static bool backup_mode() {
 }
 
 int main(int argc, char *argv[]) {
-    const char *short_options = "bcdfhprsetuw:0:1:2";
+    const char *short_options = "bcdfhprsetuw:0:1:2:3:";
     const struct option long_options[] = {
         {"backup",    required_argument, NULL, 'b'},
         {"chip_id",   no_argument,       NULL, 'c'},
@@ -191,6 +191,7 @@ int main(int argc, char *argv[]) {
         {"help",      no_argument,       NULL, 'h'},
         {"i2cdump",   required_argument, NULL, '2'},
         {"i2cget",    required_argument, NULL, '1'},
+        {"i2cset",    required_argument, NULL, '3'},
         {"printenv",  no_argument,       NULL, 'p'},
         {"restore",   optional_argument, NULL, 'r'},
         {"sensor_id", no_argument,       NULL, 's'},
@@ -267,6 +268,10 @@ int main(int argc, char *argv[]) {
 
         case '2':
             i2cdump(optarg, argv);
+            return 0;
+
+        case '3':
+            i2cset(optarg, argv);
             return 0;
 
         case 'f':

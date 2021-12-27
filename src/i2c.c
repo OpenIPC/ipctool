@@ -5,6 +5,52 @@
 #include "hal_common.h"
 #include "i2c.h"
 
+void i2cset(char *arg, char *argv[]) {
+    while (*argv != arg) {
+        if (!*argv)
+            break;
+
+        argv++;
+    }
+
+    const char *addr = argv[0];
+    const char *reg = argv[1];
+    const char *data = argv[2];
+    if (!reg) {
+        puts("Usage: ipctool i2cset addr reg");
+        return;
+    }
+
+    if (!getchipid()) {
+        puts("Unkown chip");
+        return;
+    }
+
+    if (!open_sensor_fd) {
+        puts("There is no platform specific I2C/SPI access layer");
+        return;
+    }
+
+    int fd = open_sensor_fd();
+    if (fd == -1) {
+        puts("Device not found");
+        return;
+    }
+
+    unsigned char i2c_addr = strtoul(addr, 0, 16);
+    unsigned int reg_addr = strtoul(reg, 0, 16);
+    unsigned int reg_data = strtoul(data, 0, 16);
+
+    sensor_i2c_change_addr(fd, i2c_addr);
+
+    int res = sensor_write_register(fd, i2c_addr, reg_addr,
+                                   reg_addr > 0xff ? 2 : 1, reg_data, 32);
+    printf("%#x\n", res);
+
+    close_sensor_fd(fd);
+    hal_cleanup();
+}
+
 void i2cget(char *arg, char *argv[]) {
     while (*argv != arg) {
         if (!*argv)
