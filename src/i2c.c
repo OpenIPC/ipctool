@@ -166,6 +166,7 @@ void i2cdump(char *arg, char *argv[]) {
             }
         }
     }
+    printf("\n");
 
     close_sensor_fd(fd);
     hal_cleanup();

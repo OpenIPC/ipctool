@@ -128,7 +128,12 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
             return true;
         default: {
             int ret3010 = sensor_read_register(fd, i2c_addr, base + 0x10, 2, 1);
-            if (ret3010 == 0x21) {
+            if (((ret3010 == 0x21) || (ret3010 == 0x1)) && 
+                (sensor_read_register(fd, i2c_addr, base + 0x08, 2, 1) == 0xa0) &&
+                (sensor_read_register(fd, i2c_addr, base + 0x0e, 2, 1) == 0x01) &&
+                (sensor_read_register(fd, i2c_addr, base + 0x1e, 2, 1) == 0xb2) &&
+                (sensor_read_register(fd, i2c_addr, base + 0x1f, 2, 1) == 0x01))
+            {
                 sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
 #ifndef STANDALONE_LIBRARY
                 sony_imx291_params(ctx, fd, i2c_addr, base);
