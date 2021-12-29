@@ -100,7 +100,6 @@ int hisi_gen2_sensor_write_register(int fd, unsigned char i2c_addr,
 
     int ret;
     unsigned int index = 0;
-    unsigned int reg_value;
     char buf[4];
 
     if (hisi_gen2_set_width(fd, reg_width, data_width))
@@ -117,12 +116,12 @@ int hisi_gen2_sensor_write_register(int fd, unsigned char i2c_addr,
     }
 
     if (data_width == 2) {
-        buf[index] = reg_value & 0xff;
+        buf[index] = data & 0xff;
         index++;
-        buf[index] = (reg_value >> 8) & 0xff;
+        buf[index] = (data >> 8) & 0xff;
         index++;
     } else {
-        buf[index] = reg_value & 0xff;
+        buf[index] = data & 0xff;
         index++;
     }
 
