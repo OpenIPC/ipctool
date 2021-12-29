@@ -224,7 +224,7 @@ Tested on:
 
 |Manufacturer|Models|
 |---|---|
-|[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|Hi3516CV100/200/300, Hi3516EV100/200/300, Hi3516DV300|
+|[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|Hi3516CV100/200/300, Hi3516EV100/200/300, Hi3516DV300, Hi3518EV100|
 |[SigmaStar](http://linux-chenxing.org/)|SSC335|
 |[Xiongmai](http://www.xiongmaitech.com/product)|XM510, XM530, XM550|
 
@@ -239,6 +239,7 @@ Tested on:
 |Xiongmai| Various models |
 |Hankvision | V6202IR-IMX327 |
 |Ruision | RS-H649F-A0, RS-H651JAI-AO, RS-H656S-AO |
+|TP-Link | NC210 |
 
 ## Supported sensors
 
