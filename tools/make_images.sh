@@ -4,7 +4,7 @@ PACK=--pack
 
 # EV300
 wget -qO-  \
-  https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz \
+  https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516ev300-br.tgz \
   | tar xvfz - -C /tmp
 ./upgrade_bundle.py \
   --kernel /tmp/uImage.hi3516ev300 \
