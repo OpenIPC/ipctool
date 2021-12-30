@@ -362,13 +362,28 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
 
 static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
                               unsigned int base) {
+    int prod_msb;
+    int prod_lsb;
+    int res;
+
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    if (sensor_read_register(fd, i2c_addr, 0x300A, 2, 1) == 0x97 &&
-        sensor_read_register(fd, i2c_addr, 0x300B, 2, 1) == 0x32) {
+    prod_msb = sensor_read_register(fd, i2c_addr, 0x300A, 2, 1);
+    prod_lsb = sensor_read_register(fd, i2c_addr, 0x300B, 2, 1);
+    res = prod_msb << 8 | prod_lsb;
+
+    switch (res) {
+    case 0x4688:
+        res = 0x4689;
+        sprintf(ctx->sensor_id, "OV4689");
+        return true;
+    case 0x9732:
+        res = 0x9732;
         sprintf(ctx->sensor_id, "OV9732");
         return true;
+    default:
+        break;
     }
 
     // Check OmniVision ManufacturerID
@@ -377,16 +392,16 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     if (mfg_msb == -1 || mfg_lsb == -1 || mfg_msb != 0x7f || mfg_lsb != 0xa2)
         return false;
 
-    int prod_msb = sensor_read_register(fd, i2c_addr, 0x300A, 1, 1);
+    prod_msb = sensor_read_register(fd, i2c_addr, 0x300A, 1, 1);
     // early break
     if (prod_msb == -1)
         return false;
 
-    int prod_lsb = sensor_read_register(fd, i2c_addr, 0x300B, 1, 1);
+    prod_lsb = sensor_read_register(fd, i2c_addr, 0x300B, 1, 1);
     if (prod_lsb == -1)
         return false;
 
-    int res = prod_msb << 8 | prod_lsb;
+    res = prod_msb << 8 | prod_lsb;
 
     // skip empty result
     if (!res)
@@ -394,6 +409,9 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
 
     // model mapping
     switch (res) {
+    case 0x4688:
+        res = 0x4689;
+        break;
     case 0x9711:
         res = 0x9712;
         break;
