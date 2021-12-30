@@ -517,9 +517,6 @@ static const char *get_hisi_chip_id(uint32_t reg) {
     case 0x3516A100:
         chip_generation = HISI_V2;
         return "3516AV100";
-    case 0x3516D100:
-        chip_generation = HISI_V2;
-        return "3516DV100";
     case 0x3516A200:
         return "3516AV200";
     case 0x35190101:
@@ -621,12 +618,24 @@ bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
     }
     strncpy(chip_id, get_hisi_chip_id(chip_id_u32), sizeof(chip_id));
 
-    // Special case for 16cv200/18ev200/18ev201 family
-    if (chip_id_u32 == HISI_V2 || chip_id_u32 == HISI_V3) {
+    // Special cases for V2/V3 families
+    if (chip_id_u32 == 0x3516A100 || chip_id_u32 == HISI_V2 ||
+        chip_id_u32 == HISI_V3) {
         uint32_t SCSYSID0_reg =
             ((volatile uint32_t *)(sc_ctrl_map + SCSYSID0))[0];
         char SCSYSID0_chip_id = ((char *)&SCSYSID0_reg)[3];
-        if (chip_id_u32 == 0x3518E200)
+        if (chip_id_u32 == 0x3516A100) {
+            switch (SCSYSID0_chip_id) {
+            case 1:
+                sprintf(chip_id, "3516AV100");
+                break;
+            case 2:
+                sprintf(chip_id, "3516DV100");
+                break;
+            default:
+                sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
+            }
+        } else if (chip_id_u32 == HISI_V2) {
             switch (SCSYSID0_chip_id) {
             case 1:
                 sprintf(chip_id, "3516CV200");
@@ -640,7 +649,7 @@ bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
             default:
                 sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
             }
-        if (chip_id_u32 == HISI_V3)
+        } else if (chip_id_u32 == HISI_V3) {
             switch (SCSYSID0_chip_id) {
             case 0:
                 sprintf(chip_id, "3516CV300");
@@ -651,6 +660,7 @@ bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
             default:
                 sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
             }
+        }
     }
 
     if (*chip_id == '7')
