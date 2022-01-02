@@ -117,6 +117,12 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
         return true;
     }
 
+    int ret33b4 = sensor_read_register(fd, i2c_addr, base + 0x3b4, 2, 1);
+    if (ret33b4 == 0x96 || ret33b4 == 0xfe) {
+        sprintf(ctx->sensor_id, "IMX178");
+        return true;
+    }
+
     int ret1dc = sensor_read_register(fd, i2c_addr, base + 0x1DC, 2, 1);
     if (ret1dc != 0xff) {
         switch (ret1dc & 6) {
