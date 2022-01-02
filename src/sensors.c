@@ -328,8 +328,8 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         strcpy(ctx->sensor_id, "SC307H");
         return true;
     case 0xcc05:
-        // Untested
-        strcpy(ctx->sensor_id, "AUGE");
+        // AKA AUGE
+        strcpy(ctx->sensor_id, "SC3235");
         return true;
     case 0xcc1a:
         // Untested
