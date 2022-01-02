@@ -16,7 +16,7 @@ void i2cset(char *arg, char *argv[]) {
     const char *addr = argv[0];
     const char *reg = argv[1];
     const char *data = argv[2];
-    if (!reg) {
+    if (!reg || !data) {
         puts("Usage: ipctool i2cset addr reg");
         return;
     }
@@ -45,7 +45,6 @@ void i2cset(char *arg, char *argv[]) {
 
     int res = sensor_write_register(fd, i2c_addr, reg_addr,
                                    reg_addr > 0xff ? 2 : 1, reg_data, 32);
-    printf("%#x\n", res);
 
     close_sensor_fd(fd);
     hal_cleanup();
