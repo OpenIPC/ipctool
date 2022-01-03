@@ -375,6 +375,7 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
+    // HISI_V2 needs width 2. Old OmniVision sensors do not provide mfg_id register.
     prod_msb = sensor_read_register(fd, i2c_addr, 0x300A, 2, 1);
     prod_lsb = sensor_read_register(fd, i2c_addr, 0x300B, 2, 1);
     res = prod_msb << 8 | prod_lsb;
@@ -387,6 +388,9 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     case 0x9732:
         res = 0x9732;
         sprintf(ctx->sensor_id, "OV9732");
+        return true;
+    case 0x5305:
+        sprintf(ctx->sensor_id, "OS05A");
         return true;
     default:
         break;
@@ -424,6 +428,9 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     case 0x9732:
     case 0x9750:
         // for models with identical ID for model name
+        break;
+    case 0x5305:
+        sprintf(ctx->sensor_id, "OS05A");
         break;
     case 0:
     case 0xffff:
