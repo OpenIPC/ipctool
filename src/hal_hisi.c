@@ -28,14 +28,11 @@ static unsigned char omni_addrs[] = {0x60, 0x6c, 0x42, 0};
 static unsigned char gc_addrs[] = {0x6e, 0};
 static unsigned char superpix_addrs[] = {0x79, 0};
 
-sensor_addr_t hisi_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
-                                           {SENSOR_SOI, soi_addrs},
-                                           {SENSOR_ONSEMI, onsemi_addrs},
-                                           {SENSOR_SMARTSENS, ssens_addrs},
-                                           {SENSOR_OMNIVISION, omni_addrs},
-                                           {SENSOR_GALAXYCORE, gc_addrs},
-                                           {SENSOR_SUPERPIX, superpix_addrs},
-                                           {0, NULL}};
+sensor_addr_t hisi_possible_i2c_addrs[] = {
+    {SENSOR_SONY, sony_addrs},         {SENSOR_SOI, soi_addrs},
+    {SENSOR_ONSEMI, onsemi_addrs},     {SENSOR_SMARTSENS, ssens_addrs},
+    {SENSOR_OMNIVISION, omni_addrs},   {SENSOR_GALAXYCORE, gc_addrs},
+    {SENSOR_SUPERPIX, superpix_addrs}, {0, NULL}};
 
 static float hisi_get_temp();
 
@@ -55,7 +52,7 @@ int hisi_gen1_open_sensor_fd() { return common_open_sensor_fd("/dev/hi_i2c"); }
 // Set I2C slave address
 int hisi_sensor_i2c_change_addr(int fd, unsigned char addr) {
     // use i2c address shift only for generations other than 2
-    if (chip_generation != HISI_V2) {
+    if (chip_generation != HISI_V2 && chip_generation != HISI_V2A) {
         addr >>= 1;
     }
 
@@ -426,7 +423,7 @@ void setup_hal_hisi() {
         open_sensor_fd = hisi_gen1_open_sensor_fd;
         sensor_read_register = xm_sensor_read_register;
         sensor_write_register = xm_sensor_write_register;
-    } else if (chip_generation == HISI_V2) {
+    } else if (chip_generation == HISI_V2 || chip_generation == HISI_V2A) {
         sensor_read_register = hisi_gen2_sensor_read_register;
         sensor_write_register = hisi_gen2_sensor_write_register;
     } else {
@@ -471,6 +468,9 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
 static float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
+    // TODO: Av300
+    // tempo = hisi_reg_temp(0x120300BC, 8, 0x120300B4, 0x60FA0000);
+    // tempo = ((tempo * 136.0) / 793 * 165) - 40;
     case HISI_V2:
         tempo = hisi_reg_temp(0x20270114, 8, 0x20270110, 0x60FA0000);
         tempo = ((tempo * 180) / 256) - 40;
@@ -515,7 +515,7 @@ static const char *get_hisi_chip_id(uint32_t reg) {
     case 0x6000001:
         return "3516AV200";
     case 0x3516A100:
-        chip_generation = HISI_V2;
+        chip_generation = HISI_V2A;
         return "3516AV100";
     case 0x3516A200:
         return "3516AV200";
@@ -619,12 +619,12 @@ bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
     strncpy(chip_id, get_hisi_chip_id(chip_id_u32), sizeof(chip_id));
 
     // Special cases for V2/V3 families
-    if (chip_id_u32 == 0x3516A100 || chip_id_u32 == HISI_V2 ||
+    if (chip_id_u32 == HISI_V2A || chip_id_u32 == HISI_V2 ||
         chip_id_u32 == HISI_V3) {
         uint32_t SCSYSID0_reg =
             ((volatile uint32_t *)(sc_ctrl_map + SCSYSID0))[0];
         char SCSYSID0_chip_id = ((char *)&SCSYSID0_reg)[3];
-        if (chip_id_u32 == 0x3516A100) {
+        if (chip_id_u32 == HISI_V2A) {
             switch (SCSYSID0_chip_id) {
             case 0:
             case 1:
@@ -929,6 +929,7 @@ static size_t ev300_mipi_lanes_num() {
 
 static size_t mipi_lanes_num() {
     switch (chip_generation) {
+    case HISI_V2A:
     case HISI_V2:
         return cv200_mipi_lanes_num();
     case HISI_V3:
@@ -1394,6 +1395,7 @@ const bool hisi_vi_is_not_running(cJSON *j_inner) {
     uint32_t base = 0;
     switch (chip_generation) {
     case HISI_V1:
+    case HISI_V2A:
     case HISI_V2:
         base = 0x20580000;
         addr = 0x20580000 + 0x0100;
@@ -1424,6 +1426,7 @@ static void determine_sensor_data_type(cJSON *j_inner) {
     switch (chip_generation) {
     case HISI_V1:
         return hisi_cv100_sensor_data(j_inner);
+    case HISI_V2A:
     case HISI_V2:
         return hisi_cv200_sensor_data(j_inner);
     case HISI_V3:
@@ -1439,6 +1442,7 @@ static void determine_sensor_clock(cJSON *j_inner) {
     switch (chip_generation) {
     case HISI_V1:
         return hisi_cv100_sensor_clock(j_inner);
+    case HISI_V2A:
     case HISI_V2:
         return hisi_cv200_sensor_clock(j_inner);
     case HISI_V3:
@@ -1506,9 +1510,9 @@ void hisi_detect_fmc() {
         struct CV100_GLOBAL_CONFIG val;
         if (mem_reg(CV100_GLOBAL_CONFIG, (uint32_t *)&val, OP_READ))
             mode = hisi_flash_mode(val.flash_addr_mode);
-        break;
-    }
+    } break;
     case HISI_V2:
+    case HISI_V2A:
         mode = hisi_fmc_mode(CV200_FMC_CFG);
         break;
     case HISI_V3:
