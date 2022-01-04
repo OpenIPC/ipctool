@@ -626,7 +626,9 @@ bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
         char SCSYSID0_chip_id = ((char *)&SCSYSID0_reg)[3];
         if (chip_id_u32 == 0x3516A100) {
             switch (SCSYSID0_chip_id) {
+            case 0:
             case 1:
+                /* possibly 3 and 4 could be also valid AV100 revisions */
                 sprintf(chip_id, "3516AV100");
                 break;
             case 2:
