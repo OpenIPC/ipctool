@@ -112,7 +112,7 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
         int nbytes = fwrite(blocks[i].data, 1, blocks[i].len, fp);
         if (nbytes == -1)
             break;
-#if 1
+#if 0
         printf("[%d] written %d bytes\n", i, nbytes);
 #endif
     }

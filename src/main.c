@@ -67,11 +67,12 @@ void Help() {
         "  -c, --chip_id             read chip id\n"
         "  -s, --sensor_id           read sensor model and control line\n"
         "  -t, --temp                read chip temperature (where supported)\n"
-        "  -b, --backup=<filename>   save backup into a file\n"
+        "\n"
+        "  backup <filename>         save backup into a file\n"
         "     [-0, --skip-env]       skip environment\n"
         "     [-f, --force]          enforce\n"
-	"\n"
-        "  restore [mac|filename]    restore from backup (cloud-based or local file)\n"
+        "  restore [mac|filename]    restore from backup (cloud-based or local "
+        "file)\n"
         "  printenv                  drop-in replacement for fw_printenv\n"
         "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
         "  dmesg                     drop-in replacement for dmesg\n"
@@ -149,13 +150,7 @@ void print_chip_id() {
 }
 
 #define MAX_YAML 1024 * 64
-bool wait_mode = false;
-const char *backup_file;
-static bool backup_mode() {
-    // prevent double backup creation and don't backup OpenWrt firmware
-    if (!udp_lock() || is_openipc_board())
-        return false;
-
+static bool backup_with_yaml(const char *backup_file, bool wait_mode) {
     int fds[2];
     if (pipe(fds) == -1) {
         fprintf(stderr, "Pipe Failed");
@@ -189,9 +184,16 @@ static bool backup_mode() {
     }
 }
 
+static bool auto_backup() {
+    // prevent double backup creation and don't backup OpenWrt firmware
+    if (!udp_lock() || is_openipc_board())
+        return false;
+
+    return backup_with_yaml(NULL, false);
+}
+
 int main(int argc, char *argv[]) {
     const struct option long_options[] = {
-        {"backup", required_argument, NULL, 'b'},
         {"chip_id", no_argument, NULL, 'c'},
         {"force", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
@@ -208,6 +210,7 @@ int main(int argc, char *argv[]) {
     bool skip_env = false;
     bool force = false;
     bool script_mode = false;
+    bool wait_mode = false;
     int argnum = 0;
 
     while ((res = getopt_long_only(argc, argv, "s", long_options,
@@ -261,11 +264,6 @@ int main(int argc, char *argv[]) {
             force = true;
             break;
 
-        case 'b':
-            backup_file = optarg;
-            wait_mode = true;
-            break;
-
         case 'u':
             return do_upgrade(optarg, force);
 
@@ -281,8 +279,19 @@ int main(int argc, char *argv[]) {
     if (argc > argnum) {
         if (!strcmp(argv[argnum], "dmesg")) {
             return dmesg();
+        } else if (!strcmp(argv[argnum], "backup")) {
+            if (argv[argnum + 1] == NULL) {
+                Help();
+                return EXIT_FAILURE;
+            }
+
+            if (backup_with_yaml(argv[argnum + 1], wait_mode)) {
+                // child process
+                return EXIT_SUCCESS;
+            }
+            goto start_yaml;
         } else if (!strcmp(argv[argnum], "restore")) {
-            return restore_backup(argv[argnum+1], skip_env, force);
+            return restore_backup(argv[argnum + 1], skip_env, force);
         } else if (!strcmp(argv[argnum], "printenv")) {
             return printenv();
         } else if (!strcmp(argv[argnum], "setenv")) {
@@ -300,10 +309,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (backup_mode())
+    if (auto_backup())
         // child process
         return EXIT_SUCCESS;
 
+start_yaml:
     if (getchipid()) {
         yaml_printf("---\n");
         if (get_board_id()) {
@@ -326,12 +336,11 @@ int main(int argc, char *argv[]) {
     if (wait_mode && backup_fp) {
         // trigger child process
         printf("---\n");
-        printf("state: %sStart\n", backup_file ? "save" : "upload");
+        printf("state: %sStart\n", "upload");
         fclose(backup_fp);
         int status;
         wait(&status);
-        printf("state: %sEnd, %d\n", backup_file ? "save" : "upload",
-               WEXITSTATUS(status));
+        printf("state: %sEnd, %d\n", "upload", WEXITSTATUS(status));
     }
 
     return EXIT_SUCCESS;
