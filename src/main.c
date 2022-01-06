@@ -190,7 +190,6 @@ static bool backup_mode() {
 }
 
 int main(int argc, char *argv[]) {
-    const char *short_options = "bcdfhprsetuw:0:1:2:3:";
     const struct option long_options[] = {
         {"backup", required_argument, NULL, 'b'},
         {"chip_id", no_argument, NULL, 'c'},
@@ -212,7 +211,7 @@ int main(int argc, char *argv[]) {
     bool script_mode = false;
     int argnum = 0;
 
-    while ((res = getopt_long_only(argc, argv, short_options, long_options,
+    while ((res = getopt_long_only(argc, argv, "", long_options,
                                    &option_index)) != -1) {
         argnum++;
 
