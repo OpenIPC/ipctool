@@ -218,6 +218,16 @@ sensors:
     # ipctool --setenv bootargs="mem=\${osmem} mtdparts=hi_sfc:256k(boot),64k(env),2048k(kernel),5120k(rootfs),-(rootfs_data)"
     ```
 
+* Drop-in replacement of `i2cget`, `i2cset` and `i2cdump` commands from
+  `i2c-tools` package:
+
+    ```console
+    # ipctool i2cget 0x34 0x3000
+    # ipctool i2cget 0x34 0x3000 1
+    # ipctool i2cdump 0x34 0x3000 0x31ff
+    # ipctool --script i2cdump 0x34 0x3000 0x31ff
+    ```
+
 ## Supported SoCs
 
 Tested on:

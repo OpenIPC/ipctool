@@ -5,142 +5,78 @@
 #include "hal_common.h"
 #include "i2c.h"
 
-void i2cset(char *arg, char *argv[]) {
-    while (*argv != arg) {
-        if (!*argv)
-            break;
+#define SELECT_WIDE(reg_addr) reg_addr > 0xff ? 2 : 1
 
-        argv++;
-    }
-
-    const char *addr = argv[0];
-    const char *reg = argv[1];
-    const char *data = argv[2];
-    if (!reg || !data) {
-        puts("Usage: ipctool i2cset addr reg");
-        return;
-    }
-
+static int prepare_sensor(unsigned char i2c_addr) {
     if (!getchipid()) {
-        puts("Unkown chip");
-        return;
+        puts("Unknown chip");
+        exit(EXIT_FAILURE);
     }
 
     if (!open_sensor_fd) {
         puts("There is no platform specific I2C/SPI access layer");
-        return;
+        exit(EXIT_FAILURE);
     }
 
     int fd = open_sensor_fd();
     if (fd == -1) {
         puts("Device not found");
-        return;
+        exit(EXIT_FAILURE);
     }
-
-    unsigned char i2c_addr = strtoul(addr, 0, 16);
-    unsigned int reg_addr = strtoul(reg, 0, 16);
-    unsigned int reg_data = strtoul(data, 0, 16);
 
     sensor_i2c_change_addr(fd, i2c_addr);
 
+    return fd;
+}
+
+int i2cset(int argc, char **argv) {
+    if (!argv[1] || !argv[2] || !argv[3]) {
+        puts("Usage: ipctool i2cset <device address> <register>");
+        return EXIT_FAILURE;
+    }
+
+    unsigned char i2c_addr = strtoul(argv[1], 0, 16);
+    unsigned int reg_addr = strtoul(argv[2], 0, 16);
+    unsigned int reg_data = strtoul(argv[3], 0, 16);
+
+    int fd = prepare_sensor(i2c_addr);
+
     int res = sensor_write_register(fd, i2c_addr, reg_addr,
-                                   reg_addr > 0xff ? 2 : 1, reg_data, 32);
+                                    SELECT_WIDE(reg_addr), reg_data, 32);
 
     close_sensor_fd(fd);
     hal_cleanup();
+    return EXIT_SUCCESS;
 }
 
-void i2cget(char *arg, char *argv[]) {
-    while (*argv != arg) {
-        if (!*argv)
-            break;
-
-        argv++;
+int i2cget(int argc, char **argv) {
+    if (!argv[1] || !argv[2]) {
+        puts("Usage: ipctool i2cget <device address> <register>");
+        return EXIT_FAILURE;
     }
 
-    const char *addr = argv[0];
-    const char *reg = argv[1];
-    if (!reg) {
-        puts("Usage: ipctool i2cget addr reg");
-        return;
-    }
+    unsigned char i2c_addr = strtoul(argv[1], 0, 16);
+    unsigned int reg_addr = strtoul(argv[2], 0, 16);
 
-    if (!getchipid()) {
-        puts("Unkown chip");
-        return;
-    }
+    int fd = prepare_sensor(i2c_addr);
 
-    if (!open_sensor_fd) {
-        puts("There is no platform specific I2C/SPI access layer");
-        return;
-    }
-
-    int fd = open_sensor_fd();
-    if (fd == -1) {
-        puts("Device not found");
-        return;
-    }
-
-    unsigned char i2c_addr = strtoul(addr, 0, 16);
-    unsigned int reg_addr = strtoul(reg, 0, 16);
-
-    sensor_i2c_change_addr(fd, i2c_addr);
-
-    int res = sensor_read_register(fd, i2c_addr, reg_addr,
-                                   reg_addr > 0xff ? 2 : 1, 1);
+    int res =
+        sensor_read_register(fd, i2c_addr, reg_addr, SELECT_WIDE(reg_addr), 1);
     printf("%#x\n", res);
 
     close_sensor_fd(fd);
     hal_cleanup();
+    return EXIT_SUCCESS;
 }
 
-void i2cdump(char *arg, char *argv[]) {
-    char ascii[17];
-    size_t i, j;
-    ascii[16] = '\0';
+static void i2c_hexdump(int fd, unsigned char i2c_addr,
+                        unsigned int from_reg_addr, unsigned int to_reg_addr) {
+    char ascii[17] = {0};
 
-    while (*argv != arg) {
-        if (!*argv)
-            break;
-
-        argv++;
-    }
-
-    const char *addr = argv[0];
-    if (!argv[1] || !argv[2]) {
-        puts("Usage: ipctool i2cdump addr from_reg to_reg");
-        return;
-    }
-    const char *from_reg = argv[1];
-    const char *to_reg = argv[2];
-
-    if (!getchipid()) {
-        puts("Unkown chip");
-        return;
-    }
-
-    if (!open_sensor_fd) {
-        puts("There is no platform specific I2C/SPI access layer");
-        return;
-    }
-
-    int fd = open_sensor_fd();
-    if (fd == -1) {
-        puts("Device not found");
-        return;
-    }
-
-    unsigned char i2c_addr = strtoul(addr, 0, 16);
-    unsigned int from_reg_addr = strtoul(from_reg, 0, 16);
-    unsigned int to_reg_addr = strtoul(to_reg, 0, 16);
-
-
-    sensor_i2c_change_addr(fd, i2c_addr);
-
-    int size = to_reg_addr-from_reg_addr;
+    int size = to_reg_addr - from_reg_addr;
     printf("       0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
-    for (i = from_reg_addr; i < to_reg_addr; ++i) {
-        int res = sensor_read_register(fd, i2c_addr, i, i > 0xff ? 2 : 1, 1);
+    for (size_t i = from_reg_addr; i < to_reg_addr; ++i) {
+        int res = sensor_read_register(fd, i2c_addr, i, SELECT_WIDE(i), 1);
         if (i == from_reg_addr)
             printf("%4.x: ", i);
         printf("%02X ", res);
@@ -152,13 +88,13 @@ void i2cdump(char *arg, char *argv[]) {
         if ((i + 1) % 8 == 0 || i + 1 == size) {
             printf(" ");
             if ((i + 1) % 16 == 0) {
-                printf("|  %s \n%4.x: ", ascii, i+1);
+                printf("|  %s \n%4.x: ", ascii, i + 1);
             } else if (i + 1 == size) {
                 ascii[(i + 1) % 16] = '\0';
                 if ((i + 1) % 16 <= 8) {
                     printf(" ");
                 }
-                for (j = (i + 1) % 16; j < 16; ++j) {
+                for (size_t j = (i + 1) % 16; j < 16; ++j) {
                     printf("   ");
                 }
                 printf("|  %s \n", ascii);
@@ -166,7 +102,31 @@ void i2cdump(char *arg, char *argv[]) {
         }
     }
     printf("\n");
+}
+
+int i2cdump(int argc, char **argv, bool script_mode) {
+    if (!argv[1] || !argv[2] || !argv[3]) {
+        puts("Usage: ipctool [--script] <device address> <from register> <to "
+             "register>");
+        return EXIT_FAILURE;
+    }
+
+    unsigned char i2c_addr = strtoul(argv[1], 0, 16);
+    unsigned int from_reg_addr = strtoul(argv[2], 0, 16);
+    unsigned int to_reg_addr = strtoul(argv[3], 0, 16);
+
+    int fd = prepare_sensor(i2c_addr);
+
+    if (script_mode) {
+        for (size_t i = from_reg_addr; i < to_reg_addr; ++i)
+            printf("ipctool i2cset %#x %#x %#x\n", i2c_addr, i,
+                   sensor_read_register(fd, i2c_addr, i, SELECT_WIDE(i), 1));
+    } else {
+        i2c_hexdump(fd, i2c_addr, from_reg_addr, to_reg_addr);
+    }
 
     close_sensor_fd(fd);
     hal_cleanup();
+
+    return EXIT_SUCCESS;
 }

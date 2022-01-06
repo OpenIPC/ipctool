@@ -49,31 +49,38 @@ void Help() {
 
 #ifndef SKIP_FUNDING
     printf("\n" FG_RED "OpenIPC is asking for your help!" RESET_CL
-           "\nPlease help the Team of OpenIPC project to cover the cost of development"
-           "\nand long-term maintenance of what we believe will be a stable, flexible"
+           "\nPlease help the Team of OpenIPC project to cover the cost of "
+           "development"
+           "\nand long-term maintenance of what we believe will be a stable, "
+           "flexible"
            "\nOpen IP Network Camera Framework for users worldwide.\n"
-           "\nYour contribution could help us to advance the development and keep you"
+           "\nYour contribution could help us to advance the development and "
+           "keep you"
            "\nupdated on improvements and new features more regularly.\n"
-           "\nPlease visit https://openipc.org/sponsor/ to learn more. Thank you.\n\n");
+           "\nPlease visit https://openipc.org/sponsor/ to learn more. Thank "
+           "you.\n\n");
 #endif
 
-   printf("Usage:  ipctool [OPTION]\n"
-           "Where:\n"
-           "  -c, --chip_id             read chip id\n"
-           "  -s, --sensor_id           read sensor model and control line\n"
-           "  -t, --temp                read chip temperature (where supported)\n"
-           "  -d, --dmesg               drop-in replacement for dmesg\n"
-           "  -p, --printenv            drop-in replacement for fw_printenv\n"
-           "  -e, --setenv key=value    drop-in replacement for fw_setenv\n"
-           "  -b, --backup=<filename>   save backup into a file\n"
-           "  -r, --restore[=mac]       restore from backup\n"
-           "     [-0, --skip-env]       skip environment\n"
-           "     [-f, --force]          enforce\n"
-           "  --i2cget <device address> <register>\n"
-           "                            read data from I2C device\n"
-           "  --i2cdump <device address> <from register> <to register>\n"
-           "                            dump data from I2C device\n"
-           "  -h, --help                this help\n");
+    printf(
+        "Usage:  ipctool [OPTIONS] [COMMANDS]\n"
+        "Where:\n"
+        "  -c, --chip_id             read chip id\n"
+        "  -s, --sensor_id           read sensor model and control line\n"
+        "  -t, --temp                read chip temperature (where supported)\n"
+        "  -d, --dmesg               drop-in replacement for dmesg\n"
+        "  -p, --printenv            drop-in replacement for fw_printenv\n"
+        "  -e, --setenv key=value    drop-in replacement for fw_setenv\n"
+        "  -b, --backup=<filename>   save backup into a file\n"
+        "  -r, --restore[=mac]       restore from backup\n"
+        "     [-0, --skip-env]       skip environment\n"
+        "     [-f, --force]          enforce\n"
+        "  i2cget <device address> <register>\n"
+        "                            read data from I2C device\n"
+        "  i2cset <device address> <register>\n"
+        "                            write register value to I2C device\n"
+        "  [--script] i2cdump <device address> <from register> <to register>\n"
+        "                            dump data from I2C device\n"
+        "  -h, --help                this help\n");
 }
 
 // backup mode pipe end
@@ -184,32 +191,32 @@ static bool backup_mode() {
 int main(int argc, char *argv[]) {
     const char *short_options = "bcdfhprsetuw:0:1:2:3:";
     const struct option long_options[] = {
-        {"backup",    required_argument, NULL, 'b'},
-        {"chip_id",   no_argument,       NULL, 'c'},
-        {"dmesg",     no_argument,       NULL, 'd'},
-        {"force",     no_argument,       NULL, 'f'},
-        {"help",      no_argument,       NULL, 'h'},
-        {"i2cdump",   required_argument, NULL, '2'},
-        {"i2cget",    required_argument, NULL, '1'},
-        {"i2cset",    required_argument, NULL, '3'},
-        {"printenv",  no_argument,       NULL, 'p'},
-        {"restore",   optional_argument, NULL, 'r'},
-        {"sensor_id", no_argument,       NULL, 's'},
-        {"setenv",    required_argument, NULL, 'e'},
-        {"skip-env",  no_argument,       NULL, '0'},
-        {"temp",      no_argument,       NULL, 't'},
-        {"upgrade",   optional_argument, NULL, 'u'},
-        {"wait",      no_argument,       NULL, 'w'},
-        {NULL,        0,                 NULL, 0}
-    };
+        {"backup", required_argument, NULL, 'b'},
+        {"chip_id", no_argument, NULL, 'c'},
+        {"dmesg", no_argument, NULL, 'd'},
+        {"force", no_argument, NULL, 'f'},
+        {"help", no_argument, NULL, 'h'},
+        {"printenv", no_argument, NULL, 'p'},
+        {"restore", optional_argument, NULL, 'r'},
+        {"script", no_argument, NULL, '4'},
+        {"sensor_id", no_argument, NULL, 's'},
+        {"setenv", required_argument, NULL, 'e'},
+        {"skip-env", no_argument, NULL, '0'},
+        {"temp", no_argument, NULL, 't'},
+        {"upgrade", optional_argument, NULL, 'u'},
+        {"wait", no_argument, NULL, 'w'},
+        {NULL, 0, NULL, 0}};
 
     int res;
     int option_index;
     bool skip_env = false;
     bool force = false;
+    bool script_mode = false;
+    int argnum = 0;
 
     while ((res = getopt_long_only(argc, argv, short_options, long_options,
                                    &option_index)) != -1) {
+        argnum++;
 
         switch (res) {
         case 'h':
@@ -262,17 +269,9 @@ int main(int argc, char *argv[]) {
             skip_env = true;
             break;
 
-        case '1':
-            i2cget(optarg, argv);
-            return 0;
-
-        case '2':
-            i2cdump(optarg, argv);
-            return 0;
-
-        case '3':
-            i2cset(optarg, argv);
-            return 0;
+        case '4':
+            script_mode = true;
+            break;
 
         case 'f':
             force = true;
@@ -292,6 +291,21 @@ int main(int argc, char *argv[]) {
         default:
             printf("found unknown option\n");
         case '?':
+            Help();
+            return EXIT_FAILURE;
+        }
+    }
+
+    argnum++;
+    if (argc > argnum) {
+        if (!strcmp(argv[argnum], "i2cget")) {
+            return i2cget(argc - argnum, argv + argnum);
+        } else if (!strcmp(argv[argnum], "i2cset")) {
+            return i2cset(argc - argnum, argv + argnum);
+        } else if (!strcmp(argv[argnum], "i2cdump")) {
+            return i2cdump(argc - argnum, argv + argnum, script_mode);
+        } else {
+            printf("found unknown command: %s\n\n", argv[argnum]);
             Help();
             return EXIT_FAILURE;
         }
