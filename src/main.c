@@ -184,12 +184,12 @@ static bool backup_with_yaml(const char *backup_file, bool wait_mode) {
     }
 }
 
-static bool auto_backup() {
+static bool auto_backup(bool wait_mode) {
     // prevent double backup creation and don't backup OpenWrt firmware
     if (!udp_lock() || is_openipc_board())
         return false;
 
-    return backup_with_yaml(NULL, false);
+    return backup_with_yaml(NULL, wait_mode);
 }
 
 int main(int argc, char *argv[]) {
@@ -211,7 +211,7 @@ int main(int argc, char *argv[]) {
     bool force = false;
     bool script_mode = false;
     bool wait_mode = false;
-    int argnum = 0;
+    int argnum = 1;
 
     while ((res = getopt_long_only(argc, argv, "s", long_options,
                                    &option_index)) != -1) {
@@ -275,7 +275,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    argnum++;
     if (argc > argnum) {
         if (!strcmp(argv[argnum], "dmesg")) {
             return dmesg();
@@ -309,7 +308,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (auto_backup())
+    if (auto_backup(wait_mode))
         // child process
         return EXIT_SUCCESS;
 
