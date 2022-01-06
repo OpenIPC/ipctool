@@ -71,7 +71,7 @@ void Help() {
         "     [-0, --skip-env]       skip environment\n"
         "     [-f, --force]          enforce\n"
 	"\n"
-        "  restore [mac]             restore from backup\n"
+        "  restore [mac|filename]    restore from backup (cloud-based or local file)\n"
         "  printenv                  drop-in replacement for fw_printenv\n"
         "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
         "  dmesg                     drop-in replacement for dmesg\n"

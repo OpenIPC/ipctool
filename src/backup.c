@@ -165,9 +165,10 @@ char *download_backup(const char *mac, size_t *size, char *date) {
     if (err) {
         switch (err) {
         case ERR_MALLOC:
-            printf("Tried to allocate %dMb\n"
-                   "Not enough memory, consider increase osmem U-Boot param\n",
-                   *size / 1024 / 1024);
+            printf(
+                "Tried to allocate %dMb\n"
+                "Not enough memory, consider increasing osmem U-Boot param\n",
+                *size / 1024 / 1024);
             break;
         default:
             printf("Download error occured: %d\n", HTTP_ERR(dwres));
@@ -369,11 +370,8 @@ static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
     return -1;
 }
 
-// uncomment this if you want to simulate flash write
-//#define NO_FLASH
-
 static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
-                     mtd_restore_ctx_t *mtd) {
+                     mtd_restore_ctx_t *mtd, bool simulate) {
     for (int i = 0; i < MAX_MTDBLOCKS; i++) {
         if (!*mtdbackup[i].name)
             continue;
@@ -393,21 +391,25 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
             // skip env
             if (mtd->env_dev == newi && mtd->env_offset == this_offset)
                 op = 's';
-#ifdef NO_FLASH
+#if 0
             printf("mtd_write(%d, %x, %x, %p, %zx)\n", newi, this_offset,
                    mtd->erasesize, mtdbackup[i].data + c * chunk, chunk);
-#else
-            print_flash_progress(c, cnt, op);
-            if (op != 's')
-                if (!mtd_write(newi, this_offset, mtd->erasesize,
-                               mtdbackup[i].data + c * chunk, chunk)) {
-                    fprintf(stderr, "\nSomething went wrong, aborting...\n");
-                    return false;
-                }
 #endif
+            if (!simulate) {
+                print_flash_progress(c, cnt, op);
+                if (op != 's')
+                    if (!mtd_write(newi, this_offset, mtd->erasesize,
+                                   mtdbackup[i].data + c * chunk, chunk)) {
+                        fprintf(stderr,
+                                "\nSomething went wrong, aborting...\n");
+                        return false;
+                    }
+            }
         }
-        print_flash_progress(cnt, cnt, 'e');
-        printf("\n");
+        if (!simulate) {
+            print_flash_progress(cnt, cnt, 'e');
+            printf("\n");
+        }
     }
 
     return true;
@@ -562,7 +564,9 @@ int restore_backup(const char *arg, bool skip_env, bool force) {
         }
         printf("Backups were checked\n");
 
-        if (!do_flash("Restoring", mtdbackup, &mtd))
+        if (!do_flash("Analyzing", mtdbackup, &mtd, true))
+            goto bailout;
+        if (!do_flash("Restoring", mtdbackup, &mtd, false))
             goto bailout;
 
 #ifndef NO_FLASH
@@ -840,7 +844,12 @@ int do_upgrade(const char *filename, bool force) {
     snprintf(mtdparts + strlen(mtdparts), MAX_MTDPARTS - strlen(mtdparts),
              ",-(rootfs_data)");
 
-    if (!do_flash("Upgrading", mtdwrite, &mtd)) {
+    if (!do_flash("Analyzing", mtdwrite, &mtd, true)) {
+        printf("Early exit, check the logs\n");
+        ret = 4;
+        goto bailout;
+    }
+    if (!do_flash("Upgrading", mtdwrite, &mtd, false)) {
         printf("Early exit, check the logs\n");
         ret = 4;
         goto bailout;
