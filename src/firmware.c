@@ -83,7 +83,7 @@ static void get_god_app(cJSON *j_inner) {
             return;
         if (!fgets(sname, sizeof(sname), fp))
             return;
-        ADD_PARAM("god-app", sname);
+        ADD_PARAM("main-app", sname);
 
         fclose(fp);
     }

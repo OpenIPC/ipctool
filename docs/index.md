@@ -47,18 +47,18 @@ Where:
   -c, --chip_id             read chip id
   -s, --sensor_id           read sensor model and control line
   -t, --temp                read chip temperature (where supported)
-  -b, --backup=<filename>   save backup into a file
+
+  backup <filename>         save backup into a file
      [-0, --skip-env]       skip environment
      [-f, --force]          enforce
-
-  restore [mac]             restore from backup
+  restore [mac|filename]    restore from backup (cloud-based or local file)
   printenv                  drop-in replacement for fw_printenv
   setenv <key> <value>      drop-in replacement for fw_setenv
   dmesg                     drop-in replacement for dmesg
   i2cget <device address> <register>
                             read data from I2C device
-  i2cset <device address> <register>
-                            write register value to I2C device
+  i2cset <device address> <register> <new value>
+                            write a value to I2C device
   [--script] i2cdump <device address> <from register> <to register>
                             dump data from I2C device
   -h, --help                this help
@@ -126,7 +126,7 @@ firmware:
   toolchain: gcc version 4.9.4 20150629 (prerelease) (Hisilicon_v500_20170922) 
   libc: uClibc 0.9.33.2
   sdk: "Hi3516CV300_MPP_V1.0.0.0 B010 Release (Jun 22 2018, 19:22:22)"
-  god-app: /usr/bin/Sofia
+  main-app: /usr/bin/Sofia
 sensors:
 - vendor: Sony
   model: IMX291
@@ -205,7 +205,7 @@ sensors:
 
     ```console
     # mount -o nolock mynfsserver:/srv /var/utils
-    # ipctool --backup /var/utils/mybackup-00:12:17:83:d6:39
+    # ipctool backup /var/utils/mybackup-00:12:17:83:d6:39
     # sync
     ```
 
