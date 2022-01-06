@@ -165,8 +165,10 @@ char *download_backup(const char *mac, size_t *size, char *date) {
     if (err) {
         switch (err) {
         case ERR_MALLOC:
-            printf("Tried to allocate %dMb\nNot enough memory\n",
-                   *size / 1024 / 1024);
+            printf(
+                "Tried to allocate %dMb\n"
+                "Not enough memory, consider increase osmem U-Boot param\n",
+                *size / 1024 / 1024);
             break;
         default:
             printf("Download error occured: %d\n", HTTP_ERR(dwres));

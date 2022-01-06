@@ -68,10 +68,10 @@ void Help() {
         "  -s, --sensor_id           read sensor model and control line\n"
         "  -t, --temp                read chip temperature (where supported)\n"
         "  -b, --backup=<filename>   save backup into a file\n"
-        "  -r, --restore[=mac]       restore from backup\n"
         "     [-0, --skip-env]       skip environment\n"
         "     [-f, --force]          enforce\n"
 	"\n"
+        "  restore [mac]             restore from backup\n"
         "  printenv                  drop-in replacement for fw_printenv\n"
         "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
         "  dmesg                     drop-in replacement for dmesg\n"
@@ -195,7 +195,6 @@ int main(int argc, char *argv[]) {
         {"chip_id", no_argument, NULL, 'c'},
         {"force", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
-        {"restore", optional_argument, NULL, 'r'},
         {"script", no_argument, NULL, '4'},
         {"sensor_id", no_argument, NULL, 's'},
         {"skip-env", no_argument, NULL, '0'},
@@ -267,9 +266,6 @@ int main(int argc, char *argv[]) {
             wait_mode = true;
             break;
 
-        case 'r':
-            return restore_backup(optarg, skip_env, force);
-
         case 'u':
             return do_upgrade(optarg, force);
 
@@ -285,6 +281,8 @@ int main(int argc, char *argv[]) {
     if (argc > argnum) {
         if (!strcmp(argv[argnum], "dmesg")) {
             return dmesg();
+        } else if (!strcmp(argv[argnum], "restore")) {
+            return restore_backup(argv[argnum+1], skip_env, force);
         } else if (!strcmp(argv[argnum], "printenv")) {
             return printenv();
         } else if (!strcmp(argv[argnum], "setenv")) {

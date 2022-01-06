@@ -48,10 +48,10 @@ Where:
   -s, --sensor_id           read sensor model and control line
   -t, --temp                read chip temperature (where supported)
   -b, --backup=<filename>   save backup into a file
-  -r, --restore[=mac]       restore from backup
      [-0, --skip-env]       skip environment
      [-f, --force]          enforce
 
+  restore [mac]             restore from backup
   printenv                  drop-in replacement for fw_printenv
   setenv <key> <value>      drop-in replacement for fw_setenv
   dmesg                     drop-in replacement for dmesg
