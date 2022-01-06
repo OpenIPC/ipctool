@@ -165,10 +165,9 @@ char *download_backup(const char *mac, size_t *size, char *date) {
     if (err) {
         switch (err) {
         case ERR_MALLOC:
-            printf(
-                "Tried to allocate %dMb\n"
-                "Not enough memory, consider increase osmem U-Boot param\n",
-                *size / 1024 / 1024);
+            printf("Tried to allocate %dMb\n"
+                   "Not enough memory, consider increase osmem U-Boot param\n",
+                   *size / 1024 / 1024);
             break;
         default:
             printf("Download error occured: %d\n", HTTP_ERR(dwres));
@@ -485,11 +484,13 @@ int restore_backup(const char *arg, bool skip_env, bool force) {
         if (*date)
             printf("Found backup made on %s\n", date);
 
-        char c;
-        fprintf(stderr, "Are you sure to proceed? (y/n)? ");
-        scanf(" %c", &c);
-        if (c != 'y')
-            goto bailout;
+        if (!force) {
+            char c;
+            fprintf(stderr, "Are you sure to proceed? (y/n)? ");
+            scanf(" %c", &c);
+            if (c != 'y')
+                goto bailout;
+        }
 
         // TODO: sane YAML parser
         char *ps = strstr(backup, "partitions:\n");
