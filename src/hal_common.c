@@ -2,7 +2,9 @@
 #include <string.h>
 
 #include <fcntl.h>
+#include <linux/i2c-dev.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 #include "chipid.h"
@@ -11,7 +13,7 @@
 sensor_addr_t *possible_i2c_addrs;
 
 int (*open_sensor_fd)();
-void (*close_sensor_fd)(int fd);
+bool (*close_sensor_fd)(int fd);
 int (*sensor_read_register)(int fd, unsigned char i2c_addr,
                             unsigned int reg_addr, unsigned int reg_width,
                             unsigned int data_width);
@@ -22,7 +24,7 @@ int (*sensor_i2c_change_addr)(int fd, unsigned char addr);
 float (*hal_temperature)();
 void (*hal_cleanup)();
 
-int common_open_sensor_fd(const char *dev_name) {
+int universal_open_sensor_fd(const char *dev_name) {
     int fd;
 
     fd = open(dev_name, O_RDWR);
@@ -36,17 +38,74 @@ int common_open_sensor_fd(const char *dev_name) {
     return fd;
 }
 
-bool common_close_sensor_fd(int fd) {
-    if (fd >= 0) {
-        close(fd);
-        return true;
-    }
-    return false;
+bool universal_close_sensor_fd(int fd) {
+    if (fd < 0)
+        return false;
+
+    return close(fd) == 0;
 }
 
 // Set I2C slave address,
 // actually do nothing
-int common_sensor_i2c_change_addr(int fd, unsigned char addr) { return 0; }
+int dummy_sensor_i2c_change_addr(int fd, unsigned char addr) { return 0; }
+
+// Universal I2C code
+int universal_sensor_i2c_change_addr(int fd, unsigned char addr) {
+    if (ioctl(fd, I2C_SLAVE_FORCE, addr >> 1) < 0) {
+        return -1;
+    }
+    return 0;
+}
+
+int universal_sensor_write_register(int fd, unsigned char i2c_addr,
+                                    unsigned int reg_addr,
+                                    unsigned int reg_width, unsigned int data,
+                                    unsigned int data_width) {
+    char buf[2];
+
+    if (reg_width == 2) {
+        buf[0] = (reg_addr >> 8) & 0xff;
+        buf[1] = reg_addr & 0xff;
+    } else {
+        buf[0] = reg_addr & 0xff;
+    }
+
+    if (write(fd, buf, data_width) != data_width) {
+        return -1;
+    }
+    return 0;
+}
+
+int universal_sensor_read_register(int fd, unsigned char i2c_addr,
+                                 unsigned int reg_addr, unsigned int reg_width,
+                                 unsigned int data_width) {
+    char recvbuf[4];
+    unsigned int data;
+
+    if (reg_width == 2) {
+        recvbuf[0] = (reg_addr >> 8) & 0xff;
+        recvbuf[1] = reg_addr & 0xff;
+    } else {
+        recvbuf[0] = reg_addr & 0xff;
+    }
+
+    int data_size = reg_width * sizeof(unsigned char);
+    if (write(fd, recvbuf, data_size) != data_size) {
+        return -1;
+    }
+
+    data_size = data_width * sizeof(unsigned char);
+    if (read(fd, recvbuf, data_size) != data_size) {
+        return -1;
+    }
+
+    if (data_width == 2) {
+        data = recvbuf[0] | (recvbuf[1] << 8);
+    } else
+        data = recvbuf[0];
+
+    return data;
+}
 
 void setup_hal_drivers() {
     if (!strcmp(VENDOR_HISI, chip_manufacturer))

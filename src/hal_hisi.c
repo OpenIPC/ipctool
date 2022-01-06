@@ -42,26 +42,19 @@ int hisi_open_sensor_fd() {
 
     snprintf(filename, sizeof(filename), "/dev/i2c-%d", adapter_nr);
 
-    return common_open_sensor_fd(filename);
+    return universal_open_sensor_fd(filename);
 }
 
-void hisi_close_sensor_fd(int fd) { close(fd); }
-
-int hisi_gen1_open_sensor_fd() { return common_open_sensor_fd("/dev/hi_i2c"); }
+int hisi_gen1_open_sensor_fd() {
+    return universal_open_sensor_fd("/dev/hi_i2c");
+}
 
 // Set I2C slave address
-int hisi_sensor_i2c_change_addr(int fd, unsigned char addr) {
-    // use i2c address shift only for generations other than 2
-    if (chip_generation != HISI_V2 && chip_generation != HISI_V2A) {
-        addr >>= 1;
+int hisi_gen2_sensor_i2c_change_addr(int fd, unsigned char addr) {
+    if (ioctl(fd, I2C_SLAVE_FORCE, addr) < 0) {
+        return -1;
     }
-
-    int ret = ioctl(fd, I2C_SLAVE_FORCE, addr);
-    if (ret < 0) {
-        fprintf(stderr, "CMD_SET_DEV error!\n");
-        return ret;
-    }
-    return ret;
+    return 0;
 }
 
 #define I2C_16BIT_REG 0x0709  /* 16BIT REG WIDTH */
@@ -416,9 +409,9 @@ void setup_hal_hisi() {
         v4_ensure_sensor_enabled();
 
     open_sensor_fd = hisi_open_sensor_fd;
-    close_sensor_fd = hisi_close_sensor_fd;
+    close_sensor_fd = universal_close_sensor_fd;
     hal_cleanup = hisi_hal_cleanup;
-    sensor_i2c_change_addr = hisi_sensor_i2c_change_addr;
+    sensor_i2c_change_addr = universal_sensor_i2c_change_addr;
     if (chip_generation == HISI_V1) {
         open_sensor_fd = hisi_gen1_open_sensor_fd;
         sensor_read_register = xm_sensor_read_register;
@@ -426,6 +419,7 @@ void setup_hal_hisi() {
     } else if (chip_generation == HISI_V2 || chip_generation == HISI_V2A) {
         sensor_read_register = hisi_gen2_sensor_read_register;
         sensor_write_register = hisi_gen2_sensor_write_register;
+        sensor_i2c_change_addr = hisi_gen2_sensor_i2c_change_addr;
     } else {
         sensor_read_register = hisi_sensor_read_register;
         sensor_write_register = hisi_sensor_write_register;
@@ -483,7 +477,8 @@ static float hisi_get_temp() {
         tempo = ((tempo * 180) / 256) - 40;
         break;
     case HISI_V3:
-        tempo = hisi_reg_temp(CV300_MISC_CTRL41, 16, CV300_MISC_CTRL39, 0x60FA0000);
+        tempo =
+            hisi_reg_temp(CV300_MISC_CTRL41, 16, CV300_MISC_CTRL39, 0x60FA0000);
         tempo = ((tempo - 125) / 806) * 165 - 40;
         break;
     case HISI_V4:
@@ -491,7 +486,8 @@ static float hisi_get_temp() {
         tempo = ((tempo - 117) / 798) * 165 - 40;
         break;
     case HISI_V4A:
-        tempo = hisi_reg_temp(AV300_MISC_CTRL47, 16, AV300_MISC_CTRL45, 0x60FA0000);
+        tempo =
+            hisi_reg_temp(AV300_MISC_CTRL47, 16, AV300_MISC_CTRL45, 0x60FA0000);
         tempo = ((tempo - 136) / 793 * 165) - 40;
         break;
     default:

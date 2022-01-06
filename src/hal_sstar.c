@@ -17,12 +17,10 @@ static unsigned char omni_addrs[] = {0x6c, 0};
 static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char gc_addrs[] = {0x6e, 0};
 
-sensor_addr_t sstar_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
-                                            {SENSOR_SMARTSENS, ssens_addrs},
-                                            {SENSOR_ONSEMI, onsemi_addrs},
-                                            {SENSOR_OMNIVISION, omni_addrs},
-                                            {SENSOR_GALAXYCORE, gc_addrs},
-                                            {0, NULL}};
+sensor_addr_t sstar_possible_i2c_addrs[] = {
+    {SENSOR_SONY, sony_addrs},     {SENSOR_SMARTSENS, ssens_addrs},
+    {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OMNIVISION, omni_addrs},
+    {SENSOR_GALAXYCORE, gc_addrs}, {0, NULL}};
 
 bool sstar_detect_cpu() {
     uint32_t val;
@@ -49,17 +47,7 @@ unsigned long sstar_totalmem(unsigned long *media_mem) {
     return *media_mem + kernel_mem();
 }
 
-int sstar_open_sensor_fd() { return common_open_sensor_fd("/dev/i2c-1"); }
-
-void sstar_close_sensor_fd(int fd) { close(fd); }
-
-// Set I2C slave address
-int sstar_sensor_i2c_change_addr(int fd, unsigned char addr) {
-    if (ioctl(fd, I2C_SLAVE_FORCE, addr >> 1) < 0) {
-        return -1;
-    }
-    return 0;
-}
+int sstar_open_sensor_fd() { return universal_open_sensor_fd("/dev/i2c-1"); }
 
 static int sstar_i2c_write(int fd, unsigned char slave_addr,
                            unsigned char *reg_addr, unsigned char reg_width) {
@@ -69,63 +57,13 @@ static int sstar_i2c_write(int fd, unsigned char slave_addr,
     return 0;
 }
 
-int sstar_sensor_write_register(int fd, unsigned char i2c_addr,
-                                unsigned int reg_addr, unsigned int reg_width,
-                                unsigned int data, unsigned int data_width) {
-    char buf[2];
-
-    if (reg_width == 2) {
-        buf[0] = (reg_addr >> 8) & 0xff;
-        buf[1] = reg_addr & 0xff;
-    } else {
-        buf[0] = reg_addr & 0xff;
-    }
-
-    if (write(fd, buf, data_width) != data_width) {
-        return -1;
-    }
-    return 0;
-}
-
-int sstar_sensor_read_register(int fd, unsigned char i2c_addr,
-                               unsigned int reg_addr, unsigned int reg_width,
-                               unsigned int data_width) {
-    char recvbuf[4];
-    unsigned int data;
-
-    if (reg_width == 2) {
-        recvbuf[0] = (reg_addr >> 8) & 0xff;
-        recvbuf[1] = reg_addr & 0xff;
-    } else {
-        recvbuf[0] = reg_addr & 0xff;
-    }
-
-    int data_size = reg_width * sizeof(unsigned char);
-    if (write(fd, recvbuf, data_size) != data_size) {
-        return -1;
-    }
-
-    data_size = data_width * sizeof(unsigned char);
-    if (read(fd, recvbuf, data_size) != data_size) {
-        return -1;
-    }
-
-    if (data_width == 2) {
-        data = recvbuf[0] | (recvbuf[1] << 8);
-    } else
-        data = recvbuf[0];
-
-    return data;
-}
-
 static void sstar_hal_cleanup() {}
 
-float sstar_get_temp()
-{
+float sstar_get_temp() {
     float ret = -237.0;
     char buf[16];
-    if(get_regex_line_from_file("/sys/class/mstar/msys/TEMP_R", "Temperature\\s+(.+)", buf, sizeof(buf)))
-    {
+    if (get_regex_line_from_file("/sys/class/mstar/msys/TEMP_R",
+                                 "Temperature\\s+(.+)", buf, sizeof(buf))) {
         ret = strtof(buf, NULL);
     }
     return ret;
@@ -133,12 +71,12 @@ float sstar_get_temp()
 
 void setup_hal_sstar() {
     open_sensor_fd = sstar_open_sensor_fd;
-    close_sensor_fd = sstar_close_sensor_fd;
-    sensor_i2c_change_addr = sstar_sensor_i2c_change_addr;
-    sensor_read_register = sstar_sensor_read_register;
-    sensor_write_register = sstar_sensor_write_register;
+    close_sensor_fd = universal_close_sensor_fd;
+    sensor_i2c_change_addr = universal_sensor_i2c_change_addr;
+    sensor_read_register = universal_sensor_read_register;
+    sensor_write_register = universal_sensor_write_register;
     possible_i2c_addrs = sstar_possible_i2c_addrs;
     hal_cleanup = sstar_hal_cleanup;
-    if(!access("/sys/class/mstar/msys/TEMP_R", R_OK))
+    if (!access("/sys/class/mstar/msys/TEMP_R", R_OK))
         hal_temperature = sstar_get_temp;
 }
