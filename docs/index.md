@@ -49,9 +49,9 @@ Where:
   -t, --temp                read chip temperature (where supported)
 
   backup <filename>         save backup into a file
+  restore [mac|filename]    restore from backup (cloud-based or local file)
      [-0, --skip-env]       skip environment
      [-f, --force]          enforce
-  restore [mac|filename]    restore from backup (cloud-based or local file)
   printenv                  drop-in replacement for fw_printenv
   setenv <key> <value>      drop-in replacement for fw_setenv
   dmesg                     drop-in replacement for dmesg
