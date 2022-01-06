@@ -284,7 +284,7 @@ static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
         char *addr = open_mtdblock(i, &fd, mtd->size, 0);
         if (!addr)
             return true;
-        size_t u_off = uboot_detect_env(addr, mtd->size);
+        size_t u_off = uboot_detect_env(addr, mtd->size, mtd->erasesize);
         if (u_off != -1) {
             c->env_dev = i;
             c->env_offset = u_off;

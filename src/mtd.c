@@ -124,7 +124,7 @@ char *open_mtdblock(int i, int *fd, uint32_t size, int flags) {
 
 static bool uenv_detected;
 
-static bool examine_part(int part_num, size_t size, uint32_t *sha1,
+static bool examine_part(int part_num, size_t size, size_t erasesize, uint32_t *sha1,
                          char contains[1024]) {
     bool res = false;
 
@@ -148,7 +148,7 @@ static bool examine_part(int part_num, size_t size, uint32_t *sha1,
     }
 
     if (!uenv_detected && part_num < 2) {
-        size_t u_off = uboot_detect_env(addr, size);
+        size_t u_off = uboot_detect_env(addr, size, erasesize);
         if (u_off != -1) {
             uenv_detected = true;
             sprintf(contains + strlen(contains),
@@ -201,7 +201,7 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     if (!c->mpoints[i].rw) {
         char contains[1024] = {0};
         uint32_t sha1;
-        examine_part(i, mtd->size, &sha1, contains);
+        examine_part(i, mtd->size, mtd->erasesize, &sha1, contains);
         yaml_printf("        sha1: %.8x\n", sha1);
         if (*contains) {
             yaml_printf("        contains:\n%s", contains);

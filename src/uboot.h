@@ -11,7 +11,7 @@ enum FLASH_OP {
     FOP_ROM,
 };
 
-int uboot_detect_env(void *buf, size_t len);
+int uboot_detect_env(void *buf, size_t size, size_t erasesize);
 const char *uboot_getenv(const char *name);
 void uboot_freeenv();
 void uboot_copyenv(const void *buf);
