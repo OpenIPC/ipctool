@@ -232,10 +232,11 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
-void printenv() {
+int printenv() {
     ctx_uboot_t ctx;
     ctx.op = OP_PRINTENV;
     enum_mtd_info(&ctx, cb_uboot_env);
+    return EXIT_SUCCESS;
 }
 
 void set_env_param(const char *key, const char *value, enum FLASH_OP fop) {
@@ -247,12 +248,12 @@ void set_env_param(const char *key, const char *value, enum FLASH_OP fop) {
     enum_mtd_info(&ctx, cb_uboot_env);
 }
 
-void cmd_set_env(char *arg) {
-    char *delim = strchr(arg, '=');
-    if (!delim || delim == arg) {
-        printf("Usage: setenv key=name\n");
-        exit(2);
+int cmd_set_env(int argc, char **argv) {
+    if (!argv[1] || !argv[2]) {
+        puts("Usage: ipctool setenv <key> <name>");
+        return EXIT_FAILURE;
     }
-    *delim = 0;
-    set_env_param(arg, delim + 1, FOP_INTERACTIVE);
+
+    set_env_param(argv[1], argv[2], FOP_INTERACTIVE);
+    return EXIT_SUCCESS;
 }

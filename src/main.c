@@ -67,12 +67,13 @@ void Help() {
         "  -c, --chip_id             read chip id\n"
         "  -s, --sensor_id           read sensor model and control line\n"
         "  -t, --temp                read chip temperature (where supported)\n"
-        "  -p, --printenv            drop-in replacement for fw_printenv\n"
-        "  -e, --setenv key=value    drop-in replacement for fw_setenv\n"
         "  -b, --backup=<filename>   save backup into a file\n"
         "  -r, --restore[=mac]       restore from backup\n"
         "     [-0, --skip-env]       skip environment\n"
         "     [-f, --force]          enforce\n"
+	"\n"
+        "  printenv                  drop-in replacement for fw_printenv\n"
+        "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
         "  dmesg                     drop-in replacement for dmesg\n"
         "  i2cget <device address> <register>\n"
         "                            read data from I2C device\n"
@@ -195,11 +196,9 @@ int main(int argc, char *argv[]) {
         {"chip_id", no_argument, NULL, 'c'},
         {"force", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
-        {"printenv", no_argument, NULL, 'p'},
         {"restore", optional_argument, NULL, 'r'},
         {"script", no_argument, NULL, '4'},
         {"sensor_id", no_argument, NULL, 's'},
-        {"setenv", required_argument, NULL, 'e'},
         {"skip-env", no_argument, NULL, '0'},
         {"temp", no_argument, NULL, 't'},
         {"upgrade", optional_argument, NULL, 'u'},
@@ -248,14 +247,6 @@ int main(int argc, char *argv[]) {
             return EXIT_SUCCESS;
         }
 
-        case 'p':
-            printenv();
-            return 0;
-
-        case 'e':
-            cmd_set_env(optarg);
-            return 0;
-
         case 'w':
             wait_mode = true;
             break;
@@ -295,6 +286,10 @@ int main(int argc, char *argv[]) {
     if (argc > argnum) {
         if (!strcmp(argv[argnum], "dmesg")) {
             return dmesg();
+        } else if (!strcmp(argv[argnum], "printenv")) {
+            return printenv();
+        } else if (!strcmp(argv[argnum], "setenv")) {
+            return cmd_set_env(argc - argnum, argv + argnum);
         } else if (!strcmp(argv[argnum], "i2cset")) {
             return i2cset(argc - argnum, argv + argnum);
         } else if (!strcmp(argv[argnum], "i2cset")) {

@@ -47,12 +47,13 @@ Where:
   -c, --chip_id             read chip id
   -s, --sensor_id           read sensor model and control line
   -t, --temp                read chip temperature (where supported)
-  -p, --printenv            drop-in replacement for fw_printenv
-  -e, --setenv key=value    drop-in replacement for fw_setenv
   -b, --backup=<filename>   save backup into a file
   -r, --restore[=mac]       restore from backup
      [-0, --skip-env]       skip environment
      [-f, --force]          enforce
+
+  printenv                  drop-in replacement for fw_printenv
+  setenv <key> <value>      drop-in replacement for fw_setenv
   dmesg                     drop-in replacement for dmesg
   i2cget <device address> <register>
                             read data from I2C device
@@ -219,8 +220,8 @@ sensors:
 * Drop-in replacement of `fw_printenv` and `fw_setenv` commands:
 
     ```console
-    # ipctool --printenv | grep bootargs
-    # ipctool --setenv bootargs="mem=\${osmem} mtdparts=hi_sfc:256k(boot),64k(env),2048k(kernel),5120k(rootfs),-(rootfs_data)"
+    # ipctool printenv | grep bootargs
+    # ipctool setenv bootargs "mem=\${osmem} mtdparts=hi_sfc:256k(boot),64k(env),2048k(kernel),5120k(rootfs),-(rootfs_data)"
     ```
 
 * Drop-in replacement of `i2cget`, `i2cset` and `i2cdump` commands from
