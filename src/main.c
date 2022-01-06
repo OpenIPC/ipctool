@@ -67,13 +67,13 @@ void Help() {
         "  -c, --chip_id             read chip id\n"
         "  -s, --sensor_id           read sensor model and control line\n"
         "  -t, --temp                read chip temperature (where supported)\n"
-        "  -d, --dmesg               drop-in replacement for dmesg\n"
         "  -p, --printenv            drop-in replacement for fw_printenv\n"
         "  -e, --setenv key=value    drop-in replacement for fw_setenv\n"
         "  -b, --backup=<filename>   save backup into a file\n"
         "  -r, --restore[=mac]       restore from backup\n"
         "     [-0, --skip-env]       skip environment\n"
         "     [-f, --force]          enforce\n"
+        "  dmesg                     drop-in replacement for dmesg\n"
         "  i2cget <device address> <register>\n"
         "                            read data from I2C device\n"
         "  i2cset <device address> <register>\n"
@@ -193,7 +193,6 @@ int main(int argc, char *argv[]) {
     const struct option long_options[] = {
         {"backup", required_argument, NULL, 'b'},
         {"chip_id", no_argument, NULL, 'c'},
-        {"dmesg", no_argument, NULL, 'd'},
         {"force", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
         {"printenv", no_argument, NULL, 'p'},
@@ -257,10 +256,6 @@ int main(int argc, char *argv[]) {
             cmd_set_env(optarg);
             return 0;
 
-        case 'd':
-            dmesg();
-            return 0;
-
         case 'w':
             wait_mode = true;
             break;
@@ -298,8 +293,10 @@ int main(int argc, char *argv[]) {
 
     argnum++;
     if (argc > argnum) {
-        if (!strcmp(argv[argnum], "i2cget")) {
-            return i2cget(argc - argnum, argv + argnum);
+        if (!strcmp(argv[argnum], "dmesg")) {
+            return dmesg();
+        } else if (!strcmp(argv[argnum], "i2cset")) {
+            return i2cset(argc - argnum, argv + argnum);
         } else if (!strcmp(argv[argnum], "i2cset")) {
             return i2cset(argc - argnum, argv + argnum);
         } else if (!strcmp(argv[argnum], "i2cdump")) {

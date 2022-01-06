@@ -47,13 +47,13 @@ Where:
   -c, --chip_id             read chip id
   -s, --sensor_id           read sensor model and control line
   -t, --temp                read chip temperature (where supported)
-  -d, --dmesg               drop-in replacement for dmesg
   -p, --printenv            drop-in replacement for fw_printenv
   -e, --setenv key=value    drop-in replacement for fw_setenv
   -b, --backup=<filename>   save backup into a file
   -r, --restore[=mac]       restore from backup
      [-0, --skip-env]       skip environment
      [-f, --force]          enforce
+  dmesg                     drop-in replacement for dmesg
   i2cget <device address> <register>
                             read data from I2C device
   i2cset <device address> <register>
@@ -213,7 +213,7 @@ sensors:
 * Drop-in replacement of `dmesg` command:
 
     ```console
-    # ipctool --dmesg
+    # ipctool dmesg
     ```
 
 * Drop-in replacement of `fw_printenv` and `fw_setenv` commands:

@@ -103,7 +103,6 @@ void lsnprintf(char *buf, size_t n, char *fmt, ...) {
 #define SYSLOG_ACTION_READ_ALL 3
 ssize_t get_dmesg_buf(char **buf) {
     int len = klogctl(10, NULL, 0); /* read ring buffer size */
-    printf("len = %d\n", len);
 
     *buf = malloc(len);
     if (!*buf)
@@ -112,7 +111,7 @@ ssize_t get_dmesg_buf(char **buf) {
     return len;
 }
 
-void dmesg() {
+int dmesg() {
     char *dmesg;
     ssize_t len = get_dmesg_buf(&dmesg);
 
@@ -120,6 +119,7 @@ void dmesg() {
         puts(dmesg);
         free(dmesg);
     }
+    return EXIT_SUCCESS;
 }
 
 bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
