@@ -249,7 +249,7 @@ void set_env_param(const char *key, const char *value, enum FLASH_OP fop) {
 }
 
 int cmd_set_env(int argc, char **argv) {
-    if (!argv[1] || !argv[2]) {
+    if (argc != 3) {
         puts("Usage: ipctool setenv <key> <name>");
         return EXIT_FAILURE;
     }

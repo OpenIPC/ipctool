@@ -30,8 +30,8 @@ static int prepare_sensor(unsigned char i2c_addr) {
 }
 
 int i2cset(int argc, char **argv) {
-    if (!argv[1] || !argv[2] || !argv[3]) {
-        puts("Usage: ipctool i2cset <device address> <register>");
+    if (argc != 4) {
+        puts("Usage: ipctool i2cset <device address> <register> <new value>");
         return EXIT_FAILURE;
     }
 
@@ -50,7 +50,7 @@ int i2cset(int argc, char **argv) {
 }
 
 int i2cget(int argc, char **argv) {
-    if (!argv[1] || !argv[2]) {
+    if (argc != 3) {
         puts("Usage: ipctool i2cget <device address> <register>");
         return EXIT_FAILURE;
     }
@@ -105,7 +105,7 @@ static void i2c_hexdump(int fd, unsigned char i2c_addr,
 }
 
 int i2cdump(int argc, char **argv, bool script_mode) {
-    if (!argv[1] || !argv[2] || !argv[3]) {
+    if (argc != 4) {
         puts("Usage: ipctool [--script] <device address> <from register> <to "
              "register>");
         return EXIT_FAILURE;

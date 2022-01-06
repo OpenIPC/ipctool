@@ -229,7 +229,7 @@ sensors:
 
     ```console
     # ipctool i2cget 0x34 0x3000
-    # ipctool i2cget 0x34 0x3000 1
+    # ipctool i2cset 0x34 0x3000 1
     # ipctool i2cdump 0x34 0x3000 0x31ff
     # ipctool --script i2cdump 0x34 0x3000 0x31ff
     ```

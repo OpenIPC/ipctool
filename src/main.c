@@ -77,8 +77,8 @@ void Help() {
         "  dmesg                     drop-in replacement for dmesg\n"
         "  i2cget <device address> <register>\n"
         "                            read data from I2C device\n"
-        "  i2cset <device address> <register>\n"
-        "                            write register value to I2C device\n"
+        "  i2cset <device address> <register> <new value>\n"
+        "                            write a value to I2C device\n"
         "  [--script] i2cdump <device address> <from register> <to register>\n"
         "                            dump data from I2C device\n"
         "  -h, --help                this help\n");
@@ -287,8 +287,8 @@ int main(int argc, char *argv[]) {
             return printenv();
         } else if (!strcmp(argv[argnum], "setenv")) {
             return cmd_set_env(argc - argnum, argv + argnum);
-        } else if (!strcmp(argv[argnum], "i2cset")) {
-            return i2cset(argc - argnum, argv + argnum);
+        } else if (!strcmp(argv[argnum], "i2cget")) {
+            return i2cget(argc - argnum, argv + argnum);
         } else if (!strcmp(argv[argnum], "i2cset")) {
             return i2cset(argc - argnum, argv + argnum);
         } else if (!strcmp(argv[argnum], "i2cdump")) {
