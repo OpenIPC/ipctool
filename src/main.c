@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
     bool script_mode = false;
     int argnum = 0;
 
-    while ((res = getopt_long_only(argc, argv, "", long_options,
+    while ((res = getopt_long_only(argc, argv, "s", long_options,
                                    &option_index)) != -1) {
         argnum++;
 
