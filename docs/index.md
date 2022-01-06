@@ -41,21 +41,26 @@ C library to work on vast majority of hardware.
 ## Usage
 
 ```console
-# ipctool
-    available options:
-
-	--chip_id
-	--sensor_id
-	--temp
-
-	--dmesg
-	--printenv
-	--setenv key=value
-
-	[--skip-env] [--force] --restore
-	--help
-
-    (or run without params to get full available information)
+# ipctool -h
+Usage:  ipctool [OPTIONS] [COMMANDS]
+Where:
+  -c, --chip_id             read chip id
+  -s, --sensor_id           read sensor model and control line
+  -t, --temp                read chip temperature (where supported)
+  -d, --dmesg               drop-in replacement for dmesg
+  -p, --printenv            drop-in replacement for fw_printenv
+  -e, --setenv key=value    drop-in replacement for fw_setenv
+  -b, --backup=<filename>   save backup into a file
+  -r, --restore[=mac]       restore from backup
+     [-0, --skip-env]       skip environment
+     [-f, --force]          enforce
+  i2cget <device address> <register>
+                            read data from I2C device
+  i2cset <device address> <register>
+                            write register value to I2C device
+  [--script] i2cdump <device address> <from register> <to register>
+                            dump data from I2C device
+  -h, --help                this help
 ```
 
 When run without parameters utility produces YAML with all hardware-specific
