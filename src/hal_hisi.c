@@ -465,23 +465,34 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
     return 0;
 }
 
+// T-sensor temperature record register 0
+#define CV300_MISC_CTRL41 0x120300A4
+// Temperature sensor (T-Sensor) control register
+#define CV300_MISC_CTRL39 0x1203009C
+
+// T-Sensor temperature record register 0
+#define AV300_MISC_CTRL47 0x120300BC
+// Temperature sensor (T-Sensor) control register
+#define AV300_MISC_CTRL45 0x120300B4
+
 static float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
-    // TODO: Av300
-    // tempo = hisi_reg_temp(0x120300BC, 8, 0x120300B4, 0x60FA0000);
-    // tempo = ((tempo * 136.0) / 793 * 165) - 40;
     case HISI_V2:
         tempo = hisi_reg_temp(0x20270114, 8, 0x20270110, 0x60FA0000);
         tempo = ((tempo * 180) / 256) - 40;
         break;
     case HISI_V3:
-        tempo = hisi_reg_temp(0x120300A4, 16, 0x1203009C, 0x60FA0000);
-        tempo = ((tempo - 125.0) / 806) * 165 - 40;
+        tempo = hisi_reg_temp(CV300_MISC_CTRL41, 16, CV300_MISC_CTRL39, 0x60FA0000);
+        tempo = ((tempo - 125) / 806) * 165 - 40;
         break;
     case HISI_V4:
         tempo = hisi_reg_temp(0x120280BC, 16, 0x120280B4, 0xC3200000);
         tempo = ((tempo - 117) / 798) * 165 - 40;
+        break;
+    case HISI_V4A:
+        tempo = hisi_reg_temp(AV300_MISC_CTRL47, 16, AV300_MISC_CTRL45, 0x60FA0000);
+        tempo = ((tempo - 136) / 793 * 165) - 40;
         break;
     default:
         return NAN;
@@ -522,6 +533,7 @@ static const char *get_hisi_chip_id(uint32_t reg) {
     case 0x35190101:
         return "3519V101";
     case 0x3516A300:
+        chip_generation = HISI_V4A;
         return "3516AV300";
     case 0x3516C300:
         chip_generation = HISI_V3;

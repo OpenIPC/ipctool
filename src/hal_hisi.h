@@ -17,6 +17,7 @@
 #define HISI_V2A 0x3516A100
 #define HISI_V3 0x3516C300
 #define HISI_V4 0x3516E300
+#define HISI_V4A 0x3516C500
 
 int hisi_SYS_DRV_GetChipId();
 const char *hisi_cv100_get_mii_mux();
