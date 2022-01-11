@@ -269,7 +269,7 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         break;
     case 0x2045:
         break;
-    case 0x2210:
+    case 0x0010:
         // (Untested) aka fake Aptina AR0130
         res = 0x1035;
         break;
