@@ -16,7 +16,6 @@
 #include "chipid.h"
 #include "cjson/cJSON.h"
 #include "hal_common.h"
-#include "mmap.h"
 #include "ram.h"
 #include "tools.h"
 
@@ -485,7 +484,7 @@ static float hisi_get_temp() {
     return tempo;
 }
 
-static const char *get_chip_id35180100() {
+static const char *get_chip_V1() {
     uint32_t val;
     if (!mem_reg(0x2005008C, &val, OP_READ))
         goto err;
@@ -517,13 +516,53 @@ err:
     return "unknown";
 }
 
-static const char *get_hisi_chip_id(uint32_t reg) {
-    switch (reg) {
+static const char *get_chip_V2A(uint8_t scsysid0) {
+    switch (scsysid0) {
+    case 0:
+    case 1:
+        // possibly 3 and 4 could be also valid AV100 revisions
+        return "3516AV100";
+    case 2:
+        return "3516DV100";
+    default:
+        fprintf(stderr, "reserved value %#x", scsysid0);
+        return "unknown";
+    }
+}
+
+static const char *get_chip_V2(uint8_t scsysid0) {
+    switch (scsysid0) {
+    case 1:
+        return "3516CV200";
+    case 2:
+        return "3518EV200";
+    case 3:
+        return "3518EV201";
+    default:
+        fprintf(stderr, "reserved value %#x", scsysid0);
+        return "unknown";
+    }
+}
+
+static const char *get_chip_V3(uint8_t scsysid0) {
+    switch (scsysid0) {
+    case 0:
+        return "3516CV300";
+    case 4:
+        return "3516EV100";
+    default:
+        fprintf(stderr, "reserved value %#x", scsysid0);
+        return "unknown";
+    }
+}
+
+static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
+    switch (family_id) {
     case 0x6000001:
         return "3516AV200";
     case 0x3516A100:
         chip_generation = HISI_V2A;
-        return "3516AV100";
+        return get_chip_V2A(scsysid0);
     case 0x3516A200:
         return "3516AV200";
     case 0x35190101:
@@ -533,8 +572,12 @@ static const char *get_hisi_chip_id(uint32_t reg) {
         return "3516AV300";
     case 0x3516C300:
         chip_generation = HISI_V3;
-        return "3516CV300";
+        return get_chip_V3(scsysid0);
+    case 0x3516C500:
+        chip_generation = HISI_V4A;
+        return "3516CV500";
     case 0x3516D300:
+        chip_generation = HISI_V4A;
         return "3516DV300";
     case 0x3516E200:
         chip_generation = HISI_V4;
@@ -544,10 +587,10 @@ static const char *get_hisi_chip_id(uint32_t reg) {
         return "3516EV300";
     case 0x35180100:
         chip_generation = HISI_V1;
-        return get_chip_id35180100();
+        return get_chip_V1();
     case 0x3518E200:
         chip_generation = HISI_V2;
-        return "3518EV200";
+        return get_chip_V2(scsysid0);
     case 0x3518E300:
         chip_generation = HISI_V4;
         return "3518EV300";
@@ -560,7 +603,7 @@ static const char *get_hisi_chip_id(uint32_t reg) {
         return "3521V100";
     case 0x3559A100:
         return "3559AV100";
-    case 0xbda9d100:
+    case 0xBDA9D100:
         return "3536CV100";
     case 0x72050200:
         // former 3516EV200
@@ -579,99 +622,31 @@ static const char *get_hisi_chip_id(uint32_t reg) {
         chip_generation = HISI_V4;
         return "7605V100";
     default:
-        fprintf(stderr, "get_hisi_chip_id() got unexpected 0x%x\n", reg);
+        fprintf(stderr, "Got unexpected ID 0x%x for HiSilicon\n", family_id);
         return "unknown";
     }
 }
 
+#define SCSYSID0 0xEE0
+
 bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
-    int mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
-    if (mem_fd < 0) {
-        printf("can't open /dev/mem \n");
-        return false;
-    }
+    uint32_t SCSYSID[4] = {0};
 
-    uint32_t SCSYSID0 = 0xEE0;
-    uint32_t SCSYSID1 = 0xEE4;
-    uint32_t SCSYSID2 = 0xEE8;
-    uint32_t SCSYSID3 = 0xEEC;
-
-    volatile char *sc_ctrl_map =
-        mmap(NULL,               // Any adddress in our space will do
-             SCSYSID0 + 4 * 100, // Map length
-             PROT_READ,          // Enable reading & writting to mapped memory
-             MAP_SHARED,         // Shared with other processes
-             mem_fd,             // File to map
-             SC_CTRL_base        // Offset to base address
-        );
-    if (sc_ctrl_map == MAP_FAILED) {
-        printf("sc_ctrl_map mmap error %p\n", (int *)sc_ctrl_map);
-        printf("Error: %s (%d)\n", strerror(errno), errno);
-        close(mem_fd);
-        return false;
-    }
-
-    close(mem_fd);
-
-    uint32_t chip_id_u32 = 0;
-    chip_id_u32 = *(volatile uint32_t *)(sc_ctrl_map + SCSYSID0);
-
-    if ((chip_id_u32 >> 16 & 0xff) == 0) {
-        // fallback for 8-bit registers on old platforms
-        char *ptr = (char *)&chip_id_u32;
-        ptr[0] = *(volatile char *)(sc_ctrl_map + SCSYSID0);
-        ptr[1] = *(volatile char *)(sc_ctrl_map + SCSYSID1);
-        ptr[2] = *(volatile char *)(sc_ctrl_map + SCSYSID2);
-        ptr[3] = *(volatile char *)(sc_ctrl_map + SCSYSID3);
-    }
-    strncpy(chip_id, get_hisi_chip_id(chip_id_u32), sizeof(chip_id));
-
-    // Special cases for V2/V3 families
-    if (chip_id_u32 == HISI_V2A || chip_id_u32 == HISI_V2 ||
-        chip_id_u32 == HISI_V3) {
-        uint32_t SCSYSID0_reg =
-            ((volatile uint32_t *)(sc_ctrl_map + SCSYSID0))[0];
-        char SCSYSID0_chip_id = ((char *)&SCSYSID0_reg)[3];
-        if (chip_id_u32 == HISI_V2A) {
-            switch (SCSYSID0_chip_id) {
-            case 0:
-            case 1:
-                /* possibly 3 and 4 could be also valid AV100 revisions */
-                sprintf(chip_id, "3516AV100");
-                break;
-            case 2:
-                sprintf(chip_id, "3516DV100");
-                break;
-            default:
-                sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
-            }
-        } else if (chip_id_u32 == HISI_V2) {
-            switch (SCSYSID0_chip_id) {
-            case 1:
-                sprintf(chip_id, "3516CV200");
-                break;
-            case 2:
-                sprintf(chip_id, "3518EV200");
-                break;
-            case 3:
-                sprintf(chip_id, "3518EV201");
-                break;
-            default:
-                sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
-            }
-        } else if (chip_id_u32 == HISI_V3) {
-            switch (SCSYSID0_chip_id) {
-            case 0:
-                sprintf(chip_id, "3516CV300");
-                break;
-            case 4:
-                sprintf(chip_id, "3516EV100");
-                break;
-            default:
-                sprintf(chip_id, "reserved value %d", SCSYSID0_chip_id);
-            }
+    uint32_t family_id = 0;
+    for (int i = 0; i < 4; i++) {
+        if (!mem_reg(SC_CTRL_base + SCSYSID0 + i * sizeof(uint32_t),
+                     (uint32_t *)&SCSYSID[i], OP_READ))
+            return false;
+        if (i == 0 && (SCSYSID[i] >> 16 & 0xff) != 0) {
+            // special case for new platforms
+            family_id = SCSYSID[i];
+            break;
         }
+        family_id |= (SCSYSID[i] & 0xff) << i * 8;
     }
+
+    strncpy(chip_id, get_hisi_chip_id(family_id, SCSYSID[0] >> 24),
+            sizeof(chip_id));
 
     if (*chip_id == '7')
         strcpy(chip_manufacturer, VENDOR_GOKE);
