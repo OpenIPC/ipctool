@@ -429,18 +429,6 @@ void setup_hal_hisi() {
     hal_temperature = hisi_get_temp;
 }
 
-int hisi_SYS_DRV_GetChipId() {
-    int fd = open("/dev/sys", O_RDWR);
-    if (fd < 0)
-        return -1;
-
-    uint32_t id;
-    int res = ioctl(fd, 0x80045910, &id);
-    if (res)
-        return -1;
-    return id;
-}
-
 static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
                               uint32_t prep_addr, uint32_t prep_val) {
     uint32_t val;
@@ -498,23 +486,35 @@ static float hisi_get_temp() {
 }
 
 static const char *get_chip_id35180100() {
-    int dvrid = hisi_SYS_DRV_GetChipId();
-    switch (dvrid) {
-    case 0x3516C100:
-        return "3516CV100";
-    case 0x3518A100:
-        return "3518AV100";
-    case 0x3518C100:
+    uint32_t val;
+    if (!mem_reg(0x2005008C, &val, OP_READ))
+        goto err;
+
+    switch ((val >> 8) & 0x7f) {
+    case 0x10:
         return "3518CV100";
-    case 0x3518E100:
+    case 0x57:
         return "3518EV100";
     default:
-        fprintf(stderr,
-                "get_chip_id35180100() got unexpected 0x%x for 3518?v100\n"
-                "Check kernel modules loaded\n",
-                dvrid);
-        return "unknown";
+        val = 3;
+        if (!mem_reg(0x20050088, &val, OP_WRITE))
+            goto err;
+        if (!mem_reg(0x20050088, &val, OP_READ))
+            goto err;
+        switch (val) {
+        case 1:
+            return "3516CV100";
+        case 2:
+            return "3518EV100";
+        case 3:
+            return "3518AV100";
+        default:
+            goto err;
+        }
     }
+
+err:
+    return "unknown";
 }
 
 static const char *get_hisi_chip_id(uint32_t reg) {
