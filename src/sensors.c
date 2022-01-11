@@ -153,8 +153,8 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     return false;
 }
 
-// tested on F22, F23, F37, H62, H65, K05
-// TODO(FlyRouter): test on H42, H81
+// tested on H42, F22, F23, F37, H62, H65, K05
+// TODO(FlyRouter): test on H81
 static int detect_soi_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
                              unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)

@@ -20,7 +20,7 @@
 #include "tools.h"
 
 static unsigned char sony_addrs[] = {0x34, 0};
-static unsigned char soi_addrs[] = {0x80, 0};
+static unsigned char soi_addrs[] = {0x80, 0x60, 0};
 static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char omni_addrs[] = {0x60, 0x6c, 0x42, 0};
