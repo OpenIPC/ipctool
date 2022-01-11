@@ -475,6 +475,9 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2063:
         res = 0x2063;
         break;
+    case 0xffff:
+        // no response
+        return false;
     default:
 #ifndef STANDALONE_LIBRARY
         fprintf(stderr, "Error: unexpected value for GalaxyCore == 0x%x\n", res);
@@ -512,6 +515,9 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     case 0x0000:
         res = 0x2305;
         break;
+    case 0xffff:
+        // no response
+        return false;
     default:
 #ifndef STANDALONE_LIBRARY
         fprintf(stderr, "Error: unexpected value for SuperPix == 0x%x\n", res);
