@@ -373,18 +373,18 @@ static void hisi_mipi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
                                     size_t arg, size_t sysret) {
     switch (cmd) {
     case HI_MIPI_RESET_MIPI:
-        break;
     case HI_MIPI_RESET_SENSOR:
-        break;
     case HI_MIPI_UNRESET_MIPI:
-        break;
     case HI_MIPI_UNRESET_SENSOR:
+    case HI_MIPI_SET_HS_MODE:
+    case HI_MIPI_ENABLE_MIPI_CLOCK:
+    case HI_MIPI_ENABLE_SENSOR_CLOCK:
         break;
     case HI_MIPI_SET_DEV_ATTR:
         dump_hisi_read_mipi(child, arg);
         break;
     default:
-        printf("ERR: uknown cmd %#x for himipi\n", arg);
+        printf("ERR: uknown cmd %#x for himipi\n", cmd);
     }
 }
 
