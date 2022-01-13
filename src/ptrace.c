@@ -91,6 +91,7 @@ void linux_new_mempeek() {
 #define SYSCALL_CLOSE 6
 #define SYSCALL_IOCTL 54
 #define SYSCALL_NANOSLEEP 0xa2
+#define SYSCALL_OPENAT 322
 
 static void *copy_from_process(pid_t child, size_t addr, void *ptr,
                                size_t size) {
@@ -360,13 +361,14 @@ static void ssp_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd, size_t arg,
     }
 }
 
-static void dump_hisi_read_mipi(pid_t child, size_t remote_addr) {
+static void dump_hisi_read_mipi(pid_t child, unsigned int cmd,
+                                size_t remote_addr) {
     size_t stsize = hisi_sizeof_combo_dev_attr();
     char *buf = alloca(stsize);
     if (!copy_from_process(child, remote_addr, buf, stsize))
         return;
 
-    hisi_dump_combo_dev_attr(buf);
+    hisi_dump_combo_dev_attr(buf, cmd);
 }
 
 static void hisi_mipi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
@@ -381,7 +383,8 @@ static void hisi_mipi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
     case HI_MIPI_ENABLE_SENSOR_CLOCK:
         break;
     case HI_MIPI_SET_DEV_ATTR:
-        dump_hisi_read_mipi(child, arg);
+    case HIV4A_MIPI_SET_DEV_ATTR:
+        dump_hisi_read_mipi(child, cmd, arg);
         break;
     default:
         printf("ERR: uknown cmd %#x for himipi\n", cmd);
@@ -513,13 +516,13 @@ static void show_i2c_banner(int fd) {
     }
 }
 
-static void syscall_open(pid_t child, size_t fd) {
+static void syscall_open(pid_t child, size_t fd, int offset) {
     assert(fd >= 0 && fd < MAX_MON_FDS);
 
 #if 0
     dump_regs(&scall_regs, stderr);
 #endif
-    size_t remote_addr = scall_regs.regs.uregs[0];
+    size_t remote_addr = scall_regs.regs.uregs[0 + offset];
     char *filename = copy_from_process_str(child, remote_addr);
 #if 0
     printf("open('%s')\n", filename);
@@ -639,7 +642,10 @@ static void exit_syscall(pid_t child, size_t syscall_num) {
     int sysret = get_syscall_ret(child);
     switch (syscall_num) {
     case SYSCALL_OPEN:
-        syscall_open(child, sysret);
+        syscall_open(child, sysret, 0);
+        break;
+    case SYSCALL_OPENAT:
+        syscall_open(child, sysret, 1);
         break;
     case SYSCALL_CLOSE:
         syscall_close(child, sysret);

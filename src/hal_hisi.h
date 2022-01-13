@@ -19,6 +19,9 @@
 #define HISI_V4 0x3516E300
 #define HISI_V4A 0x3516C500
 
+// CV500 platform
+#define HIV4A_MIPI_SET_DEV_ATTR 0X40C86D01
+
 // V4
 #define HI_MIPI_RESET_MIPI 0X40046D07
 #define HI_MIPI_RESET_SENSOR 0X40046D05
@@ -46,6 +49,6 @@ unsigned long hisi_totalmem(unsigned long *media_mem);
 void hisi_detect_fmc();
 bool hisi_detect_cpu(uint32_t SC_CTRL_base);
 size_t hisi_sizeof_combo_dev_attr();
-void hisi_dump_combo_dev_attr(void *ptr);
+void hisi_dump_combo_dev_attr(void *ptr, unsigned int cmd);
 
 #endif /* HAL_HISI_H */

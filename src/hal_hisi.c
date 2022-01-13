@@ -1640,7 +1640,7 @@ const char *mipi_wdr_mode_t_str(mipi_wdr_mode_t val) {
 
 #define MIPI_LANE_NUM 4
 #define LVDS_LANE_NUM 4
-#define WDR_VC_NUM 2
+#define WDR_VC_NUM 2 // and 4 for CV500
 #define SYNC_CODE_NUM 4
 
 typedef enum {
@@ -1712,7 +1712,7 @@ typedef struct {
 
 size_t hisi_sizeof_combo_dev_attr() { return sizeof(combo_dev_attr_t); }
 
-void hisi_dump_combo_dev_attr(void *ptr) {
+void hisi_dump_combo_dev_attr(void *ptr, unsigned int cmd) {
     combo_dev_attr_t *attr = ptr;
 
     printf("combo_dev_attr_t SENSOR_ATTR = {\n"
