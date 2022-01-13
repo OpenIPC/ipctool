@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <mtd/mtd-abi.h>
@@ -359,6 +360,34 @@ static void ssp_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd, size_t arg,
     }
 }
 
+static void dump_hisi_read_mipi(pid_t child, size_t remote_addr) {
+    size_t stsize = hisi_sizeof_combo_dev_attr();
+    char *buf = alloca(stsize);
+    if (!copy_from_process(child, remote_addr, buf, stsize))
+        return;
+
+    hisi_dump_combo_dev_attr(buf);
+}
+
+static void hisi_mipi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
+                                    size_t arg, size_t sysret) {
+    switch (cmd) {
+    case HI_MIPI_RESET_MIPI:
+        break;
+    case HI_MIPI_RESET_SENSOR:
+        break;
+    case HI_MIPI_UNRESET_MIPI:
+        break;
+    case HI_MIPI_UNRESET_SENSOR:
+        break;
+    case HI_MIPI_SET_DEV_ATTR:
+        dump_hisi_read_mipi(child, arg);
+        break;
+    default:
+        printf("ERR: uknown cmd %#x for himipi\n", arg);
+    }
+}
+
 static void hisi_gen2_read_exit_cb(pid_t child, int fd, size_t remote_addr,
                                    size_t nbyte, size_t sysret) {
     unsigned char *buf = alloca(nbyte);
@@ -539,8 +568,14 @@ static void syscall_open(pid_t child, size_t fd) {
         fds[fd].ioctl_exit = mtd_ioctl_exit_cb;
     } else if (IS_PREFIX(filename, "/dev/ttyAMA")) {
         // TODO
-    } else if (IS_PREFIX(filename, "/dev/hi_mipi")) {
-        // TODO
+    } else if (!strcmp(filename, "/dev/hi_mipi") ||
+               !strcmp(filename, "/dev/mipi")) {
+        switch (chip_generation) {
+        case HISI_V4:
+        case HISI_V4A:
+            fds[fd].ioctl_exit = hisi_mipi_ioctl_exit_cb;
+            break;
+        }
     }
 }
 

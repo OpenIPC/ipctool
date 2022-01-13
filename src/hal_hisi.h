@@ -19,6 +19,13 @@
 #define HISI_V4 0x3516E300
 #define HISI_V4A 0x3516C500
 
+// V4
+#define HI_MIPI_RESET_MIPI 0X40046D07
+#define HI_MIPI_RESET_SENSOR 0X40046D05
+#define HI_MIPI_SET_DEV_ATTR 0X40886D01
+#define HI_MIPI_UNRESET_MIPI 0X40046D08
+#define HI_MIPI_UNRESET_SENSOR 0X40046D06
+
 int hisi_SYS_DRV_GetChipId();
 const char *hisi_cv100_get_mii_mux();
 bool hisi_ev300_get_die_id(char *buf, ssize_t len);
@@ -35,5 +42,7 @@ void hisi_vi_information(sensor_ctx_t *ctx);
 unsigned long hisi_totalmem(unsigned long *media_mem);
 void hisi_detect_fmc();
 bool hisi_detect_cpu(uint32_t SC_CTRL_base);
+size_t hisi_sizeof_combo_dev_attr();
+void hisi_dump_combo_dev_attr(void *ptr);
 
 #endif /* HAL_HISI_H */
