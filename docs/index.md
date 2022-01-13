@@ -234,6 +234,12 @@ sensors:
     # ipctool --script i2cdump 0x34 0x3000 0x31ff
     ```
 
+* Advanced replacement of `strace`:
+
+    ```console
+    # ipctool trace /usr/bin/Sofia
+    ```
+
 ## Supported SoCs
 
 Tested on:

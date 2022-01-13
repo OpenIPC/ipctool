@@ -23,6 +23,7 @@
 #include "i2c.h"
 #include "mtd.h"
 #include "network.h"
+#include "ptrace.h"
 #include "ram.h"
 #include "sensors.h"
 #include "tools.h"
@@ -193,6 +194,10 @@ static bool auto_backup(bool wait_mode) {
 }
 
 int main(int argc, char *argv[]) {
+    // Don't use option parser for ptrace command line
+    if (argc > 1 && !strcmp(argv[1], "trace"))
+        return ptrace_cmd(argc - 1, argv + 1);
+
     const struct option long_options[] = {
         {"chip_id", no_argument, NULL, 'c'},
         {"force", no_argument, NULL, 'f'},

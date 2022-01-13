@@ -76,6 +76,8 @@ set(IPCTOOL_SRC
     src/mtd.h
     src/network.c
     src/network.h
+    src/ptrace.c
+    src/ptrace.h
     src/ram.c
     src/ram.h
     src/sha1.c

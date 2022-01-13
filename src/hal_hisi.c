@@ -192,8 +192,8 @@ int hisi_gen2_sensor_read_register(int fd, unsigned char i2c_addr,
 int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
                               unsigned int reg_addr, unsigned int reg_width,
                               unsigned int data_width) {
-    static struct i2c_rdwr_ioctl_data rdwr;
-    static struct i2c_msg msg[2];
+    struct i2c_rdwr_ioctl_data rdwr;
+    struct i2c_msg msg[2];
     unsigned int reg_addr_end = reg_addr;
     unsigned char buf[4];
     unsigned int data;
