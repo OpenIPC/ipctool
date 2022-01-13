@@ -83,6 +83,8 @@ void Help() {
         "                            write a value to I2C device\n"
         "  [--script] i2cdump <device address> <from register> <to register>\n"
         "                            dump data from I2C device\n"
+	"  ptrace <full/path/to/executable> [arguments]\n"
+        "                            dump original firmware calls and data structures\n"
         "  -h, --help                this help\n");
 }
 

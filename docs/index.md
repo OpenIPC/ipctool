@@ -61,6 +61,8 @@ Where:
                             write a value to I2C device
   [--script] i2cdump <device address> <from register> <to register>
                             dump data from I2C device
+  ptrace <full/path/to/executable> [arguments]
+                            dump original firmware calls and data structures
   -h, --help                this help
 ```
 
