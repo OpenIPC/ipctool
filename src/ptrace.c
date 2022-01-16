@@ -20,7 +20,7 @@
 #include <unistd.h>
 
 #include "chipid.h"
-#include "hal_hisi.h"
+#include "hisi/hal_hisi.h"
 #include "hal_xm.h"
 
 #define IS_PREFIX(name, substr) (!strncmp(name, substr, sizeof substr - 1))

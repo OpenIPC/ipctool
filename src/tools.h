@@ -13,6 +13,13 @@
         cJSON_AddItemToObject(j_inner, param, strval);                         \
     }
 
+#define ADD_PARAM_NOTNULL(param, val)                                          \
+    {                                                                          \
+        if (val != NULL) {                                                     \
+            ADD_PARAM(param, val);                                             \
+        }                                                                      \
+    }
+
 #define ADD_PARAM_NUM(param, num)                                              \
     {                                                                          \
         cJSON *numval = cJSON_CreateNumber(num);                               \

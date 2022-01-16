@@ -15,7 +15,7 @@
 
 #include "chipid.h"
 #include "firmware.h"
-#include "hal_hisi.h"
+#include "hisi/hal_hisi.h"
 #include "tools.h"
 #include "vendors/xm.h"
 

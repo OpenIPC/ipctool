@@ -1,7 +1,8 @@
 #ifndef HAL_COMMON_H
 #define HAL_COMMON_H
 
-#include "hal_hisi.h"
+#include "cjson/cJSON.h"
+#include "hisi/hal_hisi.h"
 #include "hal_novatek.h"
 #include "hal_sstar.h"
 #include "hal_xm.h"
@@ -37,7 +38,7 @@ extern int (*sensor_write_register)(int fd, unsigned char i2c_addr,
                                     unsigned int data_width);
 extern float (*hal_temperature)();
 extern void (*hal_cleanup)();
-extern void (*hal_detect_ethernet)(void* handle);
+extern void (*hal_detect_ethernet)(cJSON* handle);
 
 void setup_hal_drivers();
 void setup_hal_hisi();

@@ -24,7 +24,7 @@ int (*sensor_i2c_change_addr)(int fd, unsigned char addr);
 float (*hal_temperature)();
 void (*hal_cleanup)();
 
-void (*hal_detect_ethernet)(void* handle);
+void (*hal_detect_ethernet)(cJSON* root);
 
 int universal_open_sensor_fd(const char *dev_name) {
     int fd;

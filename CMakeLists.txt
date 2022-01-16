@@ -36,14 +36,14 @@ include_directories(
 set(COMMON_LIB_SRC
     src/hal_common.c
     src/hal_common.h
-    src/hal_hisi.c
-    src/hal_hisi.h
     src/hal_novatek.c
     src/hal_novatek.h
     src/hal_sstar.c
     src/hal_sstar.h
     src/hal_xm.c
     src/hal_xm.h
+    src/hisi/hal_hisi.c
+    src/hisi/hal_hisi.h
 
     src/chipid.c
     src/chipid.h
@@ -67,6 +67,8 @@ set(IPCTOOL_SRC
     src/fake_symbols.c
     src/firmware.c
     src/firmware.h
+    src/hisi/ethernet.c
+    src/hisi/ethernet.h
     src/http.c
     src/http.h
     src/i2c.c
