@@ -392,6 +392,9 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     case 0x5305:
         sprintf(ctx->sensor_id, "OS05A");
         return true;
+    case 0x5308:
+        sprintf(ctx->sensor_id, "OS08A");
+        return true;
     default:
         break;
     }
