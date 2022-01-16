@@ -25,6 +25,7 @@
 #include "network.h"
 #include "ptrace.h"
 #include "ram.h"
+#include "reginfo.h"
 #include "sensors.h"
 #include "tools.h"
 #include "uboot.h"
@@ -83,8 +84,9 @@ void Help() {
         "                            write a value to I2C device\n"
         "  [--script] i2cdump <device address> <from register> <to register>\n"
         "                            dump data from I2C device\n"
-	"  ptrace <full/path/to/executable> [arguments]\n"
-        "                            dump original firmware calls and data structures\n"
+        "  ptrace <full/path/to/executable> [arguments]\n"
+        "                            dump original firmware calls and data "
+        "structures\n"
         "  -h, --help                this help\n");
 }
 
@@ -197,8 +199,12 @@ static bool auto_backup(bool wait_mode) {
 
 int main(int argc, char *argv[]) {
     // Don't use option parser for ptrace command line
-    if (argc > 1 && !strcmp(argv[1], "trace"))
-        return ptrace_cmd(argc - 1, argv + 1);
+    if (argc > 1) {
+        if (!strcmp(argv[1], "trace"))
+            return ptrace_cmd(argc - 1, argv + 1);
+	else if (!strcmp(argv[1], "reginfo"))
+            return reginfo_cmd(argc - 1, argv + 1);
+    }
 
     const struct option long_options[] = {
         {"chip_id", no_argument, NULL, 'c'},

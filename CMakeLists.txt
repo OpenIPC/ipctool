@@ -82,6 +82,8 @@ set(IPCTOOL_SRC
     src/ptrace.h
     src/ram.c
     src/ram.h
+    src/reginfo.c
+    src/reginfo.h
     src/sha1.c
     src/sha1.h
     src/stack.c
