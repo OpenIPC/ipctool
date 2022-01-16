@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
-
+#include <string.h>
 #include <unistd.h>
 
 #include "chipid.h"
@@ -27,7 +27,7 @@ struct REG_MDIO_RWCTRL {
 #define U_MDIO_RO_STAT 0x010C
 #define D_MDIO_RO_STAT 0x210C
 
-uint32_t hieth_readl(uint32_t base, uint32_t regaddr) {
+static uint32_t hieth_readl(uint32_t base, uint32_t regaddr) {
     uint32_t val;
     if (mem_reg(base + regaddr, &val, OP_READ)) {
         return val;
@@ -35,7 +35,7 @@ uint32_t hieth_readl(uint32_t base, uint32_t regaddr) {
     return 0x1111;
 }
 
-void hieth_writel(uint32_t val, uint32_t base, uint32_t regaddr) {
+static void hieth_writel(uint32_t val, uint32_t base, uint32_t regaddr) {
     if (!mem_reg(base + regaddr, &val, OP_WRITE)) {
         fprintf(stderr, "write error\n");
     }
@@ -63,7 +63,8 @@ static int wait_mdio_ready(uint32_t base) {
 
 #define mdio_get_phyread_val(base) (hieth_readl(base, MDIO_RO_DATA) & 0xFFFF)
 
-int hieth_mdio_read(int frq_dv, int phy_addr, uint32_t base, int regnum) {
+static int hieth_mdio_read(int frq_dv, int phy_addr, uint32_t base,
+                           int regnum) {
     int val = 0;
 
     if (!wait_mdio_ready(base)) {
@@ -87,17 +88,7 @@ error_exit:
     return val;
 }
 
-cJSON *detect_ethernet() {
-    cJSON *fake_root = cJSON_CreateObject();
-    cJSON *j_inner = cJSON_CreateObject();
-    cJSON_AddItemToObject(fake_root, "ethernet", j_inner);
-
-    char mac[20];
-
-    if (get_mac_address(mac, sizeof mac)) {
-        ADD_PARAM("mac", mac);
-    };
-
+void hisi_ethdetect(cJSON *j_inner) {
     uint32_t mdio_base = 0;
     switch (chip_generation) {
     case HISI_V1:
@@ -105,6 +96,7 @@ cJSON *detect_ethernet() {
         mdio_base = 0x10090000;
         break;
     case HISI_V3:
+    case HISI_V4A:
         mdio_base = 0x10050000;
         break;
     case HISI_V4:
@@ -127,9 +119,23 @@ cJSON *detect_ethernet() {
             ADD_PARAM_FMT("d-mdio-phyaddr", "%x",
                           hieth_readl(mdio_base, D_MDIO_PHYADDR));
         }
-
-        if (chip_generation == HISI_V1)
-            ADD_PARAM("phy-mode", hisi_cv100_get_mii_mux());
     }
+    if (chip_generation == HISI_V1)
+        ADD_PARAM("phy-mode", hisi_cv100_get_phy_mode());
+}
+
+cJSON *detect_ethernet() {
+    cJSON *fake_root = cJSON_CreateObject();
+    cJSON *j_inner = cJSON_CreateObject();
+    cJSON_AddItemToObject(fake_root, "ethernet", j_inner);
+
+    char mac[20];
+    if (get_mac_address(mac, sizeof mac)) {
+        ADD_PARAM("mac", mac);
+    };
+
+    if (!strcmp(short_manufacturer, "HI"))
+        hisi_ethdetect(j_inner);
+
     return fake_root;
 }

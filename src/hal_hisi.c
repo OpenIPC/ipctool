@@ -426,6 +426,7 @@ void setup_hal_hisi() {
     possible_i2c_addrs = hisi_possible_i2c_addrs;
     strcpy(short_manufacturer, "HI");
     hal_temperature = hisi_get_temp;
+    //hal_detect_ethernet = hisi_ethdetect;
 }
 
 static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
@@ -1294,34 +1295,50 @@ bool hisi_ev300_get_die_id(char *buf, ssize_t len) {
     return true;
 }
 
-// muxctrl_reg23 is a multiplexing control register for the MII_TXCK pin.
-struct CV100_MUXCTRL_REG23 {
-    unsigned int muxctrl_reg23 : 2;
+struct CV100_PERI_CRG51 {
+    unsigned hrst_eth_s : 1;
+    unsigned eth_cken : 1;
+    unsigned eth_rmiick_sel : 1;
+    unsigned mii_rmii_mode : 1;
+    unsigned ethphy_cksel : 2;
+    unsigned ethcore_cksel : 2;
 };
 
-enum CV100_MUX_MII_TXCK {
-    CV100_GPIO3_3 = 0,
-    CV100_MII_TXCK,
-    CV100_VOU1120_DATA7,
-    CV100_RMII_CLK,
+const unsigned int CV100_PERI_CRG51_ADDR = 0x20030002;
+const char *hisi_cv100_get_phy_mode() {
+    struct CV100_PERI_CRG51 peri_crg51;
+    if (!mem_reg(CV100_PERI_CRG51_ADDR, (uint32_t *)&peri_crg51, OP_READ))
+        return NULL;
+
+    return peri_crg51.mii_rmii_mode ? "rmii" : "mii";
+}
+
+struct AV100_PERI_CRG59 {
+    unsigned port_select : 1;
+    unsigned mac_speed : 1;
+    unsigned link_status : 1;
+    unsigned tx_config : 1;
+    unsigned duplex_mode : 1;
+    unsigned phy_select : 3;
+    unsigned loopback_mode : 1;
 };
 
-const unsigned int CV100_MUXCTRL_ADDR = 0x200F005C;
-const char *hisi_cv100_get_mii_mux() {
-    struct CV100_MUXCTRL_REG23 muxctrl_reg23;
-    bool res = mem_reg(CV100_MUXCTRL_ADDR, (uint32_t *)&muxctrl_reg23, OP_READ);
-    if (res) {
-        switch (muxctrl_reg23.muxctrl_reg23) {
-        case CV100_MII_TXCK:
-            return "mii";
-        case CV100_RMII_CLK:
-            return "rmii";
-        default:
-            return NULL;
-        }
+const unsigned int AV100_PERI_CRG59_ADDR = 0x2003003F;
+const char *hisi_av100_get_phy_mode() {
+    struct AV100_PERI_CRG59 peri_crg59;
+    if (!mem_reg(AV100_PERI_CRG59_ADDR, (uint32_t *)&peri_crg59, OP_READ))
+        return NULL;
+
+    switch (peri_crg59.phy_select) {
+    case 0:
+        return "gmii/mii";
+    case 1:
+        return "rgmii";
+    case 2:
+        return "rmii";
+    default:
+        return NULL;
     }
-
-    return NULL;
 }
 
 const uint32_t CV300_ISP_AF_CFG_ADDR = 0x12200;

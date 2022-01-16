@@ -33,7 +33,7 @@
 #define HI_MIPI_ENABLE_SENSOR_CLOCK 0X40046D10
 
 int hisi_SYS_DRV_GetChipId();
-const char *hisi_cv100_get_mii_mux();
+const char *hisi_cv100_get_phy_mode();
 bool hisi_ev300_get_die_id(char *buf, ssize_t len);
 
 int sony_ssp_read_register(int fd, unsigned char i2c_addr,
