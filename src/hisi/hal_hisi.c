@@ -588,7 +588,7 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
         chip_generation = HISI_V2A;
         return get_chip_V2A(scsysid0);
     case 0x35190101:
-        chip_generation = HISI_V2A;
+        chip_generation = HISI_V3A;
         return get_chip_V3A(scsysid0);
     case 0x3516A300:
         chip_generation = HISI_V4A;
