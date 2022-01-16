@@ -168,8 +168,8 @@ static const char *hisi_phymode() {
         return hisi_cv100_get_phy_mode();
     case HISI_V2A:
         return hisi_av100_get_phy_mode();
-        // TODO:
-        // return hisi_av200_get_phy_mode();
+    case HISI_V3A:
+        return hisi_av200_get_phy_mode();
     default:
         return NULL;
     }
