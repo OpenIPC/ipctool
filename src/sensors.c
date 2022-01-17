@@ -126,6 +126,45 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
         return true;
     }
 
+    int ret3120 = sensor_read_register(fd, i2c_addr, base + 0x120, 2, 1);
+    if (ret3120 == 0x80) {
+        sprintf(ctx->sensor_id, "IMX274");
+        return true;
+    }
+
+    int ret303a = sensor_read_register(fd, i2c_addr, base + 0x03A, 2, 1);
+    if (ret303a == 0xd1) {
+        sprintf(ctx->sensor_id, "IMX385");
+        return true;
+    }
+
+    int ret3015 = sensor_read_register(fd, i2c_addr, base + 0x015, 2, 1);
+    if (ret3015 == 0x3c) {
+        sprintf(ctx->sensor_id, "IMX185");
+        return true;
+    }
+
+    int ret341c = sensor_read_register(fd, i2c_addr, base + 0x41c, 2, 1);
+    if (ret341c == 0x47) {
+        int ret302e = sensor_read_register(fd, i2c_addr, base + 0x02e, 2, 1);
+        if (ret302e == 0x18) {
+            sprintf(ctx->sensor_id, "IMX334");
+        }
+        return true;
+    }
+
+    int ret35b8 = sensor_read_register(fd, i2c_addr, base + 0x5b8, 2, 1);
+    if (ret35b8 == 0xfa) {
+        sprintf(ctx->sensor_id, "IMX294");
+        return true;
+    }
+
+    int ret301c = sensor_read_register(fd, i2c_addr, base + 0x01c, 2, 1);
+    if (ret301c == 0x8b) {
+        sprintf(ctx->sensor_id, "IMX226");
+        return true;
+    }
+
     int ret1dc = sensor_read_register(fd, i2c_addr, base + 0x1DC, 2, 1);
     if (ret1dc != 0xff) {
         switch (ret1dc & 6) {
@@ -340,6 +379,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0xcc1a:
         // Untested
         strcpy(ctx->sensor_id, "SC3335");
+        return true;
+    case 0x4210:
+        strcpy(ctx->sensor_id, "SC4210");
         return true;
     case 0xcd01:
         // XM
