@@ -21,6 +21,9 @@
 
 #define READ(addr) sensor_read_register(fd, i2c_addr, base + addr, 2, 1)
 
+#define I2C_BASE 0x3000
+#define SPI_BASE 0x200
+
 #ifndef STANDALONE_LIBRARY
 
 static int sony_imx291_fps(u_int8_t frsel, u_int16_t hmax) {
@@ -134,12 +137,15 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
             return true;
         default: {
             int ret3010 = sensor_read_register(fd, i2c_addr, base + 0x10, 2, 1);
-            if (((ret3010 == 0x21) || (ret3010 == 0x1)) && 
-                (sensor_read_register(fd, i2c_addr, base + 0x08, 2, 1) == 0xa0) &&
-                (sensor_read_register(fd, i2c_addr, base + 0x0e, 2, 1) == 0x01) &&
-                (sensor_read_register(fd, i2c_addr, base + 0x1e, 2, 1) == 0xb2) &&
-                (sensor_read_register(fd, i2c_addr, base + 0x1f, 2, 1) == 0x01))
-            {
+            if (((ret3010 == 0x21) || (ret3010 == 0x1)) &&
+                (sensor_read_register(fd, i2c_addr, base + 0x08, 2, 1) ==
+                 0xa0) &&
+                (sensor_read_register(fd, i2c_addr, base + 0x0e, 2, 1) ==
+                 0x01) &&
+                (sensor_read_register(fd, i2c_addr, base + 0x1e, 2, 1) ==
+                 0xb2) &&
+                (sensor_read_register(fd, i2c_addr, base + 0x1f, 2, 1) ==
+                 0x01)) {
                 sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
 #ifndef STANDALONE_LIBRARY
                 sony_imx291_params(ctx, fd, i2c_addr, base);
@@ -220,7 +226,7 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
 #ifndef STANDALONE_LIBRARY
         fprintf(stderr, "Error: unexpected value for Aptina == 0x%x\n", pid);
 #endif
-	return false;
+        return false;
     }
 
     if (sid) {
@@ -375,7 +381,8 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    // HISI_V2 needs width 2. Old OmniVision sensors do not provide mfg_id register.
+    // HISI_V2 needs width 2. Old OmniVision sensors do not provide mfg_id
+    // register.
     prod_msb = sensor_read_register(fd, i2c_addr, 0x300A, 2, 1);
     prod_lsb = sensor_read_register(fd, i2c_addr, 0x300B, 2, 1);
     res = prod_msb << 8 | prod_lsb;
@@ -451,7 +458,7 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
 }
 
 static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
-                                unsigned char i2c_addr, unsigned int base) {
+                                    unsigned char i2c_addr, unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -483,9 +490,10 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
         return false;
     default:
 #ifndef STANDALONE_LIBRARY
-        fprintf(stderr, "Error: unexpected value for GalaxyCore == 0x%x\n", res);
+        fprintf(stderr, "Error: unexpected value for GalaxyCore == 0x%x\n",
+                res);
 #endif
-	return false;
+        return false;
     }
 
     if (res) {
@@ -495,7 +503,7 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
 }
 
 static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
-                                unsigned char i2c_addr, unsigned int base) {
+                                  unsigned char i2c_addr, unsigned int base) {
     if (sensor_i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -525,7 +533,7 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
 #ifndef STANDALONE_LIBRARY
         fprintf(stderr, "Error: unexpected value for SuperPix == 0x%x\n", res);
 #endif
-	return false;
+        return false;
     }
 
     if (res) {
@@ -575,7 +583,7 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
         strcpy(ctx->vendor, "OmniVision");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_sony_sensor, SENSOR_SONY,
-                                       0x3000)) {
+                                       I2C_BASE)) {
         strcpy(ctx->vendor, "Sony");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_smartsens_sensor,
@@ -616,7 +624,7 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
 
     sensor_i2c_change_addr = dummy_change_addr;
 
-    int res = detect_sony_sensor(ctx, fd, 0, 0x200);
+    int res = detect_sony_sensor(ctx, fd, 0, SPI_BASE);
     if (res) {
         strcpy(ctx->vendor, "Sony");
     }
