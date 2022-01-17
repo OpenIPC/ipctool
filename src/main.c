@@ -198,11 +198,14 @@ static bool auto_backup(bool wait_mode) {
 }
 
 int main(int argc, char *argv[]) {
+	//getchipid();
+	//printf("%d\n", hisi_sizeof_combo_dev_attr());
+	//return 0;
     // Don't use option parser for ptrace command line
     if (argc > 1) {
         if (!strcmp(argv[1], "trace"))
             return ptrace_cmd(argc - 1, argv + 1);
-	else if (!strcmp(argv[1], "reginfo"))
+        else if (!strcmp(argv[1], "reginfo"))
             return reginfo_cmd(argc - 1, argv + 1);
     }
 

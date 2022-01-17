@@ -20,8 +20,9 @@
 #include <unistd.h>
 
 #include "chipid.h"
-#include "hisi/hal_hisi.h"
 #include "hal_xm.h"
+#include "hisi/hal_hisi.h"
+#include "hisi/ptrace.h"
 
 #define IS_PREFIX(name, substr) (!strncmp(name, substr, sizeof substr - 1))
 
@@ -40,6 +41,10 @@ typedef void (*ioctl_enter_hook)(pid_t child, int fd, unsigned int cmd,
                                  size_t arg);
 typedef void (*ioctl_exit_hook)(pid_t child, int fd, unsigned int cmd,
                                 size_t arg, size_t sysret);
+
+#define CHECK_FD                                                               \
+    if (fd < 0 || fd >= MAX_MON_FDS)                                           \
+        return;
 
 static int wait_for_syscall(pid_t child) {
     int status;
@@ -277,7 +282,7 @@ static void mtd_ioctl_enter_cb(pid_t child, int fd, unsigned int cmd,
 
 static void syscall_ioctl_enter(pid_t child) {
     int fd = scall_regs.regs.uregs[0];
-    assert(fd >= 0 && fd < MAX_MON_FDS);
+    CHECK_FD;
 
     unsigned int cmd = scall_regs.regs.uregs[1];
     size_t arg = scall_regs.regs.uregs[2];
@@ -382,8 +387,9 @@ static void hisi_mipi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
     case HI_MIPI_ENABLE_MIPI_CLOCK:
     case HI_MIPI_ENABLE_SENSOR_CLOCK:
         break;
-    case HI_MIPI_SET_DEV_ATTR:
+    case HIV3_HI_MIPI_SET_DEV_ATTR:
     case HIV4A_MIPI_SET_DEV_ATTR:
+    case HIV4_MIPI_SET_DEV_ATTR:
         dump_hisi_read_mipi(child, cmd, arg);
         break;
     default:
@@ -517,7 +523,7 @@ static void show_i2c_banner(int fd) {
 }
 
 static void syscall_open(pid_t child, size_t fd, int offset) {
-    assert(fd >= 0 && fd < MAX_MON_FDS);
+    CHECK_FD;
 
 #if 0
     dump_regs(&scall_regs, stderr);
@@ -574,18 +580,13 @@ static void syscall_open(pid_t child, size_t fd, int offset) {
         // TODO
     } else if (!strcmp(filename, "/dev/hi_mipi") ||
                !strcmp(filename, "/dev/mipi")) {
-        switch (chip_generation) {
-        case HISI_V4:
-        case HISI_V4A:
-            fds[fd].ioctl_exit = hisi_mipi_ioctl_exit_cb;
-            break;
-        }
+        fds[fd].ioctl_exit = hisi_mipi_ioctl_exit_cb;
     }
 }
 
 static void syscall_close(pid_t child, size_t sysret) {
     int fd = scall_regs.regs.uregs[0];
-    assert(fd >= 0 && fd < MAX_MON_FDS);
+    CHECK_FD;
 
 #if 0
     printf("close(%d)\n", fd);
@@ -598,7 +599,7 @@ static void syscall_close(pid_t child, size_t sysret) {
 
 static void syscall_write_exit(pid_t child, size_t sysret) {
     int fd = scall_regs.regs.uregs[0];
-    assert(fd >= 0 && fd < MAX_MON_FDS);
+    CHECK_FD;
 
     size_t remote_addr = scall_regs.regs.uregs[1];
     size_t nbyte = scall_regs.regs.uregs[2];
@@ -609,7 +610,7 @@ static void syscall_write_exit(pid_t child, size_t sysret) {
 
 static void syscall_read_exit(pid_t child, size_t sysret) {
     int fd = scall_regs.regs.uregs[0];
-    assert(fd >= 0 && fd < MAX_MON_FDS);
+    CHECK_FD;
 
     size_t remote_addr = scall_regs.regs.uregs[1];
     size_t nbyte = scall_regs.regs.uregs[2];
@@ -620,7 +621,7 @@ static void syscall_read_exit(pid_t child, size_t sysret) {
 
 static void syscall_ioctl_exit(pid_t child, size_t sysret) {
     int fd = scall_regs.regs.uregs[0];
-    assert(fd >= 0 && fd < MAX_MON_FDS);
+    CHECK_FD;
 
     unsigned int cmd = scall_regs.regs.uregs[1];
     size_t arg = scall_regs.regs.uregs[2];
