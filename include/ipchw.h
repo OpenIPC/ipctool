@@ -2,6 +2,7 @@
 #define IPCHW_H
 
 const char *getchipid();
+const char *getchipfamily();
 const char *getsensoridentity();
 const char *getsensorshort();
 float gethwtemp();

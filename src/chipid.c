@@ -94,3 +94,25 @@ const char *getchipid() {
     lsnprintf(sysid, sizeof(sysid), "%s%s", short_manufacturer, chip_id);
     return sysid;
 }
+
+const char *getchipfamily() {
+    getchipid();
+    switch (chip_generation) {
+    case HISI_V1:
+        return "hi3516cv100";
+    case HISI_V2A:
+        return "hi3516av100";
+    case HISI_V2:
+        return "hi3516cv200";
+    case HISI_V3A:
+        return "hi3519v100";
+    case HISI_V3:
+        return "hi3516cv300";
+    case HISI_V4A:
+        return "hi3516cv500";
+    case HISI_V4:
+        return "hi3516ev300";
+    default:
+        return "unknown";
+    }
+}

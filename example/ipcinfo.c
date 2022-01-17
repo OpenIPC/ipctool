@@ -39,6 +39,7 @@ void Help() {
            "  https://openipc.org/contribution/\n\n"
            "available options:\n"
            "\t--chip_id\n"
+           "\t--family\n"
            "\t--long_sensor\n"
            "\t--short_sensor\n"
            "\t--temp\n"
@@ -104,8 +105,9 @@ int main(int argc, char **argv) {
 
     const char *short_options = "";
     const struct option long_options[] = {
-        {"help", no_argument, NULL, 'h'},
         {"chip_id", no_argument, NULL, 'c'},
+        {"family", no_argument, NULL, 'f'},
+        {"help", no_argument, NULL, 'h'},
         {"long_sensor", no_argument, NULL, 'l'},
         {"short_sensor", no_argument, NULL, 's'},
         {"temp", no_argument, NULL, 't'},
@@ -127,6 +129,11 @@ int main(int argc, char **argv) {
             if (!chipid)
                 return EXIT_FAILURE;
             puts(chipid);
+            return EXIT_SUCCESS;
+        }
+
+        case 'f': {
+            puts(getchipfamily());
             return EXIT_SUCCESS;
         }
 
