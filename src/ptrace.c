@@ -554,6 +554,7 @@ static void syscall_open(pid_t child, size_t fd, int offset) {
             fds[fd].read_exit = hisi_gen2_read_exit_cb;
             break;
         case HISI_V3:
+        case HISI_V3A:
         case HISI_V4:
         case HISI_V4A:
             fds[fd].ioctl_enter = hisi_i2c_read_enter_cb;
