@@ -570,12 +570,28 @@ static const char *get_chip_V3A(uint8_t scsysid0) {
         return "unknown";
     }
 }
+
 static const char *get_chip_V3(uint8_t scsysid0) {
     switch (scsysid0) {
     case 0:
         return "3516CV300";
     case 4:
         return "3516EV100";
+    default:
+        fprintf(stderr, "reserved value %#x", scsysid0);
+        return "unknown";
+    }
+}
+
+static const char *get_chip_NVR3516(uint8_t scsysid0) {
+    switch (scsysid0) {
+    case 0:
+    case 1:
+        return "3521DV100";
+    case 2:
+        return "3536CV100";
+    case 3:
+        return "3520DV400";
     default:
         fprintf(stderr, "reserved value %#x", scsysid0);
         return "unknown";
@@ -627,7 +643,7 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
     case 0x3559A100:
         return "3559AV100";
     case 0xBDA9D100:
-        return "3536CV100";
+        return get_chip_NVR3516(scsysid0);
     case 0x72050200:
         // former 3516EV200
         chip_generation = HISI_V4;
