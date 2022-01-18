@@ -119,6 +119,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
+    // Possible check: 3015 == 0x3c
     int ret33b4 = READ(0x3b4);
     if (ret33b4 == 0x96 || ret33b4 == 0xfe) {
         sprintf(ctx->sensor_id, "IMX178");
@@ -135,6 +136,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
+    // Possible check: 0x303a = 0xc9
     if (READ(0x015) == 0x3c) {
         sprintf(ctx->sensor_id, "IMX185");
         return true;
@@ -153,9 +155,49 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
-    if (READ(0x01c) == 0x8b) {
+    if (READ(0x1c) == 0x8b) {
         sprintf(ctx->sensor_id, "IMX226");
         return true;
+    }
+
+    if (READ(0xce) == 0x16) {
+        sprintf(ctx->sensor_id, "IMX122");
+        return true;
+    }
+
+    if (READ(0x1e) == 0xb2) {
+
+        if (READ(0x1d8) == 0x1) {
+            sprintf(ctx->sensor_id, "IMX291");
+        } else if (READ(0x1d8) == 0x0) {
+            sprintf(ctx->sensor_id, "IMX290");
+        }
+        #ifndef STANDALONE_LIBRARY
+            sony_imx291_params(ctx, fd, i2c_addr);
+        #endif
+        return true;
+    }
+
+    // IMX326 too?
+    if (READ(0x45) == 0x32) {
+        sprintf(ctx->sensor_id, "IMX226");
+        return true;
+    }
+
+    if (READ(0x4) == 0x10) {
+        sprintf(ctx->sensor_id, "IMX123");
+        return true;
+    }
+
+    if (READ(0x1e0) > 0) {
+        uint8_t val = (0xc0 & READ(0x1e0)) >> 6;
+        if (val == 3) {
+            sprintf(ctx->sensor_id, "IMX224");
+            return true;
+        } else if (val == 0) {
+            sprintf(ctx->sensor_id, "IMX225");
+            return true;
+        }
     }
 
     int ret1dc = READ(0x1DC);
@@ -167,18 +209,18 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         case 6:
             sprintf(ctx->sensor_id, "IMX327");
             return true;
-        default: {
-            int ret3010 = READ(0x10);
-            if (((ret3010 == 0x21) || (ret3010 == 0x1)) &&
-                (READ(0x08) == 0xa0) && (READ(0x0e) == 0x01) &&
-                (READ(0x1e) == 0xb2) && (READ(0x1f) == 0x01)) {
-                sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
-#ifndef STANDALONE_LIBRARY
-                sony_imx291_params(ctx, fd, i2c_addr);
-#endif
-                return true;
-            }
-        }
+//         default: {
+//             int ret3010 = READ(0x10);
+//             if (((ret3010 == 0x21) || (ret3010 == 0x1)) &&
+//                 (READ(0x08) == 0xa0) && (READ(0x0e) == 0x01) &&
+//                 (READ(0x1e) == 0xb2) && (READ(0x1f) == 0x01)) {
+//                 sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
+// #ifndef STANDALONE_LIBRARY
+//                 sony_imx291_params(ctx, fd, i2c_addr);
+// #endif
+//                 return true;
+//             }
+//         }
         }
     }
 
@@ -242,6 +284,9 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
         break;
     case 0x256:
         sid = 0x0237;
+        break;
+    case 0x2602:
+        sid = 0x0331;
         break;
     case 0:
     case 0xffffffff:
@@ -321,6 +366,8 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2245:
         // Untested
         res = 0x1145;
+        break;
+    case 0x1045:
         break;
     case 0x1145:
         break;
