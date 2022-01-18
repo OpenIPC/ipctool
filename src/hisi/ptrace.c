@@ -32,7 +32,7 @@ typedef enum {
     RAW_DATA_16BIT,
 } raw_data_type_e;
 
-const char *raw_data_type_e_str(raw_data_type_e val) {
+const char *raw_data_type_str(raw_data_type_e val) {
     switch (val) {
     case RAW_UNKNOWN:
         return "RAW_UNKNOWN";
@@ -50,14 +50,35 @@ const char *raw_data_type_e_str(raw_data_type_e val) {
 }
 
 typedef enum {
-    LVDS_SYNC_MODE_SOF = 0, /* sensor SOL, EOL, SOF, EOF */
-    LVDS_SYNC_MODE_SAV,     /* SAV, EAV */
+    LVDS_SYNC_MODE_SOF = 0,
+    LVDS_SYNC_MODE_SAV,
 } lvds_sync_mode_t;
+
+const char *sync_mode_str(lvds_sync_mode_t val) {
+    switch (val) {
+    case LVDS_SYNC_MODE_SOF:
+        return "LVDS_SYNC_MODE_SOF";
+    case LVDS_SYNC_MODE_SAV:
+        return "LVDS_SYNC_MODE_SAV";
+    }
+    return NULL;
+}
 
 typedef enum {
     LVDS_ENDIAN_LITTLE = 0x0,
     LVDS_ENDIAN_BIG = 0x1,
 } lvds_bit_endian_t;
+
+const char *data_endian_str(lvds_bit_endian_t val) {
+    switch (val) {
+    case LVDS_ENDIAN_LITTLE:
+        return "LVDS_ENDIAN_LITTLE";
+    case LVDS_ENDIAN_BIG:
+        return "LVDS_ENDIAN_BIG";
+    }
+    return NULL;
+}
+#define sync_code_endian_str data_endian_str
 
 typedef enum {
     INPUT_MODE_MIPI = 0x0,
@@ -71,7 +92,7 @@ typedef enum {
     INPUT_MODE_BYPASS = 0x8,
 } input_mode_t;
 
-const char *input_mode_t_str(input_mode_t val) {
+const char *input_mode_str(input_mode_t val) {
     switch (val) {
     case INPUT_MODE_MIPI:
         return "INPUT_MODE_MIPI";
@@ -100,7 +121,7 @@ typedef enum {
     MIPI_DATA_RATE_X2 = 1,
 } mipi_data_rate_t;
 
-const char *mipi_data_rate_t_str(mipi_data_rate_t val) {
+const char *data_rate_str(mipi_data_rate_t val) {
     switch (val) {
     case MIPI_DATA_RATE_X1:
         return "MIPI_DATA_RATE_X1";
@@ -128,7 +149,7 @@ typedef enum {
     DATA_TYPE_YUV422_8BIT,
 } data_type_t;
 
-const char *data_type_t_str(data_type_t val) {
+const char *input_data_type_str(data_type_t val) {
     switch (val) {
     case DATA_TYPE_RAW_8BIT:
         return "DATA_TYPE_RAW_8BIT";
@@ -157,7 +178,7 @@ typedef enum {
     HI_MIPI_WDR_MODE_DOL = 0x3,
 } mipi_wdr_mode_t;
 
-const char *mipi_wdr_mode_t_str(mipi_wdr_mode_t val) {
+const char *mipi_wdr_mode_str(mipi_wdr_mode_t val) {
     switch (val) {
     case HI_MIPI_WDR_MODE_NONE:
         return "HI_MIPI_WDR_MODE_NONE";
@@ -208,11 +229,43 @@ typedef enum {
     HI_WDR_MODE_DOL_4F = 0x6,
 } wdr_mode_t;
 
+static const char *wdr_mode_str(wdr_mode_t val) {
+    switch (val) {
+    case HI_WDR_MODE_NONE:
+        return "HI_WDR_MODE_NONE";
+    case HI_WDR_MODE_2F:
+        return "HI_WDR_MODE_2F";
+    case HI_WDR_MODE_3F:
+        return "HI_WDR_MODE_3F";
+    case HI_WDR_MODE_4F:
+        return "HI_WDR_MODE_4F";
+    case HI_WDR_MODE_DOL_2F:
+        return "HI_WDR_MODE_DOL_2F";
+    case HI_WDR_MODE_DOL_3F:
+        return "HI_WDR_MODE_DOL_3F";
+    case HI_WDR_MODE_DOL_4F:
+        return "HI_WDR_MODE_DOL_4F";
+    }
+    return NULL;
+}
+
 typedef enum {
     LVDS_VSYNC_NORMAL = 0x00,
     LVDS_VSYNC_SHARE = 0x01,
     LVDS_VSYNC_HCONNECT = 0x02,
 } lvds_vsync_type_t;
+
+const char *sync_type_str(lvds_vsync_type_t val) {
+    switch (val) {
+    case LVDS_VSYNC_NORMAL:
+        return "LVDS_VSYNC_NORMAL";
+    case LVDS_VSYNC_SHARE:
+        return "LVDS_VSYNC_SHARE";
+    case LVDS_VSYNC_HCONNECT:
+        return "LVDS_VSYNC_HCONNECT";
+    }
+    return NULL;
+}
 
 typedef struct {
     lvds_vsync_type_t sync_type;
@@ -269,8 +322,24 @@ typedef struct {
 typedef enum {
     LVDS_FID_NONE = 0x00,
     LVDS_FID_IN_SAV = 0x01,
-    LVDS_FID_IN_DATA = 0x02, /* frame identification id in first data */
+    LVDS_FID_IN_DATA = 0x02,
 } lvds_fid_type_t;
+
+const char *fid_str(lvds_fid_type_t val) {
+    switch (val) {
+    case LVDS_FID_NONE:
+        return "LVDS_FID_NONE";
+    case LVDS_FID_IN_SAV:
+        return "LVDS_FID_IN_SAV";
+    case LVDS_FID_IN_DATA:
+        return "LVDS_FID_IN_DATA";
+    }
+    return NULL;
+}
+
+static const char* bool_str(bool val) {
+	return val ? "HI_TRUE": "HI_FALSE";
+}
 
 typedef struct {
     lvds_fid_type_t fid_type;
@@ -398,14 +467,6 @@ size_t hisi_sizeof_combo_dev_attr() {
     }
 }
 
-static void print_shortarray(short *data, size_t size) {
-    printf("\t\t\t{");
-    for (int i = 0; i < size; i++) {
-        printf("%s%d", i != 0 ? ", " : "", data[i]);
-    }
-    printf("}\n");
-}
-
 static void puttabs(int cnt) {
     for (int i = 0; i < cnt; i++)
         putchar('\t');
@@ -420,60 +481,118 @@ static void puttabs(int cnt) {
 #define BRACKET_CLOSE                                                          \
     do {                                                                       \
         puttabs(--level);                                                      \
-        puts("}");                                                             \
+        puts("},");                                                            \
     } while (0)
+
+#define ENUM_PARAM(name, p)                                                    \
+    puttabs(level);                                                            \
+    printf("." #name " = %s,\n", name##_str((int)p))
+
+#define ENUM_TYPED_PARAM(name, type, p)                                        \
+    puttabs(level);                                                            \
+    printf("." #name " = %s,\n", type##_str((int)p))
+
+#define INT_PARAM(name, p)                                                     \
+    puttabs(level);                                                            \
+    printf("." #name " = %d,\n", p)
+
+#define STRUCT_PARAM(name, fmt, ...)                                           \
+    puttabs(level);                                                            \
+    printf("." #name " = " fmt ",\n", __VA_ARGS__)
+
+#define DEFINE_VAR(name)                                                       \
+    puttabs(level++);                                                            \
+    printf(#name " = {\n")
+
+#define INT_ARRAY(name, data)                                                  \
+    puttabs(level);                                                            \
+    printf("." #name " = {");                                                  \
+    for (int i = 0; i < ARRAY_SIZE(data); i++) {                               \
+        printf("%s%d", i != 0 ? ", " : "", data[i]);                           \
+    }                                                                          \
+    puts("},")
+
+static void V3_vsync_type(V3_combo_dev_attr_t *attr, int level) {
+    DEFINE_VAR(.vsync_type);
+    ENUM_PARAM(sync_type, attr->lvds_attr.vsync_type.sync_type);
+    INT_PARAM(hblank1, attr->lvds_attr.vsync_type.hblank1);
+    INT_PARAM(hblank2, attr->lvds_attr.vsync_type.hblank2);
+    BRACKET_CLOSE;
+}
+
+static void V3_fid_type(V3_combo_dev_attr_t *attr, int level) {
+    DEFINE_VAR(.fid_type);
+    ENUM_PARAM(fid, attr->lvds_attr.fid_type.fid_type);
+    ENUM_TYPED_PARAM(output_fil, bool, attr->lvds_attr.fid_type.output_fil);
+    BRACKET_CLOSE;
+}
+
+static void V3_sync_code(V3_combo_dev_attr_t *attr, int level) {
+    DEFINE_VAR(.sync_code);
+    for (int i = 0; i < LVDS_LANE_NUM; i++) {
+        BRACKET_OPEN;
+        for (int j = 0; j < WDR_VC_NUM; j++) {
+            puttabs(level);
+            for (int m = 0; m < SYNC_CODE_NUM; m++) {
+                printf("%s%#x", m != 0 ? ", " : "{",
+                       attr->lvds_attr.sync_code[i][j][m]);
+            }
+            puts("},");
+        }
+        BRACKET_CLOSE;
+    }
+
+    BRACKET_CLOSE;
+}
 
 static void hisi_dump_V3combo_dev_attr(V3_combo_dev_attr_t *attr,
                                        unsigned int cmd) {
     int level = 0;
-    puts("combo_dev_attr_t SENSOR_ATTR =");
-    BRACKET_OPEN;
-    printf("\t.devno = %d,\n"
-           "\t.input_mode = %s,\n",
-           attr->devno, input_mode_t_str(attr->input_mode));
-    BRACKET_OPEN;
+    DEFINE_VAR(combo_dev_attr_t SENSOR_ATTR);
+    INT_PARAM(devno, attr->devno);
+    ENUM_PARAM(input_mode, attr->input_mode);
     if (attr->input_mode == INPUT_MODE_MIPI) {
-        printf("\t\t.mipi_attr =\n");
-        BRACKET_OPEN;
-        printf("\t\t\t%s,\n"
-               "\t\t\t%s,\n",
-               raw_data_type_e_str(attr->mipi_attr.raw_data_type),
-               mipi_wdr_mode_t_str(attr->mipi_attr.wdr_mode));
-        print_shortarray(attr->mipi_attr.lane_id,
-                         ARRAY_SIZE(attr->mipi_attr.lane_id));
+        DEFINE_VAR(.mipi_attr);
+        ENUM_PARAM(raw_data_type, attr->mipi_attr.raw_data_type);
+        ENUM_TYPED_PARAM(wdr_mode, mipi_wdr_mode, attr->mipi_attr.wdr_mode);
+        INT_ARRAY(lane_id, attr->mipi_attr.lane_id);
         BRACKET_CLOSE;
     } else if (attr->input_mode == INPUT_MODE_LVDS) {
+        DEFINE_VAR(.lvds_attr);
+        STRUCT_PARAM(img_size, "{%d, %d}", attr->lvds_attr.img_size.width,
+                     attr->lvds_attr.img_size.height);
+        ENUM_PARAM(raw_data_type, attr->lvds_attr.raw_data_type);
+        ENUM_PARAM(wdr_mode, attr->lvds_attr.wdr_mode);
+        ENUM_PARAM(sync_mode, attr->lvds_attr.sync_mode);
+        V3_vsync_type(attr, level);
+	V3_fid_type(attr, level);
+        ENUM_PARAM(data_endian, attr->lvds_attr.data_endian);
+        ENUM_PARAM(sync_code_endian, attr->lvds_attr.sync_code_endian);
+        INT_ARRAY(lane_id, attr->lvds_attr.lane_id);
+        V3_sync_code(attr, level);
+        BRACKET_CLOSE;
     }
-    BRACKET_CLOSE;
     puts("};");
 }
 
 static void hisi_dump_V4combo_dev_attr(V4_combo_dev_attr_t *attr,
                                        unsigned int cmd) {
     int level = 0;
-    puts("combo_dev_attr_t SENSOR_ATTR =");
-    BRACKET_OPEN;
-    printf("\t.devno = %d,\n"
-           "\t.input_mode = %s,\n"
-           "\t.data_rate = %s,\n"
-           "\t.img_rect = {%d, %d, %d, %d},\n",
-           attr->devno, input_mode_t_str(attr->input_mode),
-           mipi_data_rate_t_str(attr->data_rate), attr->img_rect.x,
-           attr->img_rect.y, attr->img_rect.width, attr->img_rect.height);
-    BRACKET_OPEN;
+    DEFINE_VAR(combo_dev_attr_t SENSOR_ATTR);
+    INT_PARAM(devno, attr->devno);
+    ENUM_PARAM(input_mode, attr->input_mode);
+    ENUM_PARAM(data_rate, attr->data_rate);
+    STRUCT_PARAM(img_rect, "{%d, %d, %d, %d}", attr->img_rect.x,
+                 attr->img_rect.y, attr->img_rect.width, attr->img_rect.height);
     if (attr->input_mode == INPUT_MODE_MIPI) {
-        printf("\t\t.mipi_attr =\n");
-        BRACKET_OPEN;
-        printf("\t\t\t%s,\n"
-               "\t\t\t%s,\n",
-               data_type_t_str(attr->mipi_attr.input_data_type),
-               mipi_wdr_mode_t_str(attr->mipi_attr.wdr_mode));
-        print_shortarray(attr->mipi_attr.lane_id,
-                         ARRAY_SIZE(attr->mipi_attr.lane_id));
+        DEFINE_VAR(.mipi_attr);
+        ENUM_PARAM(input_data_type, attr->mipi_attr.input_data_type);
+        ENUM_TYPED_PARAM(wdr_mode, mipi_wdr_mode, attr->mipi_attr.wdr_mode);
+        INT_ARRAY(lane_id, attr->mipi_attr.lane_id);
         BRACKET_CLOSE;
     } else if (attr->input_mode == INPUT_MODE_LVDS) {
+        // TODO
     }
-    BRACKET_CLOSE;
     puts("};");
 }
 
