@@ -29,6 +29,7 @@
 #include "sensors.h"
 #include "tools.h"
 #include "uboot.h"
+#include "watchdog.h"
 #include "version.h"
 
 #include "vendors/buildroot.h"
@@ -205,6 +206,8 @@ int main(int argc, char *argv[]) {
             return ptrace_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "reginfo"))
             return reginfo_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "watchdog"))
+            return watchdog_cmd(argc - 1, argv + 1);
     }
 
     const struct option long_options[] = {

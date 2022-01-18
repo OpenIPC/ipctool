@@ -91,6 +91,8 @@ set(IPCTOOL_SRC
     src/stack.c
     src/uboot.c
     src/uboot.h
+    src/watchdog.c
+    src/watchdog.h
 
     src/cjson/cJSON.c
     src/cjson/cJSON.h
