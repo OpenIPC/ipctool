@@ -183,8 +183,10 @@ void hisi_ethdetect(cJSON *j_inner) {
         mdio_base = 0x10090000;
         break;
     case HISI_V3:
-    case HISI_V4A:
         mdio_base = 0x10050000;
+        break;
+    case HISI_V4A:
+        mdio_base = 0x10010000;
         break;
     case HISI_V4:
         mdio_base = 0x10040000;
