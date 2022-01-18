@@ -97,7 +97,7 @@ struct CV100_PERI_CRG51 {
     unsigned ethcore_cksel : 2;
 };
 
-const unsigned int CV100_PERI_CRG51_ADDR = 0x20030002;
+#define CV100_PERI_CRG51_ADDR 0x20030002
 static const char *hisi_cv100_get_phy_mode() {
     struct CV100_PERI_CRG51 peri_crg51;
     if (!mem_reg(CV100_PERI_CRG51_ADDR, (uint32_t *)&peri_crg51, OP_READ))
@@ -116,7 +116,7 @@ struct AV100_PERI_CRG59 {
     unsigned loopback_mode : 1;
 };
 
-const unsigned int AV100_PERI_CRG59_ADDR = 0x2003003F;
+#define AV100_PERI_CRG59_ADDR 0x200300EC
 static const char *hisi_av100_get_phy_mode() {
     struct AV100_PERI_CRG59 peri_crg59;
     if (!mem_reg(AV100_PERI_CRG59_ADDR, (uint32_t *)&peri_crg59, OP_READ))
@@ -127,7 +127,7 @@ static const char *hisi_av100_get_phy_mode() {
         return "gmii/mii";
     case 1:
         return "rgmii";
-    case 2:
+    case 4:
         return "rmii";
     default:
         return NULL;
@@ -144,7 +144,7 @@ struct AV200_PERI_CRG59 {
     unsigned loopback_mode : 1;
 };
 
-const unsigned int AV200_PERI_CRG59_ADDR = 0x120100EC;
+#define AV200_PERI_CRG59_ADDR 0x120100EC
 static const char *hisi_av200_get_phy_mode() {
     struct AV200_PERI_CRG59 peri_crg59;
     if (!mem_reg(AV200_PERI_CRG59_ADDR, (uint32_t *)&peri_crg59, OP_READ))
@@ -155,7 +155,7 @@ static const char *hisi_av200_get_phy_mode() {
         return "gmii/mii";
     case 1:
         return "rgmii";
-    case 2:
+    case 4:
         return "rmii";
     default:
         return NULL;
