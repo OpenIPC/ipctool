@@ -25,16 +25,16 @@ typedef struct {
 
 extern sensor_addr_t *possible_i2c_addrs;
 
+typedef int (*read_register_t)(int fd, unsigned char i2c_addr,
+                               unsigned int reg_addr, unsigned int reg_width,
+                               unsigned int data_width);
+
 extern int (*open_i2c_sensor_fd)();
 extern int (*open_spi_sensor_fd)();
 extern bool (*close_sensor_fd)(int fd);
 extern int (*i2c_change_addr)(int fd, unsigned char addr);
-extern int (*i2c_read_register)(int fd, unsigned char i2c_addr,
-                                unsigned int reg_addr, unsigned int reg_width,
-                                unsigned int data_width);
-extern int (*spi_read_register)(int fd, unsigned char i2c_addr,
-                                unsigned int reg_addr, unsigned int reg_width,
-                                unsigned int data_width);
+extern read_register_t i2c_read_register;
+extern read_register_t spi_read_register;
 extern int (*i2c_write_register)(int fd, unsigned char i2c_addr,
                                  unsigned int reg_addr, unsigned int reg_width,
                                  unsigned int data, unsigned int data_width);

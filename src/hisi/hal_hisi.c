@@ -262,10 +262,18 @@ int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
     return data;
 }
 
+static unsigned int sony_i2c_to_spi(unsigned int reg_addr) {
+    if (reg_addr > 0x3000)
+        return reg_addr - 0x3000 + 0x200;
+    else
+        return reg_addr;
+}
+
 #define SSP_READ_ALT 0x1
 int sony_ssp_read_register(int fd, unsigned char i2c_addr,
                            unsigned int reg_addr, unsigned int reg_width,
                            unsigned int data_width) {
+    reg_addr = sony_i2c_to_spi(reg_addr);
     unsigned int data = (unsigned int)(((reg_addr & 0xffff) << 8));
     int ret = ioctl(fd, SSP_READ_ALT, &data);
     return data & 0xff;
@@ -310,6 +318,8 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
     unsigned char tx_buf[8] = {0};
     unsigned char rx_buf[8] = {0};
 
+    reg_addr = sony_i2c_to_spi(reg_addr);
+
     tx_buf[0] = (reg_addr & 0xff00) >> 8;
     tx_buf[0] |= 0x80;
     tx_buf[1] = reg_addr & 0xff;
@@ -336,6 +346,8 @@ int hisi_gen4a_spi_read_register(int fd, unsigned char i2c_addr,
     struct spi_ioc_transfer mesg[1];
     unsigned char tx_buf[8] = {0};
     unsigned char rx_buf[8] = {0};
+
+    reg_addr = sony_i2c_to_spi(reg_addr);
 
     tx_buf[0] = (reg_addr & 0xff00) >> 8;
     tx_buf[0] |= 0x80;

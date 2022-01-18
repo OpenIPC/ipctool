@@ -6,5 +6,6 @@
 int i2cget(int argc, char **argv);
 int i2cset(int argc, char **argv);
 int i2cdump(int argc, char **argv, bool script_mode);
+int spidump(int argc, char **argv, bool script_mode);
 
 #endif /* I2C_H */

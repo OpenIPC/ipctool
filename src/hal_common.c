@@ -15,10 +15,8 @@ sensor_addr_t *possible_i2c_addrs;
 int (*open_i2c_sensor_fd)();
 int (*open_spi_sensor_fd)();
 bool (*close_sensor_fd)(int fd);
-int (*i2c_read_register)(int fd, unsigned char i2c_addr, unsigned int reg_addr,
-                         unsigned int reg_width, unsigned int data_width);
-int (*spi_read_register)(int fd, unsigned char i2c_addr, unsigned int reg_addr,
-                         unsigned int reg_width, unsigned int data_width);
+read_register_t i2c_read_register;
+read_register_t spi_read_register;
 int (*i2c_write_register)(int fd, unsigned char i2c_addr, unsigned int reg_addr,
                           unsigned int reg_width, unsigned int data,
                           unsigned int data_width);

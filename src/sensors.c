@@ -23,10 +23,7 @@ int (*sensor_read_register)(int fd, unsigned char i2c_addr,
                             unsigned int reg_addr, unsigned int reg_width,
                             unsigned int data_width);
 
-#define READ(addr) sensor_read_register(fd, i2c_addr, base + addr, 2, 1)
-
-#define I2C_BASE 0x3000
-#define SPI_BASE 0x200
+#define READ(addr) sensor_read_register(fd, i2c_addr, addr + 0x3000, 2, 1)
 
 #ifndef STANDALONE_LIBRARY
 
@@ -70,7 +67,7 @@ static const char *sony_imx291_databus(int odbit) {
 }
 
 static void sony_imx291_params(sensor_ctx_t *ctx, int fd,
-                               unsigned char i2c_addr, unsigned int base) {
+                               unsigned char i2c_addr) {
     cJSON *j_inner = cJSON_CreateObject();
 
     int adbit = READ(0x5) & 1 ? 12 : 10;
@@ -86,8 +83,8 @@ static void sony_imx291_params(sensor_ctx_t *ctx, int fd,
 
 #endif
 
-static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
-                              unsigned int base) {
+static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
+                              unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -177,7 +174,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
                 (READ(0x1e) == 0xb2) && (READ(0x1f) == 0x01)) {
                 sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
 #ifndef STANDALONE_LIBRARY
-                sony_imx291_params(ctx, fd, i2c_addr, base);
+                sony_imx291_params(ctx, fd, i2c_addr);
 #endif
                 return true;
             }
@@ -190,8 +187,8 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
 
 // tested on H42, F22, F23, F37, H62, H65, K05
 // TODO(FlyRouter): test on H81
-static int detect_soi_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
-                             unsigned int base) {
+static int detect_soi_sensor(sensor_ctx_t *ctx, int fd,
+                             unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -229,7 +226,7 @@ static int detect_soi_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
 
 // tested on AR0130
 static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
-                                unsigned char i2c_addr, unsigned int base) {
+                                unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -265,7 +262,7 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
 }
 
 static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
-                                   unsigned char i2c_addr, unsigned int base) {
+                                   unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -404,8 +401,8 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     return true;
 }
 
-static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
-                              unsigned int base) {
+static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
+                              unsigned char i2c_addr) {
     int prod_msb;
     int prod_lsb;
     int res;
@@ -490,7 +487,7 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr,
 }
 
 static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
-                                    unsigned char i2c_addr, unsigned int base) {
+                                    unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -535,7 +532,7 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
 }
 
 static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
-                                  unsigned char i2c_addr, unsigned int base) {
+                                  unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
@@ -576,16 +573,15 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
 
 static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int (*detect_fn)(sensor_ctx_t *ctx, int,
-                                                    unsigned char,
-                                                    unsigned int base),
-                                   int type, unsigned int base) {
+                                                    unsigned char),
+                                   int type) {
     sensor_addr_t *sdata = possible_i2c_addrs;
 
     while (sdata->sensor_type) {
         if (sdata->sensor_type == type) {
             unsigned char *addr = sdata->addrs;
             while (*addr) {
-                if (detect_fn(ctx, fd, *addr, base)) {
+                if (detect_fn(ctx, fd, *addr)) {
                     ctx->addr = *addr;
                     return true;
                 };
@@ -604,31 +600,31 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
         return false;
 
     sensor_read_register = i2c_read_register;
-    if (detect_possible_sensors(ctx, fd, detect_soi_sensor, SENSOR_SOI, 0)) {
+    if (detect_possible_sensors(ctx, fd, detect_soi_sensor, SENSOR_SOI)) {
         strcpy(ctx->vendor, "Silicon Optronics");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_onsemi_sensor,
-                                       SENSOR_ONSEMI, 0)) {
+                                       SENSOR_ONSEMI)) {
         strcpy(ctx->vendor, "ON Semiconductor");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_omni_sensor,
-                                       SENSOR_OMNIVISION, 0)) {
+                                       SENSOR_OMNIVISION)) {
         strcpy(ctx->vendor, "OmniVision");
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_sony_sensor, SENSOR_SONY,
-                                       I2C_BASE)) {
+    } else if (detect_possible_sensors(ctx, fd, detect_sony_sensor,
+                                       SENSOR_SONY)) {
         strcpy(ctx->vendor, "Sony");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_smartsens_sensor,
-                                       SENSOR_SMARTSENS, 0)) {
+                                       SENSOR_SMARTSENS)) {
         strcpy(ctx->vendor, "SmartSens");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_galaxycore_sensor,
-                                       SENSOR_GALAXYCORE, 0)) {
+                                       SENSOR_GALAXYCORE)) {
         strcpy(ctx->vendor, "GalaxyCore");
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_superpix_sensor,
-                                       SENSOR_SUPERPIX, 0)) {
+                                       SENSOR_SUPERPIX)) {
         strcpy(ctx->vendor, "SuperPix");
         detected = true;
     }
@@ -651,7 +647,7 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
     sensor_read_register = spi_read_register;
     i2c_change_addr = dummy_change_addr;
 
-    int res = detect_sony_sensor(ctx, fd, 0, SPI_BASE);
+    int res = detect_sony_sensor(ctx, fd, 0);
     if (res) {
         strcpy(ctx->vendor, "Sony");
     }

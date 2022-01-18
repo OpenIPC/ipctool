@@ -29,8 +29,8 @@
 #include "sensors.h"
 #include "tools.h"
 #include "uboot.h"
-#include "watchdog.h"
 #include "version.h"
+#include "watchdog.h"
 
 #include "vendors/buildroot.h"
 #include "vendors/common.h"
@@ -85,7 +85,7 @@ void Help() {
         "                            write a value to I2C device\n"
         "  [--script] i2cdump <device address> <from register> <to register>\n"
         "                            dump data from I2C device\n"
-	"  reginfo [--script]        dump current status of pinmux registers\n"
+        "  reginfo [--script]        dump current status of pinmux registers\n"
         "  trace <full/path/to/executable> [arguments]\n"
         "                            dump original firmware calls and data "
         "structures\n"
@@ -318,6 +318,8 @@ int main(int argc, char *argv[]) {
             return i2cset(argc - argnum, argv + argnum);
         } else if (!strcmp(argv[argnum], "i2cdump")) {
             return i2cdump(argc - argnum, argv + argnum, script_mode);
+        } else if (!strcmp(argv[argnum], "spidump")) {
+            return spidump(argc - argnum, argv + argnum, script_mode);
         } else {
             printf("found unknown command: %s\n\n", argv[argnum]);
             Help();
