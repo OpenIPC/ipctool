@@ -69,6 +69,8 @@ set(IPCTOOL_SRC
     src/firmware.h
     src/hisi/ethernet.c
     src/hisi/ethernet.h
+    src/hisi/ispreg.c
+    src/hisi/ispreg.h
     src/hisi/ptrace.c
     src/hisi/ptrace.h
     src/http.c
