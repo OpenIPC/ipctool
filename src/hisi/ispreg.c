@@ -136,6 +136,20 @@ struct CV300_MISC_CTRL0 {
     bool commtx_rx_int_en : 1;
 };
 
+enum AV200_VICAP_INPUT_SEL {
+    AV200_VICAP_INPUT_MIPI0 = 0,
+    AV200_VICAP_INPUT_MIPI1,
+    AV200_VICAP_INPUT_CMOS0,
+    AV200_VICAP_INPUT_CMOS1,
+};
+
+struct AV200_MISC_CTRL0 {
+    enum AV200_VICAP_INPUT_SEL vicap0_input_sel : 2;
+    enum AV200_VICAP_INPUT_SEL vicap1_input_sel : 2;
+    enum CV300_MIPI_PHY mipi1_work_mode : 2;
+    enum CV300_MIPI_PHY mipi0_work_mode : 2;
+};
+
 struct CV200_PERI_CRG11 {
     bool vi0_cken : 1;
     unsigned int vi0_pctrl : 1;
@@ -396,101 +410,129 @@ static void cv300_enum_sync_codes(cJSON *j_inner) {
     }
 }
 
-#define CV300_MISC_CTRL0_ADDR 0x12030000
-static void hisi_cv300_sensor_data(cJSON *j_root) {
+static void vicap_input_set(cJSON *j_inner, const char *param,
+                            enum AV200_VICAP_INPUT_SEL val) {
+    switch (val) {
+    case AV200_VICAP_INPUT_MIPI0:
+        ADD_PARAM(param, "MIPI0");
+        break;
+    case AV200_VICAP_INPUT_MIPI1:
+        ADD_PARAM(param, "MIPI1");
+        break;
+    case AV200_VICAP_INPUT_CMOS0:
+        ADD_PARAM(param, "CMOS0");
+        break;
+    case AV200_VICAP_INPUT_CMOS1:
+        ADD_PARAM(param, "CMOS1");
+        break;
+    }
+}
+
+static const char *cv300_mipi_phy(enum CV300_MIPI_PHY val) {
+    switch (val) {
+    case CV300_PHY_CMOS_MODE:
+        return "DC";
+    case CV300_PHY_LVDS_MODE:
+        return "LVDS";
+    case CV300_PHY_MIPI_MODE:
+        return "MIPI";
+    default:
+        return NULL;
+    }
+}
+
+#define AV200_MISC_CTRL0_ADDR 0x12030000
+static void hisi_av200_sensor_data(cJSON *j_root, int vistate) {
+    struct AV200_MISC_CTRL0 ctrl0;
+    if (!mem_reg(AV200_MISC_CTRL0_ADDR, (uint32_t *)&ctrl0, OP_READ))
+        return;
+
     cJSON *j_inner = cJSON_CreateObject();
 
+    const char *param = "vicap0-input";
+    if (vistate & 1) {
+        vicap_input_set(j_inner, "vicap0-input", ctrl0.vicap0_input_sel);
+        ADD_PARAM("mipi0-type", cv300_mipi_phy(ctrl0.mipi0_work_mode));
+    }
+    if (vistate & 2) {
+        vicap_input_set(j_inner, "vicap1-input", ctrl0.vicap1_input_sel);
+        ADD_PARAM("mipi1-type", cv300_mipi_phy(ctrl0.mipi1_work_mode));
+    }
+
+    cJSON_AddItemToObject(j_root, "data", j_inner);
+}
+
+#define CV300_MISC_CTRL0_ADDR 0x12030000
+static void hisi_cv300_sensor_data(cJSON *j_root) {
     struct CV300_MISC_CTRL0 ctrl0;
-    bool is_lvds = false;
-    if (mem_reg(CV300_MISC_CTRL0_ADDR, (uint32_t *)&ctrl0, OP_READ)) {
-        switch (ctrl0.mipi_phy_mode) {
-        case CV300_PHY_CMOS_MODE:
-            ADD_PARAM("type", "DC");
-            break;
-        case CV300_PHY_LVDS_MODE:
-            ADD_PARAM("type", "LVDS");
-            is_lvds = true;
-        case CV300_PHY_MIPI_MODE:
-            if (!is_lvds)
-                ADD_PARAM("type", "MIPI");
-            /* .mipi_attr =
-            {
-                .raw_data_type = RAW_DATA_12BIT,
-                .wdr_mode      = HI_WDR_MODE_NONE,
-                .lane_id       ={0, 1, 2, 3}
-            }
-            */
+    if (!mem_reg(CV300_MISC_CTRL0_ADDR, (uint32_t *)&ctrl0, OP_READ))
+        return;
 
-            size_t lanes = mipi_lanes_num();
+    cJSON *j_inner = cJSON_CreateObject();
+    ADD_PARAM("type", cv300_mipi_phy(ctrl0.mipi_phy_mode));
 
-            struct CV300_ALIGN0_LANE_ID lid;
-            if (mem_reg(CV300_ALIGN0_LANE_ID_ADDR, (uint32_t *)&lid, OP_READ)) {
-                cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "lane-id");
-                cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane0_id));
-                if (lanes > 1)
-                    cJSON_AddItemToArray(j_lanes,
-                                         cJSON_CreateNumber(lid.lane1_id));
-                if (lanes > 2)
-                    cJSON_AddItemToArray(j_lanes,
-                                         cJSON_CreateNumber(lid.lane2_id));
-                if (lanes > 3)
-                    cJSON_AddItemToArray(j_lanes,
-                                         cJSON_CreateNumber(lid.lane3_id));
-            }
+    if (ctrl0.mipi_phy_mode == CV300_PHY_LVDS_MODE ||
+        ctrl0.mipi_phy_mode == CV300_PHY_MIPI_MODE) {
+        size_t lanes = mipi_lanes_num();
 
-            struct CV300_LVDS0_WDR wdr;
-            if (mem_reg(CV300_LVDS0_WDR_ADDR, (uint32_t *)&wdr, OP_READ)) {
-                ADD_PARAM_NUM("lvds-wdr-en", wdr.lvds_wdr_en);
-                ADD_PARAM_NUM("lvds-wdr-mode", wdr.lvds_wdr_mode);
-                ADD_PARAM_NUM("lvds-wdr-num", wdr.lvds_wdr_num);
-            }
-
-            struct LVDS0_CTRL lvds0_ctrl;
-            if (mem_reg(CV300_LVDS0_CTRL_ADDR, (uint32_t *)&lvds0_ctrl,
-                        OP_READ)) {
-
-                const char *raw;
-                switch (lvds0_ctrl.lvds_raw_type) {
-                case RAW_DATA_8BIT:
-                    raw = "RAW_DATA_8BIT";
-                    break;
-                case RAW_DATA_10BIT:
-                    raw = "RAW_DATA_10BIT";
-                    break;
-                case RAW_DATA_12BIT:
-                    raw = "RAW_DATA_12BIT";
-                    break;
-                case RAW_DATA_14BIT:
-                    raw = "RAW_DATA_14BIT";
-                    break;
-                case RAW_DATA_16BIT:
-                    raw = "RAW_DATA_16BIT";
-                    break;
-                default:
-                    raw = NULL;
-                }
-                if (raw)
-                    ADD_PARAM("raw-data-type", raw);
-
-                if (is_lvds) {
-                    if (lvds0_ctrl.lvds_sync_mode == LVDS_SYNC_MODE_SOF)
-                        ADD_PARAM("sync-mode", "LVDS_SYNC_MODE_SOF")
-                    else
-                        ADD_PARAM("sync-mode", "LVDS_SYNC_MODE_SAV");
-
-                    lvds_code_set(j_inner, "data-endian",
-                                  lvds0_ctrl.lvds_pix_big_endian);
-                    lvds_code_set(j_inner, "sync-code-endian",
-                                  lvds0_ctrl.lvds_code_big_endian);
-                    cv300_enum_sync_codes(j_inner);
-                }
-            }
-
-            break;
-        default:
-            return;
+        struct CV300_ALIGN0_LANE_ID lid;
+        if (mem_reg(CV300_ALIGN0_LANE_ID_ADDR, (uint32_t *)&lid, OP_READ)) {
+            cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "lane-id");
+            cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane0_id));
+            if (lanes > 1)
+                cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane1_id));
+            if (lanes > 2)
+                cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane2_id));
+            if (lanes > 3)
+                cJSON_AddItemToArray(j_lanes, cJSON_CreateNumber(lid.lane3_id));
         }
     }
+
+    if (ctrl0.mipi_phy_mode == CV300_PHY_LVDS_MODE) {
+        struct CV300_LVDS0_WDR wdr;
+        if (mem_reg(CV300_LVDS0_WDR_ADDR, (uint32_t *)&wdr, OP_READ)) {
+            ADD_PARAM_NUM("lvds-wdr-en", wdr.lvds_wdr_en);
+            ADD_PARAM_NUM("lvds-wdr-mode", wdr.lvds_wdr_mode);
+            ADD_PARAM_NUM("lvds-wdr-num", wdr.lvds_wdr_num);
+        }
+
+        struct LVDS0_CTRL lvds0_ctrl;
+        if (mem_reg(CV300_LVDS0_CTRL_ADDR, (uint32_t *)&lvds0_ctrl, OP_READ)) {
+
+            const char *raw;
+            switch (lvds0_ctrl.lvds_raw_type) {
+            case RAW_DATA_8BIT:
+                raw = "RAW_DATA_8BIT";
+                break;
+            case RAW_DATA_10BIT:
+                raw = "RAW_DATA_10BIT";
+                break;
+            case RAW_DATA_12BIT:
+                raw = "RAW_DATA_12BIT";
+                break;
+            case RAW_DATA_14BIT:
+                raw = "RAW_DATA_14BIT";
+                break;
+            case RAW_DATA_16BIT:
+                raw = "RAW_DATA_16BIT";
+                break;
+            default:
+                raw = NULL;
+            }
+            if (raw)
+                ADD_PARAM("raw-data-type", raw);
+        }
+        if (lvds0_ctrl.lvds_sync_mode == LVDS_SYNC_MODE_SOF)
+            ADD_PARAM("sync-mode", "LVDS_SYNC_MODE_SOF")
+        else
+            ADD_PARAM("sync-mode", "LVDS_SYNC_MODE_SAV");
+
+        lvds_code_set(j_inner, "data-endian", lvds0_ctrl.lvds_pix_big_endian);
+        lvds_code_set(j_inner, "sync-code-endian",
+                      lvds0_ctrl.lvds_code_big_endian);
+        cv300_enum_sync_codes(j_inner);
+    }
+
     cJSON_AddItemToObject(j_root, "data", j_inner);
 }
 
@@ -704,57 +746,58 @@ struct PT_INTF_MOD {
 // cv100 - 0x0110
 // cv200 - 0x0110
 // cv300 - 0x0110
-// cv500 -  0x1000 + PT_N x 0x100
-// ev300 -  0x1014 + PT_N x 0x100
+// cv500 - 0x1000 + PT_N x 0x100
+// ev300 - 0x1000 + PT_N x 0x100
 
-#define PT_INTF_MOD_OFFSET 0x100
-const bool hisi_vi_is_not_running(cJSON *j_inner) {
-    uint32_t addr = 0, PT_N = 0;
-    uint32_t vicap_base = 0;
+const int hisi_vi_is_running(cJSON *j_inner) {
+    uint32_t vicap0 = 0, vicap1 = 0, PT_N = 0;
     switch (chip_generation) {
     case HISI_V1:
     case HISI_V2A:
     case HISI_V2:
-        vicap_base = 0x20580000;
-        addr = vicap_base + 0x0100;
+        vicap0 = 0x20580000 + 0x0100;
         break;
     case HISI_V3A:
-        vicap_base = 0x11480000;
-        addr = vicap_base + 0x0100;
+        vicap0 = 0x11380000 + 0x0100;
+        vicap1 = 0x11480000 + 0x0100;
         break;
     case HISI_V3:
-        vicap_base = 0x11380000;
-        addr = vicap_base + 0x0100;
+        vicap0 = 0x11380000 + 0x0100;
         break;
     case HISI_V4A:
-        vicap_base = 0x11300000 + 0x1000;
-        addr = vicap_base + 0x1000 + PT_N * 0x100;
+        vicap0 = 0x11300000 + 0x1000 + PT_N * 0x100;
         break;
     case HISI_V4:
-        vicap_base = 0x11000000 + 0x1000;
-        addr = vicap_base + 0x1000 + PT_N * 0x100;
+        vicap0 = 0x11000000 + 0x1000 + PT_N * 0x100;
         break;
     default:
         return false;
     }
-    struct PT_INTF_MOD reg;
-    if (mem_reg(addr, (uint32_t *)&reg, OP_READ)) {
-        if (!reg.enable)
-            ADD_PARAM("vi-state", "down");
-
-        return !reg.enable;
+    struct PT_INTF_MOD reg1, reg2;
+    if (!mem_reg(vicap0, (uint32_t *)&reg1, OP_READ))
+        return 0;
+    if (vicap1 == 0) {
+        if (!reg1.enable)
+            ADD_PARAM("vicap-state", "down");
+        return reg1.enable;
     }
+    ADD_PARAM("vicap0-state", reg1.enable ? "up" : "down");
 
-    return false;
+    if (!mem_reg(vicap1, (uint32_t *)&reg2, OP_READ))
+        return 0;
+    ADD_PARAM("vicap0-state", reg2.enable ? "up" : "down");
+    return reg1.enable | (reg2.enable << 1);
 }
 
-static void determine_sensor_data_type(cJSON *j_inner) {
+static void determine_sensor_data_type(cJSON *j_inner, int vistate) {
     switch (chip_generation) {
     case HISI_V1:
         return hisi_cv100_sensor_data(j_inner);
     case HISI_V2A:
     case HISI_V2:
         return hisi_cv200_sensor_data(j_inner);
+    case HISI_V3A:
+        return hisi_av200_sensor_data(j_inner, vistate);
     case HISI_V3:
         return hisi_cv300_sensor_data(j_inner);
     case HISI_V4:
@@ -779,10 +822,11 @@ static void determine_sensor_clock(cJSON *j_inner) {
 }
 
 void hisi_vi_information(sensor_ctx_t *ctx) {
-    if (hisi_vi_is_not_running(ctx->j_sensor))
+    int vistate = hisi_vi_is_running(ctx->j_sensor);
+    if (vistate == 0)
         return;
 
-    determine_sensor_data_type(ctx->j_sensor);
+    determine_sensor_data_type(ctx->j_sensor, vistate);
     determine_sensor_clock(ctx->j_sensor);
 }
 
