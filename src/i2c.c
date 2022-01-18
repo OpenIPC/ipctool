@@ -42,7 +42,7 @@ int i2cset(int argc, char **argv) {
     int fd = prepare_sensor(i2c_addr);
 
     int res = sensor_write_register(fd, i2c_addr, reg_addr,
-                                    SELECT_WIDE(reg_addr), reg_data, 32);
+                                    SELECT_WIDE(reg_addr), reg_data, 1);
 
     close_sensor_fd(fd);
     hal_cleanup();
