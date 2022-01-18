@@ -37,7 +37,7 @@ sensor_addr_t hisi_possible_i2c_addrs[] = {
 
 static float hisi_get_temp();
 
-int hisi_open_sensor_fd() {
+static int hisi_open_i2c_fd() {
     int adapter_nr = 0; /* probably dynamically determined */
     char filename[FILENAME_MAX];
 
@@ -46,8 +46,21 @@ int hisi_open_sensor_fd() {
     return universal_open_sensor_fd(filename);
 }
 
-int hisi_gen1_open_sensor_fd() {
+static int hisi_open_spi_fd() {
+    int adapter_nr = 0; /* probably dynamically determined */
+    char filename[FILENAME_MAX];
+
+    snprintf(filename, sizeof(filename), "/dev/spidev0.%d", adapter_nr);
+
+    return universal_open_sensor_fd(filename);
+}
+
+static int hisi_gen1_open_i2c_sensor_fd() {
     return universal_open_sensor_fd("/dev/hi_i2c");
+}
+
+static int hisi_gen1_open_spi_sensor_fd() {
+    return universal_open_sensor_fd("/dev/ssp");
 }
 
 // Set I2C slave address
@@ -278,6 +291,17 @@ struct spi_ioc_transfer {
          : 0)
 #define SPI_IOC_MESSAGE(N) _IOW(SPI_IOC_MAGIC, 0, char[SPI_MSGSIZE(N)])
 
+static void reverse8(unsigned char *buf, unsigned int len) {
+    unsigned int i;
+    for (i = 0; i < len; i++) {
+        buf[i] = ((buf[i] & 0x55) << 1) | ((buf[i] & 0xAA) >> 1);
+        buf[i] =
+            ((buf[i] & 0x33) << 2) | ((buf[i] & 0xCC) >> 2); /* shift by 2 */
+        buf[i] =
+            ((buf[i] & 0x0F) << 4) | ((buf[i] & 0xF0) >> 4); /* shift by 4 */
+    }
+}
+
 int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
                                 unsigned int reg_addr, unsigned int reg_width,
                                 unsigned int data_width) {
@@ -301,6 +325,39 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
         printf("SPI_IOC_MESSAGE error \n");
         return -1;
     }
+
+    return rx_buf[2];
+}
+
+int hisi_gen4a_spi_read_register(int fd, unsigned char i2c_addr,
+                                 unsigned int reg_addr, unsigned int reg_width,
+                                 unsigned int data_width) {
+    int ret = 0;
+    struct spi_ioc_transfer mesg[1];
+    unsigned char tx_buf[8] = {0};
+    unsigned char rx_buf[8] = {0};
+
+    tx_buf[0] = (reg_addr & 0xff00) >> 8;
+    tx_buf[0] |= 0x80;
+    tx_buf[1] = reg_addr & 0xff;
+    tx_buf[2] = 0;
+
+    reverse8(tx_buf, 3);
+
+    memset(mesg, 0, sizeof(mesg));
+    mesg[0].tx_buf = (__u64)(long)&tx_buf;
+    mesg[0].len = 3;
+    mesg[0].rx_buf = (__u64)(long)&rx_buf;
+    mesg[0].cs_change = 1;
+
+    ret = ioctl(fd, SPI_IOC_MESSAGE(1), mesg);
+    if (ret < 0) {
+        printf("SPI_IOC_MESSAGE error \n");
+        return -1;
+    }
+    reverse8(rx_buf, 1);
+
+    printf("hisi_gen4a_spi_read_register(%#x) = %#x\n", reg_addr, rx_buf[2]);
 
     return rx_buf[2];
 }
@@ -397,21 +454,28 @@ void setup_hal_hisi() {
     else if (chip_generation == HISI_V4)
         v4_ensure_sensor_enabled();
 
-    open_sensor_fd = hisi_open_sensor_fd;
+    open_i2c_sensor_fd = hisi_open_i2c_fd;
+    open_spi_sensor_fd = hisi_open_spi_fd;
     close_sensor_fd = universal_close_sensor_fd;
     hal_cleanup = hisi_hal_cleanup;
-    sensor_i2c_change_addr = universal_sensor_i2c_change_addr;
+    i2c_change_addr = universal_sensor_i2c_change_addr;
+    if (chip_generation == HISI_V4A)
+        spi_read_register = hisi_gen4a_spi_read_register;
+    else
+        spi_read_register = hisi_gen3_spi_read_register;
     if (chip_generation == HISI_V1) {
-        open_sensor_fd = hisi_gen1_open_sensor_fd;
-        sensor_read_register = xm_sensor_read_register;
-        sensor_write_register = xm_sensor_write_register;
+        open_i2c_sensor_fd = hisi_gen1_open_i2c_sensor_fd;
+        open_spi_sensor_fd = hisi_gen1_open_spi_sensor_fd;
+        i2c_read_register = xm_sensor_read_register;
+        i2c_write_register = xm_sensor_write_register;
+        spi_read_register = sony_ssp_read_register;
     } else if (chip_generation == HISI_V2 || chip_generation == HISI_V2A) {
-        sensor_read_register = hisi_gen2_sensor_read_register;
-        sensor_write_register = hisi_gen2_sensor_write_register;
-        sensor_i2c_change_addr = hisi_gen2_sensor_i2c_change_addr;
+        i2c_read_register = hisi_gen2_sensor_read_register;
+        i2c_write_register = hisi_gen2_sensor_write_register;
+        i2c_change_addr = hisi_gen2_sensor_i2c_change_addr;
     } else {
-        sensor_read_register = hisi_sensor_read_register;
-        sensor_write_register = hisi_sensor_write_register;
+        i2c_read_register = hisi_sensor_read_register;
+        i2c_write_register = hisi_sensor_write_register;
     }
     possible_i2c_addrs = hisi_possible_i2c_addrs;
     strcpy(short_manufacturer, "HI");

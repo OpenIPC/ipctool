@@ -13,18 +13,18 @@ static int prepare_sensor(unsigned char i2c_addr) {
         exit(EXIT_FAILURE);
     }
 
-    if (!open_sensor_fd) {
+    if (!open_i2c_sensor_fd) {
         puts("There is no platform specific I2C/SPI access layer");
         exit(EXIT_FAILURE);
     }
 
-    int fd = open_sensor_fd();
+    int fd = open_i2c_sensor_fd();
     if (fd == -1) {
         puts("Device not found");
         exit(EXIT_FAILURE);
     }
 
-    sensor_i2c_change_addr(fd, i2c_addr);
+    i2c_change_addr(fd, i2c_addr);
 
     return fd;
 }
@@ -41,8 +41,8 @@ int i2cset(int argc, char **argv) {
 
     int fd = prepare_sensor(i2c_addr);
 
-    int res = sensor_write_register(fd, i2c_addr, reg_addr,
-                                    SELECT_WIDE(reg_addr), reg_data, 1);
+    int res = i2c_write_register(fd, i2c_addr, reg_addr, SELECT_WIDE(reg_addr),
+                                 reg_data, 1);
 
     close_sensor_fd(fd);
     hal_cleanup();
@@ -61,7 +61,7 @@ int i2cget(int argc, char **argv) {
     int fd = prepare_sensor(i2c_addr);
 
     int res =
-        sensor_read_register(fd, i2c_addr, reg_addr, SELECT_WIDE(reg_addr), 1);
+        i2c_read_register(fd, i2c_addr, reg_addr, SELECT_WIDE(reg_addr), 1);
     printf("%#x\n", res);
 
     close_sensor_fd(fd);
@@ -76,7 +76,7 @@ static void i2c_hexdump(int fd, unsigned char i2c_addr,
     int size = to_reg_addr - from_reg_addr;
     printf("       0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
     for (size_t i = from_reg_addr; i < to_reg_addr; ++i) {
-        int res = sensor_read_register(fd, i2c_addr, i, SELECT_WIDE(i), 1);
+        int res = i2c_read_register(fd, i2c_addr, i, SELECT_WIDE(i), 1);
         if (i == from_reg_addr)
             printf("%4.x: ", i);
         printf("%02X ", res);
@@ -120,7 +120,7 @@ int i2cdump(int argc, char **argv, bool script_mode) {
     if (script_mode) {
         for (size_t i = from_reg_addr; i < to_reg_addr; ++i)
             printf("ipctool i2cset %#x %#x %#x\n", i2c_addr, i,
-                   sensor_read_register(fd, i2c_addr, i, SELECT_WIDE(i), 1));
+                   i2c_read_register(fd, i2c_addr, i, SELECT_WIDE(i), 1));
     } else {
         i2c_hexdump(fd, i2c_addr, from_reg_addr, to_reg_addr);
     }

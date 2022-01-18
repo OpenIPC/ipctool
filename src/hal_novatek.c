@@ -62,11 +62,11 @@ float novatek_get_temp() {
 }
 
 void setup_hal_novatek() {
-    open_sensor_fd = novatek_open_sensor_fd;
+    open_i2c_sensor_fd = novatek_open_sensor_fd;
     close_sensor_fd = universal_close_sensor_fd;
-    sensor_i2c_change_addr = universal_sensor_i2c_change_addr;
-    sensor_read_register = universal_sensor_read_register;
-    sensor_write_register = universal_sensor_write_register;
+    i2c_change_addr = universal_sensor_i2c_change_addr;
+    i2c_read_register = universal_sensor_read_register;
+    i2c_write_register = universal_sensor_write_register;
     possible_i2c_addrs = novatek_possible_i2c_addrs;
     hal_cleanup = novatek_hal_cleanup;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))

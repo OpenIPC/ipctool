@@ -12,19 +12,21 @@
 
 sensor_addr_t *possible_i2c_addrs;
 
-int (*open_sensor_fd)();
+int (*open_i2c_sensor_fd)();
+int (*open_spi_sensor_fd)();
 bool (*close_sensor_fd)(int fd);
-int (*sensor_read_register)(int fd, unsigned char i2c_addr,
-                            unsigned int reg_addr, unsigned int reg_width,
-                            unsigned int data_width);
-int (*sensor_write_register)(int fd, unsigned char i2c_addr,
-                             unsigned int reg_addr, unsigned int reg_width,
-                             unsigned int data, unsigned int data_width);
-int (*sensor_i2c_change_addr)(int fd, unsigned char addr);
+int (*i2c_read_register)(int fd, unsigned char i2c_addr, unsigned int reg_addr,
+                         unsigned int reg_width, unsigned int data_width);
+int (*spi_read_register)(int fd, unsigned char i2c_addr, unsigned int reg_addr,
+                         unsigned int reg_width, unsigned int data_width);
+int (*i2c_write_register)(int fd, unsigned char i2c_addr, unsigned int reg_addr,
+                          unsigned int reg_width, unsigned int data,
+                          unsigned int data_width);
+int (*i2c_change_addr)(int fd, unsigned char addr);
 float (*hal_temperature)();
 void (*hal_cleanup)();
 
-void (*hal_detect_ethernet)(cJSON* root);
+void (*hal_detect_ethernet)(cJSON *root);
 
 int universal_open_sensor_fd(const char *dev_name) {
     int fd;
@@ -79,8 +81,9 @@ int universal_sensor_write_register(int fd, unsigned char i2c_addr,
 }
 
 int universal_sensor_read_register(int fd, unsigned char i2c_addr,
-                                 unsigned int reg_addr, unsigned int reg_width,
-                                 unsigned int data_width) {
+                                   unsigned int reg_addr,
+                                   unsigned int reg_width,
+                                   unsigned int data_width) {
     char recvbuf[4];
     unsigned int data;
 

@@ -2,10 +2,10 @@
 #define HAL_COMMON_H
 
 #include "cjson/cJSON.h"
-#include "hisi/hal_hisi.h"
 #include "hal_novatek.h"
 #include "hal_sstar.h"
 #include "hal_xm.h"
+#include "hisi/hal_hisi.h"
 
 enum SENSORS {
     SENSOR_ONSEMI = 1,
@@ -25,20 +25,22 @@ typedef struct {
 
 extern sensor_addr_t *possible_i2c_addrs;
 
-extern int (*open_sensor_fd)();
+extern int (*open_i2c_sensor_fd)();
+extern int (*open_spi_sensor_fd)();
 extern bool (*close_sensor_fd)(int fd);
-extern int (*sensor_i2c_change_addr)(int fd, unsigned char addr);
-extern int (*sensor_read_register)(int fd, unsigned char i2c_addr,
-                                   unsigned int reg_addr,
-                                   unsigned int reg_width,
-                                   unsigned int data_width);
-extern int (*sensor_write_register)(int fd, unsigned char i2c_addr,
-                                    unsigned int reg_addr,
-                                    unsigned int reg_width, unsigned int data,
-                                    unsigned int data_width);
+extern int (*i2c_change_addr)(int fd, unsigned char addr);
+extern int (*i2c_read_register)(int fd, unsigned char i2c_addr,
+                                unsigned int reg_addr, unsigned int reg_width,
+                                unsigned int data_width);
+extern int (*spi_read_register)(int fd, unsigned char i2c_addr,
+                                unsigned int reg_addr, unsigned int reg_width,
+                                unsigned int data_width);
+extern int (*i2c_write_register)(int fd, unsigned char i2c_addr,
+                                 unsigned int reg_addr, unsigned int reg_width,
+                                 unsigned int data, unsigned int data_width);
 extern float (*hal_temperature)();
 extern void (*hal_cleanup)();
-extern void (*hal_detect_ethernet)(cJSON* handle);
+extern void (*hal_detect_ethernet)(cJSON *handle);
 
 void setup_hal_drivers();
 void setup_hal_hisi();
@@ -54,8 +56,9 @@ int universal_sensor_write_register(int fd, unsigned char i2c_addr,
                                     unsigned int reg_width, unsigned int data,
                                     unsigned int data_width);
 int universal_sensor_read_register(int fd, unsigned char i2c_addr,
-                                 unsigned int reg_addr, unsigned int reg_width,
-                                 unsigned int data_width);
+                                   unsigned int reg_addr,
+                                   unsigned int reg_width,
+                                   unsigned int data_width);
 
 unsigned long kernel_mem();
 void hal_ram(unsigned long *media_mem, uint32_t *total_mem);

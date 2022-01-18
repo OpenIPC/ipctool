@@ -70,11 +70,11 @@ float sstar_get_temp() {
 }
 
 void setup_hal_sstar() {
-    open_sensor_fd = sstar_open_sensor_fd;
+    open_i2c_sensor_fd = sstar_open_sensor_fd;
     close_sensor_fd = universal_close_sensor_fd;
-    sensor_i2c_change_addr = universal_sensor_i2c_change_addr;
-    sensor_read_register = universal_sensor_read_register;
-    sensor_write_register = universal_sensor_write_register;
+    i2c_change_addr = universal_sensor_i2c_change_addr;
+    i2c_read_register = universal_sensor_read_register;
+    i2c_write_register = universal_sensor_write_register;
     possible_i2c_addrs = sstar_possible_i2c_addrs;
     hal_cleanup = sstar_hal_cleanup;
     if (!access("/sys/class/mstar/msys/TEMP_R", R_OK))
