@@ -1,4 +1,6 @@
 #include "watchdog.h"
+#include "chipid.h"
+#include "hisi/hal_hisi.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -13,6 +15,9 @@
 #include <unistd.h>
 
 #define DEFAULT_PING_RATE 1
+
+#define HISINEW_WDIOC_KEEPALIVE _IO(WATCHDOG_IOCTL_BASE, 5)
+#define HISI_WDIOC_SETOPTIONS _IOWR(WATCHDOG_IOCTL_BASE, 4, int)
 
 int fd;
 const char v = 'V';
@@ -32,6 +37,21 @@ static const struct option lopts[] = {
     {"info", no_argument, NULL, 'i'},
     {NULL, no_argument, NULL, 0x0}};
 
+static bool is_hisilicon() {
+    switch (chip_generation) {
+    case HISI_V1:
+    case HISI_V2A:
+    case HISI_V2:
+    case HISI_V3A:
+    case HISI_V3:
+    case HISI_V4A:
+    case HISI_V4:
+        return true;
+    default:
+        return false;
+    }
+}
+
 /*
  * This function simply sends an IOCTL to the driver, which in turn ticks
  * the PC Watchdog card to reset its internal timer so it doesn't trigger
@@ -41,9 +61,36 @@ static void keep_alive(void) {
     int dummy;
     int ret;
 
-    ret = ioctl(fd, WDIOC_KEEPALIVE, &dummy);
+    switch (chip_generation) {
+    case HISI_V3A:
+    case HISI_V3:
+    case HISI_V4A:
+    case HISI_V4:
+        ret = ioctl(fd, HISINEW_WDIOC_KEEPALIVE, &dummy);
+        break;
+    default:
+        ret = ioctl(fd, WDIOC_KEEPALIVE, &dummy);
+    }
     if (!ret)
         printf(".");
+}
+
+static int watchdog_stop() {
+    switch (chip_generation) {
+    case HISI_V2:
+    case HISI_V2A:
+    case HISI_V3:
+    case HISI_V3A:
+    case HISI_V4:
+    case HISI_V4A: {
+        int opts = WDIOS_DISABLECARD;
+        return ioctl(fd, HISI_WDIOC_SETOPTIONS, &opts);
+    }
+        // case XM:
+        // return ioctl(fd, CMD_WDT_STOP);
+    default:
+        return write(fd, "V", 1);
+    }
 }
 
 /*
@@ -52,7 +99,7 @@ static void keep_alive(void) {
  */
 
 static void term(int sig) {
-    int ret = write(fd, &v, 1);
+    int ret = watchdog_stop();
 
     close(fd);
     if (ret < 0)
@@ -94,6 +141,8 @@ int watchdog_cmd(int argc, char *argv[]) {
     struct watchdog_info info;
 
     setbuf(stdout, NULL);
+
+    getchipid();
 
     while ((c = getopt_long(argc, argv, sopts, lopts, NULL)) != -1) {
         if (c == 'f')
@@ -138,7 +187,9 @@ int watchdog_cmd(int argc, char *argv[]) {
             break;
         case 'd':
             flags = WDIOS_DISABLECARD;
-            ret = ioctl(fd, WDIOC_SETOPTIONS, &flags);
+            ret = ioctl(
+                fd, is_hisilicon() ? HISI_WDIOC_SETOPTIONS : WDIOC_SETOPTIONS,
+                &flags);
             if (!ret)
                 printf("Watchdog card disabled.\n");
             else {
@@ -148,7 +199,9 @@ int watchdog_cmd(int argc, char *argv[]) {
             break;
         case 'e':
             flags = WDIOS_ENABLECARD;
-            ret = ioctl(fd, WDIOC_SETOPTIONS, &flags);
+            ret = ioctl(
+                fd, is_hisilicon() ? HISI_WDIOC_SETOPTIONS : WDIOC_SETOPTIONS,
+                &flags);
             if (!ret)
                 printf("Watchdog card enabled.\n");
             else {
@@ -239,7 +292,7 @@ int watchdog_cmd(int argc, char *argv[]) {
         sleep(ping_rate);
     }
 end:
-    ret = write(fd, &v, 1);
+    ret = watchdog_stop(fd);
     if (ret < 0)
         printf("Stopping watchdog ticks failed (%d)...\n", errno);
     close(fd);
