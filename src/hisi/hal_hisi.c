@@ -420,10 +420,6 @@ void setup_hal_hisi() {
         sensor_read_register = hisi_gen2_sensor_read_register;
         sensor_write_register = hisi_gen2_sensor_write_register;
         sensor_i2c_change_addr = hisi_gen2_sensor_i2c_change_addr;
-    } else if (chip_generation == HISI_V3A) {
-        sensor_i2c_change_addr = hisi_gen2_sensor_i2c_change_addr;
-        sensor_read_register = hisi_sensor_read_register;
-        sensor_write_register = hisi_sensor_write_register;
     } else {
         sensor_read_register = hisi_sensor_read_register;
         sensor_write_register = hisi_sensor_write_register;
