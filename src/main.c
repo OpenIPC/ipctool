@@ -85,7 +85,7 @@ void Help() {
         "                            write a value to I2C device\n"
         "  [--script] i2cdump <device address> <from register> <to register>\n"
         "                            dump data from I2C device\n"
-	"  reginfo                   dump current status of pinmux registers\n"
+	"  reginfo [--script]        dump current status of pinmux registers\n"
         "  trace <full/path/to/executable> [arguments]\n"
         "                            dump original firmware calls and data "
         "structures\n"

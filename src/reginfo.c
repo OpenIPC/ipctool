@@ -3,6 +3,7 @@
 #include "hisi/hal_hisi.h"
 #include "tools.h"
 
+#include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1958,7 +1959,7 @@ static void show_function(const char *const *func, unsigned val) {
     puts("");
 }
 
-static int dump_regs() {
+static int dump_regs(bool script_mode) {
     const muxctrl_reg_t **regs = NULL;
     switch (chip_generation) {
     case HISI_V1:
@@ -2006,6 +2007,12 @@ static int dump_regs() {
             printf("read reg %#x error\n", regs[reg_num]->address);
             continue;
         }
+
+        if (script_mode) {
+            printf("devmem %#x 32 %#x\n", regs[reg_num]->address, val);
+            continue;
+        }
+
         val &= 0xf;
         printf("muxctrl_reg%d %#x %#x", reg_num, regs[reg_num]->address, val);
         show_function(regs[reg_num]->funcs, val);
@@ -2014,8 +2021,29 @@ static int dump_regs() {
     return EXIT_SUCCESS;
 }
 
+extern void Help();
+
 int reginfo_cmd(int argc, char **argv) {
+    const struct option long_options[] = {
+        {"script", no_argument, NULL, 's'},
+    };
+    bool script_mode = false;
+    int res;
+    int option_index;
+
+    while ((res = getopt_long_only(argc, argv, "s", long_options,
+                                   &option_index)) != -1) {
+        switch (res) {
+        case 's':
+            script_mode = true;
+            break;
+        case '?':
+            Help();
+            return EXIT_FAILURE;
+        }
+    }
+
     getchipid();
 
-    return dump_regs();
+    return dump_regs(script_mode);
 }
