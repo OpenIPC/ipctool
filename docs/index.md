@@ -61,7 +61,8 @@ Where:
                             write a value to I2C device
   [--script] i2cdump <device address> <from register> <to register>
                             dump data from I2C device
-  ptrace <full/path/to/executable> [arguments]
+  reginfo                   dump current status of pinmux registers
+  trace <full/path/to/executable> [arguments]
                             dump original firmware calls and data structures
   -h, --help                this help
 ```
@@ -234,6 +235,12 @@ sensors:
     # ipctool i2cset 0x34 0x3000 1
     # ipctool i2cdump 0x34 0x3000 0x31ff
     # ipctool --script i2cdump 0x34 0x3000 0x31ff
+    ```
+
+* Dump the state of pinmux registers in human- and machine-readable format:
+
+    ```console
+    # ipctool reginfo
     ```
 
 * Advanced replacement of `strace`:

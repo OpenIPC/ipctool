@@ -84,7 +84,8 @@ void Help() {
         "                            write a value to I2C device\n"
         "  [--script] i2cdump <device address> <from register> <to register>\n"
         "                            dump data from I2C device\n"
-        "  ptrace <full/path/to/executable> [arguments]\n"
+	"  reginfo                   dump current status of pinmux registers\n"
+        "  trace <full/path/to/executable> [arguments]\n"
         "                            dump original firmware calls and data "
         "structures\n"
         "  -h, --help                this help\n");
@@ -198,9 +199,6 @@ static bool auto_backup(bool wait_mode) {
 }
 
 int main(int argc, char *argv[]) {
-	//getchipid();
-	//printf("%d\n", hisi_sizeof_combo_dev_attr());
-	//return 0;
     // Don't use option parser for ptrace command line
     if (argc > 1) {
         if (!strcmp(argv[1], "trace"))
