@@ -17,8 +17,8 @@
 #include "cjson/cJSON.h"
 #include "hal_common.h"
 #include "hisi/ethernet.h"
-#include "hisi/ispreg.h"
 #include "hisi/hal_hisi.h"
+#include "hisi/ispreg.h"
 #include "ram.h"
 #include "tools.h"
 
@@ -320,7 +320,7 @@ struct EV200_LANE_ID0_CHN {
     unsigned int res1 : 4;
 };
 
-#define EV300_LANE_ID0_CHN_ADDR  EV300_MIPI_BASE + 0x1800
+#define EV300_LANE_ID0_CHN_ADDR EV300_MIPI_BASE + 0x1800
 struct EV300_LANE_ID0_CHN {
     unsigned int lane0_id : 4;
     unsigned int lane1_id : 4;
@@ -544,13 +544,13 @@ struct EV300_MISC_CTRL6 {
     enum EV300_MIPI_PHY mipirx0_work_mode : 2;
 };
 
-#define EV300_MIPI_IMGSIZE  EV300_MIPI_BASE + 0x1224
+#define EV300_MIPI_IMGSIZE EV300_MIPI_BASE + 0x1224
 struct CV300_EV300_MIPI_IMGSIZE {
     unsigned int mipi_imgwidth : 16;
     unsigned int mipi_imgheight : 16;
 };
 
-#define EV300_MIPI_DI_1_ADDR  EV300_MIPI_BASE + 0x1010
+#define EV300_MIPI_DI_1_ADDR EV300_MIPI_BASE + 0x1010
 struct EV300_MIPI_DI_1 {
     unsigned int di0_dt : 6;
     unsigned int di0_vc : 2;
@@ -704,26 +704,35 @@ struct PT_INTF_MOD {
 // cv100 - 0x0110
 // cv200 - 0x0110
 // cv300 - 0x0110
+// cv500 -  0x1000 + PT_N x 0x100
 // ev300 -  0x1014 + PT_N x 0x100
 
 #define PT_INTF_MOD_OFFSET 0x100
 const bool hisi_vi_is_not_running(cJSON *j_inner) {
     uint32_t addr = 0, PT_N = 0;
-    uint32_t base = 0;
+    uint32_t vicap_base = 0;
     switch (chip_generation) {
     case HISI_V1:
     case HISI_V2A:
     case HISI_V2:
-        base = 0x20580000;
-        addr = 0x20580000 + 0x0100;
+        vicap_base = 0x20580000;
+        addr = vicap_base + 0x0100;
+        break;
+    case HISI_V3A:
+        vicap_base = 0x11480000;
+        addr = vicap_base + 0x0100;
         break;
     case HISI_V3:
-        base = 0x11380000;
-        addr = 0x11380000 + 0x0100;
+        vicap_base = 0x11380000;
+        addr = vicap_base + 0x0100;
+        break;
+    case HISI_V4A:
+        vicap_base = 0x11300000 + 0x1000;
+        addr = vicap_base + 0x1000 + PT_N * 0x100;
         break;
     case HISI_V4:
-        base = 0x11000000 + 0x1000;
-        addr = 0x11000000 + 0x1000 + PT_N * 0x100;
+        vicap_base = 0x11000000 + 0x1000;
+        addr = vicap_base + 0x1000 + PT_N * 0x100;
         break;
     default:
         return false;
