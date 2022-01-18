@@ -336,10 +336,10 @@ unsigned long hisi_totalmem(unsigned long *media_mem) {
 
 #define CV300_MUX_BASE 0x12040000
 
-const uint32_t CV300_MUX30_ADDR = CV300_MUX_BASE + 0x0030;
-const uint32_t CV300_MUX2C_ADDR = CV300_MUX_BASE + 0x002c;
-const uint32_t CV300_MUX14_ADDR = CV300_MUX_BASE + 0x0038;
-const uint32_t CV300_MUX15_ADDR = CV300_MUX_BASE + 0x003c;
+#define CV300_MUX30_ADDR CV300_MUX_BASE + 0x0030
+#define CV300_MUX2C_ADDR CV300_MUX_BASE + 0x002c
+#define CV300_MUX14_ADDR CV300_MUX_BASE + 0x0038
+#define CV300_MUX15_ADDR CV300_MUX_BASE + 0x003c
 
 static void v3_ensure_sensor_enabled() {
     uint32_t reg;

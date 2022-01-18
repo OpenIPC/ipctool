@@ -46,7 +46,7 @@ static char *cv100_sensor_clksel(unsigned int sensor_clksel) {
     }
 }
 
-const unsigned int CV100_PERI_CRG12_ADDR = 0x20030030;
+#define CV100_PERI_CRG12_ADDR 0x20030030
 static void hisi_cv100_sensor_clock(cJSON *j_inner) {
     struct CV100_PERI_CRG12 crg12;
     if (mem_reg(CV100_PERI_CRG12_ADDR, (uint32_t *)&crg12, OP_READ)) {
@@ -89,7 +89,7 @@ struct CV200_MISC_CTRL1 {
     unsigned int vicap_vpss_online : 1;
 };
 
-const unsigned int CV200_MISC_CTRL1_ADDR = 0x20120004;
+#define CV200_MISC_CTRL1_ADDR 0x20120004
 static void hisi_cv200_sensor_data(cJSON *j_root) {
     cJSON *j_inner = cJSON_CreateObject();
 
@@ -181,13 +181,13 @@ struct CV300_PERI_CRG11 {
 };
 
 #define CV300_MIPI_BASE 0x11300000
-const uint32_t CV300_LVDS0_IMGSIZE_ADDR = CV300_MIPI_BASE + 0x130C;
+#define CV300_LVDS0_IMGSIZE_ADDR CV300_MIPI_BASE + 0x130C
 struct LVDS0_IMGSIZE {
     unsigned int lvds_imgwidth_lane : 16;
     unsigned int lvds_imgheight : 16;
 };
 
-const uint32_t CV300_LVDS0_WDR_ADDR = CV300_MIPI_BASE + 0x1300;
+#define CV300_LVDS0_WDR_ADDR CV300_MIPI_BASE + 0x1300
 struct CV300_LVDS0_WDR {
     bool lvds_wdr_en : 1;
     unsigned int res0 : 3;
@@ -216,7 +216,7 @@ typedef enum {
     LVDS_ENDIAN_BIG = 0x1,
 } lvds_bit_endian_t;
 
-const uint32_t CV300_LVDS0_CTRL_ADDR = CV300_MIPI_BASE + 0x1304;
+#define CV300_LVDS0_CTRL_ADDR CV300_MIPI_BASE + 0x1304
 struct LVDS0_CTRL {
     lvds_sync_mode_t lvds_sync_mode : 1;
     unsigned int res0 : 3;
@@ -230,7 +230,7 @@ struct LVDS0_CTRL {
     unsigned int lvds_split_mode : 3;
 };
 
-const uint32_t CV200_MIPI_LANES_NUM_ADDR = 0x20680000 + 0x1030;
+#define CV200_MIPI_LANES_NUM_ADDR 0x20680000 + 0x1030
 struct CV200_MIPI_LANES_NUM {
     unsigned int lane_num : 2;
 };
@@ -241,7 +241,7 @@ static size_t cv200_mipi_lanes_num() {
     return lnum.lane_num + 1;
 }
 
-const uint32_t CV300_MIPI0_LANES_NUM_ADDR = CV300_MIPI_BASE + 0x1004;
+#define CV300_MIPI0_LANES_NUM_ADDR CV300_MIPI_BASE + 0x1004
 struct CV300_MIPI0_LANES_NUM {
     unsigned int lane_num : 3;
 };
@@ -252,7 +252,7 @@ static size_t cv300_mipi_lanes_num() {
     return lnum.lane_num + 1;
 }
 
-const uint32_t EV200_MIPI_LANES_NUM_ADDR = 0x11240000 + 0x1004;
+#define EV200_MIPI_LANES_NUM_ADDR 0x11240000 + 0x1004
 struct EV200_MIPI_LANES_NUM {
     unsigned int lane_num : 2;
 };
@@ -263,7 +263,7 @@ static size_t ev200_mipi_lanes_num() {
     return lnum.lane_num + 1;
 }
 
-const uint32_t EV300_MIPI_LANES_NUM_ADDR = 0x11240000 + 0x1004;
+#define EV300_MIPI_LANES_NUM_ADDR 0x11240000 + 0x1004
 struct EV300_MIPI_LANES_NUM {
     unsigned int lane_num : 3;
 };
@@ -291,7 +291,7 @@ static size_t mipi_lanes_num() {
 }
 
 #define CV200_MIPI_BASE 0x20680000
-const uint32_t CV200_LANE_ID_LINK0_ADDR = CV200_MIPI_BASE + 0x1014;
+#define CV200_LANE_ID_LINK0_ADDR CV200_MIPI_BASE + 0x1014
 struct CV200_LANE_ID_LINK0 {
     unsigned int lane0_id : 2;
     unsigned int res0 : 2;
@@ -303,7 +303,7 @@ struct CV200_LANE_ID_LINK0 {
     unsigned int res3 : 2;
 };
 
-const uint32_t CV300_ALIGN0_LANE_ID_ADDR = CV300_MIPI_BASE + 0x1600;
+#define CV300_ALIGN0_LANE_ID_ADDR CV300_MIPI_BASE + 0x1600
 struct CV300_ALIGN0_LANE_ID {
     unsigned int lane0_id : 4;
     unsigned int lane1_id : 4;
@@ -312,7 +312,7 @@ struct CV300_ALIGN0_LANE_ID {
 };
 
 #define EV300_MIPI_BASE 0x11240000
-const uint32_t EV200_LANE_ID0_CHN_ADDR = EV300_MIPI_BASE + 0x1800;
+#define EV200_LANE_ID0_CHN_ADDR EV300_MIPI_BASE + 0x1800
 struct EV200_LANE_ID0_CHN {
     unsigned int lane0_id : 4;
     unsigned int res0 : 4;
@@ -320,7 +320,7 @@ struct EV200_LANE_ID0_CHN {
     unsigned int res1 : 4;
 };
 
-const uint32_t EV300_LANE_ID0_CHN_ADDR = EV300_MIPI_BASE + 0x1800;
+#define EV300_LANE_ID0_CHN_ADDR  EV300_MIPI_BASE + 0x1800
 struct EV300_LANE_ID0_CHN {
     unsigned int lane0_id : 4;
     unsigned int lane1_id : 4;
@@ -396,7 +396,7 @@ static void cv300_enum_sync_codes(cJSON *j_inner) {
     }
 }
 
-const unsigned int CV300_MISC_CTRL0_ADDR = 0x12030000;
+#define CV300_MISC_CTRL0_ADDR 0x12030000
 static void hisi_cv300_sensor_data(cJSON *j_root) {
     cJSON *j_inner = cJSON_CreateObject();
 
@@ -513,7 +513,7 @@ static char *cv200_cv300_map_sensor_clksel(unsigned int sensor_clksel) {
     }
 }
 
-const unsigned int CV200_PERI_CRG11_ADDR = 0x2003002c;
+#define CV200_PERI_CRG11_ADDR 0x2003002c
 static void hisi_cv200_sensor_clock(cJSON *j_inner) {
     struct CV200_PERI_CRG11 crg11;
     int res = mem_reg(CV200_PERI_CRG11_ADDR, (uint32_t *)&crg11, OP_READ);
@@ -539,18 +539,18 @@ enum EV300_MIPI_PHY {
     EV300_PHY_RESERVED1
 };
 
-const unsigned int EV300_MISC_CTRL6_ADDR = 0x12028018;
+#define EV300_MISC_CTRL6_ADDR 0x12028018
 struct EV300_MISC_CTRL6 {
     enum EV300_MIPI_PHY mipirx0_work_mode : 2;
 };
 
-const uint32_t EV300_MIPI_IMGSIZE = EV300_MIPI_BASE + 0x1224;
+#define EV300_MIPI_IMGSIZE  EV300_MIPI_BASE + 0x1224
 struct CV300_EV300_MIPI_IMGSIZE {
     unsigned int mipi_imgwidth : 16;
     unsigned int mipi_imgheight : 16;
 };
 
-const uint32_t EV300_MIPI_DI_1_ADDR = EV300_MIPI_BASE + 0x1010;
+#define EV300_MIPI_DI_1_ADDR  EV300_MIPI_BASE + 0x1010
 struct EV300_MIPI_DI_1 {
     unsigned int di0_dt : 6;
     unsigned int di0_vc : 2;
@@ -658,7 +658,7 @@ bool hisi_ev300_get_die_id(char *buf, ssize_t len) {
     return true;
 }
 
-const uint32_t CV300_ISP_AF_CFG_ADDR = 0x12200;
+#define CV300_ISP_AF_CFG_ADDR 0x12200
 struct CV300_ISP_AF_CFG {
     bool en : 1;
     bool iir0_en0 : 1;
@@ -706,7 +706,7 @@ struct PT_INTF_MOD {
 // cv300 - 0x0110
 // ev300 -  0x1014 + PT_N x 0x100
 
-const uint32_t PT_INTF_MOD_OFFSET = 0x100;
+#define PT_INTF_MOD_OFFSET 0x100
 const bool hisi_vi_is_not_running(cJSON *j_inner) {
     uint32_t addr = 0, PT_N = 0;
     uint32_t base = 0;
@@ -779,7 +779,7 @@ void hisi_vi_information(sensor_ctx_t *ctx) {
 
 #define CV100_FMC_BASE 0x10010000
 
-const uint32_t CV100_GLOBAL_CONFIG = 0x0100;
+#define CV100_GLOBAL_CONFIG_ADDR 0x0100
 struct CV100_GLOBAL_CONFIG {
     unsigned int mode : 1;
     bool wp_en : 1;
@@ -790,9 +790,9 @@ struct CV100_GLOBAL_CONFIG {
 #define CV300_FMC_BASE 0x10000000
 #define EV300_FMC_BASE 0x10000000
 
-const uint32_t CV200_FMC_CFG = CV200_FMC_BASE + 0;
-const uint32_t CV300_FMC_CFG = CV300_FMC_BASE + 0;
-const uint32_t EV300_FMC_CFG = EV300_FMC_BASE + 0;
+#define CV200_FMC_CFG CV200_FMC_BASE + 0
+#define CV300_FMC_CFG CV300_FMC_BASE + 0
+#define EV300_FMC_CFG EV300_FMC_BASE + 0
 struct FMC_CFG {
     unsigned int op_mode : 1;
     unsigned int flash_sel : 2;
@@ -825,7 +825,7 @@ void hisi_detect_fmc() {
     switch (chip_generation) {
     case HISI_V1: {
         struct CV100_GLOBAL_CONFIG val;
-        if (mem_reg(CV100_GLOBAL_CONFIG, (uint32_t *)&val, OP_READ))
+        if (mem_reg(CV100_GLOBAL_CONFIG_ADDR, (uint32_t *)&val, OP_READ))
             mode = hisi_flash_mode(val.flash_addr_mode);
     } break;
     case HISI_V2:
