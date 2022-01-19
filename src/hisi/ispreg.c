@@ -449,7 +449,6 @@ static void hisi_av200_sensor_data(cJSON *j_root, int vistate) {
 
     cJSON *j_inner = cJSON_CreateObject();
 
-    const char *param = "vicap0-input";
     if (vistate & 1) {
         vicap_input_set(j_inner, "vicap0-input", ctrl0.vicap0_input_sel);
         ADD_PARAM("mipi0-type", cv300_mipi_phy(ctrl0.mipi0_work_mode));
@@ -785,7 +784,7 @@ const int hisi_vi_is_running(cJSON *j_inner) {
 
     if (!mem_reg(vicap1, (uint32_t *)&reg2, OP_READ))
         return 0;
-    ADD_PARAM("vicap0-state", reg2.enable ? "up" : "down");
+    ADD_PARAM("vicap1-state", reg2.enable ? "up" : "down");
     return reg1.enable | (reg2.enable << 1);
 }
 
