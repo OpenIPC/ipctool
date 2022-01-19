@@ -17,7 +17,7 @@
 #define DEFAULT_PING_RATE 1
 
 #define HISINEW_WDIOC_KEEPALIVE _IO(WATCHDOG_IOCTL_BASE, 5)
-#define HISI_WDIOC_SETOPTIONS _IOWR(WATCHDOG_IOCTL_BASE, 4, int)
+#define HISINEW_WDIOC_SETOPTIONS _IOWR(WATCHDOG_IOCTL_BASE, 4, int)
 
 int fd;
 const char v = 'V';
@@ -37,12 +37,8 @@ static const struct option lopts[] = {
     {"info", no_argument, NULL, 'i'},
     {NULL, no_argument, NULL, 0x0}};
 
-static bool is_hisilicon() {
+static bool newhisictl() {
     switch (chip_generation) {
-    case HISI_V1:
-    case HISI_V2A:
-    case HISI_V2:
-    case HISI_V3A:
     case HISI_V3:
     case HISI_V4A:
     case HISI_V4:
@@ -61,16 +57,8 @@ static void keep_alive(void) {
     int dummy;
     int ret;
 
-    switch (chip_generation) {
-    case HISI_V3A:
-    case HISI_V3:
-    case HISI_V4A:
-    case HISI_V4:
-        ret = ioctl(fd, HISINEW_WDIOC_KEEPALIVE, &dummy);
-        break;
-    default:
-        ret = ioctl(fd, WDIOC_KEEPALIVE, &dummy);
-    }
+    ret = ioctl(fd, newhisictl() ? HISINEW_WDIOC_KEEPALIVE : WDIOC_KEEPALIVE,
+                &dummy);
     if (!ret)
         printf(".");
 }
@@ -84,7 +72,7 @@ static int watchdog_stop() {
     case HISI_V4:
     case HISI_V4A: {
         int opts = WDIOS_DISABLECARD;
-        return ioctl(fd, HISI_WDIOC_SETOPTIONS, &opts);
+        return ioctl(fd, HISINEW_WDIOC_SETOPTIONS, &opts);
     }
         // case XM:
         // return ioctl(fd, CMD_WDT_STOP);
@@ -188,7 +176,7 @@ int watchdog_cmd(int argc, char *argv[]) {
         case 'd':
             flags = WDIOS_DISABLECARD;
             ret = ioctl(
-                fd, is_hisilicon() ? HISI_WDIOC_SETOPTIONS : WDIOC_SETOPTIONS,
+                fd, newhisictl() ? HISINEW_WDIOC_SETOPTIONS : WDIOC_SETOPTIONS,
                 &flags);
             if (!ret)
                 printf("Watchdog card disabled.\n");
@@ -200,7 +188,7 @@ int watchdog_cmd(int argc, char *argv[]) {
         case 'e':
             flags = WDIOS_ENABLECARD;
             ret = ioctl(
-                fd, is_hisilicon() ? HISI_WDIOC_SETOPTIONS : WDIOC_SETOPTIONS,
+                fd, newhisictl() ? HISINEW_WDIOC_SETOPTIONS : WDIOC_SETOPTIONS,
                 &flags);
             if (!ret)
                 printf("Watchdog card enabled.\n");
