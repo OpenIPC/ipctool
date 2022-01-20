@@ -23,9 +23,9 @@
 
 typedef unsigned int combo_dev_t;
 
+// for V2 platform use +1 to get actual values
 typedef enum {
-    RAW_UNKNOWN = 0,
-    RAW_DATA_8BIT,
+    RAW_DATA_8BIT = 0,
     RAW_DATA_10BIT,
     RAW_DATA_12BIT,
     RAW_DATA_14BIT,
@@ -34,8 +34,6 @@ typedef enum {
 
 const char *raw_data_type_str(raw_data_type_e val) {
     switch (val) {
-    case RAW_UNKNOWN:
-        return "RAW_UNKNOWN";
     case RAW_DATA_8BIT:
         return "RAW_DATA_8BIT";
     case RAW_DATA_10BIT:
