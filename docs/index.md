@@ -55,13 +55,13 @@ Where:
   printenv                  drop-in replacement for fw_printenv
   setenv <key> <value>      drop-in replacement for fw_setenv
   dmesg                     drop-in replacement for dmesg
-  i2cget <device address> <register>
-                            read data from I2C device
-  i2cset <device address> <register> <new value>
-                            write a value to I2C device
-  [--script] i2cdump <device address> <from register> <to register>
-                            dump data from I2C device
-  reginfo                   dump current status of pinmux registers
+  (i2c|spi)get <device address> <register>
+                            read data from I2C/SPI device
+  (i2c|spi)set <device address> <register> <new value>
+                            write a value to I2C/SPI device
+  (i2c|spi)dump [--script] <device address> <from register> <to register>
+                            dump data from I2C/SPI device
+  reginfo [--script]        dump current status of pinmux registers
   trace <full/path/to/executable> [arguments]
                             dump original firmware calls and data structures
   -h, --help                this help
@@ -234,13 +234,24 @@ sensors:
     # ipctool i2cget 0x34 0x3000
     # ipctool i2cset 0x34 0x3000 1
     # ipctool i2cdump 0x34 0x3000 0x31ff
-    # ipctool --script i2cdump 0x34 0x3000 0x31ff
+    # ipctool i2cdump --script 0x34 0x3000 0x31ff
     ```
 
-* Dump the state of pinmux registers in human- and machine-readable format:
+* The same approach is to manipulate SPI sensor registers:
+
+    ```console
+    # ipctool spiget 0x200
+    # ipctool spiset 0x200 1
+    # ipctool spidump 0x200 0x300
+    # ipctool spidump --script 0x200 0x300
+    ```
+
+* Dump the state of pinmux registers in human- and machine-readable format or
+  shell script ready to be applied on another system:
 
     ```console
     # ipctool reginfo
+    # ipctool --script reginfo
     ```
 
 * Advanced replacement of `strace`:

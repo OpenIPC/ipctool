@@ -20,7 +20,7 @@
 #include "firmware.h"
 #include "hisi/hal_hisi.h"
 #include "hwinfo.h"
-#include "i2c.h"
+#include "i2cspi.h"
 #include "mtd.h"
 #include "network.h"
 #include "ptrace.h"
@@ -79,12 +79,12 @@ void Help() {
         "  printenv                  drop-in replacement for fw_printenv\n"
         "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
         "  dmesg                     drop-in replacement for dmesg\n"
-        "  i2cget <device address> <register>\n"
-        "                            read data from I2C device\n"
-        "  i2cset <device address> <register> <new value>\n"
-        "                            write a value to I2C device\n"
-        "  [--script] i2cdump <device address> <from register> <to register>\n"
-        "                            dump data from I2C device\n"
+        "  (i2c|spi)get <device address> <register>\n"
+        "                            read data from I2C/SPI device\n"
+        "  (i2c|spi)set <device address> <register> <new value>\n"
+        "                            write a value to I2C/SPI device\n"
+        "  (i2c|spi)dump [--script] <device address> <from register> <to register>\n"
+        "                            dump data from I2C/SPI device\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
         "  trace <full/path/to/executable> [arguments]\n"
         "                            dump original firmware calls and data "
@@ -208,13 +208,14 @@ int main(int argc, char *argv[]) {
             return reginfo_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "watchdog"))
             return watchdog_cmd(argc - 1, argv + 1);
+        else if (!strncmp(argv[1], "i2c", 3) || !strncmp(argv[1], "spi", 3))
+            return i2cspi_cmd(argc - 1, argv + 1);
     }
 
     const struct option long_options[] = {
         {"chip_id", no_argument, NULL, 'c'},
         {"force", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
-        {"script", no_argument, NULL, '4'},
         {"sensor_id", no_argument, NULL, 's'},
         {"skip-env", no_argument, NULL, '0'},
         {"temp", no_argument, NULL, 't'},
@@ -226,7 +227,6 @@ int main(int argc, char *argv[]) {
     int option_index;
     bool skip_env = false;
     bool force = false;
-    bool script_mode = false;
     bool wait_mode = false;
     int argnum = 1;
 
@@ -273,10 +273,6 @@ int main(int argc, char *argv[]) {
             skip_env = true;
             break;
 
-        case '4':
-            script_mode = true;
-            break;
-
         case 'f':
             force = true;
             break;
@@ -312,14 +308,6 @@ int main(int argc, char *argv[]) {
             return printenv();
         } else if (!strcmp(argv[argnum], "setenv")) {
             return cmd_set_env(argc - argnum, argv + argnum);
-        } else if (!strcmp(argv[argnum], "i2cget")) {
-            return i2cget(argc - argnum, argv + argnum);
-        } else if (!strcmp(argv[argnum], "i2cset")) {
-            return i2cset(argc - argnum, argv + argnum);
-        } else if (!strcmp(argv[argnum], "i2cdump")) {
-            return i2cdump(argc - argnum, argv + argnum, script_mode);
-        } else if (!strcmp(argv[argnum], "spidump")) {
-            return spidump(argc - argnum, argv + argnum, script_mode);
         } else {
             printf("found unknown command: %s\n\n", argv[argnum]);
             Help();

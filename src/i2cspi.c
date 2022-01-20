@@ -1,9 +1,11 @@
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "chipid.h"
 #include "hal_common.h"
-#include "i2c.h"
+#include "i2cspi.h"
 
 #define SELECT_WIDE(reg_addr) reg_addr > 0xff ? 2 : 1
 
@@ -49,15 +51,15 @@ static int prepare_spi_sensor() {
     return fd;
 }
 
-int i2cset(int argc, char **argv) {
-    if (argc != 4) {
+static int i2cset(int argc, char **argv) {
+    if (argc != 3) {
         puts("Usage: ipctool i2cset <device address> <register> <new value>");
         return EXIT_FAILURE;
     }
 
-    unsigned char i2c_addr = strtoul(argv[1], 0, 16);
-    unsigned int reg_addr = strtoul(argv[2], 0, 16);
-    unsigned int reg_data = strtoul(argv[3], 0, 16);
+    unsigned char i2c_addr = strtoul(argv[0], 0, 16);
+    unsigned int reg_addr = strtoul(argv[1], 0, 16);
+    unsigned int reg_data = strtoul(argv[2], 0, 16);
 
     int fd = prepare_i2c_sensor(i2c_addr);
 
@@ -69,14 +71,34 @@ int i2cset(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
-int i2cget(int argc, char **argv) {
+static int spiset(int argc, char **argv) {
     if (argc != 3) {
+        puts("Usage: ipctool spiset <register> <new value>");
+        return EXIT_FAILURE;
+    }
+
+    unsigned int reg_addr = strtoul(argv[0], 0, 16);
+    unsigned int reg_data = strtoul(argv[1], 0, 16);
+
+    int fd = prepare_spi_sensor();
+
+    // TODO:
+    // int res = spi_write_register(fd, 0, reg_addr, SELECT_WIDE(reg_addr),
+    // reg_data, 1);
+
+    close_sensor_fd(fd);
+    hal_cleanup();
+    return EXIT_SUCCESS;
+}
+
+static int i2cget(int argc, char **argv) {
+    if (argc != 2) {
         puts("Usage: ipctool i2cget <device address> <register>");
         return EXIT_FAILURE;
     }
 
-    unsigned char i2c_addr = strtoul(argv[1], 0, 16);
-    unsigned int reg_addr = strtoul(argv[2], 0, 16);
+    unsigned char i2c_addr = strtoul(argv[0], 0, 16);
+    unsigned int reg_addr = strtoul(argv[1], 0, 16);
 
     int fd = prepare_i2c_sensor(i2c_addr);
 
@@ -89,15 +111,33 @@ int i2cget(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
+static int spiget(int argc, char **argv) {
+    if (argc != 1) {
+        puts("Usage: ipctool spiget <register>");
+        return EXIT_FAILURE;
+    }
+
+    unsigned int reg_addr = strtoul(argv[0], 0, 16);
+
+    int fd = prepare_spi_sensor();
+
+    int res = spi_read_register(fd, 0, reg_addr, SELECT_WIDE(reg_addr), 1);
+    printf("%#x\n", res);
+
+    close_sensor_fd(fd);
+    hal_cleanup();
+    return EXIT_SUCCESS;
+}
+
 static void hexdump(read_register_t cb, int fd, unsigned char i2c_addr,
-                        unsigned int from_reg_addr, unsigned int to_reg_addr) {
+                    unsigned int from_reg_addr, unsigned int to_reg_addr) {
     char ascii[17] = {0};
 
     int size = to_reg_addr - from_reg_addr;
     printf("       0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
     for (size_t i = from_reg_addr; i < to_reg_addr; ++i) {
         int res = cb(fd, i2c_addr, i, SELECT_WIDE(i), 1);
-        if (i == from_reg_addr)
+        if (i % 16 == 0)
             printf("%4.x: ", i);
         printf("%02X ", res);
         if (res >= ' ' && res <= '~') {
@@ -108,7 +148,7 @@ static void hexdump(read_register_t cb, int fd, unsigned char i2c_addr,
         if ((i + 1) % 8 == 0 || i + 1 == size) {
             printf(" ");
             if ((i + 1) % 16 == 0) {
-                printf("|  %s \n%4.x: ", ascii, i + 1);
+                printf("|  %s \n", ascii);
             } else if (i + 1 == size) {
                 ascii[(i + 1) % 16] = '\0';
                 if ((i + 1) % 16 <= 8) {
@@ -124,17 +164,17 @@ static void hexdump(read_register_t cb, int fd, unsigned char i2c_addr,
     printf("\n");
 }
 
-int i2cdump(int argc, char **argv, bool script_mode) {
-    if (argc != 4) {
+static int i2cdump(int argc, char **argv, bool script_mode) {
+    if (argc != 3) {
         puts("Usage: ipctool [--script] i2cdump <device address> <from "
              "register> <to "
              "register>");
         return EXIT_FAILURE;
     }
 
-    unsigned char i2c_addr = strtoul(argv[1], 0, 16);
-    unsigned int from_reg_addr = strtoul(argv[2], 0, 16);
-    unsigned int to_reg_addr = strtoul(argv[3], 0, 16);
+    unsigned char i2c_addr = strtoul(argv[0], 0, 16);
+    unsigned int from_reg_addr = strtoul(argv[1], 0, 16);
+    unsigned int to_reg_addr = strtoul(argv[2], 0, 16);
 
     int fd = prepare_i2c_sensor(i2c_addr);
 
@@ -152,15 +192,15 @@ int i2cdump(int argc, char **argv, bool script_mode) {
     return EXIT_SUCCESS;
 }
 
-int spidump(int argc, char **argv, bool script_mode) {
-    if (argc != 3) {
+static int spidump(int argc, char **argv, bool script_mode) {
+    if (argc != 2) {
         puts("Usage: ipctool [--script] spidump <from register> <to "
              "register>");
         return EXIT_FAILURE;
     }
 
-    unsigned int from_reg_addr = strtoul(argv[1], 0, 16);
-    unsigned int to_reg_addr = strtoul(argv[2], 0, 16);
+    unsigned int from_reg_addr = strtoul(argv[0], 0, 16);
+    unsigned int to_reg_addr = strtoul(argv[1], 0, 16);
 
     int fd = prepare_spi_sensor();
 
@@ -176,4 +216,51 @@ int spidump(int argc, char **argv, bool script_mode) {
     hal_cleanup();
 
     return EXIT_SUCCESS;
+}
+
+extern void Help();
+
+int i2cspi_cmd(int argc, char **argv) {
+    const struct option long_options[] = {
+        {"script", no_argument, NULL, 's'},
+    };
+    bool script_mode = false;
+    int res;
+    int option_index;
+    int argnum = 1;
+
+    while ((res = getopt_long_only(argc, argv, "s", long_options,
+                                   &option_index)) != -1) {
+        argnum++;
+
+        switch (res) {
+        case 's':
+            script_mode = true;
+            break;
+        case '?':
+            Help();
+            return EXIT_FAILURE;
+        }
+    }
+
+    bool i2c_mode = argv[0][0] == 'i';
+    if (!strcmp(argv[0] + 3, "get")) {
+        if (i2c_mode)
+            return i2cget(argc - argnum, argv + argnum);
+        else
+            return spiget(argc - argnum, argv + argnum);
+    } else if (!strcmp(argv[0] + 3, "set")) {
+        if (i2c_mode)
+            return i2cset(argc - argnum, argv + argnum);
+        else
+            return spiset(argc - argnum, argv + argnum);
+    } else if (!strcmp(argv[0] + 3, "dump")) {
+        if (i2c_mode)
+            return i2cdump(argc - argnum, argv + argnum, script_mode);
+        else
+            return spidump(argc - argnum, argv + argnum, script_mode);
+    }
+
+    Help();
+    return EXIT_FAILURE;
 }

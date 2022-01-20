@@ -75,8 +75,8 @@ set(IPCTOOL_SRC
     src/hisi/ptrace.h
     src/http.c
     src/http.h
-    src/i2c.c
-    src/i2c.h
+    src/i2cspi.c
+    src/i2cspi.h
     src/main.c
     src/mtd.c
     src/mtd.h

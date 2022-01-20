@@ -280,7 +280,7 @@ int watchdog_cmd(int argc, char *argv[]) {
         sleep(ping_rate);
     }
 end:
-    ret = watchdog_stop(fd);
+    ret = watchdog_stop();
     if (ret < 0)
         printf("Stopping watchdog ticks failed (%d)...\n", errno);
     close(fd);
