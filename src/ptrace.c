@@ -387,6 +387,8 @@ static void hisi_mipi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
     case HI_MIPI_ENABLE_MIPI_CLOCK:
     case HI_MIPI_ENABLE_SENSOR_CLOCK:
         break;
+    case HIV2X_MIPI_SET_DEV_ATTR:
+    case HIV3A_MIPI_SET_DEV_ATTR:
     case HIV3_HI_MIPI_SET_DEV_ATTR:
     case HIV4A_MIPI_SET_DEV_ATTR:
     case HIV4_MIPI_SET_DEV_ATTR:

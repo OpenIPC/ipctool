@@ -195,7 +195,7 @@ typedef enum {
     PHY_CLK_SHARE_PHY0 = 0x1,
 } phy_clk_share_e;
 
-const char *phy_clk_share_e_str(phy_clk_share_e val) {
+const char *phy_clk_share_str(phy_clk_share_e val) {
     switch (val) {
     case PHY_CLK_SHARE_NONE:
         return "PHY_CLK_SHARE_NONE";
@@ -274,11 +274,6 @@ typedef struct {
 typedef struct {
     raw_data_type_e raw_data_type;
     short lane_id[V2A23A_MIPI_LANE_NUM];
-} V2A_mipi_dev_attr_t;
-
-typedef struct {
-    raw_data_type_e raw_data_type;
-    short lane_id[V2A23A_MIPI_LANE_NUM];
 } V2_mipi_dev_attr_t;
 
 typedef struct {
@@ -335,9 +330,7 @@ const char *fid_str(lvds_fid_type_t val) {
     return NULL;
 }
 
-static const char* bool_str(bool val) {
-	return val ? "HI_TRUE": "HI_FALSE";
-}
+static const char *bool_str(bool val) { return val ? "HI_TRUE" : "HI_FALSE"; }
 
 typedef struct {
     lvds_fid_type_t fid_type;
@@ -348,6 +341,29 @@ typedef struct {
     unsigned int width;
     unsigned int height;
 } img_size_t;
+
+typedef struct {
+    img_size_t img_size;
+    wdr_mode_t wdr_mode;
+    lvds_sync_mode_t sync_mode;
+    raw_data_type_e raw_data_type;
+    lvds_bit_endian_t data_endian;
+    lvds_bit_endian_t sync_code_endian;
+    short lane_id[V2_LVDS_LANE_NUM];
+    unsigned short sync_code[V2_LVDS_LANE_NUM][WDR_VC_NUM][SYNC_CODE_NUM];
+} V2_lvds_dev_attr_t;
+
+typedef struct {
+    data_type_t input_data_type;
+    wdr_mode_t wdr_mode;
+    lvds_sync_mode_t sync_mode;
+    lvds_vsync_attr_t vsync_attr;
+    lvds_fid_attr_t fid_attr;
+    lvds_bit_endian_t data_endian;
+    lvds_bit_endian_t sync_code_endian;
+    short lane_id[V3A_LVDS_LANE_NUM];
+    unsigned short sync_code[V3A_LVDS_LANE_NUM][WDR_VC_NUM][SYNC_CODE_NUM];
+} V3A_lvds_dev_attr_t;
 
 typedef struct {
     img_size_t img_size;
@@ -372,21 +388,13 @@ typedef struct {
     lvds_bit_endian_t sync_code_endian;
     short lane_id[LVDS_LANE_NUM];
     unsigned short sync_code[LVDS_LANE_NUM][WDR_VC_NUM][SYNC_CODE_NUM];
-} lvds_dev_attr_t;
-
-typedef struct {
-    input_mode_t input_mode;
-    union {
-        V2A_mipi_dev_attr_t mipi_attr;
-        lvds_dev_attr_t lvds_attr;
-    };
-} V2A_combo_dev_attr_t;
+} V4A_lvds_dev_attr_t;
 
 typedef struct {
     input_mode_t input_mode;
     union {
         V2_mipi_dev_attr_t mipi_attr;
-        lvds_dev_attr_t lvds_attr;
+        V2_lvds_dev_attr_t lvds_attr;
     };
 } V2_combo_dev_attr_t;
 
@@ -397,7 +405,7 @@ typedef struct {
     img_rect_t img_rect;
     union {
         V3A_mipi_dev_attr_t mipi_attr;
-        lvds_dev_attr_t lvds_attr;
+        V3A_lvds_dev_attr_t lvds_attr;
     };
 } V3A_combo_dev_attr_t;
 
@@ -430,7 +438,7 @@ typedef struct {
 
     union {
         V4A_mipi_dev_attr_t mipi_attr;
-        lvds_dev_attr_t lvds_attr;
+        V4A_lvds_dev_attr_t lvds_attr;
     };
 } V4A_combo_dev_attr_t;
 
@@ -499,7 +507,7 @@ static void puttabs(int cnt) {
     printf("." #name " = " fmt ",\n", __VA_ARGS__)
 
 #define DEFINE_VAR(name)                                                       \
-    puttabs(level++);                                                            \
+    puttabs(level++);                                                          \
     printf(#name " = {\n")
 
 #define INT_ARRAY(name, data)                                                  \
@@ -510,30 +518,30 @@ static void puttabs(int cnt) {
     }                                                                          \
     puts("},")
 
-static void V3_vsync_type(V3_combo_dev_attr_t *attr, int level) {
+static void vsync_type(lvds_vsync_attr_t *attr, int level) {
     DEFINE_VAR(.vsync_type);
-    ENUM_PARAM(sync_type, attr->lvds_attr.vsync_type.sync_type);
-    INT_PARAM(hblank1, attr->lvds_attr.vsync_type.hblank1);
-    INT_PARAM(hblank2, attr->lvds_attr.vsync_type.hblank2);
+    ENUM_PARAM(sync_type, attr->sync_type);
+    INT_PARAM(hblank1, attr->hblank1);
+    INT_PARAM(hblank2, attr->hblank2);
     BRACKET_CLOSE;
 }
 
-static void V3_fid_type(V3_combo_dev_attr_t *attr, int level) {
+static void fid_type(lvds_fid_attr_t *attr, int level) {
     DEFINE_VAR(.fid_type);
-    ENUM_PARAM(fid, attr->lvds_attr.fid_type.fid_type);
-    ENUM_TYPED_PARAM(output_fil, bool, attr->lvds_attr.fid_type.output_fil);
+    ENUM_PARAM(fid, attr->fid_type);
+    ENUM_TYPED_PARAM(output_fil, bool, attr->output_fil);
     BRACKET_CLOSE;
 }
 
-static void V3_sync_code(V3_combo_dev_attr_t *attr, int level) {
+static void sync_code(unsigned short *sync_code, int x, int y, int level) {
     DEFINE_VAR(.sync_code);
-    for (int i = 0; i < LVDS_LANE_NUM; i++) {
+    for (int i = 0; i < x; i++) {
         BRACKET_OPEN;
-        for (int j = 0; j < WDR_VC_NUM; j++) {
+        for (int j = 0; j < y; j++) {
             puttabs(level);
             for (int m = 0; m < SYNC_CODE_NUM; m++) {
                 printf("%s%#x", m != 0 ? ", " : "{",
-                       attr->lvds_attr.sync_code[i][j][m]);
+                       sync_code[i * x + j * y + m]);
             }
             puts("},");
         }
@@ -541,6 +549,78 @@ static void V3_sync_code(V3_combo_dev_attr_t *attr, int level) {
     }
 
     BRACKET_CLOSE;
+}
+
+static void V2_dump_lvds_dev_attr(V2_lvds_dev_attr_t *attr, int level) {
+    DEFINE_VAR(.lvds_attr);
+    STRUCT_PARAM(img_size, "{%d, %d}", attr->img_size.width,
+                 attr->img_size.height);
+    ENUM_PARAM(wdr_mode, attr->wdr_mode);
+    ENUM_PARAM(sync_mode, attr->sync_mode);
+    // see comment to enum declaration
+    ENUM_PARAM(raw_data_type, attr->raw_data_type+1);
+    ENUM_PARAM(data_endian, attr->data_endian);
+    ENUM_PARAM(sync_code_endian, attr->sync_code_endian);
+    INT_ARRAY(lane_id, attr->lane_id);
+    sync_code((unsigned short *)&attr->sync_code, V2_LVDS_LANE_NUM, WDR_VC_NUM,
+              level);
+    BRACKET_CLOSE;
+}
+
+#define DUMP_LVDS_ATTR(prefix, type, lane_num)                                 \
+    static void prefix##_dump_lvds_dev_attr(type *attr, int level) {           \
+        DEFINE_VAR(.lvds_attr);                                                \
+        ENUM_PARAM(input_data_type, attr->input_data_type);                    \
+        ENUM_PARAM(wdr_mode, attr->wdr_mode);                                  \
+        ENUM_PARAM(sync_mode, attr->sync_mode);                                \
+        vsync_type(&attr->vsync_attr, level);                                  \
+        fid_type(&attr->fid_attr, level);                                      \
+        ENUM_PARAM(data_endian, attr->data_endian);                            \
+        ENUM_PARAM(sync_code_endian, attr->sync_code_endian);                  \
+        INT_ARRAY(lane_id, attr->lane_id);                                     \
+        sync_code((unsigned short *)&attr->sync_code, lane_num, WDR_VC_NUM,    \
+                  level);                                                      \
+        BRACKET_CLOSE;                                                         \
+    }
+
+DUMP_LVDS_ATTR(V3A, V3A_lvds_dev_attr_t, V3A_LVDS_LANE_NUM);
+DUMP_LVDS_ATTR(V4A, V4A_lvds_dev_attr_t, LVDS_LANE_NUM);
+
+static void hisi_dump_V2combo_dev_attr(V2_combo_dev_attr_t *attr,
+                                       unsigned int cmd) {
+    int level = 0;
+    DEFINE_VAR(combo_dev_attr_t SENSOR_ATTR);
+    ENUM_PARAM(input_mode, attr->input_mode);
+    if (attr->input_mode == INPUT_MODE_MIPI) {
+        DEFINE_VAR(.mipi_attr);
+        ENUM_PARAM(raw_data_type, attr->mipi_attr.raw_data_type);
+        INT_ARRAY(lane_id, attr->mipi_attr.lane_id);
+        BRACKET_CLOSE;
+    } else if (attr->input_mode == INPUT_MODE_LVDS) {
+        V2_dump_lvds_dev_attr(&attr->lvds_attr, level);
+    }
+    puts("};");
+}
+
+static void hisi_dump_V3Acombo_dev_attr(V3A_combo_dev_attr_t *attr,
+                                        unsigned int cmd) {
+    int level = 0;
+    DEFINE_VAR(combo_dev_attr_t SENSOR_ATTR);
+    INT_PARAM(devno, attr->devno);
+    ENUM_PARAM(input_mode, attr->input_mode);
+    ENUM_PARAM(phy_clk_share, attr->phy_clk_share);
+    STRUCT_PARAM(img_rect, "{%d, %d, %d, %d}", attr->img_rect.x,
+                 attr->img_rect.y, attr->img_rect.width, attr->img_rect.height);
+    if (attr->input_mode == INPUT_MODE_MIPI) {
+        DEFINE_VAR(.mipi_attr);
+        ENUM_PARAM(raw_data_type, attr->mipi_attr.raw_data_type);
+        ENUM_TYPED_PARAM(wdr_mode, mipi_wdr_mode, attr->mipi_attr.wdr_mode);
+        INT_ARRAY(lane_id, attr->mipi_attr.lane_id);
+        BRACKET_CLOSE;
+    } else if (attr->input_mode == INPUT_MODE_LVDS) {
+        V3A_dump_lvds_dev_attr(&attr->lvds_attr, level);
+    }
+    puts("};");
 }
 
 static void hisi_dump_V3combo_dev_attr(V3_combo_dev_attr_t *attr,
@@ -562,13 +642,35 @@ static void hisi_dump_V3combo_dev_attr(V3_combo_dev_attr_t *attr,
         ENUM_PARAM(raw_data_type, attr->lvds_attr.raw_data_type);
         ENUM_PARAM(wdr_mode, attr->lvds_attr.wdr_mode);
         ENUM_PARAM(sync_mode, attr->lvds_attr.sync_mode);
-        V3_vsync_type(attr, level);
-	V3_fid_type(attr, level);
+        vsync_type(&attr->lvds_attr.vsync_type, level);
+        fid_type(&attr->lvds_attr.fid_type, level);
         ENUM_PARAM(data_endian, attr->lvds_attr.data_endian);
         ENUM_PARAM(sync_code_endian, attr->lvds_attr.sync_code_endian);
         INT_ARRAY(lane_id, attr->lvds_attr.lane_id);
-        V3_sync_code(attr, level);
+        sync_code((unsigned short *)&attr->lvds_attr.sync_code, LVDS_LANE_NUM,
+                  WDR_VC_NUM, level);
         BRACKET_CLOSE;
+    }
+    puts("};");
+}
+
+static void hisi_dump_V4Acombo_dev_attr(V4A_combo_dev_attr_t *attr,
+                                        unsigned int cmd) {
+    int level = 0;
+    DEFINE_VAR(combo_dev_attr_t SENSOR_ATTR);
+    INT_PARAM(devno, attr->devno);
+    ENUM_PARAM(input_mode, attr->input_mode);
+    ENUM_PARAM(data_rate, attr->data_rate);
+    STRUCT_PARAM(img_rect, "{%d, %d, %d, %d}", attr->img_rect.x,
+                 attr->img_rect.y, attr->img_rect.width, attr->img_rect.height);
+    if (attr->input_mode == INPUT_MODE_MIPI) {
+        DEFINE_VAR(.mipi_attr);
+        ENUM_PARAM(input_data_type, attr->mipi_attr.input_data_type);
+        ENUM_TYPED_PARAM(wdr_mode, mipi_wdr_mode, attr->mipi_attr.wdr_mode);
+        INT_ARRAY(lane_id, attr->mipi_attr.lane_id);
+        BRACKET_CLOSE;
+    } else if (attr->input_mode == INPUT_MODE_LVDS) {
+        V4A_dump_lvds_dev_attr(&attr->lvds_attr, level);
     }
     puts("};");
 }
@@ -589,15 +691,32 @@ static void hisi_dump_V4combo_dev_attr(V4_combo_dev_attr_t *attr,
         INT_ARRAY(lane_id, attr->mipi_attr.lane_id);
         BRACKET_CLOSE;
     } else if (attr->input_mode == INPUT_MODE_LVDS) {
-        // TODO
+        DEFINE_VAR(.lvds_attr);
+        ENUM_PARAM(input_data_type, attr->lvds_attr.input_data_type);
+        ENUM_PARAM(wdr_mode, attr->lvds_attr.wdr_mode);
+        ENUM_PARAM(sync_mode, attr->lvds_attr.sync_mode);
+        vsync_type(&attr->lvds_attr.vsync_attr, level);
+        fid_type(&attr->lvds_attr.fid_attr, level);
+        ENUM_PARAM(data_endian, attr->lvds_attr.data_endian);
+        ENUM_PARAM(sync_code_endian, attr->lvds_attr.sync_code_endian);
+        INT_ARRAY(lane_id, attr->lvds_attr.lane_id);
+        sync_code((unsigned short *)&attr->lvds_attr.sync_code, LVDS_LANE_NUM,
+                  V4_WDR_VC_NUM, level);
+        BRACKET_CLOSE;
     }
     puts("};");
 }
 
 void hisi_dump_combo_dev_attr(void *ptr, unsigned int cmd) {
     switch ((cmd >> 16) & 0xff) {
+    case sizeof(V2_combo_dev_attr_t):
+        return hisi_dump_V2combo_dev_attr(ptr, cmd);
+    case sizeof(V3A_combo_dev_attr_t):
+        return hisi_dump_V3Acombo_dev_attr(ptr, cmd);
     case sizeof(V3_combo_dev_attr_t):
         return hisi_dump_V3combo_dev_attr(ptr, cmd);
+    case sizeof(V4A_combo_dev_attr_t):
+        return hisi_dump_V4Acombo_dev_attr(ptr, cmd);
     case sizeof(V4_combo_dev_attr_t):
         return hisi_dump_V4combo_dev_attr(ptr, cmd);
     default:
