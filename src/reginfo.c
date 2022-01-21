@@ -3,6 +3,7 @@
 #include "hisi/hal_hisi.h"
 #include "tools.h"
 
+#include <assert.h>
 #include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -2045,12 +2046,11 @@ int reginfo_cmd(int argc, char **argv) {
     return dump_regs(script_mode);
 }
 
-static void print_bin(unsigned long data) {
-    int i;
-    unsigned long ulbit;
-    for (i = 7; i >= 0; i--) {
-        ulbit = data >> i;
-        if (ulbit & 1)
+static void print_bin(size_t data, size_t enabled) {
+    for (int i = 7; i >= 0; i--) {
+        if (!(enabled >> i & 1))
+            printf("x");
+        else if (data >> i & 1)
             printf("1");
         else
             printf("0");
@@ -2158,6 +2158,33 @@ static int gpio_mux_cmd(int argc, char **argv) {
     return EXIT_FAILURE;
 }
 
+static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
+    const muxctrl_reg_t **regs = regs_by_chip();
+
+    memset(enabled, 0, sizeof(size_t) * GPIO_Groups);
+    for (int reg_num = 0; regs[reg_num]; reg_num++) {
+        const char *const *func = regs[reg_num]->funcs;
+        for (int i = 0; func[i]; i++) {
+            if (!strncmp("GPIO", func[i], 4)) {
+                uint32_t val;
+                if (!mem_reg(regs[reg_num]->address, &val, OP_READ)) {
+                    printf("read reg %#x error\n", regs[reg_num]->address);
+                    continue;
+                }
+
+                if ((val & 0xf) == i) {
+                    int group, num;
+                    if (sscanf(func[i] + 4, "%d_%d", &group, &num) != 2)
+                        assert("Parsing error");
+                    assert(group <= GPIO_Groups);
+                    enabled[group] |= 1 << num;
+                }
+                break;
+            }
+        }
+    }
+}
+
 static int gpio_scan_cmd() {
     int GPIO_Groups = 0;
     size_t GPIO_Base = 0;
@@ -2168,6 +2195,8 @@ static int gpio_scan_cmd() {
         return EXIT_FAILURE;
 
     size_t state[GPIO_Groups];
+    size_t enabled[GPIO_Groups];
+    fill_enabled_gpios(enabled, GPIO_Groups);
 
     for (int group = 0; group < GPIO_Groups; group++) {
         size_t address = GPIO_Base + (group * GPIO_Offset) + 0x3fc;
@@ -2179,7 +2208,7 @@ static int gpio_scan_cmd() {
         state[group] = value;
         printf("Gr:%2d, Addr:0x%08zX, Data:0x%02zX = 0b", group, address,
                value);
-        print_bin(value);
+        print_bin(value, enabled[group]);
         address = GPIO_Base + (group * GPIO_Offset) + 0x400;
         size_t direct;
         if (!mem_reg(address, &direct, OP_READ)) {
@@ -2187,7 +2216,7 @@ static int gpio_scan_cmd() {
             return EXIT_FAILURE;
         }
         printf(", Addr:0x%08zX, Dir:0x%02zX = 0b", address, direct);
-        print_bin(direct);
+        print_bin(direct, enabled[group]);
         printf("\n");
     }
 
@@ -2211,9 +2240,9 @@ static int gpio_scan_cmd() {
                             print_line(86);
                             printf("Gr:%d, Addr:0x%08X, Data:0x%02X = 0b",
                                    group, address, state[group]);
-                            print_bin(state[group]);
+                            print_bin(state[group], enabled[group]);
                             printf(" --> 0x%02X = 0b", value);
-                            print_bin(value);
+                            print_bin(value, enabled[group]);
                             printf("\n");
                             HeaderByte = true;
                         }
