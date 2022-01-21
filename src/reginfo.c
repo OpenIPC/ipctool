@@ -1960,47 +1960,43 @@ static void show_function(const char *const *func, unsigned val) {
     puts("");
 }
 
-static int dump_regs(bool script_mode) {
-    const muxctrl_reg_t **regs = NULL;
+static const muxctrl_reg_t **regs_by_chip() {
     switch (chip_generation) {
     case HISI_V1:
-        regs = CV100regs;
-        break;
+        return CV100regs;
     case HISI_V2A:
-        regs = AV100regs;
-        break;
+        return AV100regs;
     case HISI_V2:
         if (IS_CHIP("3516CV200"))
-            regs = CV200regs;
+            return CV200regs;
         else
-            regs = EV20Xregs;
-        break;
+            return EV20Xregs;
     case HISI_V3A:
-        regs = AV200regs;
-        break;
+        return AV200regs;
     case HISI_V3:
-        regs = CV300regs;
-        break;
+        return CV300regs;
     case HISI_V4A:
         if (IS_CHIP("3516CV500"))
-            regs = CV500regs;
+            return CV500regs;
         else
-            regs = DV300regs;
-        break;
+            return DV300regs;
     case HISI_V4:
         if (IS_16EV200)
-            regs = EV200regs;
+            return EV200regs;
         else if (IS_16EV300)
-            regs = EV300regs;
+            return EV300regs;
         else if (IS_18EV300)
-            regs = _8EV300regs;
+            return _8EV300regs;
         else if (IS_16DV200)
-            regs = DV200regs;
-        break;
+            return DV200regs;
     default:
         fprintf(stderr, "Platform is not supported\n");
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
+}
+
+static int dump_regs(bool script_mode) {
+    const muxctrl_reg_t **regs = regs_by_chip();
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         uint32_t val;
@@ -2112,17 +2108,66 @@ static bool get_chip_gpio_adress(size_t *GPIO_Base, size_t *GPIO_Offset,
     return true;
 }
 
-#define MAX_GPIO_GROUPS 20
+static int gpio_mux_cmd(int argc, char **argv) {
+    if (argc != 2) {
+        printf("Usage: ipctool gpio mux <gpio number>\n"
+               "where: <gpio number> either number in 5_6 or 46 format\n");
+        return EXIT_FAILURE;
+    }
 
-int gpio_scan_cmd(int argc, char **argv) {
+    getchipname();
+    const muxctrl_reg_t **regs = regs_by_chip();
+
+    const char *gpio_name = argv[1];
+    char cgpio[64] = {0};
+    if (strchr(gpio_name, '_') == NULL) {
+        long plain_num = strtol(gpio_name, NULL, 10);
+        if (plain_num < 0)
+            return EXIT_FAILURE;
+
+        int group = plain_num / 8;
+        int num = plain_num % 8;
+        snprintf(cgpio, sizeof(cgpio), "%d_%d", group, num);
+        gpio_name = cgpio;
+    }
+
+    for (int reg_num = 0; regs[reg_num]; reg_num++) {
+        const char *const *func = regs[reg_num]->funcs;
+        for (int i = 0; func[i]; i++) {
+            if ((!strncmp("GPIO", func[i], 4)) &&
+                (!strcmp(func[i] + 4, gpio_name))) {
+
+                uint32_t val;
+                if (!mem_reg(regs[reg_num]->address, &val, OP_READ)) {
+                    printf("read reg %#x error\n", regs[reg_num]->address);
+                    return EXIT_FAILURE;
+                }
+
+                val = val & 0xfff0 | i;
+                if (!mem_reg(regs[reg_num]->address, &val, OP_WRITE)) {
+                    printf("write reg %#x error\n", regs[reg_num]->address);
+                    return EXIT_FAILURE;
+                }
+
+                return EXIT_SUCCESS;
+            }
+        }
+    }
+
+    fprintf(stderr, "GPIO %s is not found\n", gpio_name);
+    return EXIT_FAILURE;
+}
+
+static int gpio_scan_cmd() {
     int GPIO_Groups = 0;
     size_t GPIO_Base = 0;
     size_t GPIO_Offset = 0;
-    size_t state[MAX_GPIO_GROUPS];
 
     getchipname();
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
         return EXIT_FAILURE;
+
+    size_t state[GPIO_Groups];
 
     for (int group = 0; group < GPIO_Groups; group++) {
         size_t address = GPIO_Base + (group * GPIO_Offset) + 0x3fc;
@@ -2196,4 +2241,16 @@ int gpio_scan_cmd(int argc, char **argv) {
     }
 
     return EXIT_SUCCESS;
+}
+
+int gpio_cmd(int argc, char **argv) {
+    if (argc > 1) {
+        if (!strcmp(argv[1], "scan"))
+            return gpio_scan_cmd();
+        else if (!strcmp(argv[1], "mux"))
+            return gpio_mux_cmd(argc - 1, argv + 1);
+    }
+
+    printf("Usage: ipctool gpio <command>\n");
+    return EXIT_FAILURE;
 }
