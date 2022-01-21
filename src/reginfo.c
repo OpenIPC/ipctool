@@ -2108,13 +2108,7 @@ static bool get_chip_gpio_adress(size_t *GPIO_Base, size_t *GPIO_Offset,
     return true;
 }
 
-static int gpio_get_cmd(int argc, char **argv) {
-    if (argc != 2) {
-        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "get", "",
-               "where: <gpio number> either number in 5_6 or 46 format\n");
-        return EXIT_FAILURE;
-    }
-
+static int gpio_manipulate(char **argv, bool set_op) {
     int GPIO_Groups = 0;
     size_t GPIO_Base = 0;
     size_t GPIO_Offset = 0;
@@ -2135,14 +2129,52 @@ static int gpio_get_cmd(int argc, char **argv) {
 
     size_t mask = 1 << (2 + num);
     uint32_t val, address = GPIO_Base + (group * GPIO_Offset) + mask;
-    if (!mem_reg(address, &val, OP_READ)) {
-        printf("read reg %#x error\n", address);
+
+    if (set_op) {
+        unsigned val = strtoul(argv[2], NULL, 10);
+        if (val > 1)
+            return EXIT_FAILURE;
+
+        size_t daddress = GPIO_Base + (group * GPIO_Offset) + 0x400;
+        size_t direct;
+        if (!mem_reg(daddress, &direct, OP_READ)) {
+            fprintf(stderr, "read reg %#x error\n", address);
+            return EXIT_FAILURE;
+        }
+        if (((direct >> num) & 1U) == 0) {
+            // If current state is input, set bit it make it output
+            direct |= 1UL << num;
+            if (!mem_reg(daddress, &direct, OP_WRITE)) {
+                fprintf(stderr, "write reg %#x error\n", address);
+                return EXIT_FAILURE;
+            }
+	    puts("Set direction");
+        }
+
+        size_t cmd = val << num;
+        if (!mem_reg(address, &cmd, OP_WRITE)) {
+            printf("write reg %#x error\n", address);
+            return EXIT_FAILURE;
+        }
+    } else {
+        if (!mem_reg(address, &val, OP_READ)) {
+            printf("read reg %#x error\n", address);
+            return EXIT_FAILURE;
+        }
+        printf("%d\n", val ? 1 : 0);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+static int gpio_get_cmd(int argc, char **argv) {
+    if (argc != 2) {
+        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "get", "",
+               "where: <gpio number> either number in 5_6 or 46 format\n");
         return EXIT_FAILURE;
     }
 
-    printf("%d\n", val ? 1 : 0);
-
-    return EXIT_SUCCESS;
+    return gpio_manipulate(argv, false);
 }
 
 static int gpio_set_cmd(int argc, char **argv) {
@@ -2152,7 +2184,7 @@ static int gpio_set_cmd(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    return EXIT_SUCCESS;
+    return gpio_manipulate(argv, true);
 }
 
 static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
