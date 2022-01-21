@@ -2108,28 +2108,71 @@ static bool get_chip_gpio_adress(size_t *GPIO_Base, size_t *GPIO_Offset,
     return true;
 }
 
+static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
+    if (strchr(gpio_name, '_') != NULL)
+        return gpio_name;
+
+    unsigned long plain_num = strtoul(gpio_name, NULL, 10);
+    int group = plain_num / 8;
+    int num = plain_num % 8;
+    snprintf(cgpio, 64, "%d_%d", group, num);
+    return cgpio;
+}
+
+static int gpio_get_cmd(int argc, char **argv) {
+    if (argc != 2) {
+        printf("Usage: ipctool gpio %s <gpio number>\n"
+               "where: <gpio number> either number in 5_6 or 46 format\n",
+               "get");
+        return EXIT_FAILURE;
+    }
+
+    int GPIO_Groups = 0;
+    size_t GPIO_Base = 0;
+    size_t GPIO_Offset = 0;
+
+    getchipname();
+    if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
+        return EXIT_FAILURE;
+
+    const char *gpio_num = argv[1];
+    int group, num;
+    if (sscanf(gpio_num, "%d_%d", &group, &num) != 2) {
+        num = strtoul(gpio_num, NULL, 10);
+        group = num / 8;
+        num %= num;
+    }
+    if (group > GPIO_Groups || num > 7)
+        return EXIT_FAILURE;
+
+    size_t mask = 1 << (2 + num);
+    uint32_t val, address = GPIO_Base + (group * GPIO_Offset) + mask;
+    if (!mem_reg(address, &val, OP_READ)) {
+        printf("read reg %#x error\n", address);
+        return EXIT_FAILURE;
+    }
+
+    printf("%d\n", val ? 1 : 0);
+
+    return EXIT_FAILURE;
+}
+
+static int gpio_set_cmd(int argc, char **argv) { return EXIT_FAILURE; }
+
 static int gpio_mux_cmd(int argc, char **argv) {
     if (argc != 2) {
-        printf("Usage: ipctool gpio mux <gpio number>\n"
-               "where: <gpio number> either number in 5_6 or 46 format\n");
+        printf("Usage: ipctool gpio %s <gpio number>\n"
+               "where: <gpio number> either number in 5_6 or 46 format\n",
+               "mux");
         return EXIT_FAILURE;
     }
 
     getchipname();
     const muxctrl_reg_t **regs = regs_by_chip();
 
-    const char *gpio_name = argv[1];
-    char cgpio[64] = {0};
-    if (strchr(gpio_name, '_') == NULL) {
-        long plain_num = strtol(gpio_name, NULL, 10);
-        if (plain_num < 0)
-            return EXIT_FAILURE;
-
-        int group = plain_num / 8;
-        int num = plain_num % 8;
-        snprintf(cgpio, sizeof(cgpio), "%d_%d", group, num);
-        gpio_name = cgpio;
-    }
+    const char *gpio_name = num2gpio_groupnum(argv[1], (char[64]){0});
+    if (gpio_name == NULL)
+        return EXIT_FAILURE;
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         const char *const *func = regs[reg_num]->funcs;
@@ -2280,6 +2323,10 @@ int gpio_cmd(int argc, char **argv) {
             return gpio_scan_cmd();
         else if (!strcmp(argv[1], "mux"))
             return gpio_mux_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "get"))
+            return gpio_get_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "set"))
+            return gpio_set_cmd(argc - 1, argv + 1);
     }
 
     printf("Usage: ipctool gpio <command>\n");
