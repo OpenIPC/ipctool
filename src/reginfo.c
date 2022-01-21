@@ -4,6 +4,7 @@
 #include "tools.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -2148,7 +2149,6 @@ static int gpio_manipulate(char **argv, bool set_op) {
                 fprintf(stderr, "write reg %#x error\n", address);
                 return EXIT_FAILURE;
             }
-	    puts("Set direction");
         }
 
         size_t cmd = val << num;
@@ -2198,9 +2198,19 @@ static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
     return cgpio;
 }
 
+static int find_pinfunc(const char *const *func, const char *name) {
+    for (int i = 0; func[i]; i++) {
+        if (!strcmp(func[i], name))
+            return i;
+    }
+
+    return -1;
+}
+
 static int gpio_mux_cmd(int argc, char **argv) {
-    if (argc != 2) {
-        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "mux", "",
+    if (argc < 2 || argc > 3) {
+        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "mux",
+               " [function name or number]",
                "where: <gpio number> either number in 5_6 or 46 format\n");
         return EXIT_FAILURE;
     }
@@ -2211,6 +2221,14 @@ static int gpio_mux_cmd(int argc, char **argv) {
     const char *gpio_name = num2gpio_groupnum(argv[1], (char[64]){0});
     if (gpio_name == NULL)
         return EXIT_FAILURE;
+
+    const char *set_func = NULL;
+    int func_num = -1;
+    if (argc == 3) {
+        set_func = argv[2];
+        if (isdigit(set_func[0]))
+            func_num = strtoul(set_func, NULL, 10);
+    }
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         const char *const *func = regs[reg_num]->funcs;
@@ -2224,7 +2242,13 @@ static int gpio_mux_cmd(int argc, char **argv) {
                     return EXIT_FAILURE;
                 }
 
-                val = val & 0xfff0 | i;
+                int new_func = func_num;
+                if (new_func == -1 && set_func != NULL)
+                    new_func = find_pinfunc(func, set_func);
+
+                if (new_func == -1)
+                    new_func = i;
+                val = val & 0xfff0 | new_func;
                 if (!mem_reg(regs[reg_num]->address, &val, OP_WRITE)) {
                     printf("write reg %#x error\n", regs[reg_num]->address);
                     return EXIT_FAILURE;
