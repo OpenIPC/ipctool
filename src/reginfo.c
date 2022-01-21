@@ -2108,22 +2108,10 @@ static bool get_chip_gpio_adress(size_t *GPIO_Base, size_t *GPIO_Offset,
     return true;
 }
 
-static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
-    if (strchr(gpio_name, '_') != NULL)
-        return gpio_name;
-
-    unsigned long plain_num = strtoul(gpio_name, NULL, 10);
-    int group = plain_num / 8;
-    int num = plain_num % 8;
-    snprintf(cgpio, 64, "%d_%d", group, num);
-    return cgpio;
-}
-
 static int gpio_get_cmd(int argc, char **argv) {
     if (argc != 2) {
-        printf("Usage: ipctool gpio %s <gpio number>\n"
-               "where: <gpio number> either number in 5_6 or 46 format\n",
-               "get");
+        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "get", "",
+               "where: <gpio number> either number in 5_6 or 46 format\n");
         return EXIT_FAILURE;
     }
 
@@ -2154,16 +2142,34 @@ static int gpio_get_cmd(int argc, char **argv) {
 
     printf("%d\n", val ? 1 : 0);
 
-    return EXIT_FAILURE;
+    return EXIT_SUCCESS;
 }
 
-static int gpio_set_cmd(int argc, char **argv) { return EXIT_FAILURE; }
+static int gpio_set_cmd(int argc, char **argv) {
+    if (argc != 3) {
+        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "set", " <value>",
+               "where: <gpio number> either number in 5_6 or 46 format\n");
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
+    if (strchr(gpio_name, '_') != NULL)
+        return gpio_name;
+
+    unsigned long plain_num = strtoul(gpio_name, NULL, 10);
+    int group = plain_num / 8;
+    int num = plain_num % 8;
+    snprintf(cgpio, 64, "%d_%d", group, num);
+    return cgpio;
+}
 
 static int gpio_mux_cmd(int argc, char **argv) {
     if (argc != 2) {
-        printf("Usage: ipctool gpio %s <gpio number>\n"
-               "where: <gpio number> either number in 5_6 or 46 format\n",
-               "mux");
+        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "mux", "",
+               "where: <gpio number> either number in 5_6 or 46 format\n");
         return EXIT_FAILURE;
     }
 
