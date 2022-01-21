@@ -25,7 +25,7 @@ sensor_addr_t sstar_possible_i2c_addrs[] = {
 bool sstar_detect_cpu() {
     uint32_t val;
     if (mem_reg(0x1f003c00, &val, OP_READ)) {
-        snprintf(chip_id, sizeof(chip_id), "id %#x", val);
+        snprintf(chip_name, sizeof(chip_name), "id %#x", val);
         chip_generation = val;
         return true;
     }

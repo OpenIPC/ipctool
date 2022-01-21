@@ -248,7 +248,7 @@ static uint32_t CV300_WDG_CONTROL = 0x12080000 + 0x0008;
 static uint32_t EV300_WDG_CONTROL = 0x12030000 + 0x0008;
 
 static bool xm_disable_watchdog() {
-    getchipid();
+    getchipname();
     uint32_t zero = 0;
     int ret = 0;
     switch (chip_generation) {

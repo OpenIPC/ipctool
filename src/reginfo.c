@@ -1969,7 +1969,7 @@ static int dump_regs(bool script_mode) {
         regs = AV100regs;
         break;
     case HISI_V2:
-        if (!strcmp(chip_id, "3516CV200"))
+        if (!strcmp(chip_name, "3516CV200"))
             regs = CV200regs;
         else
             regs = EV20Xregs;
@@ -1981,19 +1981,22 @@ static int dump_regs(bool script_mode) {
         regs = CV300regs;
         break;
     case HISI_V4A:
-        if (!strcmp(chip_id, "3516CV500"))
+        if (!strcmp(chip_name, "3516CV500"))
             regs = CV500regs;
         else
             regs = DV300regs;
         break;
     case HISI_V4:
-        if (!strcmp(chip_id, "3516EV200") || !strcmp(chip_id, "7205V200"))
+        if (!strcmp(chip_name, "3516EV200") || !strcmp(chip_name, "7205V200"))
             regs = EV200regs;
-        else if (!strcmp(chip_id, "3516EV300") || !strcmp(chip_id, "7205V300"))
+        else if (!strcmp(chip_name, "3516EV300") ||
+                 !strcmp(chip_name, "7205V300"))
             regs = EV300regs;
-        else if (!strcmp(chip_id, "3518EV300") || !strcmp(chip_id, "7202V300"))
+        else if (!strcmp(chip_name, "3518EV300") ||
+                 !strcmp(chip_name, "7202V300"))
             regs = _8EV300regs;
-        else if (!strcmp(chip_id, "3516DV200") || !strcmp(chip_id, "7605V100"))
+        else if (!strcmp(chip_name, "3516DV200") ||
+                 !strcmp(chip_name, "7605V100"))
             regs = DV200regs;
         break;
     default:
@@ -2043,7 +2046,7 @@ int reginfo_cmd(int argc, char **argv) {
         }
     }
 
-    getchipid();
+    getchipname();
 
     return dump_regs(script_mode);
 }

@@ -21,7 +21,7 @@ char board_ver[128];
 char board_manufacturer[128];
 char board_specific[1024];
 int chip_generation;
-char chip_id[128];
+char chip_name[128];
 char chip_manufacturer[128];
 char short_manufacturer[128];
 char nor_chip[128];
@@ -51,7 +51,7 @@ static bool generic_detect_cpu() {
         return sstar_detect_cpu();
     else if (!strcmp(chip_manufacturer, VENDOR_NOVATEK))
         return novatek_detect_cpu();
-    strcpy(chip_id, "unknown");
+    strcpy(chip_name, "unknown");
     return true;
 }
 
@@ -83,7 +83,7 @@ static bool hw_detect_system() {
 }
 
 static char sysid[255];
-const char *getchipid() {
+const char *getchipname() {
     // if system wasn't detected previously
     if (*sysid)
         return sysid;
@@ -91,12 +91,12 @@ const char *getchipid() {
     if (!hw_detect_system())
         return NULL;
     setup_hal_drivers();
-    lsnprintf(sysid, sizeof(sysid), "%s%s", short_manufacturer, chip_id);
+    lsnprintf(sysid, sizeof(sysid), "%s%s", short_manufacturer, chip_name);
     return sysid;
 }
 
 const char *getchipfamily() {
-    getchipid();
+    getchipname();
     switch (chip_generation) {
     case HISI_V1:
         return "hi3516cv100";

@@ -370,7 +370,7 @@ int hisi_gen4a_spi_read_register(int fd, unsigned char i2c_addr,
         return -1;
     }
 
-    reverse8(rx_buf+2, 1);
+    reverse8(rx_buf + 2, 1);
 #if 0
     printf("hisi_gen4a_spi_read_register(%#x) = %#x\n", reg_addr, rx_buf[2]);
 #endif
@@ -756,10 +756,10 @@ bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
         family_id |= (SCSYSID[i] & 0xff) << i * 8;
     }
 
-    strncpy(chip_id, get_hisi_chip_id(family_id, SCSYSID[0] >> 24),
-            sizeof(chip_id));
+    strncpy(chip_name, get_hisi_chip_id(family_id, SCSYSID[0] >> 24),
+            sizeof(chip_name));
 
-    if (*chip_id == '7')
+    if (*chip_name == '7')
         strcpy(chip_manufacturer, VENDOR_GOKE);
     else
         strcpy(chip_manufacturer, VENDOR_HISI);

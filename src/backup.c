@@ -639,7 +639,7 @@ static void skip_signals() {
 }
 
 int do_upgrade(const char *filename, bool force) {
-    if (!getchipid()) {
+    if (!getchipname()) {
         fprintf(stderr, "Chip has not been detected\n");
         return 1;
     }

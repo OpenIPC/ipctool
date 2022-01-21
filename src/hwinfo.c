@@ -5,7 +5,7 @@
 #include "hwinfo.h"
 
 float gethwtemp() {
-    getchipid();
+    getchipname();
     if (!hal_temperature)
         return NAN;
     return hal_temperature();

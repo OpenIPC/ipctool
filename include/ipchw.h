@@ -1,7 +1,7 @@
 #ifndef IPCHW_H
 #define IPCHW_H
 
-const char *getchipid();
+const char *getchipname();
 const char *getchipfamily();
 const char *getsensoridentity();
 const char *getsensorshort();

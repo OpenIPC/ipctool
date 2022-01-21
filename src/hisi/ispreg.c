@@ -296,7 +296,7 @@ static size_t mipi_lanes_num() {
     case HISI_V3:
         return cv300_mipi_lanes_num();
     case HISI_V4:
-        if (!strcmp(chip_id, "3516EV200"))
+        if (!strcmp(chip_name, "3516EV200"))
             return ev200_mipi_lanes_num();
         else
             return ev300_mipi_lanes_num();
@@ -343,7 +343,7 @@ struct EV300_LANE_ID0_CHN {
 };
 
 static void ev300_enum_lanes(cJSON *j_inner, size_t lanes) {
-    if (!strcmp(chip_id, "3516EV200")) {
+    if (!strcmp(chip_name, "3516EV200")) {
         struct EV200_LANE_ID0_CHN lid;
         if (mem_reg(EV200_LANE_ID0_CHN_ADDR, (uint32_t *)&lid, OP_READ)) {
             cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "lane-id");

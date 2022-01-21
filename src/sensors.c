@@ -703,7 +703,7 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
 }
 
 static bool getsensorid(sensor_ctx_t *ctx) {
-    if (!getchipid())
+    if (!getchipname())
         return NULL;
     // there is no platform specific i2c/spi access layer
     if (!open_i2c_sensor_fd)

@@ -711,7 +711,7 @@ int ptrace_cmd(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    if (!getchipid()) {
+    if (!getchipname()) {
         puts("Unknown chip");
         exit(EXIT_FAILURE);
     }

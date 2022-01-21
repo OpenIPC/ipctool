@@ -28,7 +28,7 @@ bool novatek_detect_cpu() {
     if (!get_regex_line_from_file("/proc/device-tree/model",
                                   "Novatek ([A-Z]+[0-9]+)", buf, sizeof(buf)))
         return false;
-    strncpy(chip_id, buf, sizeof(chip_id) - 1);
+    strncpy(chip_name, buf, sizeof(chip_name) - 1);
     return true;
 }
 

@@ -138,18 +138,18 @@ bool xm_detect_cpu() {
     if (!res) {
         return false;
     }
-    strncpy(chip_id, buf, sizeof(chip_id));
-    char *ptr = chip_id;
+    strncpy(chip_name, buf, sizeof(chip_name));
+    char *ptr = chip_name;
     while (*ptr) {
         *ptr = toupper(*ptr);
         ptr++;
     }
-    if (!strcmp(chip_id, "XM530")) {
+    if (!strcmp(chip_name, "XM530")) {
         uint32_t reg;
         if (mem_reg(0x100B001C, (uint32_t *)&reg, OP_READ)) {
             // bank_size, 0x2 for 512M and 0x3 for 1024M
             if (reg == 3)
-                strcpy(chip_id, "XM550");
+                strcpy(chip_name, "XM550");
         }
     }
 

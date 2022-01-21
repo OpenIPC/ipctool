@@ -113,7 +113,7 @@ int universal_sensor_read_register(int fd, unsigned char i2c_addr,
 void setup_hal_drivers() {
     if (!strcmp(VENDOR_HISI, chip_manufacturer))
         setup_hal_hisi();
-    else if (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_id == '7') {
+    else if (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_name == '7') {
         setup_hal_hisi();
         strcpy(short_manufacturer, "GK");
     } else if (!strcmp(VENDOR_XM, chip_manufacturer))
@@ -160,7 +160,7 @@ uint32_t rounded_num(uint32_t n) {
 void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
     if (!strcmp(VENDOR_HISI, chip_manufacturer))
         *total_mem = hisi_totalmem(media_mem);
-    else if (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_id == '7')
+    else if (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_name == '7')
         *total_mem = hisi_totalmem(media_mem);
     else if (!strcmp(VENDOR_XM, chip_manufacturer))
         *total_mem = xm_totalmem(media_mem);

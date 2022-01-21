@@ -10,7 +10,7 @@
 #define SELECT_WIDE(reg_addr) reg_addr > 0xff ? 2 : 1
 
 static int prepare_i2c_sensor(unsigned char i2c_addr) {
-    if (!getchipid()) {
+    if (!getchipname()) {
         puts("Unknown chip");
         exit(EXIT_FAILURE);
     }
@@ -32,7 +32,7 @@ static int prepare_i2c_sensor(unsigned char i2c_addr) {
 }
 
 static int prepare_spi_sensor() {
-    if (!getchipid()) {
+    if (!getchipname()) {
         puts("Unknown chip");
         exit(EXIT_FAILURE);
     }

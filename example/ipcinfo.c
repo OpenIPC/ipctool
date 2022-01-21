@@ -38,12 +38,12 @@ void Help() {
            ", and interact with the community on a regular basis.\n\n"
            "  https://openipc.org/contribution/\n\n"
            "available options:\n"
-           "\t--chip_id\n"
+           "\t--chip-name\n"
            "\t--family\n"
-           "\t--long_sensor\n"
-           "\t--short_sensor\n"
+           "\t--long-sensor\n"
+           "\t--short-sensor\n"
            "\t--temp\n"
-           "\t--xm_mac\n"
+           "\t--xm-mac\n"
            "\t--help\n");
 }
 
@@ -105,13 +105,20 @@ int main(int argc, char **argv) {
 
     const char *short_options = "";
     const struct option long_options[] = {
-        {"chip_id", no_argument, NULL, 'c'},
+        {"chip-name", no_argument, NULL, 'c'},
         {"family", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
-        {"long_sensor", no_argument, NULL, 'l'},
-        {"short_sensor", no_argument, NULL, 's'},
+        {"long-sensor", no_argument, NULL, 'l'},
+        {"short-sensor", no_argument, NULL, 's'},
         {"temp", no_argument, NULL, 't'},
-        {"xm_mac", no_argument, NULL, 'x'},
+        {"xm-mac", no_argument, NULL, 'x'},
+
+        // Keep for compability reasons
+        {"chip_id", no_argument, NULL, '1'},
+        {"long_sensor", no_argument, NULL, '2'},
+        {"short_sensor", no_argument, NULL, '3'},
+        {"xm_mac", no_argument, NULL, '4'},
+
         {NULL, 0, NULL, 0}};
 
     int rez;
@@ -124,11 +131,12 @@ int main(int argc, char **argv) {
             Help();
             return 0;
 
+        case '1':
         case 'c': {
-            const char *chipid = getchipid();
-            if (!chipid)
+            const char *chipname = getchipname();
+            if (!chipname)
                 return EXIT_FAILURE;
-            puts(chipid);
+            puts(chipname);
             return EXIT_SUCCESS;
         }
 
@@ -137,6 +145,7 @@ int main(int argc, char **argv) {
             return EXIT_SUCCESS;
         }
 
+        case '2':
         case 'l': {
             const char *sensor = getsensoridentity();
             if (!sensor)
@@ -145,6 +154,7 @@ int main(int argc, char **argv) {
             return EXIT_SUCCESS;
         }
 
+        case '3':
         case 's': {
             const char *sensor = getsensorshort();
             if (!sensor)
@@ -163,6 +173,7 @@ int main(int argc, char **argv) {
             return EXIT_SUCCESS;
         }
 
+	case '4':
         case 'x':
             return xm_mac();
         }

@@ -67,8 +67,8 @@ void Help() {
     printf(
         "Usage:  ipctool [OPTIONS] [COMMANDS]\n"
         "Where:\n"
-        "  -c, --chip_id             read chip id\n"
-        "  -s, --sensor_id           read sensor model and control line\n"
+        "  -c, --chip-id             read chip id\n"
+        "  -s, --sensor-id           read sensor model and control line\n"
         "  -t, --temp                read chip temperature (where supported)\n"
         "\n"
         "  backup <filename>         save backup into a file\n"
@@ -83,7 +83,8 @@ void Help() {
         "                            read data from I2C/SPI device\n"
         "  (i2c|spi)set <device address> <register> <new value>\n"
         "                            write a value to I2C/SPI device\n"
-        "  (i2c|spi)dump [--script] <device address> <from register> <to register>\n"
+        "  (i2c|spi)dump [--script] <device address> <from register> <to "
+        "register>\n"
         "                            dump data from I2C/SPI device\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
         "  trace <full/path/to/executable> [arguments]\n"
@@ -147,7 +148,7 @@ void print_chip_id() {
     yaml_printf("chip:\n"
                 "  vendor: %s\n"
                 "  model: %s\n",
-                chip_manufacturer, chip_id);
+                chip_manufacturer, chip_name);
     if (chip_generation == 0x3516E300) {
         char buf[1024];
         if (hisi_ev300_get_die_id(buf, sizeof buf)) {
@@ -200,7 +201,7 @@ static bool auto_backup(bool wait_mode) {
 }
 
 int main(int argc, char *argv[]) {
-    // Don't use option parser for ptrace command line
+    // Don't use common option parser for these commands
     if (argc > 1) {
         if (!strcmp(argv[1], "trace"))
             return ptrace_cmd(argc - 1, argv + 1);
@@ -213,14 +214,19 @@ int main(int argc, char *argv[]) {
     }
 
     const struct option long_options[] = {
-        {"chip_id", no_argument, NULL, 'c'},
+        {"chip-id", no_argument, NULL, 'c'},
         {"force", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
-        {"sensor_id", no_argument, NULL, 's'},
+        {"sensor-id", no_argument, NULL, 's'},
         {"skip-env", no_argument, NULL, '0'},
         {"temp", no_argument, NULL, 't'},
         {"upgrade", optional_argument, NULL, 'u'},
         {"wait", no_argument, NULL, 'w'},
+
+        // Keep for compability reasons
+        {"chip_id", no_argument, NULL, '1'},
+        {"sensor_id", no_argument, NULL, '2'},
+
         {NULL, 0, NULL, 0}};
 
     int res;
@@ -239,14 +245,16 @@ int main(int argc, char *argv[]) {
             Help();
             return 0;
 
+        case '1':
         case 'c': {
-            const char *chipid = getchipid();
-            if (!chipid)
+            const char *chipname = getchipname();
+            if (!chipname)
                 return EXIT_FAILURE;
-            puts(chipid);
+            puts(chipname);
             return EXIT_SUCCESS;
         }
 
+        case '2':
         case 's': {
             const char *sensor = getsensoridentity();
             if (!sensor)
@@ -320,7 +328,7 @@ int main(int argc, char *argv[]) {
         return EXIT_SUCCESS;
 
 start_yaml:
-    if (getchipid()) {
+    if (getchipname()) {
         yaml_printf("---\n");
         if (get_board_id()) {
             print_board_id();

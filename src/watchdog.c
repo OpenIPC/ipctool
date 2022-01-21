@@ -130,7 +130,7 @@ int watchdog_cmd(int argc, char *argv[]) {
 
     setbuf(stdout, NULL);
 
-    getchipid();
+    getchipname();
 
     while ((c = getopt_long(argc, argv, sopts, lopts, NULL)) != -1) {
         if (c == 'f')
