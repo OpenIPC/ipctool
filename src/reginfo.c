@@ -2123,7 +2123,7 @@ static int gpio_manipulate(char **argv, bool set_op) {
     if (sscanf(gpio_num, "%d_%d", &group, &num) != 2) {
         num = strtoul(gpio_num, NULL, 10);
         group = num / 8;
-        num %= num;
+        num %= 8;
     }
     if (group > GPIO_Groups || num > 7)
         return EXIT_FAILURE;
