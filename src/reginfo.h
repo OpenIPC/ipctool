@@ -2,5 +2,6 @@
 #define REGINFO_H
 
 int reginfo_cmd(int argc, char **argv);
+int gpio_scan_cmd(int argc, char **argv);
 
 #endif /* REGINFO_H */

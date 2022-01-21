@@ -87,6 +87,7 @@ void Help() {
         "register>\n"
         "                            dump data from I2C/SPI device\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
+        "  gpio-scan                 GPIO state scanner\n"
         "  trace <full/path/to/executable> [arguments]\n"
         "                            dump original firmware calls and data "
         "structures\n"
@@ -205,6 +206,8 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         if (!strcmp(argv[1], "trace"))
             return ptrace_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "gpio-scan"))
+            return gpio_scan_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "reginfo"))
             return reginfo_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "watchdog"))

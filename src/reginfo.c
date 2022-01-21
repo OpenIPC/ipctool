@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 typedef const struct {
     uint32_t address;
@@ -1969,7 +1970,7 @@ static int dump_regs(bool script_mode) {
         regs = AV100regs;
         break;
     case HISI_V2:
-        if (!strcmp(chip_name, "3516CV200"))
+        if (IS_CHIP("3516CV200"))
             regs = CV200regs;
         else
             regs = EV20Xregs;
@@ -1981,22 +1982,19 @@ static int dump_regs(bool script_mode) {
         regs = CV300regs;
         break;
     case HISI_V4A:
-        if (!strcmp(chip_name, "3516CV500"))
+        if (IS_CHIP("3516CV500"))
             regs = CV500regs;
         else
             regs = DV300regs;
         break;
     case HISI_V4:
-        if (!strcmp(chip_name, "3516EV200") || !strcmp(chip_name, "7205V200"))
+        if (IS_16EV200)
             regs = EV200regs;
-        else if (!strcmp(chip_name, "3516EV300") ||
-                 !strcmp(chip_name, "7205V300"))
+        else if (IS_16EV300)
             regs = EV300regs;
-        else if (!strcmp(chip_name, "3518EV300") ||
-                 !strcmp(chip_name, "7202V300"))
+        else if (IS_18EV300)
             regs = _8EV300regs;
-        else if (!strcmp(chip_name, "3516DV200") ||
-                 !strcmp(chip_name, "7605V100"))
+        else if (IS_16DV200)
             regs = DV200regs;
         break;
     default:
@@ -2049,4 +2047,153 @@ int reginfo_cmd(int argc, char **argv) {
     getchipname();
 
     return dump_regs(script_mode);
+}
+
+static void print_bin(unsigned long data) {
+    int i;
+    unsigned long ulbit;
+    for (i = 7; i >= 0; i--) {
+        ulbit = data >> i;
+        if (ulbit & 1)
+            printf("1");
+        else
+            printf("0");
+    }
+}
+
+static void print_line(unsigned int cnt) {
+    char buffer[cnt + 1];
+    memset(buffer, '=', cnt);
+    buffer[cnt] = '\0';
+    printf("%s\n", buffer);
+}
+
+static bool get_chip_gpio_adress(size_t *GPIO_Base, size_t *GPIO_Offset,
+                                 int *GPIO_Groups) {
+    *GPIO_Offset = 0x10000;
+
+    switch (chip_generation) {
+    case HISI_V1:
+        *GPIO_Base = 0x20140000;
+        *GPIO_Groups = 12;
+        break;
+    case HISI_V2A:
+        *GPIO_Base = 0x20140000;
+        *GPIO_Groups = IS_CHIP("3516AV100") ? 17 : 15;
+        break;
+    case HISI_V2:
+        *GPIO_Base = 0x20140000;
+        *GPIO_Groups = 9;
+        break;
+    case HISI_V3A:
+        *GPIO_Base = 0x12140000;
+        *GPIO_Groups = 16;
+        *GPIO_Offset = 0x1000;
+        break;
+    case HISI_V3:
+        *GPIO_Base = 0x12140000;
+        *GPIO_Groups = 9;
+        *GPIO_Offset = 0x1000;
+        break;
+    case HISI_V4A:
+        // AV300
+        *GPIO_Base = 0x120D0000;
+        *GPIO_Groups = 12;
+        break;
+    case HISI_V4:
+        *GPIO_Base = 0x120B0000;
+        *GPIO_Groups = IS_16EV300 || IS_16DV200 ? 10 : 9;
+        *GPIO_Offset = 0x1000;
+        break;
+    default:
+        fprintf(stderr, "Chip is not supported\n");
+        return false;
+    }
+    return true;
+}
+
+#define MAX_GPIO_GROUPS 20
+
+int gpio_scan_cmd(int argc, char **argv) {
+    int GPIO_Groups = 0;
+    size_t GPIO_Base = 0;
+    size_t GPIO_Offset = 0;
+    size_t state[MAX_GPIO_GROUPS];
+
+    getchipname();
+    if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
+        return EXIT_FAILURE;
+
+    for (int group = 0; group < GPIO_Groups; group++) {
+        size_t address = GPIO_Base + (group * GPIO_Offset) + 0x3fc;
+        size_t value;
+        if (!mem_reg(address, &value, OP_READ)) {
+            fprintf(stderr, "Error at %#x\n", address);
+            return EXIT_FAILURE;
+        }
+        state[group] = value;
+        printf("Gr:%2d, Addr:0x%08zX, Data:0x%02zX = 0b", group, address,
+               value);
+        print_bin(value);
+        address = GPIO_Base + (group * GPIO_Offset) + 0x400;
+        size_t direct;
+        if (!mem_reg(address, &direct, OP_READ)) {
+            fprintf(stderr, "Error at %#x\n", address);
+            return EXIT_FAILURE;
+        }
+        printf(", Addr:0x%08zX, Dir:0x%02zX = 0b", address, direct);
+        print_bin(direct);
+        printf("\n");
+    }
+
+    print_line(86);
+    printf("Waiting for while something changes...\n");
+    while (1) {
+        for (int group = 0; group < GPIO_Groups; group++) {
+            size_t address = GPIO_Base + (group * GPIO_Offset) + 0x3fc;
+            size_t value;
+            if (!mem_reg(address, &value, OP_READ)) {
+                fprintf(stderr, "Error at %#x\n", address);
+                break;
+            }
+            if (state[group] != value) {
+                bool HeaderByte = false;
+                for (int bit = 7; bit >= 0; bit--) {
+                    int old_bit = (state[group] >> bit) & 1;
+                    int new_bit = (value >> bit) & 1;
+                    if (old_bit != new_bit) {
+                        if (HeaderByte == false) {
+                            print_line(86);
+                            printf("Gr:%d, Addr:0x%08X, Data:0x%02X = 0b",
+                                   group, address, state[group]);
+                            print_bin(state[group]);
+                            printf(" --> 0x%02X = 0b", value);
+                            print_bin(value);
+                            printf("\n");
+                            HeaderByte = true;
+                        }
+                        address = GPIO_Base + (group * GPIO_Offset) + 0x400;
+                        size_t direct;
+                        if (!mem_reg(address, &direct, OP_READ)) {
+                            fprintf(stderr, "Error at %#x\n", address);
+                            break;
+                        }
+                        direct = (direct >> bit) & 1;
+                        address = GPIO_Base + (group * GPIO_Offset) +
+                                  (1 << (bit + 2));
+                        int mask = value & 1 << bit;
+                        printf("Mask: \"devmem 0x%08zX 32 0x%02X\", "
+                               "GPIO%d_%d, GPIO%d, "
+                               "Dir:%s, Level:%d\n",
+                               address, mask, group, bit, (group * 8) + bit,
+                               direct ? "Output" : "Input", new_bit);
+                    }
+                }
+                state[group] = value;
+            }
+        }
+        usleep(100000);
+    }
+
+    return EXIT_SUCCESS;
 }
