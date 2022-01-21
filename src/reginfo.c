@@ -2199,7 +2199,8 @@ static int gpio_scan_cmd() {
     fill_enabled_gpios(enabled, GPIO_Groups);
 
     for (int group = 0; group < GPIO_Groups; group++) {
-        size_t address = GPIO_Base + (group * GPIO_Offset) + 0x3fc;
+        size_t mask = enabled[group] << 2;
+        size_t address = GPIO_Base + (group * GPIO_Offset) + mask;
         size_t value;
         if (!mem_reg(address, &value, OP_READ)) {
             fprintf(stderr, "Error at %#x\n", address);
@@ -2224,7 +2225,8 @@ static int gpio_scan_cmd() {
     printf("Waiting for while something changes...\n");
     while (1) {
         for (int group = 0; group < GPIO_Groups; group++) {
-            size_t address = GPIO_Base + (group * GPIO_Offset) + 0x3fc;
+            size_t mask = enabled[group] << 2;
+            size_t address = GPIO_Base + (group * GPIO_Offset) + mask;
             size_t value;
             if (!mem_reg(address, &value, OP_READ)) {
                 fprintf(stderr, "Error at %#x\n", address);
