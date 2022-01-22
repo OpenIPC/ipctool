@@ -124,8 +124,8 @@ char *open_mtdblock(int i, int *fd, uint32_t size, int flags) {
 
 static bool uenv_detected;
 
-static bool examine_part(int part_num, size_t size, size_t erasesize, uint32_t *sha1,
-                         char contains[1024]) {
+static bool examine_part(int part_num, size_t size, size_t erasesize,
+                         uint32_t *sha1, char contains[1024]) {
     bool res = false;
 
     int fd;
@@ -309,7 +309,7 @@ int mtd_erase_block(int fd, int offset, int erasesize) {
                 fprintf(stderr, "xm_spiflash_unlock_and_erase error\n");
                 return -1;
             }
-	    printf("ok\n");
+            printf("ok\n");
             return 0;
         } else
             return -1;
@@ -318,14 +318,48 @@ int mtd_erase_block(int fd, int offset, int erasesize) {
     return 0;
 }
 
-int mtd_write_block(int fd, int offset, const char *data, size_t size) {
+bool mtd_write_block(int fd, int offset, const char *data, size_t size) {
     // fprintf(stderr, "Seeking on mtd device to: %x\n", offset);
     lseek(fd, offset, SEEK_SET);
 
     // fprintf(stderr, "Writing buffer sized: %x\n", size);
-    write(fd, data, size);
+    int nbytes = write(fd, data, size);
+    if (nbytes != size) {
+        fprintf(stderr, "Writed block size is equal to %d rather than %d\n",
+                nbytes, size);
+        return false;
+    }
 
-    return 0;
+    return true;
+}
+
+bool mtd_verify_block(int fd, int offset, const char *data, size_t size) {
+    bool res = false;
+
+    // fprintf(stderr, "Seeking on mtd device to: %x\n", offset);
+    lseek(fd, offset, SEEK_SET);
+
+    char *buf = malloc(size);
+
+    // fprintf(stderr, "Reading buffer sized: %x\n", size);
+    int nbytes = read(fd, buf, size);
+    if (nbytes != size) {
+        fprintf(stderr, "Readed block size is equal to %d rather than %d\n",
+                nbytes, size);
+        goto quit;
+    }
+
+    if (memcmp(buf, data, size) != 0) {
+        fprintf(stderr, "Block verify error\n");
+        goto quit;
+    }
+
+    res = true;
+
+quit:
+    if (buf)
+        free(buf);
+    return res;
 }
 
 static int mtd_open(int mtd) {
@@ -345,17 +379,21 @@ bool mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
         return false;
     }
 
-    bool ret = true;
+    bool res = false;
     if (mtd_erase_block(fd, offset, erasesize)) {
         fprintf(stderr, "Fail to erase +0x%x\n", offset);
-        ret = false;
-        goto bailout;
+        goto quit;
     }
 
-    mtd_write_block(fd, offset, data, size);
+    if (!mtd_write_block(fd, offset, data, size))
+        goto quit;
+    if (!mtd_verify_block(fd, offset, data, size))
+        goto quit;
 
-bailout:
+    res = true;
+
+quit:
     close(fd);
 
-    return ret;
+    return res;
 }
