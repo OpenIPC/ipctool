@@ -201,11 +201,13 @@ static bool extract_snsType() {
 
 static void extract_netip_creds(char username[64], char pwd[64]) {
     size_t len;
+    cJSON *json = NULL;
+
     char *config = file_to_buf("/mnt/mtd/Config/Account1", &len);
     if (!config)
         goto bailout;
 
-    cJSON *json = cJSON_ParseWithLength(config, len);
+    json = cJSON_ParseWithLength(config, len);
     if (json == NULL)
         goto bailout;
 
