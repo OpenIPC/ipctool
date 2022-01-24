@@ -2,17 +2,17 @@
 #define _GNU_SOURCE
 // for strnlen
 
+#include <arpa/inet.h>
 #include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netdb.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/reboot.h>
@@ -299,13 +299,31 @@ static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
+static bool try_umount(const char *path) {
+    for (int i = 0; i < 3; i++) {
+        if (i != 0) {
+            fprintf(stderr, ", trying again...\n");
+            sleep(3);
+        }
+        int ret = umount2(path, MNT_FORCE | MNT_DETACH);
+        if (ret == 0)
+            return true;
+        // Consider 'No such file or directory' as already done
+        if (errno == 2)
+            return true;
+        fprintf(stderr, "Cannot umount '%s' because of %s (%d)", path,
+                strerror(errno), errno);
+    }
+    return false;
+}
+
 static void umount_fs(const char *path) {
     // skip root
     if (!strcmp(path, "/"))
         return;
 
-    if (umount2(path, MNT_FORCE | MNT_DETACH) != 0) {
-        fprintf(stderr, "Cannot umount '%s', aborting...\n", path);
+    if (!try_umount(path)) {
+        fprintf(stderr, ", aborting...\n");
         exit(1);
     } else
         printf("Unmounting %s\n", path);
@@ -609,8 +627,11 @@ static void add_mtdpart(char *dst, const char *name, uint32_t size) {
 static uint32_t platform_ramstart() {
     switch (chip_generation) {
     case HISI_V1:
+    case HISI_V2A:
     case HISI_V2:
+    case HISI_V3A:
     case HISI_V3:
+    case HISI_V4A:
         return 0x82000000;
     case HISI_V4:
         return 0x42000000;
