@@ -1943,6 +1943,9 @@ static const muxctrl_reg_t *DV200regs[] = {
     &DV200_iocfg_reg98, 0,
 };
 
+static int gpio_mux_by(const char *gpio_number, int func_num,
+                       const char *set_func);
+
 static const char *get_function(const char *const *func, unsigned val) {
     for (int i = 0; func[i]; i++) {
         if (i == val)
@@ -2119,6 +2122,8 @@ static int gpio_manipulate(char **argv, bool set_op) {
         return EXIT_FAILURE;
 
     const char *gpio_num = argv[1];
+    gpio_mux_by(gpio_num, -1, NULL);
+
     int group, num;
     if (sscanf(gpio_num, "%d_%d", &group, &num) != 2) {
         num = strtoul(gpio_num, NULL, 10);
@@ -2207,34 +2212,20 @@ static int find_pinfunc(const char *const *func, const char *name) {
     return -1;
 }
 
-static int gpio_mux_cmd(int argc, char **argv) {
-    if (argc < 2 || argc > 3) {
-        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "mux",
-               " [function name or number]",
-               "where: <gpio number> either number in 5_6 or 46 format\n");
+static int gpio_mux_by(const char *gpio_number, int func_num,
+                       const char *set_func) {
+    const char *gpio_grnum = num2gpio_groupnum(gpio_number, (char[64]){0});
+    if (gpio_grnum == NULL)
         return EXIT_FAILURE;
-    }
 
     getchipname();
     const muxctrl_reg_t **regs = regs_by_chip();
-
-    const char *gpio_name = num2gpio_groupnum(argv[1], (char[64]){0});
-    if (gpio_name == NULL)
-        return EXIT_FAILURE;
-
-    const char *set_func = NULL;
-    int func_num = -1;
-    if (argc == 3) {
-        set_func = argv[2];
-        if (isdigit(set_func[0]))
-            func_num = strtoul(set_func, NULL, 10);
-    }
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         const char *const *func = regs[reg_num]->funcs;
         for (int i = 0; func[i]; i++) {
             if ((!strncmp("GPIO", func[i], 4)) &&
-                (!strcmp(func[i] + 4, gpio_name))) {
+                (!strcmp(func[i] + 4, gpio_grnum))) {
 
                 uint32_t val;
                 if (!mem_reg(regs[reg_num]->address, &val, OP_READ)) {
@@ -2259,8 +2250,27 @@ static int gpio_mux_cmd(int argc, char **argv) {
         }
     }
 
-    fprintf(stderr, "GPIO %s is not found\n", gpio_name);
+    fprintf(stderr, "GPIO %s is not found\n", gpio_grnum);
     return EXIT_FAILURE;
+}
+
+static int gpio_mux_cmd(int argc, char **argv) {
+    if (argc < 2 || argc > 3) {
+        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "mux",
+               " [function name or number]",
+               "where: <gpio number> either number in 5_6 or 46 format\n");
+        return EXIT_FAILURE;
+    }
+
+    const char *set_func = NULL;
+    int func_num = -1;
+    if (argc == 3) {
+        set_func = argv[2];
+        if (isdigit(set_func[0]))
+            func_num = strtoul(set_func, NULL, 10);
+    }
+
+    return gpio_mux_by(argv[1], func_num, set_func);
 }
 
 static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
