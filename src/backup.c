@@ -867,8 +867,9 @@ int do_upgrade(const char *filename, bool force) {
             const char *env = uboot_fullenv(&env_len);
 
             i++;
-	    mtd.env_dev = i;
-	    mtd.env_offset = goff;
+
+            mtd.env_dev =
+                map_old_new_mtd(i, goff, &mtd.env_offset, mtdwrite, &mtd);
 
             mtdwrite[i].off_flashb = goff;
             mtdwrite[i].size = env_len;
