@@ -409,19 +409,21 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
             // skip env
             if (mtd->env_dev == newi && mtd->env_offset == this_offset)
                 op = 's';
-#if 0
-            printf("mtd_write(%d, %x, %x, %p, %zx)\n", newi, this_offset,
-                   mtd->erasesize, mtdbackup[i].data + c * chunk, chunk);
-#endif
             if (!simulate) {
                 print_flash_progress(c, cnt, op);
-                if (op != 's')
+                if (op != 's') {
+#if 0
+                    printf("mtd_write(%d, %x, %x, %p, %zx)\n", newi,
+                           this_offset, mtd->erasesize,
+                           mtdbackup[i].data + c * chunk, chunk);
+#endif
                     if (!mtd_write(newi, this_offset, mtd->erasesize,
                                    mtdbackup[i].data + c * chunk, chunk)) {
                         fprintf(stderr,
                                 "\nSomething went wrong, aborting...\n");
                         return false;
                     }
+                }
             }
         }
         if (!simulate) {
@@ -686,12 +688,10 @@ int do_upgrade(const char *filename, bool force) {
 
     skip_signals();
 
-    mtd_restore_ctx_t mtd;
-    memset(&mtd, 0, sizeof(mtd));
+    mtd_restore_ctx_t mtd = {.env_dev = -1};
     enum_mtd_info(&mtd, cb_mtd_restore);
 
-    stored_mtd_t mtdwrite[MAX_MTDBLOCKS];
-    memset(&mtdwrite, 0, sizeof(mtdwrite));
+    stored_mtd_t mtdwrite[MAX_MTDBLOCKS] = {0};
     char mtdparts[MAX_MTDPARTS] = {0};
 
     int ret = 0;
