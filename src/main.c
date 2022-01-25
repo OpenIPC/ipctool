@@ -316,7 +316,7 @@ int main(int argc, char *argv[]) {
         } else if (!strcmp(argv[argnum], "restore")) {
             return restore_backup(argv[argnum + 1], skip_env, force);
         } else if (!strcmp(argv[argnum], "printenv")) {
-            return printenv();
+            return cmd_printenv();
         } else if (!strcmp(argv[argnum], "setenv")) {
             return cmd_set_env(argc - argnum, argv + argnum);
         } else {

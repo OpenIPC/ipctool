@@ -851,6 +851,21 @@ int do_upgrade(const char *filename, bool force) {
                 goto bailout;
             }
         }
+
+        if (!strcmp(mtdwrite[i].name, "boot")) {
+            // Copy existing env just right after it as separate partition
+	    const char* env = uboot_env_findnsave();
+	    if (env == NULL) {
+		fprintf(stderr, "Cannot find env, internal error\n");
+		return 1;
+	    }
+
+
+
+		puts("Do copy");
+		exit(0);
+        }
+
         i++;
     }
     free(jsond);

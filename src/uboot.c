@@ -84,7 +84,7 @@ int uboot_detect_env(void *buf, size_t size, size_t erasesize) {
 }
 
 // Print environment configuration
-void uboot_printenv(const char *env) {
+void uboot_printenv_cb(const char *env) {
     const char *ptr = env + CRC_SZ;
     while (*ptr) {
         puts(ptr);
@@ -93,16 +93,11 @@ void uboot_printenv(const char *env) {
 }
 
 static void *uenv;
-void uboot_copyenv(const void *buf) {
+void uboot_copyenv_int(const void *buf) {
     if (!uenv) {
         uenv = malloc(env_len);
         memcpy(uenv, buf, env_len);
     }
-}
-
-void uboot_freeenv() {
-    if (uenv)
-        free(uenv);
 }
 
 // Get environment variable
@@ -123,13 +118,15 @@ const char *uboot_getenv(const char *name) {
     return NULL;
 }
 
-static void uboot_setenv(int mtd, uint32_t offset, const char *env,
-                         const char *key, const char *newvalue,
-                         uint32_t erasesize, enum FLASH_OP fop) {
+static void uboot_saveenv_cb(const char *env) { uboot_copyenv_int(env); }
+
+static void uboot_setenv_cb(int mtd, uint32_t offset, const char *env,
+                            const char *key, const char *newvalue,
+                            uint32_t erasesize, enum FLASH_OP fop) {
     const char *towrite;
     uint32_t res_crc = 0;
 
-    uboot_copyenv(env);
+    uboot_copyenv_int(env);
     char *newenv = calloc(env_len, 1);
 
     const char *ptr = uenv + CRC_SZ;
@@ -193,8 +190,11 @@ bailout:
         free(newenv);
 }
 
-#define OP_PRINTENV 0
-#define OP_SETENV 1
+enum {
+    OP_PRINTENV = 0,
+    OP_SETENV,
+    OP_COPY,
+};
 
 typedef struct {
     int op;
@@ -216,11 +216,14 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
         if (u_off != -1) {
             switch (c->op) {
             case OP_PRINTENV:
-                uboot_printenv(addr + u_off);
+                uboot_printenv_cb(addr + u_off);
                 break;
             case OP_SETENV:
-                uboot_setenv(i, u_off, addr + u_off, c->key, c->value,
-                             mtd->erasesize, c->fop);
+                uboot_setenv_cb(i, u_off, addr + u_off, c->key, c->value,
+                                mtd->erasesize, c->fop);
+                break;
+            case OP_COPY:
+                uboot_saveenv_cb(addr + u_off);
                 break;
             }
             close(fd);
@@ -232,7 +235,16 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
-int printenv() {
+const char *uboot_env_findnsave() {
+    ctx_uboot_t ctx = {
+        .op = OP_COPY,
+    };
+    enum_mtd_info(&ctx, cb_uboot_env);
+
+    return uenv;
+}
+
+int cmd_printenv() {
     ctx_uboot_t ctx;
     ctx.op = OP_PRINTENV;
     enum_mtd_info(&ctx, cb_uboot_env);
