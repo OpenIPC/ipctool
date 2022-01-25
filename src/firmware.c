@@ -189,7 +189,7 @@ cJSON *detect_firmare() {
     cJSON *j_inner = cJSON_CreateObject();
     cJSON_AddItemToObject(fake_root, "firmware", j_inner);
 
-    const char *uver = uboot_getenv("ver");
+    const char *uver = uboot_env_get_param("ver");
     if (uver) {
         const char *stver = strchr(uver, ' ');
         if (stver && *(stver + 1)) {

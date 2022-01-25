@@ -289,6 +289,7 @@ static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
         if (u_off != -1) {
             c->env_dev = i;
             c->env_offset = u_off;
+            uboot_copyenv_int(addr + u_off);
         }
         close(fd);
     }
@@ -690,6 +691,10 @@ int do_upgrade(const char *filename, bool force) {
 
     mtd_restore_ctx_t mtd = {.env_dev = -1};
     enum_mtd_info(&mtd, cb_mtd_restore);
+    if (mtd.env_dev == -1) {
+        fprintf(stderr, "Cannot find env, internal error\n");
+        return 1;
+    }
 
     stored_mtd_t mtdwrite[MAX_MTDBLOCKS] = {0};
     char mtdparts[MAX_MTDPARTS] = {0};
@@ -859,13 +864,11 @@ int do_upgrade(const char *filename, bool force) {
         if (!strcmp(mtdwrite[i].name, "boot")) {
             // Copy existing env just right after boot as separate partition
             size_t env_len;
-            const char *env = uboot_env_findnsave(&env_len);
-            if (env == NULL) {
-                fprintf(stderr, "Cannot find env, internal error\n");
-                return 1;
-            }
+            const char *env = uboot_fullenv(&env_len);
 
             i++;
+	    mtd.env_dev = i;
+	    mtd.env_offset = goff;
 
             mtdwrite[i].off_flashb = goff;
             mtdwrite[i].size = env_len;
@@ -910,13 +913,13 @@ int do_upgrade(const char *filename, bool force) {
 
     cJSON *josmem = cJSON_GetObjectItemCaseSensitive(json, "osmem");
     if (josmem && cJSON_IsString(josmem))
-        set_env_param("osmem", josmem->valuestring, FOP_RAM);
+        set_env_param_ram("osmem", josmem->valuestring);
     if (*total_mem) {
-        set_env_param("totalmem", total_mem, FOP_RAM);
+        set_env_param_ram("totalmem", total_mem);
         printf("set_env_param: total_mem=%s\n", total_mem);
     }
     if (*board)
-        set_env_param("original", board, FOP_RAM);
+        set_env_param_ram("original", board);
 
     snprintf(value, sizeof(value),
              "setenv setargs setenv bootargs ${bootargs}; run setargs; "
@@ -924,7 +927,7 @@ int do_upgrade(const char *filename, bool force) {
              "bootm 0x%x",
              // kernel params
              ram_start, mtdwrite[0].off_flashb, mtdwrite[0].size, ram_start);
-    set_env_param("bootcmd", value, FOP_RAM);
+    set_env_param_ram("bootcmd", value);
 
     snprintf(value, sizeof(value),
              "mem=%s console=ttyAMA0,115200 panic=20 "
@@ -936,8 +939,8 @@ int do_upgrade(const char *filename, bool force) {
     if (jaddcmdline && cJSON_IsString(jaddcmdline))
         snprintf(value + strlen(value), sizeof(value) - strlen(value), " %s",
                  jaddcmdline->valuestring);
-    set_env_param("bootargs", value, FOP_ROM);
-    reboot_with_msg();
+    set_env_param_rom("bootargs", value, mtd.env_dev, mtd.env_offset, mtd.erasesize);
+    // reboot_with_msg();
 
     // only makes sense for memleak detection
 bailout:

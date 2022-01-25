@@ -10,6 +10,12 @@
 #include "mtd.h"
 #include "uboot.h"
 
+enum FLASH_OP {
+    FOP_INTERACTIVE,
+    FOP_RAM,
+    FOP_ROM,
+};
+
 static uint32_t crc32_for_byte(uint32_t r) {
     for (int j = 0; j < 8; ++j)
         r = (r & 1 ? 0 : (uint32_t)0xEDB88320L) ^ r >> 1;
@@ -101,7 +107,7 @@ void uboot_copyenv_int(const void *buf) {
 }
 
 // Get environment variable
-const char *uboot_getenv(const char *name) {
+const char *uboot_env_get_param(const char *name) {
     if (!uenv)
         return NULL;
 
@@ -117,8 +123,6 @@ const char *uboot_getenv(const char *name) {
     }
     return NULL;
 }
-
-static void uboot_saveenv_cb(const char *env) { uboot_copyenv_int(env); }
 
 static void uboot_setenv_cb(int mtd, uint32_t offset, const char *env,
                             const char *key, const char *newvalue,
@@ -181,6 +185,8 @@ rewrite:
         crc32(towrite + CRC_SZ, env_len - CRC_SZ, &res_crc);
         *(uint32_t *)towrite = res_crc;
         mtd_write(mtd, offset, erasesize, towrite, env_len);
+        printf("mtd_write(%d, %#x, %#x, ..., %#x)\n", mtd, offset, erasesize,
+               env_len);
     }
     if (uenv != towrite)
         memcpy(uenv, towrite, env_len);
@@ -193,7 +199,6 @@ bailout:
 enum {
     OP_PRINTENV = 0,
     OP_SETENV,
-    OP_COPY,
 };
 
 typedef struct {
@@ -222,9 +227,6 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
                 uboot_setenv_cb(i, u_off, addr + u_off, c->key, c->value,
                                 mtd->erasesize, c->fop);
                 break;
-            case OP_COPY:
-                uboot_saveenv_cb(addr + u_off);
-                break;
             }
             close(fd);
             return false;
@@ -235,29 +237,36 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
-const char *uboot_env_findnsave(size_t* len) {
-    ctx_uboot_t ctx = {
-        .op = OP_COPY,
-    };
-    enum_mtd_info(&ctx, cb_uboot_env);
+const char *uboot_fullenv(size_t *len) {
     *len = env_len;
-
     return uenv;
 }
 
 int cmd_printenv() {
-    ctx_uboot_t ctx;
-    ctx.op = OP_PRINTENV;
+    ctx_uboot_t ctx = {
+        .op = OP_PRINTENV,
+    };
     enum_mtd_info(&ctx, cb_uboot_env);
     return EXIT_SUCCESS;
 }
 
-void set_env_param(const char *key, const char *value, enum FLASH_OP fop) {
-    ctx_uboot_t ctx;
-    ctx.op = OP_SETENV;
-    ctx.key = key;
-    ctx.value = value;
-    ctx.fop = fop;
+void set_env_param_ram(const char *key, const char *value) {
+    uboot_setenv_cb(0, 0, 0, key, value, 0, FOP_RAM);
+}
+
+void set_env_param_rom(const char *key, const char *value, int i, size_t u_off,
+                       size_t erasesize) {
+    uboot_setenv_cb(i, u_off, 0, key, value, erasesize, FOP_ROM);
+}
+
+static void cmd_set_env_param(const char *key, const char *value,
+                              enum FLASH_OP fop) {
+    ctx_uboot_t ctx = {
+        .op = OP_SETENV,
+        .key = key,
+        .value = value,
+        .fop = fop,
+    };
     enum_mtd_info(&ctx, cb_uboot_env);
 }
 
@@ -267,6 +276,6 @@ int cmd_set_env(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    set_env_param(argv[1], argv[2], FOP_INTERACTIVE);
+    cmd_set_env_param(argv[1], argv[2], FOP_INTERACTIVE);
     return EXIT_SUCCESS;
 }

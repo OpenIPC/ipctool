@@ -7,14 +7,14 @@ import hashlib
 
 
 template = {
-    "kernelMem": "${totalmem}",
+    "kernelMem": "${osmem}",
     "setTotalMem": True,
     "mtdPrefix": "hi_sfc:",
     "osmem": "32M",
     "partitions": [],
 }
 
-valid_parts = {'boot': 0x50000, 'kernel': 0x200000, 'rootfs': 0x500000}
+valid_parts = {'boot': 0x40000, 'kernel': 0x200000, 'rootfs': 0x500000}
 
 
 def add_additional(original, value):
@@ -35,6 +35,7 @@ def write_bundle(**kwarg):
         additional = add_additional(additional, 'init=/init')
     if cma:
         additional = add_additional(additional, cma)
+        template["kernelMem"] = "${totalmem}"
     if additional != '':
         template['additionalCmdline'] = additional
 
@@ -53,7 +54,7 @@ def write_bundle(**kwarg):
                 'payloadSize': size,
                 'sha1': digest
             }
-            if not pack:
+            if not pack or name == 'boot':
                 pSize = valid_parts[name]
                 if size > pSize:
                     raise Exception('binary size exceeds partition')
