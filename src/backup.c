@@ -789,6 +789,8 @@ int do_upgrade(const char *filename, bool force) {
     const cJSON *part;
     int i = 0;
     int root_part = -1;
+    int kernel_part = -1;
+
     cJSON_ArrayForEach(part, parts) {
         cJSON *jname = cJSON_GetObjectItemCaseSensitive(part, "name");
         JSON_CHECK(jname, String);
@@ -842,6 +844,8 @@ int do_upgrade(const char *filename, bool force) {
         add_mtdpart(mtdparts, mtdwrite[i].name, mtdwrite[i].size);
         if (!strcmp(mtdwrite[i].name, "rootfs")) {
             root_part = curr_mtd_part;
+        } else if (!strcmp(mtdwrite[i].name, "kernel")) {
+            kernel_part = curr_mtd_part;
         }
         curr_mtd_part++;
         printf("\t%p, size: %zu bytes\n", mtdwrite[i].data, mtdwrite[i].size);
@@ -864,7 +868,7 @@ int do_upgrade(const char *filename, bool force) {
         if (!strcmp(mtdwrite[i].name, "boot")) {
             // Copy existing env just right after boot as separate partition
             size_t env_len;
-            const char *env = uboot_fullenv(&env_len);
+            char *env = uboot_fullenv(&env_len);
 
             i++;
 
@@ -873,13 +877,8 @@ int do_upgrade(const char *filename, bool force) {
 
             mtdwrite[i].off_flashb = goff;
             mtdwrite[i].size = env_len;
-            mtdwrite[i].data = malloc(mtdwrite[i].size);
-            if (mtdwrite[i].data == NULL) {
-                fprintf(stderr, "Allocation error\n");
-                return 1;
-            }
+            mtdwrite[i].data = env;
             strcpy(mtdwrite[i].name, "env");
-            memcpy(mtdwrite[i].data, env, env_len);
             add_mtdpart(mtdparts, mtdwrite[i].name, mtdwrite[i].size);
             curr_mtd_part++;
             printf("\t%p, size: %zu bytes\n", mtdwrite[i].data,
@@ -891,8 +890,9 @@ int do_upgrade(const char *filename, bool force) {
     }
     free(jsond);
 
-    if (root_part == -1) {
-        fprintf(stderr, "Cannot proceed with unknown root fs partition\n");
+    if (root_part == -1 || kernel_part == -1) {
+        fprintf(stderr,
+                "Cannot proceed with unknown kernel or root fs partition\n");
         return 1;
     }
 
@@ -927,7 +927,8 @@ int do_upgrade(const char *filename, bool force) {
              "sf probe 0; sf read 0x%x 0x%zx 0x%zx; "
              "bootm 0x%x",
              // kernel params
-             ram_start, mtdwrite[0].off_flashb, mtdwrite[0].size, ram_start);
+             ram_start, mtdwrite[kernel_part].off_flashb,
+             mtdwrite[kernel_part].size, ram_start);
     set_env_param_ram("bootcmd", value);
 
     snprintf(value, sizeof(value),
@@ -940,8 +941,9 @@ int do_upgrade(const char *filename, bool force) {
     if (jaddcmdline && cJSON_IsString(jaddcmdline))
         snprintf(value + strlen(value), sizeof(value) - strlen(value), " %s",
                  jaddcmdline->valuestring);
-    set_env_param_rom("bootargs", value, mtd.env_dev, mtd.env_offset, mtd.erasesize);
-    // reboot_with_msg();
+    set_env_param_rom("bootargs", value, mtd.env_dev, mtd.env_offset,
+                      mtd.erasesize);
+    reboot_with_msg();
 
     // only makes sense for memleak detection
 bailout:

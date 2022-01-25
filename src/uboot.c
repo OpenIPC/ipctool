@@ -237,7 +237,7 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
-const char *uboot_fullenv(size_t *len) {
+char *uboot_fullenv(size_t *len) {
     *len = env_len;
     return uenv;
 }
