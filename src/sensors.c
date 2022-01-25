@@ -167,7 +167,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
 
     if (READ(0x1e) == 0xb2) {
 
-        if (READ(0x1d8) == 0x1) {
+        if (READ(0x1d8) == 0x1 && READ(0x1dc) == 0x1) {
             sprintf(ctx->sensor_id, "IMX291");
         } else if (READ(0x1d8) == 0x0) {
             sprintf(ctx->sensor_id, "IMX290");
