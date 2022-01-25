@@ -126,7 +126,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
-    if (READ(0x120) == 0x80) {
+    if (READ(0x120) == 0x80 && READ(0x129) == 0x0d) {
         sprintf(ctx->sensor_id, "IMX274");
         return true;
     }
@@ -184,7 +184,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
-    if (READ(0x4) == 0x10) {
+    if (READ(0x4) == 0x10 && READ(0x9e) == 0x71) {
         sprintf(ctx->sensor_id, "IMX123");
         return true;
     }
