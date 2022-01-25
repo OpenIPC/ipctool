@@ -15,7 +15,7 @@ int uboot_detect_env(void *buf, size_t size, size_t erasesize);
 const char *uboot_getenv(const char *name);
 void uboot_copyenv_int(const void *buf);
 void set_env_param(const char *key, const char *value, enum FLASH_OP op);
-const char *uboot_env_findnsave();
+const char *uboot_env_findnsave(size_t* len);
 
 int cmd_printenv();
 int cmd_set_env(int argc, char **argv);

@@ -235,11 +235,12 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
-const char *uboot_env_findnsave() {
+const char *uboot_env_findnsave(size_t* len) {
     ctx_uboot_t ctx = {
         .op = OP_COPY,
     };
     enum_mtd_info(&ctx, cb_uboot_env);
+    *len = env_len;
 
     return uenv;
 }

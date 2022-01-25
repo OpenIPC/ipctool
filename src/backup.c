@@ -389,7 +389,7 @@ static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
 }
 
 static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
-                     mtd_restore_ctx_t *mtd, bool simulate) {
+                     mtd_restore_ctx_t *mtd, bool skip_env, bool simulate) {
     for (int i = 0; i < MAX_MTDBLOCKS; i++) {
         if (!*mtdbackup[i].name)
             continue;
@@ -406,8 +406,8 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
                 return false;
             }
             char op = 'e';
-            // skip env
-            if (mtd->env_dev == newi && mtd->env_offset == this_offset)
+            if (skip_env && mtd->env_dev == newi &&
+                mtd->env_offset == this_offset)
                 op = 's';
             if (!simulate) {
                 print_flash_progress(c, cnt, op);
@@ -584,9 +584,9 @@ int restore_backup(const char *arg, bool skip_env, bool force) {
         }
         printf("Backups were checked\n");
 
-        if (!do_flash("Analyzing", mtdbackup, &mtd, true))
+        if (!do_flash("Analyzing", mtdbackup, &mtd, skip_env, true))
             goto bailout;
-        if (!do_flash("Restoring", mtdbackup, &mtd, false))
+        if (!do_flash("Restoring", mtdbackup, &mtd, skip_env, false))
             goto bailout;
 
         reboot_with_msg();
@@ -817,6 +817,10 @@ int do_upgrade(const char *filename, bool force) {
             payload = jpayload->valueint;
             mtdwrite[i].size = ceil_up(payload, psize ? psize : mtd.erasesize);
             mtdwrite[i].data = malloc(mtdwrite[i].size);
+            if (mtdwrite[i].data == NULL) {
+                fprintf(stderr, "Allocation error\n");
+                return 1;
+            }
             memcpy(mtdwrite[i].data, read_ptr, payload);
             memset(mtdwrite[i].data + payload, 0xff,
                    mtdwrite[i].size - payload);
@@ -853,17 +857,30 @@ int do_upgrade(const char *filename, bool force) {
         }
 
         if (!strcmp(mtdwrite[i].name, "boot")) {
-            // Copy existing env just right after it as separate partition
-	    const char* env = uboot_env_findnsave();
-	    if (env == NULL) {
-		fprintf(stderr, "Cannot find env, internal error\n");
-		return 1;
-	    }
+            // Copy existing env just right after boot as separate partition
+            size_t env_len;
+            const char *env = uboot_env_findnsave(&env_len);
+            if (env == NULL) {
+                fprintf(stderr, "Cannot find env, internal error\n");
+                return 1;
+            }
 
+            i++;
 
-
-		puts("Do copy");
-		exit(0);
+            mtdwrite[i].off_flashb = goff;
+            mtdwrite[i].size = env_len;
+            mtdwrite[i].data = malloc(mtdwrite[i].size);
+            if (mtdwrite[i].data == NULL) {
+                fprintf(stderr, "Allocation error\n");
+                return 1;
+            }
+            strcpy(mtdwrite[i].name, "env");
+            memcpy(mtdwrite[i].data, env, env_len);
+            add_mtdpart(mtdparts, mtdwrite[i].name, mtdwrite[i].size);
+            curr_mtd_part++;
+            printf("\t%p, size: %zu bytes\n", mtdwrite[i].data,
+                   mtdwrite[i].size);
+            goff += mtdwrite[i].size;
         }
 
         i++;
@@ -878,12 +895,12 @@ int do_upgrade(const char *filename, bool force) {
     snprintf(mtdparts + strlen(mtdparts), MAX_MTDPARTS - strlen(mtdparts),
              ",-(rootfs_data)");
 
-    if (!do_flash("Analyzing", mtdwrite, &mtd, true)) {
+    if (!do_flash("Analyzing", mtdwrite, &mtd, false, true)) {
         printf("Early exit, check the logs\n");
         ret = 4;
         goto bailout;
     }
-    if (!do_flash("Upgrading", mtdwrite, &mtd, false)) {
+    if (!do_flash("Upgrading", mtdwrite, &mtd, false, false)) {
         printf("Early exit, check the logs\n");
         ret = 4;
         goto bailout;
