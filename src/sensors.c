@@ -189,7 +189,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
-    if (READ(0x1e0) > 0) {
+    if (READ(0x1e0) > 0 && READ(0x1e) == 0x1) {
         uint8_t val = (0xc0 & READ(0x1e0)) >> 6;
         if (val == 3) {
             sprintf(ctx->sensor_id, "IMX224");
