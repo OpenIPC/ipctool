@@ -919,8 +919,9 @@ int do_upgrade(const char *filename, bool force) {
         set_env_param_ram("totalmem", total_mem);
         printf("set_env_param: total_mem=%s\n", total_mem);
     }
-    if (*board)
-        set_env_param_ram("original", board);
+    if (*board_id)
+        set_env_param_ram("hardware", board_id);
+    set_env_param_ram("soc", getchipname());
 
     snprintf(value, sizeof(value),
              "setenv setargs setenv bootargs ${bootargs}; run setargs; "
