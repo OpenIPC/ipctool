@@ -103,7 +103,7 @@ static int xm_mac() {
 
 int main(int argc, char **argv) {
 
-    const char *short_options = "";
+    const char *short_options = "sc";
     const struct option long_options[] = {
         {"chip-name", no_argument, NULL, 'c'},
         {"family", no_argument, NULL, 'f'},

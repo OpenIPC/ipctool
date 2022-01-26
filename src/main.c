@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
     bool wait_mode = false;
     int argnum = 1;
 
-    while ((res = getopt_long_only(argc, argv, "s", long_options,
+    while ((res = getopt_long_only(argc, argv, "cs", long_options,
                                    &option_index)) != -1) {
         argnum++;
 
