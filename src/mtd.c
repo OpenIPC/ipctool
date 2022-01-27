@@ -289,7 +289,7 @@ void print_mtd_info() {
         hisi_detect_fmc();
 }
 
-// static bool xm_inited;
+static bool xm_warning;
 
 int mtd_erase_block(int fd, int offset, int erasesize) {
     struct erase_info_user mtdEraseInfo;
@@ -300,7 +300,8 @@ int mtd_erase_block(int fd, int offset, int erasesize) {
 
     if (ioctl(fd, MEMERASE, &mtdEraseInfo) < 0) {
         if (is_xm_board()) {
-            printf("Erase failed, trying XM specific algorithm...");
+            if (!xm_warning)
+                printf("Erase failed, trying XM specific algorithm...");
             if (!xm_flash_init(fd)) {
                 fprintf(stderr, "xm_flash_init error\n");
                 return -1;
@@ -309,7 +310,10 @@ int mtd_erase_block(int fd, int offset, int erasesize) {
                 fprintf(stderr, "xm_spiflash_unlock_and_erase error\n");
                 return -1;
             }
-            printf("ok\n");
+            if (!xm_warning) {
+                printf("ok\n");
+                xm_warning = true;
+            }
             return 0;
         } else
             return -1;
