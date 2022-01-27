@@ -73,8 +73,10 @@ void Help() {
         "\n"
         "  backup <filename>         save backup into a file\n"
         "  restore [mac|filename]    restore from backup (cloud-based or local "
-        "file)\n"
-        "     [-0, --skip-env]       skip environment\n"
+         "file)\n"
+        "     [-s, --skip-env]       skip environment\n"
+        "     [-f, --force]          enforce\n"
+        "  upgrade <bundle>          upgrade to OpenIPC firmware (experimental feature, use only on cameras with UART)\n"
         "     [-f, --force]          enforce\n"
         "  printenv                  drop-in replacement for fw_printenv\n"
         "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
@@ -214,16 +216,15 @@ int main(int argc, char *argv[]) {
             return watchdog_cmd(argc - 1, argv + 1);
         else if (!strncmp(argv[1], "i2c", 3) || !strncmp(argv[1], "spi", 3))
             return i2cspi_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "restore" ) || !strcmp(argv[1], "upgrade"))
+            return upgrade_restore_cmd(argc - 1, argv + 1);
     }
 
     const struct option long_options[] = {
         {"chip-id", no_argument, NULL, 'c'},
-        {"force", no_argument, NULL, 'f'},
         {"help", no_argument, NULL, 'h'},
         {"sensor-id", no_argument, NULL, 's'},
-        {"skip-env", no_argument, NULL, '0'},
         {"temp", no_argument, NULL, 't'},
-        {"upgrade", optional_argument, NULL, 'u'},
         {"wait", no_argument, NULL, 'w'},
 
         // Keep for compability reasons
@@ -234,15 +235,10 @@ int main(int argc, char *argv[]) {
 
     int res;
     int option_index;
-    bool skip_env = false;
-    bool force = false;
     bool wait_mode = false;
-    int argnum = 1;
 
     while ((res = getopt_long_only(argc, argv, "cs", long_options,
                                    &option_index)) != -1) {
-        argnum++;
-
         switch (res) {
         case 'h':
             Help();
@@ -281,15 +277,6 @@ int main(int argc, char *argv[]) {
             break;
 
         case '0':
-            skip_env = true;
-            break;
-
-        case 'f':
-            force = true;
-            break;
-
-        case 'u':
-            return do_upgrade(optarg, force);
 
         default:
             printf("found unknown option\n");
@@ -299,28 +286,26 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (argc > argnum) {
-        if (!strcmp(argv[argnum], "dmesg")) {
+    if (argc > optind) {
+        if (!strcmp(argv[optind], "dmesg")) {
             return dmesg();
-        } else if (!strcmp(argv[argnum], "backup")) {
-            if (argv[argnum + 1] == NULL) {
+        } else if (!strcmp(argv[optind], "backup")) {
+            if (argv[optind + 1] == NULL) {
                 Help();
                 return EXIT_FAILURE;
             }
 
-            if (backup_with_yaml(argv[argnum + 1], wait_mode)) {
+            if (backup_with_yaml(argv[optind + 1], wait_mode)) {
                 // child process
                 return EXIT_SUCCESS;
             }
             goto start_yaml;
-        } else if (!strcmp(argv[argnum], "restore")) {
-            return restore_backup(argv[argnum + 1], skip_env, force);
-        } else if (!strcmp(argv[argnum], "printenv")) {
+        } else if (!strcmp(argv[optind], "printenv")) {
             return cmd_printenv();
-        } else if (!strcmp(argv[argnum], "setenv")) {
-            return cmd_set_env(argc - argnum, argv + argnum);
+        } else if (!strcmp(argv[optind], "setenv")) {
+            return cmd_set_env(argc - optind, argv + optind);
         } else {
-            printf("found unknown command: %s\n\n", argv[argnum]);
+            printf("found unknown command: %s\n\n", argv[optind]);
             Help();
             return EXIT_FAILURE;
         }

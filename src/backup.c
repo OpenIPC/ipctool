@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <netdb.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -452,7 +453,7 @@ static void reboot_with_msg() {
     reboot(RB_AUTOBOOT);
 }
 
-int restore_backup(const char *arg, bool skip_env, bool force) {
+static int restore_backup(const char *arg, bool skip_env, bool force) {
     const char *uboot_env = "  U-Boot env overwrite will be skipped";
     printf("Restoring the backup\n%s\n", skip_env ? uboot_env : "");
 
@@ -662,7 +663,7 @@ static void skip_signals() {
 #endif
 }
 
-int do_upgrade(const char *filename, bool force) {
+static int do_upgrade(const char *filename, bool force) {
     if (!getchipname()) {
         fprintf(stderr, "Chip has not been detected\n");
         return 1;
@@ -701,9 +702,12 @@ int do_upgrade(const char *filename, bool force) {
 
     int ret = 0;
     size_t len;
-    if (!filename)
-        filename = "/utils/update.json";
-    else
+    if (!filename) {
+        fprintf(
+            stderr,
+            "Cloud support is not available yet, please specify bundle path\n");
+        return 1;
+    } else
         printf("Using '%s' as update descriptor\n", filename);
     char *jsond = file_to_buf(filename, &len);
     if (!jsond) {
@@ -951,4 +955,43 @@ bailout:
     cJSON_Delete(json);
 
     return ret;
+}
+
+extern void Help();
+
+int upgrade_restore_cmd(int argc, char **argv) {
+    const char *short_options = "fs";
+    const struct option long_options[] = {
+        {"force", no_argument, NULL, 'f'},
+        {"skip-env", no_argument, NULL, 's'},
+        {NULL, 0, NULL, 0},
+    };
+    bool skip_env = false;
+    bool force = false;
+    int res;
+    int option_index;
+
+    while ((res = getopt_long_only(argc, argv, "", long_options,
+                                   &option_index)) != -1) {
+        switch (res) {
+        case 's':
+            skip_env = true;
+            break;
+        case 'f':
+            force = true;
+            break;
+
+        case '?':
+            Help();
+            return EXIT_FAILURE;
+        }
+    }
+
+    const char *optarg = argv[optind];
+
+    bool restore_mode = argv[0][0] == 'r';
+    if (restore_mode)
+        return restore_backup(optarg, skip_env, force);
+    else
+        return do_upgrade(optarg, force);
 }

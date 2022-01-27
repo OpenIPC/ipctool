@@ -221,18 +221,17 @@ static int spidump(int argc, char **argv, bool script_mode) {
 extern void Help();
 
 int i2cspi_cmd(int argc, char **argv) {
+    const char *short_options = "s";
     const struct option long_options[] = {
         {"script", no_argument, NULL, 's'},
+        {NULL, 0, NULL, 0},
     };
     bool script_mode = false;
     int res;
     int option_index;
-    int argnum = 1;
 
-    while ((res = getopt_long_only(argc, argv, "s", long_options,
+    while ((res = getopt_long_only(argc, argv, short_options, long_options,
                                    &option_index)) != -1) {
-        argnum++;
-
         switch (res) {
         case 's':
             script_mode = true;
@@ -246,19 +245,19 @@ int i2cspi_cmd(int argc, char **argv) {
     bool i2c_mode = argv[0][0] == 'i';
     if (!strcmp(argv[0] + 3, "get")) {
         if (i2c_mode)
-            return i2cget(argc - argnum, argv + argnum);
+            return i2cget(argc - optind, argv + optind);
         else
-            return spiget(argc - argnum, argv + argnum);
+            return spiget(argc - optind, argv + optind);
     } else if (!strcmp(argv[0] + 3, "set")) {
         if (i2c_mode)
-            return i2cset(argc - argnum, argv + argnum);
+            return i2cset(argc - optind, argv + optind);
         else
-            return spiset(argc - argnum, argv + argnum);
+            return spiset(argc - optind, argv + optind);
     } else if (!strcmp(argv[0] + 3, "dump")) {
         if (i2c_mode)
-            return i2cdump(argc - argnum, argv + argnum, script_mode);
+            return i2cdump(argc - optind, argv + optind, script_mode);
         else
-            return spidump(argc - argnum, argv + argnum, script_mode);
+            return spidump(argc - optind, argv + optind, script_mode);
     }
 
     Help();

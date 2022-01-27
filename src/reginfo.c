@@ -2028,6 +2028,7 @@ extern void Help();
 int reginfo_cmd(int argc, char **argv) {
     const struct option long_options[] = {
         {"script", no_argument, NULL, 's'},
+        {NULL, 0, NULL, 0},
     };
     bool script_mode = false;
     int res;
