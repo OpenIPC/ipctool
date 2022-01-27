@@ -708,7 +708,7 @@ static int do_upgrade(const char *filename, bool force) {
             "Cloud support is not available yet, please specify bundle path\n");
         return 1;
     } else
-        printf("Using '%s' as update descriptor\n", filename);
+        printf("Using '%s' as upgrade bundle\n", filename);
     char *jsond = file_to_buf(filename, &len);
     if (!jsond) {
         fprintf(stderr, "'%s' is not found\n", filename);
@@ -852,7 +852,7 @@ static int do_upgrade(const char *filename, bool force) {
             kernel_part = curr_mtd_part;
         }
         curr_mtd_part++;
-        printf("\t%p, size: %zu bytes\n", mtdwrite[i].data, mtdwrite[i].size);
+        printf("\t%s\t%p, size: %zu bytes\n", mtdwrite[i].name, mtdwrite[i].data, mtdwrite[i].size);
         goff += mtdwrite[i].size;
 
         cJSON *jsha1 = cJSON_GetObjectItemCaseSensitive(part, "sha1");
