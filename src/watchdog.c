@@ -72,7 +72,9 @@ static int watchdog_stop() {
     case HISI_V4:
     case HISI_V4A: {
         int opts = WDIOS_DISABLECARD;
-        return ioctl(fd, HISINEW_WDIOC_SETOPTIONS, &opts);
+        return ioctl(fd,
+                     newhisictl() ? HISINEW_WDIOC_SETOPTIONS : WDIOC_SETOPTIONS,
+                     &opts);
     }
         // case XM:
         // return ioctl(fd, CMD_WDT_STOP);
