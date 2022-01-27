@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
         {"temp", no_argument, NULL, 't'},
         {"xm-mac", no_argument, NULL, 'x'},
 
-        // Keep for compability reasons
+        // Keep for compatibility reasons
         {"chip_id", no_argument, NULL, '1'},
         {"long_sensor", no_argument, NULL, '2'},
         {"short_sensor", no_argument, NULL, '3'},

@@ -73,10 +73,11 @@ void Help() {
         "\n"
         "  backup <filename>         save backup into a file\n"
         "  restore [mac|filename]    restore from backup (cloud-based or local "
-         "file)\n"
+        "file)\n"
         "     [-s, --skip-env]       skip environment\n"
         "     [-f, --force]          enforce\n"
-        "  upgrade <bundle>          upgrade to OpenIPC firmware (experimental feature, use only on cameras with UART)\n"
+        "  upgrade <bundle>          upgrade to OpenIPC firmware (experimental "
+        "feature, use only on cameras with UART)\n"
         "     [-f, --force]          enforce\n"
         "  printenv                  drop-in replacement for fw_printenv\n"
         "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
@@ -216,22 +217,27 @@ int main(int argc, char *argv[]) {
             return watchdog_cmd(argc - 1, argv + 1);
         else if (!strncmp(argv[1], "i2c", 3) || !strncmp(argv[1], "spi", 3))
             return i2cspi_cmd(argc - 1, argv + 1);
-        else if (!strcmp(argv[1], "restore" ) || !strcmp(argv[1], "upgrade"))
+        else if (!strcmp(argv[1], "restore") || !strcmp(argv[1], "upgrade"))
             return upgrade_restore_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "printenv"))
+            return cmd_printenv();
+        else if (!strcmp(argv[1], "setenv"))
+            return cmd_set_env(argc - 1, argv + 1);
+        else if (!strcmp(argv[optind], "dmesg"))
+            return dmesg();
     }
 
-    const struct option long_options[] = {
-        {"chip-id", no_argument, NULL, 'c'},
-        {"help", no_argument, NULL, 'h'},
-        {"sensor-id", no_argument, NULL, 's'},
-        {"temp", no_argument, NULL, 't'},
-        {"wait", no_argument, NULL, 'w'},
+    const struct option long_options[] = {{"chip-id", no_argument, NULL, 'c'},
+                                          {"help", no_argument, NULL, 'h'},
+                                          {"sensor-id", no_argument, NULL, 's'},
+                                          {"temp", no_argument, NULL, 't'},
+                                          {"wait", no_argument, NULL, 'w'},
 
-        // Keep for compability reasons
-        {"chip_id", no_argument, NULL, '1'},
-        {"sensor_id", no_argument, NULL, '2'},
+                                          // Keep for compatibility reasons
+                                          {"chip_id", no_argument, NULL, '1'},
+                                          {"sensor_id", no_argument, NULL, '2'},
 
-        {NULL, 0, NULL, 0}};
+                                          {NULL, 0, NULL, 0}};
 
     int res;
     int option_index;
@@ -287,9 +293,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc > optind) {
-        if (!strcmp(argv[optind], "dmesg")) {
-            return dmesg();
-        } else if (!strcmp(argv[optind], "backup")) {
+        if (!strcmp(argv[optind], "backup")) {
             if (argv[optind + 1] == NULL) {
                 Help();
                 return EXIT_FAILURE;
@@ -300,10 +304,6 @@ int main(int argc, char *argv[]) {
                 return EXIT_SUCCESS;
             }
             goto start_yaml;
-        } else if (!strcmp(argv[optind], "printenv")) {
-            return cmd_printenv();
-        } else if (!strcmp(argv[optind], "setenv")) {
-            return cmd_set_env(argc - optind, argv + optind);
         } else {
             printf("found unknown command: %s\n\n", argv[optind]);
             Help();
