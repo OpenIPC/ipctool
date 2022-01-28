@@ -186,14 +186,14 @@ sensors:
 * Determine chip id:
 
     ```console
-    # ipctool --chip_id
+    # ipctool --chip-id
     hi3516cv300
     ```
 
 * Determine sensor model and control line:
 
     ```console
-    # ipctool --sensor_id
+    # ipctool --sensor-id
     imx291_i2c
     ```
 
