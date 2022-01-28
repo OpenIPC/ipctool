@@ -849,10 +849,11 @@ static int do_upgrade(const char *filename, bool force) {
         if (!strcmp(mtdwrite[i].name, "rootfs")) {
             root_part = curr_mtd_part;
         } else if (!strcmp(mtdwrite[i].name, "kernel")) {
-            kernel_part = curr_mtd_part;
+            kernel_part = i;
         }
         curr_mtd_part++;
-        printf("\t%s\t%p, size: %zu bytes\n", mtdwrite[i].name, mtdwrite[i].data, mtdwrite[i].size);
+        printf("\t%s\t%p, size: %zu bytes\n", mtdwrite[i].name,
+               mtdwrite[i].data, mtdwrite[i].size);
         goff += mtdwrite[i].size;
 
         cJSON *jsha1 = cJSON_GetObjectItemCaseSensitive(part, "sha1");
@@ -885,8 +886,8 @@ static int do_upgrade(const char *filename, bool force) {
             strcpy(mtdwrite[i].name, "env");
             add_mtdpart(mtdparts, mtdwrite[i].name, mtdwrite[i].size);
             curr_mtd_part++;
-            printf("\t%p, size: %zu bytes\n", mtdwrite[i].data,
-                   mtdwrite[i].size);
+            printf("\t%s\t%p, size: %zu bytes\n", mtdwrite[i].name,
+                   mtdwrite[i].data, mtdwrite[i].size);
             goff += mtdwrite[i].size;
         }
 
