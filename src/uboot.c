@@ -185,8 +185,6 @@ rewrite:
         crc32(towrite + CRC_SZ, env_len - CRC_SZ, &res_crc);
         *(uint32_t *)towrite = res_crc;
         mtd_write(mtd, offset, erasesize, towrite, env_len);
-        printf("mtd_write(%d, %#x, %#x, ..., %#x)\n", mtd, offset, erasesize,
-               env_len);
     }
     if (uenv != towrite)
         memcpy(uenv, towrite, env_len);

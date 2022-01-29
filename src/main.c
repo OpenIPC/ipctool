@@ -225,6 +225,8 @@ int main(int argc, char *argv[]) {
             return cmd_set_env(argc - 1, argv + 1);
         else if (!strcmp(argv[optind], "dmesg"))
             return dmesg();
+        else if (!strcmp(argv[optind], "mtd-unlock"))
+            return mtd_unlock_cmd();
     }
 
     const struct option long_options[] = {{"chip-id", no_argument, NULL, 'c'},

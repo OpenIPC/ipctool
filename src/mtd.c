@@ -337,7 +337,7 @@ bool mtd_write_block(int fd, int offset, const char *data, size_t size) {
     return true;
 }
 
-bool mtd_verify_block(int fd, int offset, const char *data, size_t size) {
+bool mtd_verify_block(int mtd, int fd, int offset, const char *data, size_t size) {
     bool res = false;
 
     // fprintf(stderr, "Seeking on mtd device to: %x\n", offset);
@@ -354,7 +354,7 @@ bool mtd_verify_block(int fd, int offset, const char *data, size_t size) {
     }
 
     if (memcmp(buf, data, size) != 0) {
-        fprintf(stderr, "Block verify error\n");
+        fprintf(stderr, "Block mtd%d [%#x, %#x] write verify error, possibly dead flash\n", mtd, offset, size);
         goto quit;
     }
 
@@ -391,7 +391,7 @@ bool mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
 
     if (!mtd_write_block(fd, offset, data, size))
         goto quit;
-    if (!mtd_verify_block(fd, offset, data, size))
+    if (!mtd_verify_block(mtd, fd, offset, data, size))
         goto quit;
 
     res = true;
@@ -400,4 +400,38 @@ quit:
     close(fd);
 
     return res;
+}
+
+static void mtd_unlock(int fd, int offset, int erasesize) {
+    struct erase_info_user mtdEraseInfo = {
+        .start = offset,
+        .length = erasesize,
+    };
+
+    int ret = ioctl(fd, MEMUNLOCK, &mtdEraseInfo);
+    if (ret < 0)
+        fprintf(stderr, "Error while mtd_unlock() = %d\n", ret);
+}
+
+static bool mtd_unlock_cb(int i, const char *name, struct mtd_info_user *mtd,
+                          void *ctx) {
+    int fd = mtd_open(i);
+    if (fd < 0) {
+        fprintf(stderr, "Could not open mtd device: %d\n", i);
+        return false;
+    }
+
+    if (mtd->type == MTD_NORFLASH) {
+        printf("%s\t%#x, %#x\n", name, 0, mtd->size);
+        mtd_unlock(fd, 0, mtd->size);
+    }
+
+    close(fd);
+    return true;
+}
+
+int mtd_unlock_cmd() {
+    enum_mtd_info(NULL, mtd_unlock_cb);
+
+    return EXIT_SUCCESS;
 }
