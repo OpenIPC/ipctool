@@ -2100,6 +2100,7 @@ static bool get_chip_gpio_adress(size_t *GPIO_Base, size_t *GPIO_Offset,
         // AV300
         *GPIO_Base = 0x120D0000;
         *GPIO_Groups = 12;
+        *GPIO_Offset = 0x1000;
         break;
     case HISI_V4:
         *GPIO_Base = 0x120B0000;
