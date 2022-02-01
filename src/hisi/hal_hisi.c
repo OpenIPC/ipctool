@@ -357,7 +357,7 @@ int hisi_gen4a_spi_read_register(int fd, unsigned char i2c_addr,
     memset(mesg, 0, sizeof(mesg));
     mesg[0].tx_buf = (__u64)(long)&tx_buf;
     mesg[0].rx_buf = (__u64)(long)&rx_buf;
-    mesg[0].len = 3;
+    mesg[0].len = 4;
     mesg[0].speed_hz = 2000000;
     mesg[0].bits_per_word = 8;
     mesg[0].cs_change = 1;
@@ -370,12 +370,13 @@ int hisi_gen4a_spi_read_register(int fd, unsigned char i2c_addr,
         return -1;
     }
 
-    reverse8(rx_buf + 2, 1);
+    reverse8(rx_buf, 3);
+    uint8_t val = (rx_buf[2] >> 1) | (rx_buf[3] & 0x80);
 #if 0
-    printf("hisi_gen4a_spi_read_register(%#x) = %#x\n", reg_addr, rx_buf[2]);
+    printf("hisi_gen4a_spi_read_register(%#x) = %#x\n", reg_addr, val);
 #endif
 
-    return rx_buf[2];
+    return val;
 }
 
 static unsigned long hisi_media_mem() {
