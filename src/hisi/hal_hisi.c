@@ -5,11 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <linux/i2c-dev.h>
-#include <linux/i2c.h>
-#include <linux/ioctl.h>
 #include <pthread.h>
-#include <sys/ioctl.h>
 #include <sys/resource.h>
 #include <unistd.h>
 
@@ -45,17 +41,6 @@ static int hisi_open_i2c_fd() {
 
     return universal_open_sensor_fd(filename);
 }
-
-#define SPI_CPHA 0x01
-#define SPI_CPOL 0x02
-
-#define SPI_MODE_3 (SPI_CPOL | SPI_CPHA)
-#define SPI_LSB_FIRST 0x08
-
-#define SPI_IOC_MAGIC 'k'
-#define SPI_IOC_WR_MODE _IOW(SPI_IOC_MAGIC, 1, __u8)
-#define SPI_IOC_WR_BITS_PER_WORD _IOW(SPI_IOC_MAGIC, 3, __u8)
-#define SPI_IOC_WR_MAX_SPEED_HZ _IOW(SPI_IOC_MAGIC, 4, __u32)
 
 static int hisi_open_spi_fd() {
     unsigned int value;
@@ -318,37 +303,6 @@ int sony_ssp_read_register(int fd, unsigned char i2c_addr,
     unsigned int data = (unsigned int)(((reg_addr & 0xffff) << 8));
     int ret = ioctl(fd, SSP_READ_ALT, &data);
     return data & 0xff;
-}
-
-struct spi_ioc_transfer {
-    __u64 tx_buf;
-    __u64 rx_buf;
-
-    __u32 len;
-    __u32 speed_hz;
-
-    __u16 delay_usecs;
-    __u8 bits_per_word;
-    __u8 cs_change;
-    __u32 pad;
-};
-
-#define SPI_IOC_MAGIC 'k'
-#define SPI_MSGSIZE(N)                                                         \
-    ((((N) * (sizeof(struct spi_ioc_transfer))) < (1 << _IOC_SIZEBITS))        \
-         ? ((N) * (sizeof(struct spi_ioc_transfer)))                           \
-         : 0)
-#define SPI_IOC_MESSAGE(N) _IOW(SPI_IOC_MAGIC, 0, char[SPI_MSGSIZE(N)])
-
-static void reverse8(unsigned char *buf, unsigned int len) {
-    unsigned int i;
-    for (i = 0; i < len; i++) {
-        buf[i] = ((buf[i] & 0x55) << 1) | ((buf[i] & 0xAA) >> 1);
-        buf[i] =
-            ((buf[i] & 0x33) << 2) | ((buf[i] & 0xCC) >> 2); /* shift by 2 */
-        buf[i] =
-            ((buf[i] & 0x0F) << 4) | ((buf[i] & 0xF0) >> 4); /* shift by 4 */
-    }
 }
 
 int hisi_spi_read_register(int fd, unsigned char i2c_addr,

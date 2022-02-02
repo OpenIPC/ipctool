@@ -1,11 +1,46 @@
 #ifndef HAL_COMMON_H
 #define HAL_COMMON_H
 
+#include <linux/i2c-dev.h>
+#include <linux/i2c.h>
+#include <sys/ioctl.h>
+#include <linux/ioctl.h>
+
 #include "cjson/cJSON.h"
 #include "hal_novatek.h"
 #include "hal_sstar.h"
 #include "hal_xm.h"
 #include "hisi/hal_hisi.h"
+
+#define SPI_CPHA 0x01
+#define SPI_CPOL 0x02
+#define SPI_MODE_3 (SPI_CPOL | SPI_CPHA)
+#define SPI_CS_HIGH 0x04
+#define SPI_LSB_FIRST 0x08
+
+#define SPI_IOC_MAGIC 'k'
+#define SPI_IOC_WR_MODE _IOW(SPI_IOC_MAGIC, 1, __u8)
+#define SPI_IOC_WR_BITS_PER_WORD _IOW(SPI_IOC_MAGIC, 3, __u8)
+#define SPI_IOC_WR_MAX_SPEED_HZ _IOW(SPI_IOC_MAGIC, 4, __u32)
+
+struct spi_ioc_transfer {
+    __u64 tx_buf;
+    __u64 rx_buf;
+
+    __u32 len;
+    __u32 speed_hz;
+
+    __u16 delay_usecs;
+    __u8 bits_per_word;
+    __u8 cs_change;
+    __u32 pad;
+};
+
+#define SPI_MSGSIZE(N)                                                         \
+    ((((N) * (sizeof(struct spi_ioc_transfer))) < (1 << _IOC_SIZEBITS))        \
+         ? ((N) * (sizeof(struct spi_ioc_transfer)))                           \
+         : 0)
+#define SPI_IOC_MESSAGE(N) _IOW(SPI_IOC_MAGIC, 0, char[SPI_MSGSIZE(N)])
 
 enum SENSORS {
     SENSOR_ONSEMI = 1,

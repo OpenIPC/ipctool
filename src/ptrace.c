@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include "chipid.h"
+#include "hal_common.h"
 #include "hal_xm.h"
 #include "hisi/hal_hisi.h"
 #include "hisi/ptrace.h"
@@ -453,20 +454,79 @@ static void print_args(uint32_t *b, uint32_t *a, int cnt) {
     }
 }
 
+static void add_flag(char *buf, const char *name) {
+    if (*buf)
+        strcat(buf, " | ");
+    strcat(buf, name);
+}
+
+static const char *spi_modes(uint32_t value, char buf[1024]) {
+    if (value & SPI_CPHA) {
+        add_flag(buf, "SPI_CPHA");
+        value &= ~SPI_CPHA;
+    }
+    if (value & SPI_CPOL) {
+        add_flag(buf, "SPI_CPOL");
+        value &= ~SPI_CPOL;
+    }
+    if (value & SPI_LSB_FIRST) {
+        add_flag(buf, "SPI_LSB_FIRST");
+        value &= ~SPI_LSB_FIRST;
+    }
+    if (value & SPI_CS_HIGH) {
+        add_flag(buf, "SPI_LSB_FIRST");
+        value &= ~SPI_CS_HIGH;
+    }
+    if (value) {
+        if (*buf)
+            strcat(buf, " | ");
+        sprintf(buf + strlen(buf), "%d", value);
+    }
+    return buf;
+}
+
+static void print_ioctl_spi(pid_t child, int fd, size_t arg, const char *name) {
+    uint32_t d = 0;
+    copy_from_process(child, arg, &d, sizeof(d));
+    printf("ioctl_spi('%s', %s, &%d);\n", fds[fd].filename, name, d);
+}
+
 static void spi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd, size_t arg,
                               size_t sysret) {
-    uint32_t d[2] = {0};
-    copy_from_process(child, arg, &d, sizeof(d));
-    if (*d > 0xb0000000) {
-        uint32_t tx = 0;
-        copy_from_process(child, *d, &tx, sizeof(tx));
+    switch (cmd) {
+    case SPI_IOC_WR_MAX_SPEED_HZ:
+        print_ioctl_spi(child, fd, arg, "SPI_IOC_WR_MAX_SPEED_HZ");
+        return;
+    case SPI_IOC_WR_BITS_PER_WORD:
+        print_ioctl_spi(child, fd, arg, "SPI_IOC_WR_BITS_PER_WORD");
+        return;
+    case SPI_IOC_WR_MODE: {
+        uint32_t d = 0;
+        copy_from_process(child, arg, &d, sizeof(d));
+        printf("ioctl_spi('%s', SPI_IOC_WR_MODE, &(%s));\n", fds[fd].filename,
+               spi_modes(d, (char[1024]){0}));
+    }
+        return;
+    case SPI_IOC_MESSAGE(1): {
+        struct spi_ioc_transfer mesg[1];
+        copy_from_process(child, arg, &mesg[0], sizeof(mesg));
+        char *rx_buf = NULL;
+        if (mesg[0].len) {
+            rx_buf = alloca(mesg[0].len);
+            copy_from_process(child, mesg[0].tx_buf, rx_buf, mesg[0].len);
+        }
 
-        printf("ioctl_spi('%s', 0x%x, {%#.8x}\n", fds[fd].filename, cmd, tx);
-    } else {
-        int num = 1;
-        printf("ioctl_spi('%s', 0x%x, {", fds[fd].filename, cmd);
-        print_args((uint32_t *)ioctl_arg, d, num);
-        printf("}) = %d\n", sysret);
+        printf("ioctl_spi('%s', SPI_IOC_MESSAGE(1), { ", fds[fd].filename);
+        for (int i = 0; i < mesg[0].len; i++) {
+            printf("%s%#x", i != 0 ? ", " : "", rx_buf[i]);
+        }
+        printf(" });\n");
+    } break;
+    default: {
+        uint32_t d = 0;
+        copy_from_process(child, arg, &d, sizeof(d));
+        printf("ioctl_spi('%s', %#x, &%d);\n", fds[fd].filename, cmd, d);
+    }
     }
 }
 
