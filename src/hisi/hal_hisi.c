@@ -46,13 +46,54 @@ static int hisi_open_i2c_fd() {
     return universal_open_sensor_fd(filename);
 }
 
+#define SPI_CPHA 0x01
+#define SPI_CPOL 0x02
+
+#define SPI_MODE_3 (SPI_CPOL | SPI_CPHA)
+#define SPI_LSB_FIRST 0x08
+
+#define SPI_IOC_MAGIC 'k'
+#define SPI_IOC_WR_MODE _IOW(SPI_IOC_MAGIC, 1, __u8)
+#define SPI_IOC_WR_BITS_PER_WORD _IOW(SPI_IOC_MAGIC, 3, __u8)
+#define SPI_IOC_WR_MAX_SPEED_HZ _IOW(SPI_IOC_MAGIC, 4, __u32)
+
 static int hisi_open_spi_fd() {
+    unsigned int value;
+    int ret;
     int adapter_nr = 0; /* probably dynamically determined */
     char filename[FILENAME_MAX];
 
     snprintf(filename, sizeof(filename), "/dev/spidev0.%d", adapter_nr);
 
-    return universal_open_sensor_fd(filename);
+    int fd = universal_open_sensor_fd(filename);
+
+    value = SPI_MODE_3 | SPI_LSB_FIRST;
+    ret = ioctl(fd, SPI_IOC_WR_MODE, &value);
+    if (ret < 0) {
+        fprintf(stderr, "ioctl SPI_IOC_WR_MODE err, value = %d ret = %d\n",
+                value, ret);
+        return ret;
+    }
+
+    value = 8;
+    ret = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &value);
+    if (ret < 0) {
+        fprintf(stderr,
+                "ioctl SPI_IOC_WR_BITS_PER_WORD err, value = %d ret = %d\n",
+                value, ret);
+        return ret;
+    }
+
+    value = 2000000;
+    ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &value);
+    if (ret < 0) {
+        fprintf(stderr,
+                "ioctl SPI_IOC_WR_MAX_SPEED_HZ err, value = %d ret = %d\n",
+                value, ret);
+        return ret;
+    }
+
+    return fd;
 }
 
 static int hisi_gen1_open_i2c_sensor_fd() {
@@ -310,9 +351,9 @@ static void reverse8(unsigned char *buf, unsigned int len) {
     }
 }
 
-int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
-                                unsigned int reg_addr, unsigned int reg_width,
-                                unsigned int data_width) {
+int hisi_spi_read_register(int fd, unsigned char i2c_addr,
+                           unsigned int reg_addr, unsigned int reg_width,
+                           unsigned int data_width) {
     int ret = 0;
     struct spi_ioc_transfer mesg[1];
     unsigned char tx_buf[8] = {0};
@@ -337,46 +378,6 @@ int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
     }
 
     return rx_buf[2];
-}
-
-int hisi_gen4a_spi_read_register(int fd, unsigned char i2c_addr,
-                                 unsigned int reg_addr, unsigned int reg_width,
-                                 unsigned int data_width) {
-    int ret = 0;
-    struct spi_ioc_transfer mesg[1];
-    unsigned char tx_buf[8] = {0};
-    unsigned char rx_buf[8] = {0};
-
-    reg_addr = sony_i2c_to_spi(reg_addr);
-
-    tx_buf[0] = (reg_addr & 0xff00) >> 8;
-    tx_buf[0] |= 0x80;
-    tx_buf[1] = reg_addr & 0xff;
-    tx_buf[2] = 0;
-
-    memset(mesg, 0, sizeof(mesg));
-    mesg[0].tx_buf = (__u64)(long)&tx_buf;
-    mesg[0].rx_buf = (__u64)(long)&rx_buf;
-    mesg[0].len = 4;
-    mesg[0].speed_hz = 2000000;
-    mesg[0].bits_per_word = 8;
-    mesg[0].cs_change = 1;
-
-    reverse8(tx_buf, mesg[0].len);
-
-    ret = ioctl(fd, SPI_IOC_MESSAGE(1), mesg);
-    if (ret != (int)mesg[0].len) {
-        printf("SPI_IOC_MESSAGE error \n");
-        return -1;
-    }
-
-    reverse8(rx_buf, 3);
-    uint8_t val = (rx_buf[2] >> 1) | (rx_buf[3] & 0x80);
-#if 0
-    printf("hisi_gen4a_spi_read_register(%#x) = %#x\n", reg_addr, val);
-#endif
-
-    return val;
 }
 
 static unsigned long hisi_media_mem() {
@@ -476,10 +477,7 @@ void setup_hal_hisi() {
     close_sensor_fd = universal_close_sensor_fd;
     hal_cleanup = hisi_hal_cleanup;
     i2c_change_addr = universal_sensor_i2c_change_addr;
-    if (chip_generation == HISI_V4A)
-        spi_read_register = hisi_gen4a_spi_read_register;
-    else
-        spi_read_register = hisi_gen3_spi_read_register;
+    spi_read_register = hisi_spi_read_register;
     if (chip_generation == HISI_V1) {
         open_i2c_sensor_fd = hisi_gen1_open_i2c_sensor_fd;
         open_spi_sensor_fd = hisi_gen1_open_spi_sensor_fd;

@@ -33,12 +33,12 @@ int sony_ssp_read_register(int fd, unsigned char i2c_addr,
                            unsigned int reg_addr, unsigned int reg_width,
                            unsigned int data_width);
 
-int hisi_gen3_spi_read_register(int fd, unsigned char i2c_addr,
-                                unsigned int reg_addr, unsigned int reg_width,
-                                unsigned int data_width);
+int hisi_spi_read_register(int fd, unsigned char i2c_addr,
+                           unsigned int reg_addr, unsigned int reg_width,
+                           unsigned int data_width);
 int hisi_gen4a_spi_read_register(int fd, unsigned char i2c_addr,
-                                unsigned int reg_addr, unsigned int reg_width,
-                                unsigned int data_width);
+                                 unsigned int reg_addr, unsigned int reg_width,
+                                 unsigned int data_width);
 
 void hisi_vi_information(sensor_ctx_t *ctx);
 unsigned long hisi_totalmem(unsigned long *media_mem);
