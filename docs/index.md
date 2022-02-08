@@ -56,15 +56,18 @@ Where:
   printenv                  drop-in replacement for fw_printenv
   setenv <key> <value>      drop-in replacement for fw_setenv
   dmesg                     drop-in replacement for dmesg
-  (i2c|spi)get <device address> <register>
+  i2cget <device address> <register>
+  spiget <register>
                             read data from I2C/SPI device
-  (i2c|spi)set <device address> <register> <new value>
+  i2cset <device address> <register> <new value>
+  spiset <register> <new value>
                             write a value to I2C/SPI device
-  (i2c|spi)dump [--script] <device address> <from register> <to register>
+  i2cdump [--script] <device address> <from register> <to register>
+  spidump [--script] <from register> <to register>
                             dump data from I2C/SPI device
   reginfo [--script]        dump current status of pinmux registers
   gpio (scan|mux)           GPIO utilities
-  trace <full/path/to/executable> [arguments]
+  trace [--skip=usleep] <full/path/to/executable> [program arguments]
                             dump original firmware calls and data structures
   -h, --help                this help
 ```
