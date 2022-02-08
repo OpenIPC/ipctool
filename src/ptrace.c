@@ -26,6 +26,19 @@
 #include "hisi/hal_hisi.h"
 #include "hisi/ptrace.h"
 
+#define ASSERT_PTRACE                                                          \
+    if (ret == -1 && errno) {                                                  \
+        switch (errno) {                                                       \
+        case 3:                                                                \
+            fprintf(stderr, "No such PID %d\n", proc->pid);                    \
+            break;                                                             \
+        default:                                                               \
+            fprintf(stderr, "[%d] errno %d (%s)\n", proc->pid, errno,          \
+                    strerror(errno));                                          \
+        }                                                                      \
+        exit(0);                                                               \
+    }
+
 #define IS_PREFIX(name, substr) (!strncmp(name, substr, sizeof substr - 1))
 
 #define SSP_READ_ALT 0x1
@@ -79,22 +92,6 @@ typedef struct process {
 
 HashTable pids;
 
-static int wait_for_syscall(process_t *proc) {
-    int status;
-    while (1) {
-        ptrace(PTRACE_SYSCALL, proc->pid, 0, 0);
-        waitpid(proc->pid, &status, 0);
-        if (WIFSTOPPED(status) && WSTOPSIG(status) & 0x80)
-            return 0;
-        if (WIFEXITED(status))
-            return 1;
-        fprintf(stderr, "[stopped pid %d status %d (%x)], exiting\n", proc->pid,
-                status, WSTOPSIG(status));
-        if (WSTOPSIG(status) == 0)
-            exit(0);
-    }
-}
-
 static void dump_regs(struct user const *regs, FILE *outfp) {
     fprintf(outfp, "r0   = 0x%08x, r1 = 0x%08x\n", regs->regs.uregs[0],
             regs->regs.uregs[1]);
@@ -135,18 +132,19 @@ static void *copy_from_process(pid_t child, size_t addr, void *ptr,
                                size_t size) {
     size_t *buf = ptr;
     for (size_t i = 0; i < size; i += sizeof(size_t)) {
-        size_t word = ptrace(PTRACE_PEEKTEXT, child, addr + i, 0);
-        if (word == -1 && errno) {
-            printf("error copy_from_process from %#x\n", addr);
+        long ret = ptrace(PTRACE_PEEKTEXT, child, addr + i, 0);
+        if (ret == -1 && errno) {
+            printf("error copy_from_process from %#x (%s)\n", addr,
+                   strerror(errno));
             return NULL;
         }
-        buf[i / sizeof(size_t)] = word;
+        buf[i / sizeof(size_t)] = ret;
     }
     return ptr;
 }
 
-static char *copy_from_process_str(pid_t child, size_t addr) {
-    size_t word;
+static char *copy_from_process_str(process_t *proc, size_t addr) {
+    long ret;
     ssize_t buflen = 1024;
     char *buf = malloc(buflen);
     size_t readlen = 0;
@@ -157,11 +155,16 @@ static char *copy_from_process_str(pid_t child, size_t addr) {
             buf = realloc(buf, buflen);
             assert(buf);
         }
-        word = ptrace(PTRACE_PEEKTEXT, child, addr + readlen, 0);
-        assert(errno == 0);
-        *(size_t *)(buf + readlen) = word;
+        ret = ptrace(PTRACE_PEEKTEXT, proc->pid, addr + readlen, 0);
+        if (ret == -1 && errno) {
+            printf("error copy_from_process_str from %#x (%s)\n", addr,
+                   strerror(errno));
+            free(buf);
+            return NULL;
+        }
+        *(size_t *)(buf + readlen) = ret;
         readlen += sizeof(size_t);
-    } while (!memchr(&word, 0, sizeof(word)));
+    } while (!memchr(&ret, 0, sizeof(ret)));
     return buf;
 }
 
@@ -308,8 +311,8 @@ static void syscall_ioctl_enter(process_t *proc) {
 
 static void enter_syscall(process_t *proc) {
     memset(&proc->regs, 0, sizeof(proc->regs));
-    ptrace(PTRACE_GETREGS, proc->pid, NULL, &proc->regs);
-    assert(errno == 0);
+    long ret = ptrace(PTRACE_GETREGS, proc->pid, NULL, &proc->regs);
+    ASSERT_PTRACE;
 
     proc->syscall_num = proc->regs.regs.uregs[7];
     switch (proc->syscall_num) {
@@ -324,8 +327,8 @@ static void enter_syscall(process_t *proc) {
 static size_t get_syscall_ret(process_t *proc) {
     struct user regs;
     memset(&regs, 0, sizeof(regs));
-    ptrace(PTRACE_GETREGS, proc->pid, NULL, &regs);
-    assert(errno == 0);
+    long ret = ptrace(PTRACE_GETREGS, proc->pid, NULL, &regs);
+    ASSERT_PTRACE;
     return regs.regs.uregs[0];
 }
 
@@ -632,9 +635,13 @@ static void free_fds(process_t *proc) {
 
 static void clone_fds(process_t *parent, process_t *new) {
     memcpy(new->fds, parent->fds, sizeof(new->fds));
+    int cnt = 0;
     for (int i = 0; i < MAX_MON_FDS; i++)
-        if (new->fds[i].file != NULL)
+        if (new->fds[i].file != NULL) {
             new->fds[i].file->ref_cnt++;
+            cnt++;
+        }
+    fprintf(stderr, "Cloned %d fds\n", cnt);
 }
 
 static void syscall_open(process_t *proc, size_t fd, int offset) {
@@ -644,7 +651,7 @@ static void syscall_open(process_t *proc, size_t fd, int offset) {
     dump_regs(&scall_regs, stderr);
 #endif
     size_t remote_addr = proc->regs.regs.uregs[0 + offset];
-    char *filename = copy_from_process_str(proc->pid, remote_addr);
+    char *filename = copy_from_process_str(proc, remote_addr);
 #if 0
     printf("open('%s')\n", filename);
 #endif
@@ -786,30 +793,122 @@ static void exit_syscall(process_t *proc) {
     }
 }
 
-static void do_trace(pid_t child) {
-    ht_setup(&pids, sizeof(pid_t), sizeof(process_t), 10);
-    process_t *mthread = &(process_t){.pid = child};
-    ht_insert(&pids, &child, mthread);
+static pid_t get_process_parent_id(const pid_t pid) {
+    pid_t ppid = -1;
+    char buffer[BUFSIZ];
 
+    sprintf(buffer, "/proc/%d/stat", pid);
+    FILE *fp = fopen(buffer, "r");
+    if (fp) {
+        size_t size = fread(buffer, sizeof(char), sizeof(buffer), fp);
+        if (size > 0) {
+            // See: http://man7.org/linux/man-pages/man5/proc.5.html section
+            // /proc/[pid]/stat
+            strtok(buffer, " ");              // (1) pid  %d
+            strtok(NULL, " ");                // (2) comm  %s
+            strtok(NULL, " ");                // (3) state  %c
+            char *s_ppid = strtok(NULL, " "); // (4) ppid  %d
+            ppid = atoi(s_ppid);
+        }
+        fclose(fp);
+    }
+    return ppid;
+}
+
+static void do_trace(pid_t tracee) {
+    int status;
+
+    ht_setup(&pids, sizeof(pid_t), sizeof(process_t), 10);
+    pid_t tracer = getpid();
+
+    printf("\n[%d] child %d created\n", tracer, tracee);
+    ptrace(PTRACE_ATTACH, tracee, NULL,
+           NULL); // child is the main thread
+    process_t *mthread = &(process_t){.pid = tracee};
     mthread->fds[0].file = new_arc_str(strdup("stdin"));
     mthread->fds[1].file = new_arc_str(strdup("stdout"));
     mthread->fds[2].file = new_arc_str(strdup("stderr"));
+    ht_insert(&pids, &tracee, mthread);
 
-    int status;
-    waitpid(child, &status, 0);
-    assert(WIFSTOPPED(status));
-    ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
+    wait(NULL);
+
+    long ptraceOption = PTRACE_O_TRACECLONE;
+    ptrace(PTRACE_SETOPTIONS, tracee, NULL, ptraceOption);
+    ptrace(PTRACE_SYSCALL, tracee, 0, 0);
 
     while (1) {
-        // enter syscall
-        if (wait_for_syscall(mthread) != 0)
-            break;
-        enter_syscall(mthread);
+        pid_t child_waited = waitpid(-1, &status, __WALL);
 
-        // exit from syscall
-        if (wait_for_syscall(mthread) != 0)
+        if (child_waited == -1)
             break;
-        exit_syscall(mthread);
+
+        if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP) {
+            if (((status >> 16) & 0xffff) == PTRACE_EVENT_CLONE) {
+                pid_t new_child;
+                if (ptrace(PTRACE_GETEVENTMSG, child_waited, 0, &new_child) !=
+                    -1) {
+                    pid_t ppid = -1;
+                    if (!ht_contains(&pids, &new_child)) {
+                        ppid = get_process_parent_id(new_child);
+                        // TODO: review
+                        if (ppid == tracer)
+                            ppid = tracee;
+                        //
+                        process_t *thread = &(process_t){.pid = new_child};
+                        process_t *parent = ht_lookup(&pids, &ppid);
+                        if (parent) {
+                            clone_fds(parent, thread);
+                            ht_insert(&pids, &new_child, thread);
+                        } else {
+                            fprintf(stderr, "Cannot find parent %d\n", ppid);
+                        }
+                    }
+                    ptrace(PTRACE_SYSCALL, new_child, 0, 0);
+
+                    printf("\nparent %d created child %d\n", ppid, new_child);
+                }
+
+                ptrace(PTRACE_SYSCALL, child_waited, 0, 0);
+                continue;
+            }
+        }
+
+        if (WIFEXITED(status) || WIFSIGNALED(status)) {
+            if (WIFEXITED(status))
+                printf("\nchild %d exited with status %d\n", child_waited,
+                       WEXITSTATUS(status));
+            else
+                printf("\nchild %d killed by signal %d\n", child_waited,
+                       WTERMSIG(status));
+            process_t *proc = ht_lookup(&pids, &child_waited);
+            if (proc == NULL) {
+                fprintf(stderr, "Cannot lookup PID %d\n", child_waited);
+                break;
+            }
+            free_fds(proc);
+            ht_erase(&pids, &child_waited);
+
+            if (ht_is_empty(&pids))
+                break;
+        } else if (WIFSTOPPED(status)) {
+            int stopCode = WSTOPSIG(status);
+            if (stopCode == SIGTRAP) {
+                process_t *proc = ht_lookup(&pids, &child_waited);
+                if (proc == NULL) {
+                    printf("BAD lookup for %d\n", child_waited);
+                    break;
+                }
+
+                if (!proc->syscall_num) {
+                    enter_syscall(proc);
+                } else {
+                    exit_syscall(proc);
+                    proc->syscall_num = 0;
+                }
+            }
+        }
+
+        ptrace(PTRACE_SYSCALL, child_waited, 1, NULL);
     }
 }
 
