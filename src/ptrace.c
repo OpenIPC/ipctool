@@ -33,24 +33,31 @@
 
 #define LINE "=========================="
 
-struct process_t;
-typedef void (*read_enter_hook)(struct process_t* proc, int fd, size_t buf, size_t nbyte);
-typedef void (*read_exit_hook)(struct process_t* proc, int fd, size_t buf, size_t nbyte,
-                               size_t sysret);
-typedef void (*write_enter_hook)(struct process_t* proc, int fd, size_t buf, size_t nbyte);
-typedef void (*write_exit_hook)(struct process_t *proc, int fd, size_t buf,
+struct process;
+typedef void (*read_enter_hook)(struct process *proc, int fd, size_t buf,
+                                size_t nbyte);
+typedef void (*read_exit_hook)(struct process *proc, int fd, size_t buf,
+                               size_t nbyte, size_t sysret);
+typedef void (*write_enter_hook)(struct process *proc, int fd, size_t buf,
+                                 size_t nbyte);
+typedef void (*write_exit_hook)(struct process *proc, int fd, size_t buf,
                                 size_t nbyte, size_t sysret);
-typedef void (*ioctl_enter_hook)(struct process_t* proc, int fd, unsigned int cmd,
+typedef void (*ioctl_enter_hook)(struct process *proc, int fd, unsigned int cmd,
                                  size_t arg);
-typedef void (*ioctl_exit_hook)(struct process_t *proc, int fd,
-                                unsigned int cmd, size_t arg, size_t sysret);
+typedef void (*ioctl_exit_hook)(struct process *proc, int fd, unsigned int cmd,
+                                size_t arg, size_t sysret);
 
 #define CHECK_FD                                                               \
     if (fd < 0 || fd >= MAX_MON_FDS)                                           \
         return;
 
 typedef struct {
-    char *filename;
+    char *str;
+    size_t ref_cnt;
+} arc_str_t;
+
+typedef struct {
+    arc_str_t *file;
 
     read_enter_hook read_enter;
     read_exit_hook read_exit;
@@ -62,7 +69,7 @@ typedef struct {
     ioctl_exit_hook ioctl_exit;
 } mon_fd_t;
 
-typedef struct process_t {
+typedef struct process {
     pid_t pid;
     struct user regs;
     size_t syscall_num;
@@ -265,30 +272,30 @@ static void hisi_decode_sns_read(int phase, pid_t child, uint32_t arg,
 
 static unsigned char ioctl_arg[8];
 
-static void hisi_i2c_read_enter_cb(process_t* proc, int fd, unsigned int cmd,
+static void hisi_i2c_read_enter_cb(process_t *proc, int fd, unsigned int cmd,
                                    size_t arg) {
     if (cmd == I2C_RDWR)
         hisi_decode_sns_read(1, proc->pid, arg, 0);
 }
 
-static void xm_i2c_ioctl_enter_cb(process_t* proc, int fd, unsigned int cmd,
+static void xm_i2c_ioctl_enter_cb(process_t *proc, int fd, unsigned int cmd,
                                   size_t arg) {
     if (cmd == CMD_I2C_WRITE)
         xm_decode_i2c_write(proc->pid, arg, 0);
 }
 
-static void ssp_ioctl_enter_cb(process_t* proc, int fd, unsigned int cmd,
+static void ssp_ioctl_enter_cb(process_t *proc, int fd, unsigned int cmd,
                                size_t arg) {
     if (cmd == SSP_READ_ALT)
         ssp_decode_read(1, proc->pid, arg, 0);
 }
 
-static void mtd_ioctl_enter_cb(process_t* proc, int fd, unsigned int cmd,
+static void mtd_ioctl_enter_cb(process_t *proc, int fd, unsigned int cmd,
                                size_t arg) {
     copy_from_process(proc->pid, arg, ioctl_arg, sizeof(ioctl_arg));
 }
 
-static void syscall_ioctl_enter(process_t* proc) {
+static void syscall_ioctl_enter(process_t *proc) {
     int fd = proc->regs.regs.uregs[0];
     CHECK_FD;
 
@@ -405,7 +412,7 @@ static void hisi_mipi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
     }
 }
 
-static void hisi_gen2_read_exit_cb(process_t* proc, int fd, size_t remote_addr,
+static void hisi_gen2_read_exit_cb(process_t *proc, int fd, size_t remote_addr,
                                    size_t nbyte, size_t sysret) {
     unsigned char *buf = alloca(nbyte);
     copy_from_process(proc->pid, remote_addr, buf, nbyte);
@@ -417,7 +424,7 @@ static void hisi_gen2_read_exit_cb(process_t* proc, int fd, size_t remote_addr,
     }
 }
 
-static void default_read_exit_cb(process_t* proc, int fd, size_t remote_addr,
+static void default_read_exit_cb(process_t *proc, int fd, size_t remote_addr,
                                  size_t nbyte, size_t sysret) {
 #if 0
     printf("read(%d, ..., %d)\n", fd, nbyte);
@@ -490,10 +497,20 @@ static const char *spi_modes(uint32_t value, char buf[1024]) {
     return buf;
 }
 
-static void print_ioctl_spi(process_t* proc, int fd, size_t arg, const char *name) {
+static const char *arc_cstr(arc_str_t *file) {
+    if (!file)
+        return NULL;
+
+    return file->str;
+}
+
+static void print_ioctl_spi(process_t *proc, int fd, size_t arg,
+                            const char *name) {
     uint32_t d = 0;
     copy_from_process(proc->pid, arg, &d, sizeof(d));
-    printf("ioctl_spi('%s', %s, &%d);\n", proc->fds[fd].filename, name, d);
+    if (proc->fds[fd].file)
+        printf("ioctl_spi('%s', %s, &%d);\n", arc_cstr(proc->fds[fd].file),
+               name, d);
 }
 
 static void spi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
@@ -508,8 +525,8 @@ static void spi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
     case SPI_IOC_WR_MODE: {
         uint32_t d = 0;
         copy_from_process(proc->pid, arg, &d, sizeof(d));
-        printf("ioctl_spi('%s', SPI_IOC_WR_MODE, &(%s));\n", proc->fds[fd].filename,
-               spi_modes(d, (char[1024]){0}));
+        printf("ioctl_spi('%s', SPI_IOC_WR_MODE, &(%s));\n",
+               arc_cstr(proc->fds[fd].file), spi_modes(d, (char[1024]){0}));
     }
         return;
     case SPI_IOC_MESSAGE(1): {
@@ -521,7 +538,8 @@ static void spi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
             copy_from_process(proc->pid, mesg[0].tx_buf, rx_buf, mesg[0].len);
         }
 
-        printf("ioctl_spi('%s', SPI_IOC_MESSAGE(1), { ", proc->fds[fd].filename);
+        printf("ioctl_spi('%s', SPI_IOC_MESSAGE(1), { ",
+               arc_cstr(proc->fds[fd].file));
         for (int i = 0; i < mesg[0].len; i++) {
             printf("%s%#x", i != 0 ? ", " : "", rx_buf[i]);
         }
@@ -530,7 +548,8 @@ static void spi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
     default: {
         uint32_t d = 0;
         copy_from_process(proc->pid, arg, &d, sizeof(d));
-        printf("ioctl_spi('%s', %#x, &%d);\n", proc->fds[fd].filename, cmd, d);
+        printf("ioctl_spi('%s', %#x, &%d);\n", arc_cstr(proc->fds[fd].file),
+               cmd, d);
     }
     }
 }
@@ -575,7 +594,7 @@ static void mtd_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
     uint32_t d[2] = {0};
     copy_from_process(proc->pid, arg, &d, sizeof(d));
     int num = 1;
-    printf("mtd_ioctl('%s'(%d), %s (0x%x)", proc->fds[fd].filename, fd,
+    printf("mtd_ioctl('%s'(%d), %s (0x%x)", arc_cstr(proc->fds[fd].file), fd,
            mtd_cmd_params(cmd, &num), cmd);
     print_args((uint32_t *)ioctl_arg, d, num);
     printf(") = %d\n", sysret);
@@ -589,7 +608,36 @@ static void show_i2c_banner(int fd) {
     }
 }
 
-static void syscall_open(process_t* proc, size_t fd, int offset) {
+static arc_str_t *new_arc_str(char *str) {
+    arc_str_t *item = malloc(sizeof(*item));
+    item->ref_cnt = 1;
+    item->str = str;
+
+    return item;
+}
+
+static void delete_arc_str(arc_str_t *item) {
+    item->ref_cnt--;
+    if (item->ref_cnt == 0) {
+        free(item->str);
+        free(item);
+    }
+}
+
+static void free_fds(process_t *proc) {
+    for (int i = 0; i < MAX_MON_FDS; i++)
+        if (proc->fds[i].file != NULL)
+            delete_arc_str(proc->fds[i].file);
+}
+
+static void clone_fds(process_t *parent, process_t *new) {
+    memcpy(new->fds, parent->fds, sizeof(new->fds));
+    for (int i = 0; i < MAX_MON_FDS; i++)
+        if (new->fds[i].file != NULL)
+            new->fds[i].file->ref_cnt++;
+}
+
+static void syscall_open(process_t *proc, size_t fd, int offset) {
     CHECK_FD;
 
 #if 0
@@ -601,7 +649,7 @@ static void syscall_open(process_t* proc, size_t fd, int offset) {
     printf("open('%s')\n", filename);
 #endif
 
-    proc->fds[fd].filename = filename;
+    proc->fds[fd].file = new_arc_str(filename);
     proc->fds[fd].ioctl_exit = default_ioctl_exit_cb;
     proc->fds[fd].read_exit = default_read_exit_cb;
     proc->fds[fd].write_exit = default_write_exit_cb;
@@ -651,15 +699,15 @@ static void syscall_open(process_t* proc, size_t fd, int offset) {
     }
 }
 
-static void syscall_close(process_t* proc, size_t sysret) {
+static void syscall_close(process_t *proc, size_t sysret) {
     int fd = proc->regs.regs.uregs[0];
     CHECK_FD;
 
 #if 0
     printf("close(%d)\n", fd);
 #endif
-    if (proc->fds[fd].filename) {
-        free(proc->fds[fd].filename);
+    if (proc->fds[fd].file) {
+        delete_arc_str(proc->fds[fd].file);
     }
     memset(&proc->fds[fd], 0, sizeof(proc->fds[fd]));
 }
@@ -675,7 +723,7 @@ static void syscall_write_exit(process_t *proc, size_t sysret) {
         proc->fds[fd].write_exit(proc, fd, remote_addr, nbyte, sysret);
 }
 
-static void syscall_read_exit(process_t* proc, size_t sysret) {
+static void syscall_read_exit(process_t *proc, size_t sysret) {
     int fd = proc->regs.regs.uregs[0];
     CHECK_FD;
 
@@ -743,9 +791,9 @@ static void do_trace(pid_t child) {
     process_t *mthread = &(process_t){.pid = child};
     ht_insert(&pids, &child, mthread);
 
-    mthread->fds[0].filename = strdup("stdin");
-    mthread->fds[1].filename = strdup("stdout");
-    mthread->fds[2].filename = strdup("stderr");
+    mthread->fds[0].file = new_arc_str(strdup("stdin"));
+    mthread->fds[1].file = new_arc_str(strdup("stdout"));
+    mthread->fds[2].file = new_arc_str(strdup("stderr"));
 
     int status;
     waitpid(child, &status, 0);
