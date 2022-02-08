@@ -67,6 +67,8 @@ set(IPCTOOL_SRC
     src/fake_symbols.c
     src/firmware.c
     src/firmware.h
+    src/hashtable.c
+    src/hashtable.h
     src/hisi/ethernet.c
     src/hisi/ethernet.h
     src/hisi/ispreg.c

@@ -22,6 +22,7 @@
 #include "chipid.h"
 #include "hal_common.h"
 #include "hal_xm.h"
+#include "hashtable.h"
 #include "hisi/hal_hisi.h"
 #include "hisi/ptrace.h"
 
@@ -32,31 +33,55 @@
 
 #define LINE "=========================="
 
-typedef void (*read_enter_hook)(pid_t child, int fd, size_t buf, size_t nbyte);
-typedef void (*read_exit_hook)(pid_t child, int fd, size_t buf, size_t nbyte,
+struct process_t;
+typedef void (*read_enter_hook)(struct process_t* proc, int fd, size_t buf, size_t nbyte);
+typedef void (*read_exit_hook)(struct process_t* proc, int fd, size_t buf, size_t nbyte,
                                size_t sysret);
-typedef void (*write_enter_hook)(pid_t child, int fd, size_t buf, size_t nbyte);
-typedef void (*write_exit_hook)(pid_t child, int fd, size_t buf, size_t nbyte,
-                                size_t sysret);
-typedef void (*ioctl_enter_hook)(pid_t child, int fd, unsigned int cmd,
+typedef void (*write_enter_hook)(struct process_t* proc, int fd, size_t buf, size_t nbyte);
+typedef void (*write_exit_hook)(struct process_t *proc, int fd, size_t buf,
+                                size_t nbyte, size_t sysret);
+typedef void (*ioctl_enter_hook)(struct process_t* proc, int fd, unsigned int cmd,
                                  size_t arg);
-typedef void (*ioctl_exit_hook)(pid_t child, int fd, unsigned int cmd,
-                                size_t arg, size_t sysret);
+typedef void (*ioctl_exit_hook)(struct process_t *proc, int fd,
+                                unsigned int cmd, size_t arg, size_t sysret);
 
 #define CHECK_FD                                                               \
     if (fd < 0 || fd >= MAX_MON_FDS)                                           \
         return;
 
-static int wait_for_syscall(pid_t child) {
+typedef struct {
+    char *filename;
+
+    read_enter_hook read_enter;
+    read_exit_hook read_exit;
+
+    write_enter_hook write_enter;
+    write_exit_hook write_exit;
+
+    ioctl_enter_hook ioctl_enter;
+    ioctl_exit_hook ioctl_exit;
+} mon_fd_t;
+
+typedef struct process_t {
+    pid_t pid;
+    struct user regs;
+    size_t syscall_num;
+#define MAX_MON_FDS 1024
+    mon_fd_t fds[MAX_MON_FDS];
+} process_t;
+
+HashTable pids;
+
+static int wait_for_syscall(process_t *proc) {
     int status;
     while (1) {
-        ptrace(PTRACE_SYSCALL, child, 0, 0);
-        waitpid(child, &status, 0);
+        ptrace(PTRACE_SYSCALL, proc->pid, 0, 0);
+        waitpid(proc->pid, &status, 0);
         if (WIFSTOPPED(status) && WSTOPSIG(status) & 0x80)
             return 0;
         if (WIFEXITED(status))
             return 1;
-        fprintf(stderr, "[stopped pid %d status %d (%x)], exiting\n", child,
+        fprintf(stderr, "[stopped pid %d status %d (%x)], exiting\n", proc->pid,
                 status, WSTOPSIG(status));
         if (WSTOPSIG(status) == 0)
             exit(0);
@@ -132,24 +157,6 @@ static char *copy_from_process_str(pid_t child, size_t addr) {
     } while (!memchr(&word, 0, sizeof(word)));
     return buf;
 }
-
-static struct user scall_regs;
-
-typedef struct {
-    char *filename;
-
-    read_enter_hook read_enter;
-    read_exit_hook read_exit;
-
-    write_enter_hook write_enter;
-    write_exit_hook write_exit;
-
-    ioctl_enter_hook ioctl_enter;
-    ioctl_exit_hook ioctl_exit;
-} mon_fd_t;
-
-#define MAX_MON_FDS 1024
-static mon_fd_t fds[MAX_MON_FDS];
 
 static void xm_i2c_change_addr(int new_addr) {
     static int old_addr;
@@ -258,111 +265,109 @@ static void hisi_decode_sns_read(int phase, pid_t child, uint32_t arg,
 
 static unsigned char ioctl_arg[8];
 
-static void hisi_i2c_read_enter_cb(pid_t child, int fd, unsigned int cmd,
+static void hisi_i2c_read_enter_cb(process_t* proc, int fd, unsigned int cmd,
                                    size_t arg) {
     if (cmd == I2C_RDWR)
-        hisi_decode_sns_read(1, child, arg, 0);
+        hisi_decode_sns_read(1, proc->pid, arg, 0);
 }
 
-static void xm_i2c_ioctl_enter_cb(pid_t child, int fd, unsigned int cmd,
+static void xm_i2c_ioctl_enter_cb(process_t* proc, int fd, unsigned int cmd,
                                   size_t arg) {
     if (cmd == CMD_I2C_WRITE)
-        xm_decode_i2c_write(child, arg, 0);
+        xm_decode_i2c_write(proc->pid, arg, 0);
 }
 
-static void ssp_ioctl_enter_cb(pid_t child, int fd, unsigned int cmd,
+static void ssp_ioctl_enter_cb(process_t* proc, int fd, unsigned int cmd,
                                size_t arg) {
     if (cmd == SSP_READ_ALT)
-        ssp_decode_read(1, child, arg, 0);
+        ssp_decode_read(1, proc->pid, arg, 0);
 }
 
-static void mtd_ioctl_enter_cb(pid_t child, int fd, unsigned int cmd,
+static void mtd_ioctl_enter_cb(process_t* proc, int fd, unsigned int cmd,
                                size_t arg) {
-    copy_from_process(child, arg, ioctl_arg, sizeof(ioctl_arg));
+    copy_from_process(proc->pid, arg, ioctl_arg, sizeof(ioctl_arg));
 }
 
-static void syscall_ioctl_enter(pid_t child) {
-    int fd = scall_regs.regs.uregs[0];
+static void syscall_ioctl_enter(process_t* proc) {
+    int fd = proc->regs.regs.uregs[0];
     CHECK_FD;
 
-    unsigned int cmd = scall_regs.regs.uregs[1];
-    size_t arg = scall_regs.regs.uregs[2];
+    unsigned int cmd = proc->regs.regs.uregs[1];
+    size_t arg = proc->regs.regs.uregs[2];
 
-    if (fds[fd].ioctl_enter)
-        fds[fd].ioctl_enter(child, fd, cmd, arg);
+    if (proc->fds[fd].ioctl_enter)
+        proc->fds[fd].ioctl_enter(proc, fd, cmd, arg);
 }
 
-static size_t enter_syscall(pid_t child, int syscall_req) {
-    memset(&scall_regs, 0, sizeof(scall_regs));
-    ptrace(PTRACE_GETREGS, child, NULL, &scall_regs);
+static void enter_syscall(process_t *proc) {
+    memset(&proc->regs, 0, sizeof(proc->regs));
+    ptrace(PTRACE_GETREGS, proc->pid, NULL, &proc->regs);
     assert(errno == 0);
 
-    size_t syscall_num = scall_regs.regs.uregs[7];
-    switch (syscall_num) {
+    proc->syscall_num = proc->regs.regs.uregs[7];
+    switch (proc->syscall_num) {
     case SYSCALL_IOCTL: {
-        syscall_ioctl_enter(child);
+        syscall_ioctl_enter(proc);
         break;
     }
     default:;
     }
-
-    return syscall_num;
 }
 
-static size_t get_syscall_ret(pid_t child) {
+static size_t get_syscall_ret(process_t *proc) {
     struct user regs;
     memset(&regs, 0, sizeof(regs));
-    ptrace(PTRACE_GETREGS, child, NULL, &regs);
-    // assert(errno == 0);
+    ptrace(PTRACE_GETREGS, proc->pid, NULL, &regs);
+    assert(errno == 0);
     return regs.regs.uregs[0];
 }
 
-static void default_i2c_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
+static void default_i2c_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
                                       size_t arg, size_t sysret) {
 #if 0
-    printf("ioctl_i2c('%s', 0x%x, 0x%x)\n", fds[fd].filename, cmd, arg);
+    printf("ioctl_i2c('%s', 0x%x, 0x%x)\n", proc->fds[fd].filename, cmd, arg);
 #endif
 }
 
-static void default_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
+static void default_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
                                   size_t arg, size_t sysret) {
 #if 0
-    printf("ioctl('%s'(%d), 0x%x, 0x%x)\n", fds[fd].filename, fd, cmd, arg);
+    printf("ioctl('%s'(%d), 0x%x, 0x%x)\n", proc->fds[fd].filename, fd, cmd, arg);
 #endif
 }
 
-static void xm_i2c_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
+static void xm_i2c_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
                                  size_t arg, size_t sysret) {
     switch (cmd) {
     case I2C_RDWR:
-        hisi_decode_sns_read(2, child, arg, sysret);
+        hisi_decode_sns_read(2, proc->pid, arg, sysret);
         break;
     case CMD_I2C_READ:
-        xm_decode_i2c_read(child, arg, sysret);
+        xm_decode_i2c_read(proc->pid, arg, sysret);
         break;
     }
 }
 
-static void hisi_i2c_read_exit_cb(pid_t child, int fd, unsigned int cmd,
+static void hisi_i2c_read_exit_cb(process_t *proc, int fd, unsigned int cmd,
                                   size_t arg, size_t sysret) {
     switch (cmd) {
     case I2C_SLAVE_FORCE:
         printf("sensor_i2c_change_addr(0x%x);\n", arg << 1);
         break;
     case I2C_RDWR:
-        hisi_decode_sns_read(2, child, arg, sysret);
+        hisi_decode_sns_read(2, proc->pid, arg, sysret);
         break;
     }
 }
 
-static void ssp_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd, size_t arg,
-                              size_t sysret) {
+static void ssp_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                              size_t arg, size_t sysret) {
     switch (cmd) {
     case SSP_READ_ALT:
-        ssp_decode_read(2, child, arg, sysret);
+        ssp_decode_read(2, proc->pid, arg, sysret);
         break;
     case SSP_WRITE_ALT:
-        ssp_decode_write(child, arg, sysret);
+        ssp_decode_write(proc->pid, arg, sysret);
         break;
     }
 }
@@ -377,7 +382,7 @@ static void dump_hisi_read_mipi(pid_t child, unsigned int cmd,
     hisi_dump_combo_dev_attr(buf, cmd);
 }
 
-static void hisi_mipi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
+static void hisi_mipi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
                                     size_t arg, size_t sysret) {
     switch (cmd) {
     case HI_MIPI_RESET_MIPI:
@@ -393,17 +398,17 @@ static void hisi_mipi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd,
     case HIV3_HI_MIPI_SET_DEV_ATTR:
     case HIV4A_MIPI_SET_DEV_ATTR:
     case HIV4_MIPI_SET_DEV_ATTR:
-        dump_hisi_read_mipi(child, cmd, arg);
+        dump_hisi_read_mipi(proc->pid, cmd, arg);
         break;
     default:
         printf("ERR: uknown cmd %#x for himipi\n", cmd);
     }
 }
 
-static void hisi_gen2_read_exit_cb(pid_t child, int fd, size_t remote_addr,
+static void hisi_gen2_read_exit_cb(process_t* proc, int fd, size_t remote_addr,
                                    size_t nbyte, size_t sysret) {
     unsigned char *buf = alloca(nbyte);
-    copy_from_process(child, remote_addr, buf, nbyte);
+    copy_from_process(proc->pid, remote_addr, buf, nbyte);
     // reg_width
     if (nbyte == 2) {
         printf("i2c_read() = 0x%x\n", *(u_int16_t *)buf);
@@ -412,24 +417,24 @@ static void hisi_gen2_read_exit_cb(pid_t child, int fd, size_t remote_addr,
     }
 }
 
-static void default_read_exit_cb(pid_t child, int fd, size_t remote_addr,
+static void default_read_exit_cb(process_t* proc, int fd, size_t remote_addr,
                                  size_t nbyte, size_t sysret) {
 #if 0
     printf("read(%d, ..., %d)\n", fd, nbyte);
 #endif
 }
 
-static void default_write_exit_cb(pid_t child, int fd, size_t remote_addr,
+static void default_write_exit_cb(process_t *proc, int fd, size_t remote_addr,
                                   size_t nbyte, size_t sysret) {
 #if 0
     printf("write(%d, ..., %d)\n", fd, nbyte);
 #endif
 }
 
-static void i2c_write_exit_cb(pid_t child, int fd, size_t remote_addr,
+static void i2c_write_exit_cb(process_t *proc, int fd, size_t remote_addr,
                               size_t nbyte, size_t sysret) {
     unsigned char *buf = alloca(nbyte);
-    void *res = copy_from_process(child, remote_addr, buf, nbyte);
+    void *res = copy_from_process(proc->pid, remote_addr, buf, nbyte);
     if (!res) {
         printf("ERROR: write(%d, 0x%x, %d) -> read from addrspace\n", fd,
                remote_addr, nbyte);
@@ -440,8 +445,8 @@ static void i2c_write_exit_cb(pid_t child, int fd, size_t remote_addr,
     printf("sensor_write_register(0x%x, 0x%x);\n", addr, val);
 }
 
-static void mtd_write_cb(pid_t child, int fd, size_t remote_addr, size_t nbyte,
-                         size_t sysret) {
+static void mtd_write_cb(process_t *proc, int fd, size_t remote_addr,
+                         size_t nbyte, size_t sysret) {
     printf("mtd_write(%d, %zu, 0x%x)\n", fd, remote_addr, nbyte);
 }
 
@@ -485,38 +490,38 @@ static const char *spi_modes(uint32_t value, char buf[1024]) {
     return buf;
 }
 
-static void print_ioctl_spi(pid_t child, int fd, size_t arg, const char *name) {
+static void print_ioctl_spi(process_t* proc, int fd, size_t arg, const char *name) {
     uint32_t d = 0;
-    copy_from_process(child, arg, &d, sizeof(d));
-    printf("ioctl_spi('%s', %s, &%d);\n", fds[fd].filename, name, d);
+    copy_from_process(proc->pid, arg, &d, sizeof(d));
+    printf("ioctl_spi('%s', %s, &%d);\n", proc->fds[fd].filename, name, d);
 }
 
-static void spi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd, size_t arg,
-                              size_t sysret) {
+static void spi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                              size_t arg, size_t sysret) {
     switch (cmd) {
     case SPI_IOC_WR_MAX_SPEED_HZ:
-        print_ioctl_spi(child, fd, arg, "SPI_IOC_WR_MAX_SPEED_HZ");
+        print_ioctl_spi(proc, fd, arg, "SPI_IOC_WR_MAX_SPEED_HZ");
         return;
     case SPI_IOC_WR_BITS_PER_WORD:
-        print_ioctl_spi(child, fd, arg, "SPI_IOC_WR_BITS_PER_WORD");
+        print_ioctl_spi(proc, fd, arg, "SPI_IOC_WR_BITS_PER_WORD");
         return;
     case SPI_IOC_WR_MODE: {
         uint32_t d = 0;
-        copy_from_process(child, arg, &d, sizeof(d));
-        printf("ioctl_spi('%s', SPI_IOC_WR_MODE, &(%s));\n", fds[fd].filename,
+        copy_from_process(proc->pid, arg, &d, sizeof(d));
+        printf("ioctl_spi('%s', SPI_IOC_WR_MODE, &(%s));\n", proc->fds[fd].filename,
                spi_modes(d, (char[1024]){0}));
     }
         return;
     case SPI_IOC_MESSAGE(1): {
         struct spi_ioc_transfer mesg[1];
-        copy_from_process(child, arg, &mesg[0], sizeof(mesg));
+        copy_from_process(proc->pid, arg, &mesg[0], sizeof(mesg));
         char *rx_buf = NULL;
         if (mesg[0].len) {
             rx_buf = alloca(mesg[0].len);
-            copy_from_process(child, mesg[0].tx_buf, rx_buf, mesg[0].len);
+            copy_from_process(proc->pid, mesg[0].tx_buf, rx_buf, mesg[0].len);
         }
 
-        printf("ioctl_spi('%s', SPI_IOC_MESSAGE(1), { ", fds[fd].filename);
+        printf("ioctl_spi('%s', SPI_IOC_MESSAGE(1), { ", proc->fds[fd].filename);
         for (int i = 0; i < mesg[0].len; i++) {
             printf("%s%#x", i != 0 ? ", " : "", rx_buf[i]);
         }
@@ -524,8 +529,8 @@ static void spi_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd, size_t arg,
     } break;
     default: {
         uint32_t d = 0;
-        copy_from_process(child, arg, &d, sizeof(d));
-        printf("ioctl_spi('%s', %#x, &%d);\n", fds[fd].filename, cmd, d);
+        copy_from_process(proc->pid, arg, &d, sizeof(d));
+        printf("ioctl_spi('%s', %#x, &%d);\n", proc->fds[fd].filename, cmd, d);
     }
     }
 }
@@ -565,12 +570,12 @@ static const char *mtd_cmd_params(unsigned int cmd, int *args) {
     }
 }
 
-static void mtd_ioctl_exit_cb(pid_t child, int fd, unsigned int cmd, size_t arg,
-                              size_t sysret) {
+static void mtd_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                              size_t arg, size_t sysret) {
     uint32_t d[2] = {0};
-    copy_from_process(child, arg, &d, sizeof(d));
+    copy_from_process(proc->pid, arg, &d, sizeof(d));
     int num = 1;
-    printf("mtd_ioctl('%s'(%d), %s (0x%x)", fds[fd].filename, fd,
+    printf("mtd_ioctl('%s'(%d), %s (0x%x)", proc->fds[fd].filename, fd,
            mtd_cmd_params(cmd, &num), cmd);
     print_args((uint32_t *)ioctl_arg, d, num);
     printf(") = %d\n", sysret);
@@ -584,157 +589,164 @@ static void show_i2c_banner(int fd) {
     }
 }
 
-static void syscall_open(pid_t child, size_t fd, int offset) {
+static void syscall_open(process_t* proc, size_t fd, int offset) {
     CHECK_FD;
 
 #if 0
     dump_regs(&scall_regs, stderr);
 #endif
-    size_t remote_addr = scall_regs.regs.uregs[0 + offset];
-    char *filename = copy_from_process_str(child, remote_addr);
+    size_t remote_addr = proc->regs.regs.uregs[0 + offset];
+    char *filename = copy_from_process_str(proc->pid, remote_addr);
 #if 0
     printf("open('%s')\n", filename);
 #endif
 
-    fds[fd].filename = filename;
-    fds[fd].ioctl_exit = default_ioctl_exit_cb;
-    fds[fd].read_exit = default_read_exit_cb;
-    fds[fd].write_exit = default_write_exit_cb;
+    proc->fds[fd].filename = filename;
+    proc->fds[fd].ioctl_exit = default_ioctl_exit_cb;
+    proc->fds[fd].read_exit = default_read_exit_cb;
+    proc->fds[fd].write_exit = default_write_exit_cb;
 
     if (!strcmp(filename, "/dev/hi_i2c")) {
-        fds[fd].ioctl_enter = xm_i2c_ioctl_enter_cb;
-        fds[fd].ioctl_exit = xm_i2c_ioctl_exit_cb;
+        proc->fds[fd].ioctl_enter = xm_i2c_ioctl_enter_cb;
+        proc->fds[fd].ioctl_exit = xm_i2c_ioctl_exit_cb;
         show_i2c_banner(fd);
         return;
     }
 
     if (!strcmp(filename, "/dev/ssp")) {
-        fds[fd].ioctl_enter = ssp_ioctl_enter_cb;
-        fds[fd].ioctl_exit = ssp_ioctl_exit_cb;
+        proc->fds[fd].ioctl_enter = ssp_ioctl_enter_cb;
+        proc->fds[fd].ioctl_exit = ssp_ioctl_exit_cb;
         return;
     }
 
     if (IS_PREFIX(filename, "/dev/i2c-")) {
-        fds[fd].write_exit = i2c_write_exit_cb;
+        proc->fds[fd].write_exit = i2c_write_exit_cb;
         switch (chip_generation) {
         case HISI_V2:
         case HISI_V2A:
-            fds[fd].read_exit = hisi_gen2_read_exit_cb;
+            proc->fds[fd].read_exit = hisi_gen2_read_exit_cb;
             break;
         case HISI_V3:
         case HISI_V3A:
         case HISI_V4:
         case HISI_V4A:
-            fds[fd].ioctl_enter = hisi_i2c_read_enter_cb;
-            fds[fd].ioctl_exit = hisi_i2c_read_exit_cb;
+            proc->fds[fd].ioctl_enter = hisi_i2c_read_enter_cb;
+            proc->fds[fd].ioctl_exit = hisi_i2c_read_exit_cb;
             break;
         default:
-            fds[fd].ioctl_exit = default_i2c_ioctl_exit_cb;
+            proc->fds[fd].ioctl_exit = default_i2c_ioctl_exit_cb;
         }
         show_i2c_banner(fd);
     } else if (IS_PREFIX(filename, "/dev/spidev")) {
-        fds[fd].ioctl_exit = spi_ioctl_exit_cb;
+        proc->fds[fd].ioctl_exit = spi_ioctl_exit_cb;
     } else if (IS_PREFIX(filename, "/dev/mtd")) {
-        fds[fd].write_exit = mtd_write_cb;
-        fds[fd].ioctl_enter = mtd_ioctl_enter_cb;
-        fds[fd].ioctl_exit = mtd_ioctl_exit_cb;
+        proc->fds[fd].write_exit = mtd_write_cb;
+        proc->fds[fd].ioctl_enter = mtd_ioctl_enter_cb;
+        proc->fds[fd].ioctl_exit = mtd_ioctl_exit_cb;
     } else if (IS_PREFIX(filename, "/dev/ttyAMA")) {
         // TODO
     } else if (!strcmp(filename, "/dev/hi_mipi") ||
                !strcmp(filename, "/dev/mipi")) {
-        fds[fd].ioctl_exit = hisi_mipi_ioctl_exit_cb;
+        proc->fds[fd].ioctl_exit = hisi_mipi_ioctl_exit_cb;
     }
 }
 
-static void syscall_close(pid_t child, size_t sysret) {
-    int fd = scall_regs.regs.uregs[0];
+static void syscall_close(process_t* proc, size_t sysret) {
+    int fd = proc->regs.regs.uregs[0];
     CHECK_FD;
 
 #if 0
     printf("close(%d)\n", fd);
 #endif
-    if (fds[fd].filename) {
-        free(fds[fd].filename);
+    if (proc->fds[fd].filename) {
+        free(proc->fds[fd].filename);
     }
-    memset(&fds[fd], 0, sizeof(fds[fd]));
+    memset(&proc->fds[fd], 0, sizeof(proc->fds[fd]));
 }
 
-static void syscall_write_exit(pid_t child, size_t sysret) {
-    int fd = scall_regs.regs.uregs[0];
+static void syscall_write_exit(process_t *proc, size_t sysret) {
+    int fd = proc->regs.regs.uregs[0];
     CHECK_FD;
 
-    size_t remote_addr = scall_regs.regs.uregs[1];
-    size_t nbyte = scall_regs.regs.uregs[2];
+    size_t remote_addr = proc->regs.regs.uregs[1];
+    size_t nbyte = proc->regs.regs.uregs[2];
 
-    if (fds[fd].write_exit)
-        fds[fd].write_exit(child, fd, remote_addr, nbyte, sysret);
+    if (proc->fds[fd].write_exit)
+        proc->fds[fd].write_exit(proc, fd, remote_addr, nbyte, sysret);
 }
 
-static void syscall_read_exit(pid_t child, size_t sysret) {
-    int fd = scall_regs.regs.uregs[0];
+static void syscall_read_exit(process_t* proc, size_t sysret) {
+    int fd = proc->regs.regs.uregs[0];
     CHECK_FD;
 
-    size_t remote_addr = scall_regs.regs.uregs[1];
-    size_t nbyte = scall_regs.regs.uregs[2];
+    size_t remote_addr = proc->regs.regs.uregs[1];
+    size_t nbyte = proc->regs.regs.uregs[2];
 
-    if (fds[fd].read_exit)
-        fds[fd].read_exit(child, fd, remote_addr, nbyte, sysret);
+    if (proc->fds[fd].read_exit)
+        proc->fds[fd].read_exit(proc, fd, remote_addr, nbyte, sysret);
 }
 
-static void syscall_ioctl_exit(pid_t child, size_t sysret) {
-    int fd = scall_regs.regs.uregs[0];
+static void syscall_ioctl_exit(process_t *proc, size_t sysret) {
+    int fd = proc->regs.regs.uregs[0];
     CHECK_FD;
 
-    unsigned int cmd = scall_regs.regs.uregs[1];
-    size_t arg = scall_regs.regs.uregs[2];
+    unsigned int cmd = proc->regs.regs.uregs[1];
+    size_t arg = proc->regs.regs.uregs[2];
 
-    if (fds[fd].ioctl_exit)
-        fds[fd].ioctl_exit(child, fd, cmd, arg, sysret);
+    if (proc->fds[fd].ioctl_exit)
+        proc->fds[fd].ioctl_exit(proc, fd, cmd, arg, sysret);
 }
 
-static void syscall_nanosleep(pid_t child, size_t sysret) {
-    size_t remote_rqtp = scall_regs.regs.uregs[0];
-    size_t remote_rmtp = scall_regs.regs.uregs[1];
+static void syscall_nanosleep(process_t *proc, size_t sysret) {
+    size_t remote_rqtp = proc->regs.regs.uregs[0];
+    size_t remote_rmtp = proc->regs.regs.uregs[1];
 
     struct timespec req = {0};
-    copy_from_process(child, remote_rqtp, &req, sizeof(req));
+    copy_from_process(proc->pid, remote_rqtp, &req, sizeof(req));
     printf("usleep(%ld)\n",
            (unsigned long)req.tv_sec * 1000000 + req.tv_nsec / 1000);
 }
 
-static void exit_syscall(pid_t child, size_t syscall_num) {
-    int sysret = get_syscall_ret(child);
-    switch (syscall_num) {
+static void exit_syscall(process_t *proc) {
+    int sysret = get_syscall_ret(proc);
+    switch (proc->syscall_num) {
     case SYSCALL_OPEN:
-        syscall_open(child, sysret, 0);
+        syscall_open(proc, sysret, 0);
         break;
     case SYSCALL_OPENAT:
-        syscall_open(child, sysret, 1);
+        syscall_open(proc, sysret, 1);
         break;
     case SYSCALL_CLOSE:
-        syscall_close(child, sysret);
+        syscall_close(proc, sysret);
         break;
     case SYSCALL_READ:
-        syscall_read_exit(child, sysret);
+        syscall_read_exit(proc, sysret);
         break;
     case SYSCALL_WRITE:
-        syscall_write_exit(child, sysret);
+        syscall_write_exit(proc, sysret);
         break;
     case SYSCALL_IOCTL:
-        syscall_ioctl_exit(child, sysret);
+        syscall_ioctl_exit(proc, sysret);
         break;
     case SYSCALL_NANOSLEEP:
-        syscall_nanosleep(child, sysret);
+        syscall_nanosleep(proc, sysret);
         break;
 #if 0
     default:
-        printf("syscall%d()\n", syscall_num);
+        printf("syscall%d()\n", proc->syscall_num);
 #endif
     }
 }
 
-static void do_trace(pid_t child, int syscall_req) {
-    printf("[%d]: Parent for %d\n", getpid(), child);
+static void do_trace(pid_t child) {
+    ht_setup(&pids, sizeof(pid_t), sizeof(process_t), 10);
+    process_t *mthread = &(process_t){.pid = child};
+    ht_insert(&pids, &child, mthread);
+
+    mthread->fds[0].filename = strdup("stdin");
+    mthread->fds[1].filename = strdup("stdout");
+    mthread->fds[2].filename = strdup("stderr");
+
     int status;
     waitpid(child, &status, 0);
     assert(WIFSTOPPED(status));
@@ -742,24 +754,18 @@ static void do_trace(pid_t child, int syscall_req) {
 
     while (1) {
         // enter syscall
-        if (wait_for_syscall(child) != 0)
+        if (wait_for_syscall(mthread) != 0)
             break;
-        size_t syscall_num = enter_syscall(child, syscall_req);
+        enter_syscall(mthread);
 
         // exit from syscall
-        if (wait_for_syscall(child) != 0)
+        if (wait_for_syscall(mthread) != 0)
             break;
-        exit_syscall(child, syscall_num);
+        exit_syscall(mthread);
     }
 }
 
 static void do_child(const char *program, char *const argv[]) {
-    printf("[%d]: Child\n", getpid());
-
-    fds[0].filename = strdup("stdin");
-    fds[1].filename = strdup("stdout");
-    fds[2].filename = strdup("stderr");
-
     ptrace(PTRACE_TRACEME, 0, 0, 0);
     execv(program, argv);
     perror("execl");
@@ -778,7 +784,7 @@ int ptrace_cmd(int argc, char **argv) {
 
     pid_t pid = fork();
     if (pid)
-        do_trace(pid, 2);
+        do_trace(pid);
     else
         do_child(argv[1], &argv[1]);
     return EXIT_SUCCESS;
