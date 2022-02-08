@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <mtd/mtd-abi.h>
@@ -762,6 +763,8 @@ static void syscall_nanosleep(process_t *proc, size_t sysret) {
            (unsigned long)req.tv_sec * 1000000 + req.tv_nsec / 1000);
 }
 
+static bool usleep_disabled = false;
+
 static void exit_syscall(process_t *proc) {
     int sysret = get_syscall_ret(proc);
     switch (proc->syscall_num) {
@@ -784,7 +787,8 @@ static void exit_syscall(process_t *proc) {
         syscall_ioctl_exit(proc, sysret);
         break;
     case SYSCALL_NANOSLEEP:
-        syscall_nanosleep(proc, sysret);
+        if (!usleep_disabled)
+            syscall_nanosleep(proc, sysret);
         break;
 #if 0
     default:
@@ -918,10 +922,37 @@ static void do_child(const char *program, char *const argv[]) {
     perror("execl");
 }
 
+static int help() {
+    puts("Usage: ipctool trace [--skip=usleep] <full/path/to/executable> [program arguments]");
+    return EXIT_FAILURE;
+}
+
+static void parse_skip(const char *option) {
+    if (strstr(option, "usleep") != NULL) {
+        usleep_disabled = true;
+    }
+}
+
 int ptrace_cmd(int argc, char **argv) {
-    if (argc < 2) {
-        puts("Usage: ipctool ptrace <full/path/to/executable> [arguments]");
-        return EXIT_FAILURE;
+    if (argc < 2)
+        return help();
+
+    const struct option long_options[] = {
+        {"skip", required_argument, NULL, 's'},
+        {NULL, 0, NULL, 0},
+    };
+    int res;
+    int option_index;
+
+    while ((res = getopt_long_only(argc, argv, "", long_options,
+                                   &option_index)) != -1) {
+        switch (res) {
+        case 's':
+            parse_skip(optarg);
+            break;
+        case '?':
+            return help();
+        }
     }
 
     if (!getchipname()) {
@@ -933,6 +964,6 @@ int ptrace_cmd(int argc, char **argv) {
     if (pid)
         do_trace(pid);
     else
-        do_child(argv[1], &argv[1]);
+        do_child(argv[optind], &argv[optind]);
     return EXIT_SUCCESS;
 }

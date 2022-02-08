@@ -91,7 +91,7 @@ void Help() {
         "                            dump data from I2C/SPI device\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
         "  gpio (scan|mux)           GPIO utilities\n"
-        "  trace <full/path/to/executable> [arguments]\n"
+	"  trace [--skip=usleep] <full/path/to/executable> [program arguments]\n"
         "                            dump original firmware calls and data "
         "structures\n"
         "  -h, --help                this help\n");
