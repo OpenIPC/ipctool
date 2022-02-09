@@ -94,7 +94,8 @@ void Help() {
         "                            dump data from I2C/SPI device\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
         "  gpio (scan|mux)           GPIO utilities\n"
-	"  trace [--skip=usleep] <full/path/to/executable> [program arguments]\n"
+        "  trace [--skip=usleep] <full/path/to/executable> [program "
+        "arguments]\n"
         "                            dump original firmware calls and data "
         "structures\n"
         "  -h, --help                this help\n");
@@ -164,8 +165,12 @@ void print_chip_id() {
     }
 }
 
+enum {
+    BACKUP_WAIT = 1 << 0,
+};
+
 #define MAX_YAML 1024 * 64
-static bool backup_with_yaml(const char *backup_file, bool wait_mode) {
+static bool backup_with_yaml(const char *backup_file, unsigned modes) {
     int fds[2];
     if (pipe(fds) == -1) {
         fprintf(stderr, "Pipe Failed");
@@ -190,7 +195,7 @@ static bool backup_with_yaml(const char *backup_file, bool wait_mode) {
         }
         size_t yaml_sz = ptr - yaml;
         close(fds[0]);
-        int ret = do_backup(yaml, yaml_sz, wait_mode, backup_file);
+        int ret = do_backup(yaml, yaml_sz, modes & BACKUP_WAIT, backup_file);
         free(yaml);
 
         if (ret)
@@ -199,12 +204,12 @@ static bool backup_with_yaml(const char *backup_file, bool wait_mode) {
     }
 }
 
-static bool auto_backup(bool wait_mode) {
+static bool auto_backup(unsigned modes) {
     // prevent double backup creation and don't backup OpenWrt firmware
     if (!udp_lock() || is_openipc_board())
         return false;
 
-    return backup_with_yaml(NULL, wait_mode);
+    return backup_with_yaml(NULL, modes);
 }
 
 int main(int argc, char *argv[]) {
@@ -246,7 +251,7 @@ int main(int argc, char *argv[]) {
 
     int res;
     int option_index;
-    bool wait_mode = false;
+    unsigned modes = 0;
 
     while ((res = getopt_long_only(argc, argv, "cs", long_options,
                                    &option_index)) != -1) {
@@ -284,7 +289,7 @@ int main(int argc, char *argv[]) {
         }
 
         case 'w':
-            wait_mode = true;
+            modes |= BACKUP_WAIT;
             break;
 
         case '0':
@@ -297,6 +302,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    const char *backupAction = "upload";
     if (argc > optind) {
         if (!strcmp(argv[optind], "backup")) {
             if (argv[optind + 1] == NULL) {
@@ -304,7 +310,9 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
             }
 
-            if (backup_with_yaml(argv[optind + 1], wait_mode)) {
+            modes |= BACKUP_WAIT;
+            backupAction = "save";
+            if (backup_with_yaml(argv[optind + 1], modes)) {
                 // child process
                 return EXIT_SUCCESS;
             }
@@ -316,7 +324,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (auto_backup(wait_mode))
+    if (auto_backup(modes))
         // child process
         return EXIT_SUCCESS;
 
@@ -340,14 +348,14 @@ start_yaml:
     tcdrain(STDOUT_FILENO);
     show_yaml(detect_sensors());
 
-    if (wait_mode && backup_fp) {
+    if (modes & BACKUP_WAIT && backup_fp) {
         // trigger child process
         printf("---\n");
-        printf("state: %sStart\n", "upload");
+        printf("state: %sStart\n", backupAction);
         fclose(backup_fp);
         int status;
         wait(&status);
-        printf("state: %sEnd, %d\n", "upload", WEXITSTATUS(status));
+        printf("state: %sEnd, %d\n", backupAction, WEXITSTATUS(status));
     }
 
     return EXIT_SUCCESS;
