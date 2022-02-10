@@ -9,16 +9,26 @@
 
 #define SELECT_WIDE(reg_addr) reg_addr > 0xff ? 2 : 1
 
+static int fallback_open_sensor_fd() {
+    return universal_open_sensor_fd("/dev/i2c-0");
+}
+
+static void setup_i2c_fallback() {
+    open_i2c_sensor_fd = fallback_open_sensor_fd;
+    close_sensor_fd = universal_close_sensor_fd;
+    i2c_change_addr = universal_sensor_i2c_change_addr;
+    i2c_read_register = universal_sensor_read_register;
+    i2c_write_register = universal_sensor_write_register;
+}
+
 static int prepare_i2c_sensor(unsigned char i2c_addr) {
     if (!getchipname()) {
         puts("Unknown chip");
         exit(EXIT_FAILURE);
     }
 
-    if (!open_i2c_sensor_fd) {
-        puts("There is no platform specific I2C access layer");
-        exit(EXIT_FAILURE);
-    }
+    if (!open_i2c_sensor_fd)
+        setup_i2c_fallback();
 
     int fd = open_i2c_sensor_fd();
     if (fd == -1) {
