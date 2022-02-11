@@ -511,6 +511,8 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
     case 0x9711:
         res = 0x9712;
         break;
+    case 0x2710:
+    case 0x2715:
     case 0x9732:
     case 0x9750:
         // for models with identical ID for model name
