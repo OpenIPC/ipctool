@@ -7,6 +7,7 @@
 #include <linux/ioctl.h>
 
 #include "cjson/cJSON.h"
+#include "hal_gm.h"
 #include "hal_novatek.h"
 #include "hal_sstar.h"
 #include "hal_xm.h"

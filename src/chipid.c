@@ -41,7 +41,7 @@ static long get_uart0_address() {
 static bool generic_detect_cpu() {
     char buf[256];
 
-    bool res = get_regex_line_from_file("/proc/cpuinfo", "Hardware.+: (\\w+)",
+    bool res = get_regex_line_from_file("/proc/cpuinfo", "Hardware.+: ([a-zA-Z-]+)",
                                         buf, sizeof(buf));
     if (!res) {
         return false;
@@ -51,6 +51,8 @@ static bool generic_detect_cpu() {
         return sstar_detect_cpu();
     else if (!strcmp(chip_manufacturer, VENDOR_NOVATEK))
         return novatek_detect_cpu();
+    else if (!strcmp(chip_manufacturer, VENDOR_GM))
+        return gm_detect_cpu();
     strcpy(chip_name, "unknown");
     return true;
 }
