@@ -12,6 +12,7 @@
 
 #include "chipid.h"
 #include "hal_common.h"
+#include "hal_fh.h"
 #include "tools.h"
 
 char system_id[128];
@@ -53,6 +54,8 @@ static bool generic_detect_cpu() {
         return novatek_detect_cpu();
     else if (!strcmp(chip_manufacturer, VENDOR_GM))
         return gm_detect_cpu();
+    else if (!strcmp(chip_manufacturer, "FH"))
+        return fh_detect_cpu();
     strcpy(chip_name, "unknown");
     return true;
 }

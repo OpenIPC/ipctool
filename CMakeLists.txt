@@ -36,6 +36,8 @@ include_directories(
 set(COMMON_LIB_SRC
     src/hal_common.c
     src/hal_common.h
+    src/hal_fh.c
+    src/hal_fh.h
     src/hal_gm.c
     src/hal_gm.h
     src/hal_novatek.c

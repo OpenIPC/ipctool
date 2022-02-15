@@ -124,6 +124,8 @@ void setup_hal_drivers() {
         setup_hal_novatek();
     else if (!strcmp(VENDOR_GM, chip_manufacturer))
         setup_hal_gm();
+    else if (!strcmp(VENDOR_FH, chip_manufacturer))
+        setup_hal_fh();
 }
 
 typedef struct meminfo {
@@ -172,6 +174,8 @@ void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
         *total_mem = novatek_totalmem(media_mem);
     else if (!strcmp(VENDOR_GM, chip_manufacturer))
         *total_mem = gm_totalmem(media_mem);
+    else if (!strcmp(VENDOR_FH, chip_manufacturer))
+        *total_mem = fh_totalmem(media_mem);
 
     if (!*total_mem)
         *total_mem = kernel_mem();
