@@ -40,6 +40,7 @@ void Help() {
            "available options:\n"
            "\t--chip-name\n"
            "\t--family\n"
+           "\t--chip-manufacturer\n"
            "\t--long-sensor\n"
            "\t--short-sensor\n"
            "\t--temp\n"
@@ -107,6 +108,7 @@ int main(int argc, char **argv) {
     const struct option long_options[] = {
         {"chip-name", no_argument, NULL, 'c'},
         {"family", no_argument, NULL, 'f'},
+        {"vendor", no_argument, NULL, 'v'},
         {"help", no_argument, NULL, 'h'},
         {"long-sensor", no_argument, NULL, 'l'},
         {"short-sensor", no_argument, NULL, 's'},
@@ -142,6 +144,15 @@ int main(int argc, char **argv) {
 
         case 'f': {
             puts(getchipfamily());
+            return EXIT_SUCCESS;
+        }
+
+        case 'v': {
+            getchipname();
+            for (int i = 0; chip_manufacturer[i]; i++){
+                chip_manufacturer[i] = tolower(chip_manufacturer[i]);
+            }
+            puts(chip_manufacturer);
             return EXIT_SUCCESS;
         }
 
