@@ -40,7 +40,7 @@ void Help() {
            "available options:\n"
            "\t--chip-name\n"
            "\t--family\n"
-           "\t--chip-manufacturer\n"
+           "\t--vendor\n"
            "\t--long-sensor\n"
            "\t--short-sensor\n"
            "\t--temp\n"
