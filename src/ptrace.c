@@ -70,6 +70,13 @@ typedef struct {
     size_t ref_cnt;
 } arc_str_t;
 
+static const char *arc_cstr(arc_str_t *file) {
+    if (!file)
+        return NULL;
+
+    return file->str;
+}
+
 typedef struct {
     arc_str_t *file;
 
@@ -336,14 +343,18 @@ static size_t get_syscall_ret(process_t *proc) {
 static void default_i2c_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
                                       size_t arg, size_t sysret) {
 #if 0
-    printf("ioctl_i2c('%s', 0x%x, 0x%x)\n", proc->fds[fd].filename, cmd, arg);
+    if (proc->fds[fd].file)
+        printf("ioctl_i2c('%s', 0x%x, 0x%x)\n", arc_cstr(proc->fds[fd].file),
+               cmd, arg);
 #endif
 }
 
 static void default_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
                                   size_t arg, size_t sysret) {
 #if 0
-    printf("ioctl('%s'(%d), 0x%x, 0x%x)\n", proc->fds[fd].filename, fd, cmd, arg);
+    if (proc->fds[fd].file)
+        printf("ioctl('%s'(%d), 0x%x, 0x%x)\n", arc_cstr(proc->fds[fd].file),
+               fd, cmd, arg);
 #endif
 }
 
@@ -499,13 +510,6 @@ static const char *spi_modes(uint32_t value, char buf[1024]) {
         sprintf(buf + strlen(buf), "%d", value);
     }
     return buf;
-}
-
-static const char *arc_cstr(arc_str_t *file) {
-    if (!file)
-        return NULL;
-
-    return file->str;
 }
 
 static void print_ioctl_spi(process_t *proc, int fd, size_t arg,
@@ -923,7 +927,8 @@ static void do_child(const char *program, char *const argv[]) {
 }
 
 static int help() {
-    puts("Usage: ipctool trace [--skip=usleep] <full/path/to/executable> [program arguments]");
+    puts("Usage: ipctool trace [--skip=usleep] <full/path/to/executable> "
+         "[program arguments]");
     return EXIT_FAILURE;
 }
 
