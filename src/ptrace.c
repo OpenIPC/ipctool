@@ -306,6 +306,70 @@ static void mtd_ioctl_enter_cb(process_t *proc, int fd, unsigned int cmd,
     copy_from_process(proc->pid, arg, ioctl_arg, sizeof(ioctl_arg));
 }
 
+static void null_i2c_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                                   size_t arg, size_t sysret) {}
+
+static void dump_i2c_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                                   size_t arg, size_t sysret) {
+    if (proc->fds[fd].file)
+        printf("ioctl_i2c('%s', 0x%x, 0x%x)\n", arc_cstr(proc->fds[fd].file),
+               cmd, arg);
+}
+
+static void null_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                               size_t arg, size_t sysret) {}
+
+static void dump_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                               size_t arg, size_t sysret) {
+    if (proc->fds[fd].file)
+        printf("ioctl('%s'(%d), 0x%x, 0x%x)\n", arc_cstr(proc->fds[fd].file),
+               fd, cmd, arg);
+}
+
+typedef struct {
+    int handle;
+    int group;
+    int num;
+} XMGpioDescriptor_t;
+
+static void xm_gpio_open(process_t *proc, size_t arg) {
+    XMGpioDescriptor_t desc;
+
+    void *ret = copy_from_process(proc->pid, arg, &desc, sizeof(desc));
+
+    printf("XM_GPIO_REQUEST(GPIO%d_%d) = [%#x]\n", desc.group, desc.num,
+           desc.handle);
+}
+
+static void xm_gpio_req(process_t *proc, size_t arg, const char *op) {
+    uint32_t d[2] = {0};
+
+    void *ret = copy_from_process(proc->pid, arg, &d, sizeof(d));
+    printf("%s([%#x], %#x)\n", op, d[0], d[1]);
+}
+
+static void xm_gpio_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                                  size_t arg, size_t sysret) {
+    switch (cmd) {
+    case 0xC0084705:
+        return xm_gpio_req(proc, arg, "XM_GPIO_READ");
+    case 0x40084706:
+        return xm_gpio_req(proc, arg, "XM_GPIO_WRITE");
+    case 0x401C4701:
+        return xm_gpio_open(proc, arg);
+    case 0x40084704:
+        return xm_gpio_req(proc, arg, "XM_GPIO_DIRECTION_SET");
+    case 0x40044709:
+        puts("XM_GPIO_PRINT()");
+        break;
+    case 0x4004470A:
+        puts("XM_DEMUX_CLEAR()");
+        break;
+    default:
+        dump_ioctl_exit_cb(proc, fd, cmd, arg, 0);
+    }
+}
+
 static void syscall_ioctl_enter(process_t *proc) {
     int fd = proc->regs.regs.uregs[0];
     CHECK_FD;
@@ -338,24 +402,6 @@ static size_t get_syscall_ret(process_t *proc) {
     long ret = ptrace(PTRACE_GETREGS, proc->pid, NULL, &regs);
     ASSERT_PTRACE;
     return regs.regs.uregs[0];
-}
-
-static void default_i2c_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
-                                      size_t arg, size_t sysret) {
-#if 0
-    if (proc->fds[fd].file)
-        printf("ioctl_i2c('%s', 0x%x, 0x%x)\n", arc_cstr(proc->fds[fd].file),
-               cmd, arg);
-#endif
-}
-
-static void default_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
-                                  size_t arg, size_t sysret) {
-#if 0
-    if (proc->fds[fd].file)
-        printf("ioctl('%s'(%d), 0x%x, 0x%x)\n", arc_cstr(proc->fds[fd].file),
-               fd, cmd, arg);
-#endif
 }
 
 static void xm_i2c_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
@@ -662,7 +708,7 @@ static void syscall_open(process_t *proc, size_t fd, int offset) {
 #endif
 
     proc->fds[fd].file = new_arc_str(filename);
-    proc->fds[fd].ioctl_exit = default_ioctl_exit_cb;
+    proc->fds[fd].ioctl_exit = null_ioctl_exit_cb; // dump_ioctl_exit_cb;
     proc->fds[fd].read_exit = default_read_exit_cb;
     proc->fds[fd].write_exit = default_write_exit_cb;
 
@@ -676,6 +722,11 @@ static void syscall_open(process_t *proc, size_t fd, int offset) {
     if (!strcmp(filename, "/dev/ssp")) {
         proc->fds[fd].ioctl_enter = ssp_ioctl_enter_cb;
         proc->fds[fd].ioctl_exit = ssp_ioctl_exit_cb;
+        return;
+    }
+
+    if (!strcmp(filename, "/dev/xm_gpio")) {
+        proc->fds[fd].ioctl_exit = xm_gpio_ioctl_exit_cb;
         return;
     }
 
@@ -694,7 +745,8 @@ static void syscall_open(process_t *proc, size_t fd, int offset) {
             proc->fds[fd].ioctl_exit = hisi_i2c_read_exit_cb;
             break;
         default:
-            proc->fds[fd].ioctl_exit = default_i2c_ioctl_exit_cb;
+            proc->fds[fd].ioctl_exit =
+                null_i2c_ioctl_exit_cb; // dump_i2c_ioctl_exit_cb;
         }
         show_i2c_banner(fd);
     } else if (IS_PREFIX(filename, "/dev/spidev")) {
