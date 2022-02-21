@@ -17,9 +17,8 @@ int (*open_spi_sensor_fd)();
 bool (*close_sensor_fd)(int fd);
 read_register_t i2c_read_register;
 read_register_t spi_read_register;
-int (*i2c_write_register)(int fd, unsigned char i2c_addr, unsigned int reg_addr,
-                          unsigned int reg_width, unsigned int data,
-                          unsigned int data_width);
+write_register_t i2c_write_register;
+write_register_t spi_write_register;
 int (*i2c_change_addr)(int fd, unsigned char addr);
 float (*hal_temperature)();
 void (*hal_cleanup)();
@@ -47,22 +46,17 @@ bool universal_close_sensor_fd(int fd) {
     return close(fd) == 0;
 }
 
-// Set I2C slave address,
-// actually do nothing
-int dummy_sensor_i2c_change_addr(int fd, unsigned char addr) { return 0; }
-
 // Universal I2C code
-int universal_sensor_i2c_change_addr(int fd, unsigned char addr) {
+int universal_i2c_change_addr(int fd, unsigned char addr) {
     if (ioctl(fd, I2C_SLAVE_FORCE, addr >> 1) < 0) {
         return -1;
     }
     return 0;
 }
 
-int universal_sensor_write_register(int fd, unsigned char i2c_addr,
-                                    unsigned int reg_addr,
-                                    unsigned int reg_width, unsigned int data,
-                                    unsigned int data_width) {
+int universal_i2c_write_register(int fd, unsigned char i2c_addr,
+                                 unsigned int reg_addr, unsigned int reg_width,
+                                 unsigned int data, unsigned int data_width) {
     char buf[2];
 
     if (reg_width == 2) {
@@ -78,10 +72,9 @@ int universal_sensor_write_register(int fd, unsigned char i2c_addr,
     return 0;
 }
 
-int universal_sensor_read_register(int fd, unsigned char i2c_addr,
-                                   unsigned int reg_addr,
-                                   unsigned int reg_width,
-                                   unsigned int data_width) {
+int universal_i2c_read_register(int fd, unsigned char i2c_addr,
+                                unsigned int reg_addr, unsigned int reg_width,
+                                unsigned int data_width) {
     char recvbuf[4];
     unsigned int data;
 
@@ -110,7 +103,90 @@ int universal_sensor_read_register(int fd, unsigned char i2c_addr,
     return data;
 }
 
+unsigned int sony_i2c_to_spi(unsigned int reg_addr) {
+    if (reg_addr >= 0x3000)
+        return reg_addr - 0x3000 + 0x200;
+    else
+        return reg_addr;
+}
+
+static int universal_spi_read_register(int fd, unsigned char i2c_addr,
+                                       unsigned int reg_addr,
+                                       unsigned int reg_width,
+                                       unsigned int data_width) {
+    int ret = 0;
+    struct spi_ioc_transfer mesg[1];
+    unsigned char tx_buf[8] = {0};
+    unsigned char rx_buf[8] = {0};
+
+    reg_addr = sony_i2c_to_spi(reg_addr);
+
+    tx_buf[0] = (reg_addr & 0xff00) >> 8;
+    tx_buf[0] |= 0x80;
+    tx_buf[1] = reg_addr & 0xff;
+    tx_buf[2] = 0;
+    memset(mesg, 0, sizeof(mesg));
+    mesg[0].tx_buf = (__u64)(long)&tx_buf;
+    mesg[0].len = 3;
+    mesg[0].rx_buf = (__u64)(long)&rx_buf;
+    mesg[0].cs_change = 1;
+
+    ret = ioctl(fd, SPI_IOC_MESSAGE(1), mesg);
+    if (ret < 0) {
+        printf("SPI_IOC_MESSAGE error \n");
+        return -1;
+    }
+
+    return rx_buf[2];
+}
+
+int universal_spi_write_register(int fd, unsigned char i2c_addr,
+                                 unsigned int reg_addr, unsigned int reg_width,
+                                 unsigned int data, unsigned int data_width) {
+    int ret = 0;
+    struct spi_ioc_transfer mesg[1];
+    unsigned char tx_buf[8] = {0};
+    unsigned char rx_buf[8] = {0};
+
+    reg_addr = sony_i2c_to_spi(reg_addr);
+
+    tx_buf[0] = (reg_addr & 0xff00) >> 8;
+    tx_buf[1] = reg_addr & 0xff;
+    tx_buf[2] = data;
+    memset(mesg, 0, sizeof(mesg));
+    mesg[0].tx_buf = (__u64)(long)&tx_buf;
+    mesg[0].len = 3;
+    mesg[0].rx_buf = (__u64)(long)&rx_buf;
+    mesg[0].cs_change = 1;
+
+    ret = ioctl(fd, SPI_IOC_MESSAGE(1), mesg);
+    if (ret < 0) {
+        printf("SPI_IOC_MESSAGE error \n");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int fallback_open_sensor_fd() {
+    return universal_open_sensor_fd("/dev/i2c-0");
+}
+
+static void universal_hal_cleanup() {}
+
+static void setup_hal_fallback() {
+    open_i2c_sensor_fd = fallback_open_sensor_fd;
+    close_sensor_fd = universal_close_sensor_fd;
+    i2c_change_addr = universal_i2c_change_addr;
+    i2c_read_register = universal_i2c_read_register;
+    spi_read_register = universal_spi_read_register;
+    i2c_write_register = universal_i2c_write_register;
+    spi_write_register = universal_spi_write_register;
+    hal_cleanup = universal_hal_cleanup;
+}
+
 void setup_hal_drivers() {
+    setup_hal_fallback();
     if (!strcmp(VENDOR_HISI, chip_manufacturer))
         setup_hal_hisi();
     else if (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_name == '7') {

@@ -28,18 +28,6 @@
 #define IS_16DV200 IS_CHIP("3516DV200") || IS_CHIP("7605V100")
 
 bool hisi_ev300_get_die_id(char *buf, ssize_t len);
-
-int sony_ssp_read_register(int fd, unsigned char i2c_addr,
-                           unsigned int reg_addr, unsigned int reg_width,
-                           unsigned int data_width);
-
-int hisi_spi_read_register(int fd, unsigned char i2c_addr,
-                           unsigned int reg_addr, unsigned int reg_width,
-                           unsigned int data_width);
-int hisi_gen4a_spi_read_register(int fd, unsigned char i2c_addr,
-                                 unsigned int reg_addr, unsigned int reg_width,
-                                 unsigned int data_width);
-
 void hisi_vi_information(sensor_ctx_t *ctx);
 unsigned long hisi_totalmem(unsigned long *media_mem);
 void hisi_detect_fmc();

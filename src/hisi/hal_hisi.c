@@ -288,13 +288,6 @@ int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
     return data;
 }
 
-static unsigned int sony_i2c_to_spi(unsigned int reg_addr) {
-    if (reg_addr > 0x3000)
-        return reg_addr - 0x3000 + 0x200;
-    else
-        return reg_addr;
-}
-
 #define SSP_READ_ALT 0x1
 int sony_ssp_read_register(int fd, unsigned char i2c_addr,
                            unsigned int reg_addr, unsigned int reg_width,
@@ -303,35 +296,6 @@ int sony_ssp_read_register(int fd, unsigned char i2c_addr,
     unsigned int data = (unsigned int)(((reg_addr & 0xffff) << 8));
     int ret = ioctl(fd, SSP_READ_ALT, &data);
     return data & 0xff;
-}
-
-int hisi_spi_read_register(int fd, unsigned char i2c_addr,
-                           unsigned int reg_addr, unsigned int reg_width,
-                           unsigned int data_width) {
-    int ret = 0;
-    struct spi_ioc_transfer mesg[1];
-    unsigned char tx_buf[8] = {0};
-    unsigned char rx_buf[8] = {0};
-
-    reg_addr = sony_i2c_to_spi(reg_addr);
-
-    tx_buf[0] = (reg_addr & 0xff00) >> 8;
-    tx_buf[0] |= 0x80;
-    tx_buf[1] = reg_addr & 0xff;
-    tx_buf[2] = 0;
-    memset(mesg, 0, sizeof(mesg));
-    mesg[0].tx_buf = (__u64)(long)&tx_buf;
-    mesg[0].len = 3;
-    mesg[0].rx_buf = (__u64)(long)&rx_buf;
-    mesg[0].cs_change = 1;
-
-    ret = ioctl(fd, SPI_IOC_MESSAGE(1), mesg);
-    if (ret < 0) {
-        printf("SPI_IOC_MESSAGE error \n");
-        return -1;
-    }
-
-    return rx_buf[2];
 }
 
 static unsigned long hisi_media_mem() {
@@ -428,10 +392,7 @@ void setup_hal_hisi() {
 
     open_i2c_sensor_fd = hisi_open_i2c_fd;
     open_spi_sensor_fd = hisi_open_spi_fd;
-    close_sensor_fd = universal_close_sensor_fd;
     hal_cleanup = hisi_hal_cleanup;
-    i2c_change_addr = universal_sensor_i2c_change_addr;
-    spi_read_register = hisi_spi_read_register;
     if (chip_generation == HISI_V1) {
         open_i2c_sensor_fd = hisi_gen1_open_i2c_sensor_fd;
         open_spi_sensor_fd = hisi_gen1_open_spi_sensor_fd;

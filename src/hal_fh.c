@@ -121,10 +121,6 @@ unsigned long fh_totalmem(unsigned long *media_mem) {
     return kernel_mem();
 }
 
-int fh_open_sensor_fd() { return universal_open_sensor_fd("/dev/i2c-0"); }
-
-static void fh_hal_cleanup() {}
-
 float fh_get_temp() {
     float ret = -237.0;
     char buf[16];
@@ -136,13 +132,7 @@ float fh_get_temp() {
 }
 
 void setup_hal_fh() {
-    open_i2c_sensor_fd = fh_open_sensor_fd;
-    close_sensor_fd = universal_close_sensor_fd;
-    i2c_change_addr = universal_sensor_i2c_change_addr;
-    i2c_read_register = universal_sensor_read_register;
-    i2c_write_register = universal_sensor_write_register;
     possible_i2c_addrs = fh_possible_i2c_addrs;
-    hal_cleanup = fh_hal_cleanup;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = fh_get_temp;
 }

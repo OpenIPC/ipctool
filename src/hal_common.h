@@ -3,8 +3,8 @@
 
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
-#include <sys/ioctl.h>
 #include <linux/ioctl.h>
+#include <sys/ioctl.h>
 
 #include "cjson/cJSON.h"
 #include "hal_fh.h"
@@ -65,6 +65,9 @@ extern sensor_addr_t *possible_i2c_addrs;
 typedef int (*read_register_t)(int fd, unsigned char i2c_addr,
                                unsigned int reg_addr, unsigned int reg_width,
                                unsigned int data_width);
+typedef int (*write_register_t)(int fd, unsigned char i2c_addr,
+                                unsigned int reg_addr, unsigned int reg_width,
+                                unsigned int data, unsigned int data_width);
 
 extern int (*open_i2c_sensor_fd)();
 extern int (*open_spi_sensor_fd)();
@@ -72,9 +75,8 @@ extern bool (*close_sensor_fd)(int fd);
 extern int (*i2c_change_addr)(int fd, unsigned char addr);
 extern read_register_t i2c_read_register;
 extern read_register_t spi_read_register;
-extern int (*i2c_write_register)(int fd, unsigned char i2c_addr,
-                                 unsigned int reg_addr, unsigned int reg_width,
-                                 unsigned int data, unsigned int data_width);
+extern write_register_t i2c_write_register;
+extern write_register_t spi_write_register;
 extern float (*hal_temperature)();
 extern void (*hal_cleanup)();
 extern void (*hal_detect_ethernet)(cJSON *handle);
@@ -87,15 +89,14 @@ int universal_open_sensor_fd(const char *dev_name);
 bool universal_close_sensor_fd(int fd);
 
 int dummy_sensor_i2c_change_addr(int fd, unsigned char addr);
-int universal_sensor_i2c_change_addr(int fd, unsigned char addr);
-int universal_sensor_write_register(int fd, unsigned char i2c_addr,
-                                    unsigned int reg_addr,
-                                    unsigned int reg_width, unsigned int data,
-                                    unsigned int data_width);
-int universal_sensor_read_register(int fd, unsigned char i2c_addr,
-                                   unsigned int reg_addr,
-                                   unsigned int reg_width,
-                                   unsigned int data_width);
+int universal_i2c_change_addr(int fd, unsigned char addr);
+int universal_i2c_write_register(int fd, unsigned char i2c_addr,
+                                 unsigned int reg_addr, unsigned int reg_width,
+                                 unsigned int data, unsigned int data_width);
+int universal_i2c_read_register(int fd, unsigned char i2c_addr,
+                                unsigned int reg_addr, unsigned int reg_width,
+                                unsigned int data_width);
+unsigned int sony_i2c_to_spi(unsigned int reg_addr);
 
 unsigned long kernel_mem();
 void hal_ram(unsigned long *media_mem, uint32_t *total_mem);
