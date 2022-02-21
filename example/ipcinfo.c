@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <math.h>
