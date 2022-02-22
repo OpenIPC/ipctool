@@ -96,6 +96,8 @@ set(IPCTOOL_SRC
     src/reginfo.h
     src/sha1.c
     src/sha1.h
+    src/snstool.c
+    src/snstool.h
     src/stack.c
     src/uboot.c
     src/uboot.h

@@ -21,6 +21,7 @@
 #include "hisi/hal_hisi.h"
 #include "hwinfo.h"
 #include "i2cspi.h"
+#include "snstool.h"
 #include "mtd.h"
 #include "network.h"
 #include "ptrace.h"
@@ -235,6 +236,8 @@ int main(int argc, char *argv[]) {
             return dmesg();
         else if (!strcmp(argv[optind], "mtd-unlock"))
             return mtd_unlock_cmd();
+        else if (!strcmp(argv[optind], "sensor"))
+            return snstool_cmd(argc - 1, argv + 1);
     }
 
     const struct option long_options[] = {{"chip-id", no_argument, NULL, 'c'},

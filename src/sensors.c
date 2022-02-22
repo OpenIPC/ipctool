@@ -172,9 +172,9 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         } else if (READ(0x1d8) == 0x0) {
             sprintf(ctx->sensor_id, "IMX290");
         }
-        #ifndef STANDALONE_LIBRARY
-            sony_imx291_params(ctx, fd, i2c_addr);
-        #endif
+#ifndef STANDALONE_LIBRARY
+        sony_imx291_params(ctx, fd, i2c_addr);
+#endif
         return true;
     }
 
@@ -209,18 +209,18 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         case 6:
             sprintf(ctx->sensor_id, "IMX327");
             return true;
-//         default: {
-//             int ret3010 = READ(0x10);
-//             if (((ret3010 == 0x21) || (ret3010 == 0x1)) &&
-//                 (READ(0x08) == 0xa0) && (READ(0x0e) == 0x01) &&
-//                 (READ(0x1e) == 0xb2) && (READ(0x1f) == 0x01)) {
-//                 sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
-// #ifndef STANDALONE_LIBRARY
-//                 sony_imx291_params(ctx, fd, i2c_addr);
-// #endif
-//                 return true;
-//             }
-//         }
+            //         default: {
+            //             int ret3010 = READ(0x10);
+            //             if (((ret3010 == 0x21) || (ret3010 == 0x1)) &&
+            //                 (READ(0x08) == 0xa0) && (READ(0x0e) == 0x01) &&
+            //                 (READ(0x1e) == 0xb2) && (READ(0x1f) == 0x01)) {
+            //                 sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
+            // #ifndef STANDALONE_LIBRARY
+            //                 sony_imx291_params(ctx, fd, i2c_addr);
+            // #endif
+            //                 return true;
+            //             }
+            //         }
         }
     }
 
@@ -652,10 +652,12 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
     sensor_read_register = i2c_read_register;
     if (detect_possible_sensors(ctx, fd, detect_soi_sensor, SENSOR_SOI)) {
         strcpy(ctx->vendor, "Silicon Optronics");
+        ctx->reg_width = 1;
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_onsemi_sensor,
                                        SENSOR_ONSEMI)) {
         strcpy(ctx->vendor, "ON Semiconductor");
+        ctx->data_width = 2;
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_omni_sensor,
                                        SENSOR_OMNIVISION)) {
@@ -672,10 +674,12 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
     } else if (detect_possible_sensors(ctx, fd, detect_galaxycore_sensor,
                                        SENSOR_GALAXYCORE)) {
         strcpy(ctx->vendor, "GalaxyCore");
+        ctx->reg_width = 1;
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_superpix_sensor,
                                        SENSOR_SUPERPIX)) {
         strcpy(ctx->vendor, "SuperPix");
+        ctx->reg_width = 1;
         detected = true;
     }
 exit:
@@ -705,12 +709,16 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
     return res;
 }
 
-static bool getsensorid(sensor_ctx_t *ctx) {
+bool getsensorid(sensor_ctx_t *ctx) {
     if (!getchipname())
         return NULL;
     // there is no platform specific i2c/spi access layer
     if (!open_i2c_sensor_fd)
         return NULL;
+
+    // Use common settings as default
+    ctx->data_width = 1;
+    ctx->reg_width = 2;
 
     bool i2c_detected = get_sensor_id_i2c(ctx);
     if (i2c_detected) {
