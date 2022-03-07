@@ -1,3 +1,4 @@
+#ifdef __ARM__
 #include "ptrace.h"
 
 #include <assert.h>
@@ -1024,3 +1025,4 @@ int ptrace_cmd(int argc, char **argv) {
         do_child(argv[optind], &argv[optind]);
     return EXIT_SUCCESS;
 }
+#endif

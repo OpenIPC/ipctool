@@ -216,9 +216,7 @@ static bool auto_backup(unsigned modes) {
 int main(int argc, char *argv[]) {
     // Don't use common option parser for these commands
     if (argc > 1) {
-        if (!strcmp(argv[1], "trace"))
-            return ptrace_cmd(argc - 1, argv + 1);
-        else if (!strcmp(argv[1], "gpio"))
+        if (!strcmp(argv[1], "gpio"))
             return gpio_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "reginfo"))
             return reginfo_cmd(argc - 1, argv + 1);
@@ -238,6 +236,10 @@ int main(int argc, char *argv[]) {
             return mtd_unlock_cmd();
         else if (!strcmp(argv[optind], "sensor"))
             return snstool_cmd(argc - 1, argv + 1);
+        #ifdef __ARM__
+        else if (!strcmp(argv[1], "trace"))
+            return ptrace_cmd(argc - 1, argv + 1);
+        #endif
     }
 
     const struct option long_options[] = {{"chip-id", no_argument, NULL, 'c'},
