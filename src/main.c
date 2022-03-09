@@ -236,7 +236,7 @@ int main(int argc, char *argv[]) {
             return mtd_unlock_cmd();
         else if (!strcmp(argv[optind], "sensor"))
             return snstool_cmd(argc - 1, argv + 1);
-        #ifdef __ARM__
+        #ifdef __arm__
         else if (!strcmp(argv[1], "trace"))
             return ptrace_cmd(argc - 1, argv + 1);
         #endif

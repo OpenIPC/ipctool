@@ -1,4 +1,4 @@
-#ifdef __ARM__
+#ifdef __arm__
 #include "ptrace.h"
 
 #include <assert.h>

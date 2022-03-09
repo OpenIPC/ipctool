@@ -65,36 +65,6 @@ float ingenic_get_temp() {
     }
     return ret;
 }
-int ingenic_i2c_read_register(int fd, unsigned char i2c_addr,
-                              unsigned int reg_addr, unsigned int reg_width,
-                              unsigned int data_width) {
-    char recvbuf[4];
-    unsigned int data;
-
-    if (reg_width == 2) {
-        recvbuf[0] = (reg_addr >> 8) & 0xff;
-        recvbuf[1] = reg_addr & 0xff;
-    } else {
-        recvbuf[0] = reg_addr & 0xff;
-    }
-
-    int data_size = reg_width * sizeof(unsigned char);
-    if (write(fd, recvbuf, data_size) != data_size) {
-        return -1;
-    }
-
-    data_size = data_width * sizeof(unsigned char);
-    if (read(fd, recvbuf, data_size) != data_size) {
-        return -1;
-    }
-
-    if (data_width == 2) {
-        data = recvbuf[0] | (recvbuf[1] << 8);
-    } else
-        data = recvbuf[0];
-
-    return data;
-}
 
 void setup_hal_ingenic() {
     disable_printk();
