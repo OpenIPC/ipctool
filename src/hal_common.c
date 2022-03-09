@@ -75,7 +75,7 @@ int universal_i2c_write_register(int fd, unsigned char i2c_addr,
 int universal_i2c_read_register(int fd, unsigned char i2c_addr,
                                 unsigned int reg_addr, unsigned int reg_width,
                                 unsigned int data_width) {
-    char recvbuf[4];
+    unsigned char recvbuf[4];
     unsigned int data;
 
     if (reg_width == 2) {
@@ -202,6 +202,8 @@ void setup_hal_drivers() {
         setup_hal_gm();
     else if (!strcmp(VENDOR_FH, chip_manufacturer))
         setup_hal_fh();
+    else if (!strcmp(VENDOR_INGENIC, chip_manufacturer))
+        setup_hal_ingenic();
 }
 
 typedef struct meminfo {
@@ -252,6 +254,8 @@ void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
         *total_mem = gm_totalmem(media_mem);
     else if (!strcmp(VENDOR_FH, chip_manufacturer))
         *total_mem = fh_totalmem(media_mem);
+    else if (!strcmp(VENDOR_INGENIC, chip_manufacturer))
+        *total_mem = ingenic_totalmem(media_mem);
 
     if (!*total_mem)
         *total_mem = kernel_mem();

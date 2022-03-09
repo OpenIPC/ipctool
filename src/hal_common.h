@@ -9,6 +9,7 @@
 #include "cjson/cJSON.h"
 #include "hal_fh.h"
 #include "hal_gm.h"
+#include "hal_ingenic.h"
 #include "hal_novatek.h"
 #include "hal_sstar.h"
 #include "hal_xm.h"

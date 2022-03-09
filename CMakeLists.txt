@@ -40,6 +40,8 @@ set(COMMON_LIB_SRC
     src/hal_fh.h
     src/hal_gm.c
     src/hal_gm.h
+    src/hal_ingenic.c
+    src/hal_ingenic.h
     src/hal_novatek.c
     src/hal_novatek.h
     src/hal_sstar.c

@@ -42,7 +42,7 @@ static long get_uart0_address() {
 static bool generic_detect_cpu() {
     char buf[256];
 
-    bool res = get_regex_line_from_file("/proc/cpuinfo", "Hardware.+: ([a-zA-Z-]+)",
+    bool res = get_regex_line_from_file("/proc/cpuinfo", "Hardware\\t+: ([a-zA-Z-]+)",
                                         buf, sizeof(buf));
     if (!res) {
         return false;
@@ -56,6 +56,8 @@ static bool generic_detect_cpu() {
         return gm_detect_cpu();
     else if (!strcmp(chip_manufacturer, "FH"))
         return fh_detect_cpu();
+    else if (!strcmp(chip_manufacturer, "isvp"))
+        return ingenic_detect_cpu();
     strcpy(chip_name, "unknown");
     return true;
 }
