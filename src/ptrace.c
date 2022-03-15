@@ -568,6 +568,99 @@ static void print_ioctl_spi(process_t *proc, int fd, size_t arg,
                name, d);
 }
 
+static void dump_an41908a_reg(const char *prefix, const char *op,
+                              uint8_t reg_num, uint16_t value) {
+    switch (reg_num) {
+    case 0:
+        printf("%s(IRS_TGT %s %#x)\n", prefix, op, value);
+        break;
+    case 0x21: {
+        printf("%s(%#x %s %#x /* FZTEST %#x, TESTEN 2 %d */)\n", prefix,
+               reg_num, op, value, value & 0x1f, value >> 7);
+    } break;
+    case 0x20: {
+        uint8_t h = value >> 8 & 0xff;
+        printf("%s(%#x %s %#x /* DT1 %#x, PWMMODE %#x, PWMRES %#x */)\n",
+               prefix, reg_num, op, value, value & 0xf, h & 0x1f, h >> 5);
+    } break;
+    case 0x25: {
+        const char *sf = reg_num == 0x25 ? "AB" : "CD";
+        printf("%s(INTCT%s %s %#x)\n", prefix, sf, op, value);
+    } break;
+    case 0x22:
+    case 0x27: {
+        const char *sf = reg_num == 0x22 ? "AB" : "CD";
+        const char pp = reg_num == 0x22 ? 'A' : 'C';
+        uint8_t h = value >> 8 & 0xff;
+        printf("%s(DT2%c %s %#x, PHMOD%s %s %#x)\n", prefix, pp, op,
+               value & 0xff, sf, op, h);
+    } break;
+    case 0x23:
+    case 0x28: {
+        const char l = reg_num == 0x23 ? 'A' : 'C';
+        const char r = reg_num == 0x23 ? 'B' : 'D';
+        uint8_t h = value >> 8 & 0xff;
+        printf("%s(PPW%c %s %#x, PPWA%c %s %#x)\n", prefix, l, op, value & 0xff,
+               r, op, h);
+    } break;
+    case 0x24:
+    case 0x29: {
+        const char *sf = reg_num == 0x24 ? "AB" : "CD";
+        const char led = reg_num == 0x24 ? 'B' : 'C';
+        uint8_t h = value >> 8 & 0xff;
+        printf(
+            "%s(%#x %s %#x /* PSUM%s 0x%.2x, CCWCW%s %d, BRAKE%s %d, ENDIS%s "
+            "%d, LED%c %d, MICRO%s %d */)\n",
+            prefix, reg_num, op, value, sf, value & 0xff, sf, h & 1, sf,
+            (h >> 1) & 1, sf, (h >> 2) & 1, led, (h >> 3) & 1, sf, h >> 4);
+    } break;
+    default:
+        printf("%s(%#x %s %#x)\n", prefix, reg_num, op, value);
+    }
+}
+
+#define MAX_AN41908A_REG 0x2A
+static void an41908a_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                                   size_t arg, size_t sysret) {
+    if (SPI_IOC_MESSAGE(1) != cmd)
+        return;
+
+    struct spi_ioc_transfer mesg[1];
+    copy_from_process(proc->pid, arg, &mesg[0], sizeof(mesg));
+    if (mesg[0].len % 3 != 0) {
+        printf("an41908a() -> errored len %d\n", mesg[0].len);
+        return;
+    }
+
+    static uint16_t state[MAX_AN41908A_REG + 1];
+
+    char *tx_buf = NULL, *rx_buf = NULL;
+    if (mesg[0].len) {
+        tx_buf = alloca(mesg[0].len);
+        copy_from_process(proc->pid, mesg[0].tx_buf, tx_buf, mesg[0].len);
+    }
+
+    for (int i = 0; i < mesg[0].len; i += 3) {
+        uint8_t reg_num = tx_buf[i] & 0x3f;
+        uint16_t value = tx_buf[i + 1] | tx_buf[i + 2] << 8;
+        if (reg_num > MAX_AN41908A_REG) {
+            printf("an41908a(), bad reg_num %#x\n", reg_num);
+        } else if (tx_buf[i] & 0x40) {
+            if (rx_buf == NULL) {
+                rx_buf = alloca(mesg[0].len);
+                copy_from_process(proc->pid, mesg[0].rx_buf, rx_buf,
+                                  mesg[0].len);
+            }
+            value = rx_buf[i + 1] | rx_buf[i + 2] << 8;
+            if (value != state[reg_num])
+                dump_an41908a_reg("read_an41908a", "->", reg_num, value);
+        } else if (value != state[reg_num]) {
+            dump_an41908a_reg("write_an41908a", "<-", reg_num, value);
+            state[tx_buf[i]] = value;
+        }
+    }
+}
+
 static void spi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
                               size_t arg, size_t sysret) {
     switch (cmd) {
@@ -587,16 +680,16 @@ static void spi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
     case SPI_IOC_MESSAGE(1): {
         struct spi_ioc_transfer mesg[1];
         copy_from_process(proc->pid, arg, &mesg[0], sizeof(mesg));
-        char *rx_buf = NULL;
+        char *tx_buf = NULL;
         if (mesg[0].len) {
-            rx_buf = alloca(mesg[0].len);
-            copy_from_process(proc->pid, mesg[0].tx_buf, rx_buf, mesg[0].len);
+            tx_buf = alloca(mesg[0].len);
+            copy_from_process(proc->pid, mesg[0].tx_buf, tx_buf, mesg[0].len);
         }
 
         printf("ioctl_spi('%s', SPI_IOC_MESSAGE(1), { ",
                arc_cstr(proc->fds[fd].file));
         for (int i = 0; i < mesg[0].len; i++) {
-            printf("%s%#x", i != 0 ? ", " : "", rx_buf[i]);
+            printf("%s%#x", i != 0 ? ", " : "", tx_buf[i]);
         }
         printf(" });\n");
     } break;
@@ -750,6 +843,8 @@ static void syscall_open(process_t *proc, size_t fd, int offset) {
                 null_i2c_ioctl_exit_cb; // dump_i2c_ioctl_exit_cb;
         }
         show_i2c_banner(fd);
+    } else if (IS_PREFIX(filename, "/dev/spidev2.0")) {
+        proc->fds[fd].ioctl_exit = an41908a_ioctl_exit_cb;
     } else if (IS_PREFIX(filename, "/dev/spidev")) {
         proc->fds[fd].ioctl_exit = spi_ioctl_exit_cb;
     } else if (IS_PREFIX(filename, "/dev/mtd")) {
