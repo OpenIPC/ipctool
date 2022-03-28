@@ -514,6 +514,21 @@ static void i2c_write_exit_cb(process_t *proc, int fd, size_t remote_addr,
     printf("sensor_write_register(0x%x, 0x%x);\n", addr, val);
 }
 
+static void gpio_write_cb(process_t *proc, int fd, size_t remote_addr,
+                          size_t nbyte, size_t sysret) {
+    if (proc->fds[fd].file && nbyte > 0) {
+        unsigned char *buf = alloca(nbyte) + 1;
+        char *res = copy_from_process(proc->pid, remote_addr, buf, nbyte);
+        if (!res) {
+            printf("ERROR: gpio_write(%d, 0x%x, %d) -> read from addrspace\n",
+                   fd, remote_addr, nbyte);
+            return;
+        }
+        buf[nbyte] = 0;
+        printf("gpio_write(%s, %s)\n", arc_cstr(proc->fds[fd].file), res);
+    }
+}
+
 static void mtd_write_cb(process_t *proc, int fd, size_t remote_addr,
                          size_t nbyte, size_t sysret) {
     printf("mtd_write(%d, %zu, 0x%x)\n", fd, remote_addr, nbyte);
@@ -851,8 +866,8 @@ static void syscall_open(process_t *proc, size_t fd, int offset) {
         proc->fds[fd].write_exit = mtd_write_cb;
         proc->fds[fd].ioctl_enter = mtd_ioctl_enter_cb;
         proc->fds[fd].ioctl_exit = mtd_ioctl_exit_cb;
-    } else if (IS_PREFIX(filename, "/dev/ttyAMA")) {
-        // TODO
+    } else if (IS_PREFIX(filename, "/sys/class/gpio/gpio")) {
+        proc->fds[fd].write_exit = gpio_write_cb;
     } else if (!strcmp(filename, "/dev/hi_mipi") ||
                !strcmp(filename, "/dev/mipi")) {
         proc->fds[fd].ioctl_exit = hisi_mipi_ioctl_exit_cb;
