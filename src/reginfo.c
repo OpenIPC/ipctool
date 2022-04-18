@@ -2195,6 +2195,10 @@ static const muxctrl_reg_t **regs_by_chip() {
             return _8EV300regs;
         else if (IS_16DV200)
             return DV200regs;
+    case HISI_3536C:
+        return RCV100regs;
+    case HISI_3536D:
+        return DV100regs;
     default:
         fprintf(stderr, "Platform is not supported\n");
         exit(EXIT_FAILURE);
@@ -2307,6 +2311,14 @@ static bool get_chip_gpio_adress(size_t *GPIO_Base, size_t *GPIO_Offset,
         *GPIO_Base = 0x120B0000;
         *GPIO_Groups = IS_16EV300 || IS_16DV200 ? 10 : 9;
         *GPIO_Offset = 0x1000;
+        break;
+    case HISI_3536C:
+        *GPIO_Base = 0x12150000;
+        *GPIO_Groups = 14;
+        break;
+    case HISI_3536D:
+        *GPIO_Base = 0x12150000;
+        *GPIO_Groups = 6;
         break;
     default:
         fprintf(stderr, "Chip is not supported\n");

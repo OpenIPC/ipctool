@@ -19,6 +19,8 @@
 #define HISI_V3 0x3516C300
 #define HISI_V4 0x3516E300
 #define HISI_V4A 0x3516C500
+#define HISI_3536C 0x3536C100
+#define HISI_3536D 0x3536D100
 
 #define IS_CHIP(name) (!strcmp(chip_name, name))
 
