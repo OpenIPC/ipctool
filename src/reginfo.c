@@ -1943,6 +1943,207 @@ static const muxctrl_reg_t *DV200regs[] = {
     &DV200_iocfg_reg98, 0,
 };
 
+MUXCTRL(DV100_muxctrl_reg0, 0x120F0000, "GPIO2_4", "VGA_HS")
+MUXCTRL(DV100_muxctrl_reg1, 0x120F0004, "GPIO2_5", "VGA_VS")
+MUXCTRL(DV100_muxctrl_reg2, 0x120F0008, "PWM_SVB_CORE", "GPIO2_6")
+MUXCTRL(DV100_muxctrl_reg3, 0x120F000C, "PWM_SVB_CPU", "GPIO2_7")
+MUXCTRL(DV100_muxctrl_reg4, 0x120F0010, "GPIO5_7", "PWM_FREE")
+MUXCTRL(DV100_muxctrl_reg5, 0x120F0014, "GPIO3_0", "I2C_SDA")
+MUXCTRL(DV100_muxctrl_reg6, 0x120F0018, "GPIO3_1", "I2C_SCL")
+MUXCTRL(DV100_muxctrl_reg7, 0x120F001C, "GPIO4_0", "UART1_RXD")
+MUXCTRL(DV100_muxctrl_reg8, 0x120F0020, "GPIO4_1", "UART1_TXD")
+MUXCTRL(DV100_muxctrl_reg9, 0x120F0024, "GPIO4_2", "UART1_RTSN")
+MUXCTRL(DV100_muxctrl_reg10, 0x120F0028, "GPIO4_3", "UART1_CTSN")
+MUXCTRL(DV100_muxctrl_reg11, 0x120F002C, "GPIO4_4", "UART2_RXD")
+MUXCTRL(DV100_muxctrl_reg12, 0x120F0030, "GPIO4_5", "UART2_TXD")
+MUXCTRL(DV100_muxctrl_reg13, 0x120F0034, "GPIO4_6", "ETH_LINK_LED")
+MUXCTRL(DV100_muxctrl_reg14, 0x120F0038, "GPIO4_7", "ETH_SPD_LED")
+MUXCTRL(DV100_muxctrl_reg15, 0x120F003C, "GPIO3_2", "IR_IN")
+MUXCTRL(DV100_muxctrl_reg16, 0x120F0040, "GPIO5_0", "reserved", "reserved",
+        "I2S_SD_RX")
+MUXCTRL(DV100_muxctrl_reg17, 0x120F0044, "GPIO5_1", "reserved", "reserved",
+        "I2S_MCLK")
+MUXCTRL(DV100_muxctrl_reg18, 0x120F0048, "GPIO5_2", "reserved", "reserved",
+        "I2S_WS")
+MUXCTRL(DV100_muxctrl_reg19, 0x120F004C, "GPIO5_3", "reserved", "reserved",
+        "I2S_BCLK")
+MUXCTRL(DV100_muxctrl_reg20, 0x120F0050, "GPIO5_4", "reserved", "reserved",
+        "I2S_SD_TX")
+MUXCTRL(DV100_muxctrl_reg21, 0x120F0054, "GPIO5_5", "USB2_PWREN0")
+MUXCTRL(DV100_muxctrl_reg22, 0x120F0058, "GPIO5_6", "USB2_PWREN1")
+MUXCTRL(DV100_muxctrl_reg23, 0x120F005C, "GPIO3_3", "HDMI_HOTPLUG")
+MUXCTRL(DV100_muxctrl_reg24, 0x120F0060, "GPIO3_4", "HDMI_SDA")
+MUXCTRL(DV100_muxctrl_reg25, 0x120F0064, "GPIO3_5", "HDMI_SCL")
+MUXCTRL(DV100_muxctrl_reg26, 0x120F0068, "GPIO3_6", "SATA_LED_N")
+MUXCTRL(DV100_muxctrl_reg27, 0x120F006C, "GPIO0_0", "MII_RXDV")
+MUXCTRL(DV100_muxctrl_reg28, 0x120F0070, "GPIO0_1", "MII_RXD3", "I2S_WS")
+MUXCTRL(DV100_muxctrl_reg29, 0x120F0074, "GPIO0_2", "MII_RXD2")
+MUXCTRL(DV100_muxctrl_reg30, 0x120F0078, "GPIO0_3", "MII_RXD1", "I2S_BCLK")
+MUXCTRL(DV100_muxctrl_reg31, 0x120F007C, "GPIO0_4", "MII_RXD0", "I2S_MCLK")
+MUXCTRL(DV100_muxctrl_reg32, 0x120F0080, "GPIO0_5", "MII_RXCK")
+MUXCTRL(DV100_muxctrl_reg33, 0x120F0084, "GPIO0_6", "MII_TXEN")
+MUXCTRL(DV100_muxctrl_reg34, 0x120F0088, "GPIO0_7", "MII_TXD3")
+MUXCTRL(DV100_muxctrl_reg35, 0x120F008C, "GPIO1_0", "MII_TXD2")
+MUXCTRL(DV100_muxctrl_reg36, 0x120F0090, "GPIO1_1", "MII_TXD1", "I2S_SD_RX")
+MUXCTRL(DV100_muxctrl_reg37, 0x120F0094, "GPIO1_2", "MII_TXD0", "I2S_SD_TX")
+MUXCTRL(DV100_muxctrl_reg38, 0x120F0098, "GPIO1_3", "MII_TXCK", "RMII_CLK")
+MUXCTRL(DV100_muxctrl_reg39, 0x120F009C, "GPIO1_4", "MII_CRS")
+MUXCTRL(DV100_muxctrl_reg40, 0x120F00A0, "GPIO1_5", "MII_COL")
+MUXCTRL(DV100_muxctrl_reg41, 0x120F00A4, "GPIO1_6", "MII_RXER")
+MUXCTRL(DV100_muxctrl_reg42, 0x120F00A8, "GPIO1_7", "MII_TXER")
+MUXCTRL(DV100_muxctrl_reg43, 0x120F00AC, "TEST_CLK", "EPHY_CLK", "GPIO2_0")
+MUXCTRL(DV100_muxctrl_reg44, 0x120F00B0, "GPIO2_1", "EPHY_RSTN")
+MUXCTRL(DV100_muxctrl_reg45, 0x120F00B4, "GPIO2_2", "MDCK")
+MUXCTRL(DV100_muxctrl_reg46, 0x120F00B8, "GPIO2_3", "MDIO")
+
+static const muxctrl_reg_t *DV100regs[] = {
+    &DV100_muxctrl_reg0,  &DV100_muxctrl_reg1,  &DV100_muxctrl_reg2,
+    &DV100_muxctrl_reg3,  &DV100_muxctrl_reg4,  &DV100_muxctrl_reg5,
+    &DV100_muxctrl_reg6,  &DV100_muxctrl_reg7,  &DV100_muxctrl_reg8,
+    &DV100_muxctrl_reg9,  &DV100_muxctrl_reg10, &DV100_muxctrl_reg11,
+    &DV100_muxctrl_reg12, &DV100_muxctrl_reg13, &DV100_muxctrl_reg14,
+    &DV100_muxctrl_reg15, &DV100_muxctrl_reg16, &DV100_muxctrl_reg17,
+    &DV100_muxctrl_reg18, &DV100_muxctrl_reg19, &DV100_muxctrl_reg20,
+    &DV100_muxctrl_reg21, &DV100_muxctrl_reg22, &DV100_muxctrl_reg23,
+    &DV100_muxctrl_reg24, &DV100_muxctrl_reg25, &DV100_muxctrl_reg26,
+    &DV100_muxctrl_reg27, &DV100_muxctrl_reg28, &DV100_muxctrl_reg29,
+    &DV100_muxctrl_reg30, &DV100_muxctrl_reg31, &DV100_muxctrl_reg32,
+    &DV100_muxctrl_reg33, &DV100_muxctrl_reg34, &DV100_muxctrl_reg35,
+    &DV100_muxctrl_reg36, &DV100_muxctrl_reg37, &DV100_muxctrl_reg38,
+    &DV100_muxctrl_reg39, &DV100_muxctrl_reg40, &DV100_muxctrl_reg41,
+    &DV100_muxctrl_reg42, &DV100_muxctrl_reg43, &DV100_muxctrl_reg44,
+    &DV100_muxctrl_reg45, &DV100_muxctrl_reg46, 0,
+};
+
+MUXCTRL(RCV100_muxctrl_reg0, 0x120F0000, "GPIO5_7", "reserved", "reserved",
+        "RGMII1_TXER")
+MUXCTRL(RCV100_muxctrl_reg1, 0x120F0004, "GPIO1_0", "reserved", "reserved",
+        "EPHY1_CLK")
+MUXCTRL(RCV100_muxctrl_reg2, 0x120F0008, "GPIO1_1", "reserved", "reserved",
+        "RGMII1_TXD2")
+MUXCTRL(RCV100_muxctrl_reg3, 0x120F000C, "GPIO1_2", "reserved", "reserved",
+        "RGMII1_TXD3")
+MUXCTRL(RCV100_muxctrl_reg4, 0x120F0010, "GPIO1_3", "reserved", "reserved",
+        "RGMII1_TXD1")
+MUXCTRL(RCV100_muxctrl_reg5, 0x120F0014, "GPIO1_4", "reserved", "reserved",
+        "RGMII1_TXCKOUT", "MII1_TXCK", "RMII1_CLK")
+MUXCTRL(RCV100_muxctrl_reg6, 0x120F0018, "GPIO1_5", "reserved", "reserved",
+        "RGMII1_TXD0")
+MUXCTRL(RCV100_muxctrl_reg7, 0x120F001C, "GPIO1_6", "reserved", "reserved",
+        "RGMII1_TXEN")
+MUXCTRL(RCV100_muxctrl_reg8, 0x120F0020, "GPIO1_7", "reserved", "reserved",
+        "RGMII1_RXER")
+MUXCTRL(RCV100_muxctrl_reg9, 0x120F0024, "GPIO10_6", "reserved", "reserved",
+        "RGMII1_RXCK")
+MUXCTRL(RCV100_muxctrl_reg10, 0x120F0028, "GPIO2_0", "reserved", "reserved",
+        "MDCK1")
+MUXCTRL(RCV100_muxctrl_reg11, 0x120F002C, "GPIO2_1", "reserved", "reserved",
+        "MDIO1")
+MUXCTRL(RCV100_muxctrl_reg12, 0x120F0030, "GPIO2_2", "reserved", "reserved",
+        "RGMII1_CRS")
+MUXCTRL(RCV100_muxctrl_reg13, 0x120F0034, "GPIO2_3", "reserved", "reserved",
+        "EPHY1_RSTN")
+MUXCTRL(RCV100_muxctrl_reg14, 0x120F0038, "GPIO2_4", "reserved", "reserved",
+        "RGMII1_RXD3")
+MUXCTRL(RCV100_muxctrl_reg15, 0x120F003C, "GPIO2_5", "reserved", "reserved",
+        "RGMII1_RXD2")
+MUXCTRL(RCV100_muxctrl_reg16, 0x120F0040, "GPIO2_6", "reserved", "reserved",
+        "RGMII1_RXD0")
+MUXCTRL(RCV100_muxctrl_reg17, 0x120F0044, "GPIO2_7", "reserved", "reserved",
+        "RGMII1_RXD1")
+MUXCTRL(RCV100_muxctrl_reg18, 0x120F0048, "GPIO6_0", "reserved", "reserved",
+        "RGMII1_RXDV")
+MUXCTRL(RCV100_muxctrl_reg20, 0x120F0050, "GPIO3_0", "reserved", "reserved",
+        "RGMII1_COL")
+MUXCTRL(RCV100_muxctrl_reg38, 0x120F0098, "GPIO11_6", "VGA_HS")
+MUXCTRL(RCV100_muxctrl_reg39, 0x120F009C, "GPIO11_3", "VGA_VS")
+MUXCTRL(RCV100_muxctrl_reg43, 0x120F00AC, "GPIO9_3", "I2S1_BCLK_RX",
+        "I2S2_MCLK")
+MUXCTRL(RCV100_muxctrl_reg44, 0x120F00B0, "GPIO9_4", "I2S1_WS_RX")
+MUXCTRL(RCV100_muxctrl_reg45, 0x120F00B4, "GPIO9_5", "I2S1_SD_RX")
+MUXCTRL(RCV100_muxctrl_reg46, 0x120F00B8, "GPIO9_6", "I2S2_BCLK_TX")
+MUXCTRL(RCV100_muxctrl_reg47, 0x120F00BC, "GPIO9_7", "I2S2_WS_TX")
+MUXCTRL(RCV100_muxctrl_reg48, 0x120F00C0, "GPIO5_4", "I2S2_SD_TX")
+MUXCTRL(RCV100_muxctrl_reg49, 0x120F00C4, "TEST_CLK", "SPI_SCLK", "GPIO5_0")
+MUXCTRL(RCV100_muxctrl_reg50, 0x120F00C8, "GPIO5_1", "SPI_MOSI")
+MUXCTRL(RCV100_muxctrl_reg51, 0x120F00CC, "GPIO5_2", "SPI_MISO")
+MUXCTRL(RCV100_muxctrl_reg52, 0x120F00D0, "GPIO5_3", "SPI_CSN0")
+MUXCTRL(RCV100_muxctrl_reg53, 0x120F00D4, "GPIO8_7", "SPI_CSN1")
+MUXCTRL(RCV100_muxctrl_reg54, 0x120F00D8, "PWM_OUT0", "GPIO5_5")
+MUXCTRL(RCV100_muxctrl_reg55, 0x120F00DC, "PWM_OUT1", "GPIO5_6")
+MUXCTRL(RCV100_muxctrl_reg56, 0x120F00E0, "GPIO12_6", "I2C_SDA")
+MUXCTRL(RCV100_muxctrl_reg57, 0x120F00E4, "GPIO12_7", "I2C_SCL")
+MUXCTRL(RCV100_muxctrl_reg58, 0x120F00E8, "UART0_RXD", "GPIO10_7")
+MUXCTRL(RCV100_muxctrl_reg59, 0x120F00EC, "UART0_TXD", "GPIO12_5")
+MUXCTRL(RCV100_muxctrl_reg60, 0x120F00F0, "UART0_CTSN", "GPIO6_2")
+MUXCTRL(RCV100_muxctrl_reg61, 0x120F00F4, "UART0_RTSN", "GPIO6_3")
+MUXCTRL(RCV100_muxctrl_reg62, 0x120F00F8, "GPIO6_5", "UART1_RXD")
+MUXCTRL(RCV100_muxctrl_reg63, 0x120F00FC, "GPIO6_7", "UART1_TXD")
+MUXCTRL(RCV100_muxctrl_reg64, 0x120F0100, "GPIO11_4", "UART2_RXD")
+MUXCTRL(RCV100_muxctrl_reg65, 0x120F0104, "GPIO11_5", "UART2_TXD")
+MUXCTRL(RCV100_muxctrl_reg66, 0x120F0108, "GPIO7_0", "RGMII0_RXDV")
+MUXCTRL(RCV100_muxctrl_reg67, 0x120F010C, "GPIO7_1", "RGMII0_RXD3")
+MUXCTRL(RCV100_muxctrl_reg68, 0x120F0110, "GPIO7_2", "RGMII0_RXD2")
+MUXCTRL(RCV100_muxctrl_reg69, 0x120F0114, "GPIO7_3", "RGMII0_RXD1")
+MUXCTRL(RCV100_muxctrl_reg70, 0x120F0118, "GPIO7_4", "RGMII0_RXD0")
+MUXCTRL(RCV100_muxctrl_reg71, 0x120F011C, "GPIO7_5", "RGMII0_RXCK")
+MUXCTRL(RCV100_muxctrl_reg72, 0x120F0120, "GPIO7_6", "RGMII0_TXEN")
+MUXCTRL(RCV100_muxctrl_reg73, 0x120F0124, "GPIO7_7", "RGMII0_TXD3")
+MUXCTRL(RCV100_muxctrl_reg74, 0x120F0128, "GPIO8_0", "RGMII0_TXD2")
+MUXCTRL(RCV100_muxctrl_reg75, 0x120F012C, "GPIO8_1", "RGMII0_TXD1")
+MUXCTRL(RCV100_muxctrl_reg76, 0x120F0130, "GPIO8_2", "RGMII0_TXD0")
+MUXCTRL(RCV100_muxctrl_reg77, 0x120F0134, "GPIO8_3", "RGMII0_TXCKOUT",
+        "MII0_TXCK", "RMII0_CLK")
+MUXCTRL(RCV100_muxctrl_reg78, 0x120F0138, "GPIO8_4", "RGMII0_CRS")
+MUXCTRL(RCV100_muxctrl_reg79, 0x120F013C, "GPIO8_5", "RGMII0_COL")
+MUXCTRL(RCV100_muxctrl_reg80, 0x120F0140, "GPIO8_6", "RGMII0_RXER")
+MUXCTRL(RCV100_muxctrl_reg81, 0x120F0144, "GPIO6_6", "EPHY0_CLK")
+MUXCTRL(RCV100_muxctrl_reg82, 0x120F0148, "GPIO6_4", "EPHY0_RSTN")
+MUXCTRL(RCV100_muxctrl_reg83, 0x120F014C, "GPIO10_0", "MDCK0")
+MUXCTRL(RCV100_muxctrl_reg84, 0x120F0150, "GPIO10_1", "MDIO0")
+MUXCTRL(RCV100_muxctrl_reg85, 0x120F0154, "GPIO10_2", "IR_IN")
+MUXCTRL(RCV100_muxctrl_reg86, 0x120F0158, "SFC_MOSI_IO0", "GPIO11_0")
+MUXCTRL(RCV100_muxctrl_reg87, 0x120F015C, "SFC_WP_IO2", "GPIO11_1")
+MUXCTRL(RCV100_muxctrl_reg88, 0x120F0160, "SFC_MISO_IO1", "GPIO11_2")
+MUXCTRL(RCV100_muxctrl_reg89, 0x120F0164, "GPIO13_0", "USB2_OVRCUR0")
+MUXCTRL(RCV100_muxctrl_reg90, 0x120F0168, "GPIO13_1", "USB2_PWREN0")
+MUXCTRL(RCV100_muxctrl_reg91, 0x120F016C, "GPIO13_2", "USB2_OVRCUR1")
+MUXCTRL(RCV100_muxctrl_reg92, 0x120F0170, "GPIO13_3", "USB2_PWREN1")
+MUXCTRL(RCV100_muxctrl_reg93, 0x120F0174, "GPIO13_4", "HDMI_HOTPLUG")
+MUXCTRL(RCV100_muxctrl_reg95, 0x120F017C, "GPIO13_6", "HDMI_SDA")
+MUXCTRL(RCV100_muxctrl_reg96, 0x120F0180, "GPIO13_7", "HDMI_SCL")
+MUXCTRL(RCV100_muxctrl_reg97, 0x120F0184, "GPIO10_3", "SATA_LED_N0")
+MUXCTRL(RCV100_muxctrl_reg98, 0x120F0188, "GPIO10_4", "SATA_LED_N1")
+
+static const muxctrl_reg_t *RCV100regs[] = {
+    &RCV100_muxctrl_reg0,  &RCV100_muxctrl_reg1,  &RCV100_muxctrl_reg2,
+    &RCV100_muxctrl_reg3,  &RCV100_muxctrl_reg4,  &RCV100_muxctrl_reg5,
+    &RCV100_muxctrl_reg6,  &RCV100_muxctrl_reg7,  &RCV100_muxctrl_reg8,
+    &RCV100_muxctrl_reg9,  &RCV100_muxctrl_reg10, &RCV100_muxctrl_reg11,
+    &RCV100_muxctrl_reg12, &RCV100_muxctrl_reg13, &RCV100_muxctrl_reg14,
+    &RCV100_muxctrl_reg15, &RCV100_muxctrl_reg16, &RCV100_muxctrl_reg17,
+    &RCV100_muxctrl_reg18, &RCV100_muxctrl_reg20, &RCV100_muxctrl_reg38,
+    &RCV100_muxctrl_reg39, &RCV100_muxctrl_reg43, &RCV100_muxctrl_reg44,
+    &RCV100_muxctrl_reg45, &RCV100_muxctrl_reg46, &RCV100_muxctrl_reg47,
+    &RCV100_muxctrl_reg48, &RCV100_muxctrl_reg49, &RCV100_muxctrl_reg50,
+    &RCV100_muxctrl_reg51, &RCV100_muxctrl_reg52, &RCV100_muxctrl_reg53,
+    &RCV100_muxctrl_reg54, &RCV100_muxctrl_reg55, &RCV100_muxctrl_reg56,
+    &RCV100_muxctrl_reg57, &RCV100_muxctrl_reg58, &RCV100_muxctrl_reg59,
+    &RCV100_muxctrl_reg60, &RCV100_muxctrl_reg61, &RCV100_muxctrl_reg62,
+    &RCV100_muxctrl_reg63, &RCV100_muxctrl_reg64, &RCV100_muxctrl_reg65,
+    &RCV100_muxctrl_reg66, &RCV100_muxctrl_reg67, &RCV100_muxctrl_reg68,
+    &RCV100_muxctrl_reg69, &RCV100_muxctrl_reg70, &RCV100_muxctrl_reg71,
+    &RCV100_muxctrl_reg72, &RCV100_muxctrl_reg73, &RCV100_muxctrl_reg74,
+    &RCV100_muxctrl_reg75, &RCV100_muxctrl_reg76, &RCV100_muxctrl_reg77,
+    &RCV100_muxctrl_reg78, &RCV100_muxctrl_reg79, &RCV100_muxctrl_reg80,
+    &RCV100_muxctrl_reg81, &RCV100_muxctrl_reg82, &RCV100_muxctrl_reg83,
+    &RCV100_muxctrl_reg84, &RCV100_muxctrl_reg85, &RCV100_muxctrl_reg86,
+    &RCV100_muxctrl_reg87, &RCV100_muxctrl_reg88, &RCV100_muxctrl_reg89,
+    &RCV100_muxctrl_reg90, &RCV100_muxctrl_reg91, &RCV100_muxctrl_reg92,
+    &RCV100_muxctrl_reg93, &RCV100_muxctrl_reg95, &RCV100_muxctrl_reg96,
+    &RCV100_muxctrl_reg97, &RCV100_muxctrl_reg98, 0,
+};
+
 static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func);
 
