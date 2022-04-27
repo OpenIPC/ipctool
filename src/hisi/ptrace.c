@@ -456,6 +456,7 @@ typedef struct {
 
 size_t hisi_sizeof_combo_dev_attr() {
     switch (chip_generation) {
+    case HISI_V2A:
     case HISI_V2:
         return sizeof(V2_combo_dev_attr_t);
     case HISI_V3A:
@@ -708,7 +709,7 @@ static void hisi_dump_V4combo_dev_attr(V4_combo_dev_attr_t *attr,
 }
 
 void hisi_dump_combo_dev_attr(void *ptr, unsigned int cmd) {
-    switch ((cmd >> 16) & 0xff) {
+    switch ((cmd >> 16) & 0x1ff) {
     case sizeof(V2_combo_dev_attr_t):
         return hisi_dump_V2combo_dev_attr(ptr, cmd);
     case sizeof(V3A_combo_dev_attr_t):

@@ -140,6 +140,7 @@ void linux_new_mempeek() {
 static void *copy_from_process(pid_t child, size_t addr, void *ptr,
                                size_t size) {
     size_t *buf = ptr;
+    errno = 0;
     for (size_t i = 0; i < size; i += sizeof(size_t)) {
         long ret = ptrace(PTRACE_PEEKTEXT, child, addr + i, 0);
         if (ret == -1 && errno) {
@@ -158,6 +159,7 @@ static char *copy_from_process_str(process_t *proc, size_t addr) {
     char *buf = malloc(buflen);
     size_t readlen = 0;
 
+    errno = 0;
     do {
         if (buflen == readlen) {
             buflen *= 2;
