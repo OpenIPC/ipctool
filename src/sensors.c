@@ -468,6 +468,8 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     case 0x2710:
     case 0x2715:
+    case 0x2718:
+    case 0x2735:
     case 0x9732:
         sprintf(ctx->sensor_id, "OV%04x", res);
         return true;
