@@ -93,6 +93,7 @@ void Help() {
         "register>\n"
         "  spidump [--script] <from register> <to register>\n"
         "                            dump data from I2C/SPI device\n"
+        "  i2cdetect                 attempt to detect devices on I2C bus\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
         "  gpio (scan|mux)           GPIO utilities\n"
         "  trace [--skip=usleep] <full/path/to/executable> [program "
