@@ -371,6 +371,8 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         break;
     case 0x1145:
         break;
+    case 0x2310:
+        break;
     case 0x2311:
         // XM
         strcpy(ctx->sensor_id, "SC2315");
@@ -469,7 +471,6 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2710:
     case 0x2715:
     case 0x2718:
-    case 0x2735:
     case 0x9732:
         sprintf(ctx->sensor_id, "OV%04x", res);
         return true;
@@ -586,15 +587,36 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    int prod_msb = i2c_read_register(fd, i2c_addr, 0xfa, 1, 1);
+    int prod_msb = i2c_read_register(fd, i2c_addr, 0x02, 1, 1);
+    if (prod_msb == -1)
+        return false;
+
+    int prod_lsb = i2c_read_register(fd, i2c_addr, 0x03, 1, 1);
+    if (prod_lsb == -1)
+        return false;
+
+    int res = prod_msb << 8 | prod_lsb;
+
+    if (!res)
+        return false;
+
+    switch (res) {
+    // Omnivision-SuperPix OV2735
+    case 0x2735:
+        sprintf(ctx->sensor_id, "OV%04x", res);
+        return res;
+        break;
+    }
+
+    prod_msb = i2c_read_register(fd, i2c_addr, 0xfa, 1, 1);
     // early break
     if (prod_msb == -1)
         return false;
 
-    int prod_lsb = i2c_read_register(fd, i2c_addr, 0xfb, 1, 1);
+    prod_lsb = i2c_read_register(fd, i2c_addr, 0xfb, 1, 1);
     if (prod_lsb == -1)
         return false;
-    int res = prod_msb << 8 | prod_lsb;
+    res = prod_msb << 8 | prod_lsb;
 
     if (!res)
         return false;
