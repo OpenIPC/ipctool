@@ -542,15 +542,32 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    int prod_msb = i2c_read_register(fd, i2c_addr, 0xf0, 1, 1);
-    // early break
+    int prod_msb = i2c_read_register(fd, i2c_addr, 0x3f0, 2, 1);
     if (prod_msb == -1)
         return false;
 
-    int prod_lsb = i2c_read_register(fd, i2c_addr, 0xf1, 1, 1);
+    int prod_lsb = i2c_read_register(fd, i2c_addr, 0x3f1, 2, 1);
     if (prod_lsb == -1)
         return false;
     int res = prod_msb << 8 | prod_lsb;
+
+    if (!res)
+        return false;
+
+    switch (res) {
+    case 0x4653:
+        sprintf(ctx->sensor_id, "GC%04x", res);
+        return true;
+    }
+
+    prod_msb = i2c_read_register(fd, i2c_addr, 0xf0, 1, 1);
+    if (prod_msb == -1)
+        return false;
+
+    prod_lsb = i2c_read_register(fd, i2c_addr, 0xf1, 1, 1);
+    if (prod_lsb == -1)
+        return false;
+    res = prod_msb << 8 | prod_lsb;
 
     if (!res)
         return false;
