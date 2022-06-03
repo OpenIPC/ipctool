@@ -31,151 +31,130 @@ typedef unsigned short uint16;
 #define BYTE2(x) BYTEn(x, 2)
 
 static int get_cpu_id() {
-    int result; // $v0
-    int v2;     // $v0
-    int v3;     // $a0
-    int Option; // $v0
-    int v5;     // $a1
-    int v6;     // $v1
-    int v7;     // $a0
-    int v8;     // $a0
-    int v9;     // $a0
-    int v10;    // $v0
-    int v11;    // $v0
+    uint32_t soc_id = 0, cppsr = 0;
+    uint32_t subsoctype = 0, subremark = 0;
 
-    uint32_t soc_id_7971 = 0, cppsr_7970 = 0;
-    uint32_t subsoctype_7972 = 0, subremark_7974 = 0;
-
-    if (!mem_reg(0x1300002C, &soc_id_7971, OP_READ))
+    if (!mem_reg(0x1300002C, &soc_id, OP_READ))
         return -1;
-    if (!mem_reg(0x10000034, &cppsr_7970, OP_READ))
+    if (!mem_reg(0x10000034, &cppsr, OP_READ))
         return -1;
-    if (!mem_reg(0x13540238, &subsoctype_7972, OP_READ))
+    if (!mem_reg(0x13540238, &subsoctype, OP_READ))
         return -1;
-    if (!mem_reg(0x13540231, &subremark_7974, OP_READ))
+    if (!mem_reg(0x13540231, &subremark, OP_READ))
         return -1;
-    if (soc_id_7971 >> 28 != 1)
+    if (soc_id >> 28 != 1)
         return -1;
-    switch ((soc_id_7971 >> 12) & 0xff) {
+    switch ((soc_id >> 12) & 0xff) {
     case 5:
-        if ((uint8_t)cppsr_7970 == 1) {
+        switch ((uint8_t)cppsr) {
+        case 0:
+            return 1;
+        case 1:
             return 0;
-        } else {
-            result = 1;
-            if ((_BYTE)cppsr_7970) {
-                result = 2;
-                if ((uint8_t)cppsr_7970 != 0x10)
-                    return -1;
-            }
+        case 0x10:
+            return 2;
+        default:
+            return -1;
         }
-        break;
     case 0x2000:
-        if ((uint8_t)cppsr_7970 == 1)
+        switch ((uint8_t)cppsr) {
+        case 1:
             return 3;
-        if ((uint8_t)cppsr_7970 == 16)
+        case 16:
             return 4;
-        return -1;
+        default:
+            return -1;
+        }
     case 0x30:
-        if ((uint8_t)cppsr_7970 == 1) {
-            if (HIWORD(subsoctype_7972) == 0x3333) {
+        if ((uint8_t)cppsr == 1) {
+            switch (HIWORD(subsoctype)) {
+            case 0x1111:
                 return 7;
-            } else {
-                result = 7;
-                if (HIWORD(subsoctype_7972) != 0x1111) {
-                    result = 8;
-                    if (HIWORD(subsoctype_7972) != 0x2222) {
-                        result = 9;
-                        if (HIWORD(subsoctype_7972) != 0x4444) {
-                            result = 8;
-                            if (HIWORD(subsoctype_7972) == 21845)
-                                return 10;
-                        }
-                    }
-                }
+            case 0x3333:
+                return 7;
+            case 0x2222:
+                return 8;
+            case 0x4444:
+                return 9;
+            case 0x5555:
+                return 10;
+            default:
+                return 8;
             }
         } else {
-            v6 = 6;
-            if ((uint8_t)cppsr_7970 != 0x10)
-                return -1;
-            return v6;
+            if ((uint8_t)cppsr == 0x10)
+                return 6;
+            return -1;
         }
-        break;
     case 0x21:
-        result = 11;
-        if ((uint8_t)cppsr_7970 == 1) {
-            if (BYTE2(subremark_7974)) {
-                result = 12;
-                if (BYTE2(subremark_7974) != (uint8_t)cppsr_7970) {
-                    result = 11;
-                    if (BYTE2(subremark_7974) != 3) {
-                        result = 12;
-                        if (BYTE2(subremark_7974) != 7) {
-                            v8 = 11;
-                            if (BYTE2(subremark_7974) != 0xF)
+        if ((uint8_t)cppsr == 1) {
+            if (BYTE2(subremark)) {
+                if (BYTE2(subremark) != (uint8_t)cppsr) {
+                    if (BYTE2(subremark) != 3) {
+                        if (BYTE2(subremark) != 7) {
+                            if (BYTE2(subremark) != 0xF)
                                 return -1;
-                            return v8;
+                            return 11;
                         }
+                        return 12;
                     }
+                    return 11;
                 }
+                return 12;
             } else {
-                result = 11;
-                if (HIWORD(subsoctype_7972) != 0x3333) {
-                    result = 12;
-                    if (HIWORD(subsoctype_7972) != 0x1111) {
-                        v9 = 13;
-                        if (HIWORD(subsoctype_7972) == 21845)
+                if (HIWORD(subsoctype) != 0x3333) {
+                    if (HIWORD(subsoctype) != 0x1111) {
+                        if (HIWORD(subsoctype) == 0x5555)
                             return 14;
-                        return v9;
+                        return 13;
                     }
+                    return 12;
                 }
+                return 11;
             }
-        } else if ((uint8_t)cppsr_7970 != 0x10) {
+        } else if ((uint8_t)cppsr != 0x10) {
             return -1;
         }
-        break;
+        return 11;
     case 0x31:
-        result = 15;
-        if ((uint8_t)cppsr_7970 == 1) {
-            if (BYTE2(subremark_7974)) {
-                result = 16;
-                if (BYTE2(subremark_7974) != (uint8_t)cppsr_7970) {
-                    result = 15;
-                    if (BYTE2(subremark_7974) != 3) {
-                        result = 16;
-                        if (BYTE2(subremark_7974) != 7) {
-                            v7 = 15;
-                            if (BYTE2(subremark_7974) != 0xF)
+        if ((uint8_t)cppsr == 1) {
+            if (BYTE2(subremark)) {
+                if (BYTE2(subremark) != (uint8_t)cppsr) {
+                    if (BYTE2(subremark) != 3) {
+                        if (BYTE2(subremark) != 7) {
+                            if (BYTE2(subremark) != 0xF)
                                 return -1;
-                            return v7;
+                            return 15;
                         }
+                        return 16;
                     }
+                    return 15;
                 }
+                return 16;
             } else {
-                result = 15;
-                if (HIWORD(subsoctype_7972) != 0x3333) {
-                    result = 16;
-                    if (HIWORD(subsoctype_7972) != 0x1111) {
-                        result = 17;
-                        if (HIWORD(subsoctype_7972) != 0x2222) {
-                            result = 18;
-                            if (HIWORD(subsoctype_7972) != 0x4444) {
-                                v3 = 20;
-                                if (HIWORD(subsoctype_7972) == 21845)
+                if (HIWORD(subsoctype) != 0x3333) {
+                    if (HIWORD(subsoctype) != 0x1111) {
+                        if (HIWORD(subsoctype) != 0x2222) {
+                            if (HIWORD(subsoctype) != 0x4444) {
+                                if (HIWORD(subsoctype) == 0x5555)
                                     return 19;
-                                return v3;
+                                return 20;
                             }
+                            return 18;
                         }
+                        return 17;
                     }
+                    return 16;
                 }
+                return 15;
             }
-        } else if ((uint8_t)cppsr_7970 != 0x10) {
+        } else if ((uint8_t)cppsr != 0x10) {
             return -1;
         }
-        return result;
+        return 15;
     default:
         return -1;
     }
-    return result;
 }
 
 static const char *ingenic_cpu_name() {
