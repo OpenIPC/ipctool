@@ -163,43 +163,43 @@ static const char *ingenic_cpu_name() {
         return "T10";
     case 1:
     case 2:
-        return "T10-Lite";
+        return "T10Lite";
     case 3:
         return "T20";
     case 4:
-        return "T20-Lite";
+        return "T20Lite";
     case 5:
-        return "T20-X";
+        return "T20X";
     case 6:
-        return "T30-Lite";
+        return "T30Lite";
     case 7:
-        return "T30-N";
+        return "T30N";
     case 8:
-        return "T30-X";
+        return "T30X";
     case 9:
-        return "T30-A";
+        return "T30A";
     case 10:
-        return "T30-Z";
+        return "T30Z";
     case 11:
-        return "T21-L";
+        return "T21L";
     case 12:
-        return "T21-N";
+        return "T21N";
     case 13:
-        return "T21-X";
+        return "T21X";
     case 14:
-        return "T21-Z";
+        return "T21Z";
     case 15:
-        return "T31-L";
+        return "T31L";
     case 16:
-        return "T31-N";
+        return "T31N";
     case 17:
-        return "T31-X";
+        return "T31X";
     case 18:
-        return "T31-A";
+        return "T31A";
     case 19:
-        return "T31-ZL";
+        return "T31ZL";
     case 20:
-        return "T31-ZX";
+        return "T31ZX";
     }
     return "unknown";
 }
