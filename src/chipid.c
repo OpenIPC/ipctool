@@ -42,8 +42,8 @@ static long get_uart0_address() {
 static bool generic_detect_cpu() {
     char buf[256];
 
-    bool res = get_regex_line_from_file("/proc/cpuinfo", "Hardware\\t+: ([a-zA-Z-]+)",
-                                        buf, sizeof(buf));
+    bool res = get_regex_line_from_file(
+        "/proc/cpuinfo", "Hardware\\t+: ([a-zA-Z-]+)", buf, sizeof(buf));
     if (!res) {
         return false;
     }
@@ -125,4 +125,9 @@ const char *getchipfamily() {
     default:
         return "unknown";
     }
+}
+
+const char *getchipvendor() {
+    getchipname();
+    return chip_manufacturer;
 }

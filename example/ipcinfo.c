@@ -149,11 +149,14 @@ int main(int argc, char **argv) {
         }
 
         case 'v': {
-            getchipname();
-            for (int i = 0; chip_manufacturer[i]; i++){
-                chip_manufacturer[i] = tolower(chip_manufacturer[i]);
+            const char *vendor = getchipvendor();
+            size_t len = strlen(vendor);
+            char *str = alloca(len + 1);
+            str[len] = 0;
+            for (int i = 0; i < len; i++) {
+                str[i] = tolower(vendor[i]);
             }
-            puts(chip_manufacturer);
+            puts(str);
             return EXIT_SUCCESS;
         }
 
@@ -185,7 +188,7 @@ int main(int argc, char **argv) {
             return EXIT_SUCCESS;
         }
 
-	case '4':
+        case '4':
         case 'x':
             return xm_mac();
         }
