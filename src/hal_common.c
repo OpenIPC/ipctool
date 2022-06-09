@@ -46,6 +46,10 @@ bool universal_close_sensor_fd(int fd) {
     return close(fd) == 0;
 }
 
+// Set I2C slave address,
+// actually do nothing
+int dummy_sensor_i2c_change_addr(int fd, unsigned char addr) { return 0; }
+
 // Universal I2C code
 int universal_i2c_change_addr(int fd, unsigned char addr) {
     if (ioctl(fd, I2C_SLAVE_FORCE, addr >> 1) < 0) {
