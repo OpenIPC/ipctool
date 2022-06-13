@@ -339,6 +339,8 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
             return true;
         }
     case 0x2032:
+        strcpy(ctx->sensor_id, "SC2035");
+        return true;
     case 0x2135:
         break;
     case 0x2145:
