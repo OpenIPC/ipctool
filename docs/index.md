@@ -309,7 +309,7 @@ Please test on your device to help us extend the list.
 
 OpenIPC offers two levels of support.
 
-- Free support through the community (via [chat](https://openipc.org/#telegram-chat-groups) and [mailing lists](https://github.com/OpenIPC/firmware/discussions)).
+- Free support through the community (via [chat](https://openipc.org/#telegram-chat-groups)).
 - Paid commercial support (from the team of developers).
 
 Please consider subscribing for paid commercial support if you intend to use our product for business.
@@ -318,7 +318,7 @@ Your bug reports and feature requests will get prioritized attention and expedit
 strategy for both parties, that would contribute to the stability your business, and help core developers
 to work on the project full-time.
 
-If you have any specific questions concerning our project, feel free to [contact us](mailto:flyrouter@gmail.com).
+If you have any specific questions concerning our project, feel free to [contact us](mailto:dev@openipc.org).
 
 ### Participating and Contribution
 
