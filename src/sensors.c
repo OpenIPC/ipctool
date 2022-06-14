@@ -553,10 +553,8 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
         return false;
     int res = prod_msb << 8 | prod_lsb;
 
-    if (!res)
-        return false;
-
     switch (res) {
+    case 0x2053:
     case 0x4653:
         sprintf(ctx->sensor_id, "GC%04x", res);
         return true;
