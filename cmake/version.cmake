@@ -1,4 +1,4 @@
-execute_process(COMMAND git log --pretty=format:'%h' -n 1
+execute_process(COMMAND git log --pretty=format:'%h' --abbrev=8 -n 1
                 WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
                 OUTPUT_VARIABLE GIT_REV
                 ERROR_QUIET)
