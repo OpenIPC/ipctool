@@ -32,7 +32,7 @@ jobs:
           GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
           BRANCH_NAME=$(echo $GITHUB_REF | cut -d'/' -f 3)
           if [ -z "$HEAD_TAG" ]; then
-            TAG_NAME="master"
+            TAG_NAME="latest"
             RELEASE_NAME="Development Build"
             PRERELEASE=true
           else
