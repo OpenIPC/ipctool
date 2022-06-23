@@ -80,6 +80,7 @@ jobs:
           release_name: ${{ env.RELEASE_NAME }}
           draft: false
           prerelease: ${{ env.PRERELEASE }}
+          allowUpdates: true
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
