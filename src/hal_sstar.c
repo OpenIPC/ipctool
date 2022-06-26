@@ -24,6 +24,24 @@ sensor_addr_t sstar_possible_i2c_addrs[] = {
 
 bool sstar_detect_cpu() {
     uint32_t val;
+
+    if (!strcmp(chip_manufacturer, VENDOR_MSTAR)) {
+        if (mem_reg(0x1f2025a4, (uint32_t *)&val, OP_READ)) {
+            switch (val & 0xF000) {
+            case 0x6000:
+                strcpy(chip_name, "MSC313E");
+                break;
+            case 0x7000:
+                strcpy(chip_name, "MSC316DC");
+                break;
+            case 0x8000:
+                strcpy(chip_name, "MSC318");
+                break;
+            }
+        return true;
+        }
+    }
+
     if (mem_reg(0x1f003c00, &val, OP_READ)) {
         snprintf(chip_name, sizeof(chip_name), "id %#x", val);
         chip_generation = val;

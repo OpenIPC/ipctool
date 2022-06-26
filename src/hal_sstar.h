@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #define VENDOR_SSTAR "SStar"
+#define VENDOR_MSTAR "MStar"
 
 bool sstar_detect_cpu();
 unsigned long sstar_totalmem(unsigned long *media_mem);
