@@ -105,7 +105,7 @@ const char *getchipname() {
 }
 
 const char *getchipfamily() {
-    getchipname();
+    const char* chip_name = getchipname();
     switch (chip_generation) {
     case HISI_V1:
         return "hi3516cv100";
@@ -125,7 +125,7 @@ const char *getchipfamily() {
         else
             return "hi3516ev300";
     default:
-        return "unknown";
+        return chip_name;
     }
 }
 
