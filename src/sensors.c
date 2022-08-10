@@ -88,6 +88,13 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
+    int chip_id = READ(0x57);
+    if(chip_id == 0x06) {
+        sprintf(ctx->sensor_id, "IMX347");
+        return true;
+    }
+    // 0x3057 also can be used for IMX335 (chip_id == 0x07)
+
     // from IMX335 datasheet, p.40
     // 316Ah - 2-6 bits are 1, 7 bit is 0
     int ret16a = READ(0x16A);
