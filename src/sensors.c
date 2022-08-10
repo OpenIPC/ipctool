@@ -93,11 +93,12 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         sprintf(ctx->sensor_id, "IMX347");
         return true;
     }
+#if 0
     if(chip_id == 0x07) {
         sprintf(ctx->sensor_id, "IMX355");
         return true;
     }
-
+#else
     // from IMX335 datasheet, p.40
     // 316Ah - 2-6 bits are 1, 7 bit is 0
     int ret16a = READ(0x16A);
@@ -109,7 +110,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         sprintf(ctx->sensor_id, "IMX335");
         return true;
     }
-
+#endif
     // Fixed to "40h"
     if (READ(0x13) == 0x40) {
 
