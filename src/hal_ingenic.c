@@ -18,7 +18,7 @@ static unsigned char soi_addrs[] = {0x60, 0x80, 0};
 
 sensor_addr_t ingenic_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},     {SENSOR_SMARTSENS, ssens_addrs},
-    {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OM`NIVISION, omni_addrs},
+    {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OMNIVISION, omni_addrs},
     {SENSOR_GALAXYCORE, gc_addrs}, {SENSOR_SOI, soi_addrs}, {0, NULL}};
 
 typedef unsigned char uint8;
