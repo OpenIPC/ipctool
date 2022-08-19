@@ -123,7 +123,7 @@ const char *getchipfamily() {
         if (*chip_name == '7')
             return "gk7205v200";
         else
-            return "hi3516ev300";
+            return "hi3516ev200";
     default:
         return chip_name;
     }
