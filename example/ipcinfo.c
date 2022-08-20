@@ -144,7 +144,7 @@ void print_xm_mac() {
 int main(int argc, char **argv) {
     const char *short_options = "cfhltsvxV";
     const struct option long_options[] = {
-        {"chip-id", no_argument, NULL, 'c'},
+        {"chip-name", no_argument, NULL, 'c'},
         {"family", no_argument, NULL, 'f'},
         {"vendor", no_argument, NULL, 'v'},
         {"help", no_argument, NULL, 'h'},
