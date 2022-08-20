@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <getopt.h>
@@ -15,53 +14,19 @@
 
 #include "version.h"
 
-#define RESET_CL "\x1b[0m"
-#define FG_RED "\x1b[31m"
-
-void Help() {
-#ifndef SKIP_VERSION
-    printf("ipcinfo, version: ");
-    const char *vers = get_git_version();
-    if (*vers) {
-        puts(vers);
-    } else {
-        printf("%s+%s\n", get_git_branch(), get_git_revision());
-    }
-#endif
-
-    printf("\nOpenIPC is " FG_RED "asking for your help " RESET_CL
-           "to support development cost and long-term maintenance of what we "
-           "believe will serve a fundamental role in the advancement of a "
-           "stable, flexible and most importantly, Open IP Network Camera "
-           "Framework for users worldwide.\n\n"
-           "Your contribution will help us " FG_RED
-           "advance development proposals forward" RESET_CL
-           ", and interact with the community on a regular basis.\n\n"
-           "  https://openipc.org/contribution/\n\n"
-           "available options:\n"
-           "\t--chip-name\n"
-           "\t--family\n"
-           "\t--vendor\n"
-           "\t--long-sensor\n"
-           "\t--short-sensor\n"
-           "\t--temp\n"
-           "\t--xm-mac\n"
-           "\t--help\n");
-}
-
-static bool try_for_xmmac(int i, size_t size) {
+static bool find_xm_mac(int i, size_t size) {
     char filepath[80];
 
     snprintf(filepath, sizeof(filepath), "/dev/mtdblock%d", i);
     int fd = open(filepath, O_RDONLY);
     if (fd < 0) {
-        printf("\n\"%s \" could not open\n", filepath);
+        fprintf(stderr, "\"%s \" could not open\n", filepath);
         return false;
     }
 
     const char *part = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (part == MAP_FAILED) {
-        printf("Mapping Failed\n");
+        fprintf(stderr, "Mapping Failed\n");
         return false;
     }
 
@@ -85,27 +50,98 @@ static bool try_for_xmmac(int i, size_t size) {
     return false;
 }
 
-static int xm_mac() {
+void print_usage() {
+    printf("Usage: ipcinfo [OPTIONS]\n"
+           "Where:\n"
+           "  -c, --chip-id             read chip id\n"
+           "  -f, --family              read chip family\n"
+           "  -v, --vendor              read chip manufacturer\n"
+           "  -l, --long-sensor         read sensor model and control line\n"
+           "  -s, --short-sensor        read sensor model\n"
+           "  -t, --temp                read chip temperature (where supported)\n"
+           "  -x, --xm-mac              read MAC address (for XM chips)\n"
+           "  -V, --version             display version\n"
+           "  -h, --help                display this help\n");
+}
+
+void print_chip_family() { puts(getchipfamily()); }
+
+void print_chip_name() {
+    const char *chipname = getchipname();
+    if (!chipname)
+        exit(EXIT_FAILURE);
+    puts(chipname);
+}
+
+void print_chip_temperature() {
+    float temp = gethwtemp();
+    if (isnan(temp)) {
+        fprintf(stderr, "Temperature cannot be retrieved\n");
+        exit(EXIT_FAILURE);
+    }
+    printf("%.2f\n", temp);
+}
+
+void print_sensor_long() {
+    const char *sensor = getsensoridentity();
+    if (!sensor)
+        exit(EXIT_FAILURE);
+    puts(sensor);
+}
+
+void print_sensor_short() {
+    const char *sensor = getsensorshort();
+    if (!sensor)
+        exit(EXIT_FAILURE);
+    puts(sensor);
+}
+
+void print_vendor() {
+    const char *vendor = getchipvendor();
+    size_t len = strlen(vendor);
+    int *str = alloca(len + 1);
+    str[len] = 0;
+    for (int i = 0; i < len; i++) {
+        str[i] = tolower(vendor[i]);
+    }
+    puts((const char *)str);
+}
+
+void print_version() {
+    printf("ipcinfo, version: ");
+    const char *vers = get_git_version();
+    if (*vers) {
+        puts(vers);
+    } else {
+        printf("%s+%s\n", get_git_branch(), get_git_revision());
+    }
+}
+
+void print_xm_mac() {
     FILE *fp;
     char dev[80], name[80];
     int i, es, ee;
 
-    if ((fp = fopen("/proc/mtd", "r"))) {
-        while (fgets(dev, sizeof dev, fp)) {
-            name[0] = 0;
-            if (sscanf(dev, "mtd%d: %x %x \"%64[^\"]\"", &i, &es, &ee, name)) {
-                if (try_for_xmmac(i, es))
-                    return EXIT_SUCCESS;
-            }
-        }
-        fclose(fp);
+    fp = fopen("/proc/mtd", "r");
+    if (!fp) {
+        fprintf(stderr, "Could not open /proc/mtd.\n");
+        exit(EXIT_FAILURE);
     }
-    return EXIT_FAILURE;
+
+    while (fgets(dev, sizeof dev, fp)) {
+        name[0] = 0;
+        if (sscanf(dev, "mtd%d: %x %x \"%64[^\"]\"", &i, &es, &ee, name)) {
+            if (find_xm_mac(i, es))
+                return;
+        }
+    }
+    fclose(fp);
+    fprintf(stderr, "Nothing found.\n");
+    exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv) {
-
-    const char *short_options = "sc";
+    const char *short_options = "cfhltsvxV";
     const struct option long_options[] = {
         {"chip-name", no_argument, NULL, 'c'},
         {"family", no_argument, NULL, 'f'},
@@ -115,85 +151,48 @@ int main(int argc, char **argv) {
         {"short-sensor", no_argument, NULL, 's'},
         {"temp", no_argument, NULL, 't'},
         {"xm-mac", no_argument, NULL, 'x'},
-
-        // Keep for compatibility reasons
-        {"chip_id", no_argument, NULL, '1'},
-        {"long_sensor", no_argument, NULL, '2'},
-        {"short_sensor", no_argument, NULL, '3'},
-        {"xm_mac", no_argument, NULL, '4'},
-
+        {"version", no_argument, NULL, 'V'},
         {NULL, 0, NULL, 0}};
 
-    int rez;
-    int option_index;
-    while ((rez = getopt_long_only(argc, argv, short_options, long_options,
-                                   &option_index)) != -1) {
-
-        switch (rez) {
+    int opt;
+    int long_index = 0;
+    while ((opt = getopt_long_only(argc, argv, short_options, long_options,
+                                   &long_index)) != -1) {
+        switch (opt) {
+        case 'c':
+            print_chip_name();
+            break;
+        case 'f':
+            print_chip_family();
+            break;
         case 'h':
-            Help();
-            return 0;
-
-        case '1':
-        case 'c': {
-            const char *chipname = getchipname();
-            if (!chipname)
-                return EXIT_FAILURE;
-            puts(chipname);
-            return EXIT_SUCCESS;
-        }
-
-        case 'f': {
-            puts(getchipfamily());
-            return EXIT_SUCCESS;
-        }
-
-        case 'v': {
-            const char *vendor = getchipvendor();
-            size_t len = strlen(vendor);
-            char *str = alloca(len + 1);
-            str[len] = 0;
-            for (int i = 0; i < len; i++) {
-                str[i] = tolower(vendor[i]);
-            }
-            puts(str);
-            return EXIT_SUCCESS;
-        }
-
-        case '2':
-        case 'l': {
-            const char *sensor = getsensoridentity();
-            if (!sensor)
-                return EXIT_FAILURE;
-            puts(sensor);
-            return EXIT_SUCCESS;
-        }
-
-        case '3':
-        case 's': {
-            const char *sensor = getsensorshort();
-            if (!sensor)
-                return EXIT_FAILURE;
-            puts(sensor);
-            return EXIT_SUCCESS;
-        }
-
-        case 't': {
-            float temp = gethwtemp();
-            if (isnan(temp)) {
-                fprintf(stderr, "Temperature cannot be retrieved\n");
-                return EXIT_FAILURE;
-            }
-            printf("%.2f\n", temp);
-            return EXIT_SUCCESS;
-        }
-
-        case '4':
+            print_usage();
+            break;
+        case 'l':
+            print_sensor_long();
+            break;
+        case 's':
+            print_sensor_short();
+            break;
+        case 't':
+            print_chip_temperature();
+            break;
+        case 'v':
+            print_vendor();
+            break;
         case 'x':
-            return xm_mac();
+            print_xm_mac();
+            break;
+        case 'V':
+            print_version();
+            break;
+        default:
+            print_usage();
         }
     }
 
-    Help();
-    return 0;
+    if (argc == 1)
+        print_usage();
+
+    exit(EXIT_SUCCESS);
 }

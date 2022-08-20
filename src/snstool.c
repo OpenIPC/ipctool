@@ -10,7 +10,7 @@
 #include "snstool.h"
 #include "tools.h"
 
-extern void Help();
+extern void print_usage();
 
 typedef struct {
     const char *name;
@@ -137,7 +137,7 @@ static int monitor() {
 
 int snstool_cmd(int argc, char **argv) {
     if (argc != 2) {
-        Help();
+        print_usage();
         return EXIT_FAILURE;
     }
 
