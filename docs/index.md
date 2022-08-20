@@ -44,7 +44,7 @@ C library to work on vast majority of hardware.
 # ipctool -h
 Where:
   -c, --chip-name           read chip name
-  -s, --sensor-id           read sensor model and control line
+  -s, --sensor-name         read sensor model and control line
   -t, --temp                read chip temperature (where supported)
 
   backup <filename>         save backup into a file
@@ -186,7 +186,7 @@ sensors:
 
 ### In your own scripts
 
-* Determine chip id:
+* Determine chip name:
 
     ```console
     # ipctool --chip-name
@@ -196,7 +196,7 @@ sensors:
 * Determine sensor model and control line:
 
     ```console
-    # ipctool --sensor-id
+    # ipctool --sensor-name
     imx291_i2c
     ```
 

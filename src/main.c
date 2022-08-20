@@ -69,7 +69,7 @@ void print_usage() {
         "Usage: ipctool [OPTIONS] [COMMANDS]\n"
         "Where:\n"
         "  -c, --chip-name           read chip name\n"
-        "  -s, --sensor-id           read sensor model and control line\n"
+        "  -s, --sensor-name         read sensor model and control line\n"
         "  -t, --temp                read chip temperature (where supported)\n"
         "\n"
         "  backup <filename>         save backup into a file\n"
@@ -241,7 +241,7 @@ int main(int argc, char *argv[]) {
 
     const struct option long_options[] = {{"chip-name", no_argument, NULL, 'c'},
                                           {"help", no_argument, NULL, 'h'},
-                                          {"sensor-id", no_argument, NULL, 's'},
+                                          {"sensor-name", no_argument, NULL, 's'},
                                           {"temp", no_argument, NULL, 't'},
                                           {"wait", no_argument, NULL, 'w'},
                                           {NULL, 0, NULL, 0}};
