@@ -958,7 +958,7 @@ bailout:
     return ret;
 }
 
-extern void Help();
+extern void print_usage();
 
 int upgrade_restore_cmd(int argc, char **argv) {
     const char *short_options = "fs";
@@ -983,7 +983,7 @@ int upgrade_restore_cmd(int argc, char **argv) {
             break;
 
         case '?':
-            Help();
+            print_usage();
             return EXIT_FAILURE;
         }
     }

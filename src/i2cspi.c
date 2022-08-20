@@ -248,7 +248,7 @@ static int spidump(int argc, char **argv, bool script_mode) {
     return EXIT_SUCCESS;
 }
 
-extern void Help();
+extern void print_usage();
 
 int i2cspi_cmd(int argc, char **argv) {
     const char *short_options = "s";
@@ -267,7 +267,7 @@ int i2cspi_cmd(int argc, char **argv) {
             script_mode = true;
             break;
         case '?':
-            Help();
+            print_usage();
             return EXIT_FAILURE;
         }
     }
@@ -292,6 +292,6 @@ int i2cspi_cmd(int argc, char **argv) {
             return i2cdetect(argc - optind, argv + optind, script_mode);
     }
 
-    Help();
+    print_usage();
     return EXIT_FAILURE;
 }

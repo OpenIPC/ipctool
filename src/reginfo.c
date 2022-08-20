@@ -2228,7 +2228,7 @@ static int dump_regs(bool script_mode) {
     return EXIT_SUCCESS;
 }
 
-extern void Help();
+extern void print_usage();
 
 int reginfo_cmd(int argc, char **argv) {
     const struct option long_options[] = {
@@ -2246,7 +2246,7 @@ int reginfo_cmd(int argc, char **argv) {
             script_mode = true;
             break;
         case '?':
-            Help();
+            print_usage();
             return EXIT_FAILURE;
         }
     }

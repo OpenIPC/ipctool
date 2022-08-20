@@ -39,7 +39,7 @@
 #define RESET_CL "\x1b[0m"
 #define FG_RED "\x1b[31m"
 
-void Help() {
+void print_usage() {
 #ifndef SKIP_VERSION
     printf("ipctool, version: ");
 
@@ -66,19 +66,18 @@ void Help() {
 #endif
 
     printf(
-        "Usage:  ipctool [OPTIONS] [COMMANDS]\n"
+        "Usage: ipctool [OPTIONS] [COMMANDS]\n"
         "Where:\n"
         "  -c, --chip-id             read chip id\n"
         "  -s, --sensor-id           read sensor model and control line\n"
         "  -t, --temp                read chip temperature (where supported)\n"
         "\n"
         "  backup <filename>         save backup into a file\n"
-        "  restore [mac|filename]    restore from backup (cloud-based or local "
-        "file)\n"
+        "  restore [mac|filename]    restore from backup (cloud-based or local file)\n"
         "     [-s, --skip-env]       skip environment\n"
         "     [-f, --force]          enforce\n"
-        "  upgrade <bundle>          upgrade to OpenIPC firmware (experimental "
-        "feature, use only on cameras with UART)\n"
+        "  upgrade <bundle>          upgrade to OpenIPC firmware\n"
+        "                            (experimental! use only on cameras with UART)\n"
         "     [-f, --force]          enforce\n"
         "  printenv                  drop-in replacement for fw_printenv\n"
         "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
@@ -89,17 +88,14 @@ void Help() {
         "  i2cset <device address> <register> <new value>\n"
         "  spiset <register> <new value>\n"
         "                            write a value to I2C/SPI device\n"
-        "  i2cdump [--script] <device address> <from register> <to "
-        "register>\n"
+        "  i2cdump [--script] <device address> <from register> <to register>\n"
         "  spidump [--script] <from register> <to register>\n"
         "                            dump data from I2C/SPI device\n"
         "  i2cdetect                 attempt to detect devices on I2C bus\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
         "  gpio (scan|mux)           GPIO utilities\n"
-        "  trace [--skip=usleep] <full/path/to/executable> [program "
-        "arguments]\n"
-        "                            dump original firmware calls and data "
-        "structures\n"
+        "  trace [--skip=usleep] <full/path/to/executable> [program arguments]\n"
+        "                            dump original firmware calls and data structures\n"
         "  -h, --help                this help\n");
 }
 
@@ -171,7 +167,7 @@ enum {
     BACKUP_WAIT = 1 << 0,
 };
 
-#define MAX_YAML 1024 * 64
+#define MAX_YAML (1024 * 64)
 static bool backup_with_yaml(const char *backup_file, unsigned modes) {
     int fds[2];
     if (pipe(fds) == -1) {
@@ -207,7 +203,7 @@ static bool backup_with_yaml(const char *backup_file, unsigned modes) {
 }
 
 static bool auto_backup(unsigned modes) {
-    // prevent double backup creation and don't backup OpenWrt firmware
+    // prevent double backup creation and don't back up OpenWrt firmware
     if (!udp_lock() || is_openipc_board())
         return false;
 
@@ -248,23 +244,18 @@ int main(int argc, char *argv[]) {
                                           {"sensor-id", no_argument, NULL, 's'},
                                           {"temp", no_argument, NULL, 't'},
                                           {"wait", no_argument, NULL, 'w'},
-
-                                          // Keep for compatibility reasons
-                                          {"chip_id", no_argument, NULL, '1'},
-                                          {"sensor_id", no_argument, NULL, '2'},
-
                                           {NULL, 0, NULL, 0}};
 
     int res;
     int option_index;
     unsigned modes = 0;
 
-    while ((res = getopt_long_only(argc, argv, "cs", long_options,
+    while ((res = getopt_long_only(argc, argv, "chstw", long_options,
                                    &option_index)) != -1) {
         switch (res) {
         case 'h':
-            Help();
-            return 0;
+            print_usage();
+            return EXIT_SUCCESS;
 
         case '1':
         case 'c': {
@@ -303,7 +294,7 @@ int main(int argc, char *argv[]) {
         default:
             printf("found unknown option\n");
         case '?':
-            Help();
+            print_usage();
             return EXIT_FAILURE;
         }
     }
@@ -312,7 +303,7 @@ int main(int argc, char *argv[]) {
     if (argc > optind) {
         if (!strcmp(argv[optind], "backup")) {
             if (argv[optind + 1] == NULL) {
-                Help();
+                print_usage();
                 return EXIT_FAILURE;
             }
 
@@ -325,7 +316,7 @@ int main(int argc, char *argv[]) {
             goto start_yaml;
         } else {
             printf("found unknown command: %s\n\n", argv[optind]);
-            Help();
+            print_usage();
             return EXIT_FAILURE;
         }
     }
