@@ -54,7 +54,7 @@ void print_usage() {
     printf(
         "Usage: ipcinfo [OPTIONS]\n"
         "Where:\n"
-        "  -c, --chip-id             read chip id\n"
+        "  -c, --chip-name           read chip name\n"
         "  -f, --family              read chip family\n"
         "  -v, --vendor              read chip manufacturer\n"
         "  -l, --long-sensor         read sensor model and control line\n"

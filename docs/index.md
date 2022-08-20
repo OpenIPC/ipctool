@@ -43,7 +43,7 @@ C library to work on vast majority of hardware.
 ```console
 # ipctool -h
 Where:
-  -c, --chip-id             read chip id
+  -c, --chip-name           read chip name
   -s, --sensor-id           read sensor model and control line
   -t, --temp                read chip temperature (where supported)
 
@@ -189,7 +189,7 @@ sensors:
 * Determine chip id:
 
     ```console
-    # ipctool --chip-id
+    # ipctool --chip-name
     hi3516cv300
     ```
 
