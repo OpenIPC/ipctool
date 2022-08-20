@@ -51,17 +51,18 @@ static bool find_xm_mac(int i, size_t size) {
 }
 
 void print_usage() {
-    printf("Usage: ipcinfo [OPTIONS]\n"
-           "Where:\n"
-           "  -c, --chip-id             read chip id\n"
-           "  -f, --family              read chip family\n"
-           "  -v, --vendor              read chip manufacturer\n"
-           "  -l, --long-sensor         read sensor model and control line\n"
-           "  -s, --short-sensor        read sensor model\n"
-           "  -t, --temp                read chip temperature (where supported)\n"
-           "  -x, --xm-mac              read MAC address (for XM chips)\n"
-           "  -V, --version             display version\n"
-           "  -h, --help                display this help\n");
+    printf(
+        "Usage: ipcinfo [OPTIONS]\n"
+        "Where:\n"
+        "  -c, --chip-id             read chip id\n"
+        "  -f, --family              read chip family\n"
+        "  -v, --vendor              read chip manufacturer\n"
+        "  -l, --long-sensor         read sensor model and control line\n"
+        "  -s, --short-sensor        read sensor model\n"
+        "  -t, --temp                read chip temperature (where supported)\n"
+        "  -x, --xm-mac              read MAC address (for XM chips)\n"
+        "  -V, --version             display version\n"
+        "  -h, --help                display this help\n");
 }
 
 void print_chip_family() { puts(getchipfamily()); }
@@ -99,7 +100,7 @@ void print_sensor_short() {
 void print_vendor() {
     const char *vendor = getchipvendor();
     size_t len = strlen(vendor);
-    int *str = alloca(len + 1);
+    char *str = alloca(len + 1);
     str[len] = 0;
     for (int i = 0; i < len; i++) {
         str[i] = tolower(vendor[i]);
