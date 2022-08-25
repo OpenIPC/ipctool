@@ -295,6 +295,9 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2602:
         sid = 0x0331;
         break;
+    case 0x2604:
+        sid = 0x0330;
+        break;
     case 0:
     case 0xffffffff:
     case 0xffff:
