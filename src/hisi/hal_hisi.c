@@ -19,7 +19,7 @@
 
 static unsigned char sony_addrs[] = {0x34, 0};
 static unsigned char soi_addrs[] = {0x80, 0x60, 0};
-static unsigned char onsemi_addrs[] = {0x20, 0};
+static unsigned char onsemi_addrs[] = {0x20, 0x30, 0};
 static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char omni_addrs[] = {0x60, 0x6c, 0x42, 0};
 static unsigned char gc_addrs[] = {0x6e, 0x52, 0};
