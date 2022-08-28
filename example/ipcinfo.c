@@ -109,6 +109,7 @@ void print_vendor() {
 }
 
 void print_version() {
+#ifndef SKIP_VERSION
     printf("ipcinfo, version: ");
     const char *vers = get_git_version();
     if (*vers) {
@@ -116,6 +117,7 @@ void print_version() {
     } else {
         printf("%s+%s\n", get_git_branch(), get_git_revision());
     }
+#endif
 }
 
 void print_xm_mac() {
