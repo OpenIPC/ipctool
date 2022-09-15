@@ -19,8 +19,7 @@ describing ways to do them).
 
 ## Download
 
-Use [the
-link](https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool)
+Use [the link](https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool)
 to download latest build (even directly to your camera). The build uses `musl`
 C library to work on vast majority of hardware.
 
@@ -40,12 +39,13 @@ C library to work on vast majority of hardware.
 
 * *TFTP*, since some cameras have tftp clients and/or servers by default. Assuming
   you have the `ipctool-mips32` binary ready under `/directory/to/serve`:
-  ** On a destkop computer: **
+
+  **On a desktop computer:**
   ```
   $ pip install ptftpd
   $ ptftpd -p 6969 en0 /directory/to/serve
   ```
-  ** On the camera: **
+  **On the camera:**
   ```
    # tftp -r /directory/to/serve/ipctool-mips32 -g 192.168.1.107 6969
 
