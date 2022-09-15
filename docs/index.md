@@ -38,6 +38,20 @@ C library to work on vast majority of hardware.
   into `echo`/`printf` chunks and deploy to `/tmp` partition. Read
   [more in documentation](https://github.com/widgetii/uget)
 
+* *TFTP*, since some cameras have tftp clients and/or servers by default. Assuming
+  you have the `ipctool-mips32` binary ready under `/directory/to/serve`:
+  ** On a destkop computer: **
+  ```
+  $ pip install ptftpd
+  $ ptftpd -p 6969 en0 /directory/to/serve
+  ```
+  ** On the camera: **
+  ```
+   # tftp -r /directory/to/serve/ipctool-mips32 -g 192.168.1.107 6969
+
+     46% |**************                 | 61952   0:00:01 ETA
+  ```
+
 ## Usage
 
 ```console
