@@ -38,6 +38,10 @@ C library to work on vast majority of hardware.
   into `echo`/`printf` chunks and deploy to `/tmp` partition. Read
   [more in documentation](https://github.com/widgetii/uget)
 
+* *Using telnet + uudecode* by converting the binary to uuencoded 
+  text, pushing it over and decoding it on the cam.
+  [More here](uuencode_upload.md)
+
 ## Usage
 
 ```console
