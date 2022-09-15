@@ -40,7 +40,7 @@ C library to work on vast majority of hardware.
 
 * *Using telnet + uudecode* by converting the binary to uuencoded 
   text, pushing it over and decoding it on the cam.
-  [More here](uuencode_upload.md)
+  [More here](docs/uuencode_upload.md)
 
 ## Usage
 
