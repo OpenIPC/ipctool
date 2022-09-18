@@ -95,6 +95,15 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     }
     // 0x3057 also can be used for IMX335 (chip_id == 0x07)
 
+    if (READ(0x41c) == 0x47) {
+        int ret302e = READ(0x02e);
+        int ret302f = READ(0x02f);
+        if (ret302e == 0x18 && ret302f == 0xf) {
+            sprintf(ctx->sensor_id, "IMX334");
+        }
+        return true;
+    }
+
     // from IMX335 datasheet, p.40
     // 316Ah - 2-6 bits are 1, 7 bit is 0
     int ret16a = READ(0x16A);
@@ -149,13 +158,6 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
-    if (READ(0x41c) == 0x47) {
-        int ret302e = READ(0x02e);
-        if (ret302e == 0x18) {
-            sprintf(ctx->sensor_id, "IMX334");
-        }
-        return true;
-    }
 
     if (READ(0x5b8) == 0xfa) {
         sprintf(ctx->sensor_id, "IMX294");
