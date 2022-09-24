@@ -260,8 +260,16 @@ static int detect_soi_sensor(sensor_ctx_t *ctx, int fd,
         sprintf(ctx->sensor_id, "JXH%x", ver);
         return true;
     case 0x5:
-        sprintf(ctx->sensor_id, "JXK%.2x", ver);
+        if(ver == 0x07)
+            sprintf(ctx->sensor_id, "JXQ03");
+        else
+            sprintf(ctx->sensor_id, "JXK%.2x", ver);
         return true;
+    case 0x8:
+        if(ver == 0x43) {
+            sprintf(ctx->sensor_id, "JXQ03P");
+            return true;
+        }
     // it can be another sensor type
     case 0:
     case 0xff:
