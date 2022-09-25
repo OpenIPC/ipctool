@@ -12,6 +12,7 @@
 
 #include <ipchw.h>
 
+#include "firmware.c"
 #include "version.h"
 
 static bool find_xm_mac(int i, size_t size) {
@@ -61,6 +62,7 @@ void print_usage() {
         "  -s, --short-sensor        read sensor model\n"
         "  -t, --temp                read chip temperature (where supported)\n"
         "  -x, --xm-mac              read MAC address (for XM chips)\n"
+        "  -S, --streamer            read streamer name\n"
         "  -V, --version             display version\n"
         "  -h, --help                display this help\n");
 }
@@ -108,6 +110,23 @@ void print_vendor() {
     puts((const char *)str);
 }
 
+void print_streamer() {
+    char sname[1024];
+    pid_t godpid;
+
+    if ((godpid = get_god_pid(NULL, 0)) > 0) {
+        snprintf(sname, sizeof(sname), "/proc/%d/cmdline", godpid);
+        FILE *fp = fopen(sname, "r");
+        if (!fp)
+            exit(EXIT_FAILURE);
+        if (!fgets(sname, sizeof(sname), fp))
+            exit(EXIT_FAILURE);
+        puts(sname);
+
+        fclose(fp);
+    }
+}
+
 void print_version() {
 #ifndef SKIP_VERSION
     printf("ipcinfo, version: ");
@@ -144,7 +163,7 @@ void print_xm_mac() {
 }
 
 int main(int argc, char **argv) {
-    const char *short_options = "cfhltsvxV";
+    const char *short_options = "cfvhlstSxV";
     const struct option long_options[] = {
         {"chip-name", no_argument, NULL, 'c'},
         {"family", no_argument, NULL, 'f'},
@@ -153,6 +172,7 @@ int main(int argc, char **argv) {
         {"long-sensor", no_argument, NULL, 'l'},
         {"short-sensor", no_argument, NULL, 's'},
         {"temp", no_argument, NULL, 't'},
+        {"streamer", no_argument, NULL, 'S'},
         {"xm-mac", no_argument, NULL, 'x'},
         {"version", no_argument, NULL, 'V'},
         {NULL, 0, NULL, 0}};
@@ -182,6 +202,9 @@ int main(int argc, char **argv) {
             break;
         case 'v':
             print_vendor();
+            break;
+        case 'S':
+            print_streamer();
             break;
         case 'x':
             print_xm_mac();
