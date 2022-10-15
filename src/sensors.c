@@ -109,8 +109,8 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         int ret302f = READ(0x02f);
         if (ret302e == 0x18 && ret302f == 0xf) {
             sprintf(ctx->sensor_id, "IMX334");
+            return true;
         }
-        return true;
     }
 
     // from IMX335 datasheet, p.40
@@ -194,7 +194,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
             break;
         default:
             SENSOR_ERR("Sony29x", ret9c);
-	    return false;
+            return false;
         }
 #ifndef STANDALONE_LIBRARY
         sony_imx291_params(ctx, fd, i2c_addr);
