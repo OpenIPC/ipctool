@@ -7,31 +7,28 @@ set(CMAKE_C_FLAGS "-std=gnu99")
 cmake_policy(SET CMP0069 NEW)
 
 if(NOT BUILD_SHARED_LIBS)
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-    set(CMAKE_C_FLAGS "-static ${CMAKE_C_FLAGS}")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  set(CMAKE_C_FLAGS "-static ${CMAKE_C_FLAGS}")
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s -Os -ffunction-sections -Wl,--gc-sections -DNDEBUG")
+  set(CMAKE_C_FLAGS
+      "${CMAKE_C_FLAGS} -s -Os -ffunction-sections -Wl,--gc-sections -DNDEBUG")
 endif()
 
 if(NOT SKIP_VERSION)
-    set(VERSION_SRC ${CMAKE_CURRENT_BINARY_DIR}/version.c)
-    # Add a custom command that produces version.c, plus
-    # a dummy output that's not actually produced, in order
-    # to force version.cmake to always be re-run before the build
-    add_custom_command(
-        OUTPUT ${VERSION_SRC}
-               ${CMAKE_CURRENT_BINARY_DIR}/_version.c
-        COMMAND ${CMAKE_COMMAND} -P
-                ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
+  set(VERSION_SRC ${CMAKE_CURRENT_BINARY_DIR}/version.c)
+  # Add a custom command that produces version.c, plus a dummy output that's not
+  # actually produced, in order to force version.cmake to always be re-run
+  # before the build
+  add_custom_command(
+    OUTPUT ${VERSION_SRC} ${CMAKE_CURRENT_BINARY_DIR}/_version.c
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
 else()
-    add_definitions(-DSKIP_VERSION)
+  add_definitions(-DSKIP_VERSION)
 endif()
 
-include_directories(
-    ./src/
-)
+include_directories(./src/)
 
 set(COMMON_LIB_SRC
     src/hal_common.c
@@ -50,7 +47,6 @@ set(COMMON_LIB_SRC
     src/hal_xm.h
     src/hisi/hal_hisi.c
     src/hisi/hal_hisi.h
-
     src/chipid.c
     src/chipid.h
     src/hwinfo.c
@@ -60,8 +56,7 @@ set(COMMON_LIB_SRC
     src/sensors.h
     src/tools.c
     src/tools.h
-    src/version.h
-    )
+    src/version.h)
 
 set(IPCTOOL_SRC
     src/backup.c
@@ -105,12 +100,10 @@ set(IPCTOOL_SRC
     src/uboot.h
     src/watchdog.c
     src/watchdog.h
-
     src/cjson/cJSON.c
     src/cjson/cJSON.h
     src/cjson/cYAML.c
     src/cjson/cYAML.h
-
     src/vendors/anjoy.c
     src/vendors/anjoy.h
     src/vendors/buildroot.c
@@ -129,31 +122,20 @@ set(IPCTOOL_SRC
     src/vendors/xm.h
     src/vendors/sstar.c
     src/vendors/sstar.h
+    ${VERSION_SRC})
 
-    ${VERSION_SRC}
-    )
-
-add_library(ipchw STATIC
-    ${COMMON_LIB_SRC}
-    )
+add_library(ipchw STATIC ${COMMON_LIB_SRC})
 target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY)
 target_link_libraries(ipchw m)
 
 if(NOT ONLY_LIBRARY)
-    add_executable(ipctool
-        ${IPCTOOL_SRC}
-        ${COMMON_LIB_SRC}
-    )
+  add_executable(ipctool ${IPCTOOL_SRC} ${COMMON_LIB_SRC})
 
-    target_link_libraries(ipctool m)
-    install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
+  target_link_libraries(ipctool m)
+  install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
 
-    add_executable(ipcinfo
-        example/ipcinfo.c
-        src/tools.c
-        ${VERSION_SRC}
-        )
-    target_include_directories(ipcinfo PUBLIC include)
-    target_link_libraries(ipcinfo ipchw)
-    install(TARGETS ipcinfo RUNTIME DESTINATION /usr/bin/)
+  add_executable(ipcinfo example/ipcinfo.c src/tools.c ${VERSION_SRC})
+  target_include_directories(ipcinfo PUBLIC include)
+  target_link_libraries(ipcinfo ipchw)
+  install(TARGETS ipcinfo RUNTIME DESTINATION /usr/bin/)
 endif()
