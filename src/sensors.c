@@ -175,11 +175,22 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     }
 
     if (READ(0x1e) == 0xb2 && READ(0x1f) == 0x1) {
-
-        if (READ(0x9c) == 0x22) {
+        int ret9c = READ(0x9c);
+        switch (ret9c) {
+        case 0x20:
+        case 0x22:
             sprintf(ctx->sensor_id, "IMX291");
-        } else if (READ(0x9c) == 0x0) {
+            break;
+        case 0:
             sprintf(ctx->sensor_id, "IMX290");
+            break;
+        default:
+#ifndef STANDALONE_LIBRARY
+            fprintf(stderr, "Error: unexpected value for Sony29x == 0x%x\n",
+                    ret9c);
+#else
+            ;
+#endif
         }
 #ifndef STANDALONE_LIBRARY
         sony_imx291_params(ctx, fd, i2c_addr);
