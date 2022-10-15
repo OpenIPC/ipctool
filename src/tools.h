@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/syscall.h>
+#include <sys/types.h>
 
 #define ADD_PARAM(param, val)                                                  \
     {                                                                          \
@@ -34,8 +35,7 @@
     }
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
-#define ARRAY_SIZE(array) \
-    (sizeof(array) / sizeof(*array))
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(*array))
 
 enum REG_OPS { OP_READ, OP_WRITE };
 
@@ -52,6 +52,7 @@ char *fread_to_buf(const char *filename, size_t *len, uint32_t round_up,
 void restore_printk();
 void disable_printk();
 uint32_t ceil_up(uint32_t n, uint32_t offset);
+pid_t get_god_pid(char *shortname, size_t shortsz);
 
 // avoid warnings for old compilers
 #if __GNUC__ < 7

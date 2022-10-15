@@ -150,6 +150,7 @@ if(NOT ONLY_LIBRARY)
 
     add_executable(ipcinfo
         example/ipcinfo.c
+        src/tools.c
         ${VERSION_SRC}
         )
     target_include_directories(ipcinfo PUBLIC include)

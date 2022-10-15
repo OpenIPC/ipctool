@@ -15,63 +15,6 @@
 #include "tools.h"
 #include "uboot.h"
 
-static unsigned long time_by_proc(const char *filename, char *shortname,
-                                  size_t shortsz) {
-    FILE *fp = fopen(filename, "r");
-    if (!fp)
-        return 0;
-
-    char line[1024];
-    if (!fgets(line, sizeof(line), fp))
-        return 0;
-    char *rpar = strchr(line, ')');
-    if (!rpar || *(rpar + 1) != ' ')
-        return 0;
-    if (shortname) {
-        const char *lpar = strchr(line, '(');
-        *rpar = 0;
-        strncpy(shortname, lpar + 1, shortsz);
-    }
-
-    char state;
-    long long ppid, pgid, sid, tty_nr, tty_pgrp;
-    unsigned long flags, min_flt, cmin_flt, maj_flt, cmaj_flt, utime, stime;
-    long long cutime, cstime;
-    sscanf(rpar + 2,
-           "%c %lld %lld %lld %lld %lld %ld %ld %ld %ld %ld %ld %ld %lld %lld",
-           &state, &ppid, &pgid, &sid, &tty_nr, &tty_pgrp, &flags, &min_flt,
-           &cmin_flt, &maj_flt, &cmaj_flt, &utime, &stime, &cutime, &cstime);
-
-    fclose(fp);
-    return utime + stime;
-}
-
-pid_t get_god_pid(char *shortname, size_t shortsz) {
-    DIR *dir = opendir("/proc");
-    if (!dir)
-        return -1;
-
-    unsigned long max = 0;
-    char sname[1024], prname[255], maxname[255] = {0};
-    pid_t godpid;
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        if (*entry->d_name && isdigit(entry->d_name[0])) {
-            snprintf(sname, sizeof(sname), "/proc/%s/stat", entry->d_name);
-
-            unsigned long curres = time_by_proc(sname, prname, sizeof(prname));
-            if (curres > max) {
-                max = curres;
-                godpid = strtol(entry->d_name, NULL, 10);
-                strcpy(maxname, prname);
-            }
-        }
-    };
-    closedir(dir);
-    strncpy(shortname, maxname, shortsz);
-    return godpid;
-}
-
 static void get_god_app(cJSON *j_inner) {
     char sname[1024];
     pid_t godpid;

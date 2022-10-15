@@ -12,7 +12,7 @@
 
 #include <ipchw.h>
 
-#include "firmware.c"
+#include "tools.h"
 #include "version.h"
 
 static bool find_xm_mac(int i, size_t size) {
