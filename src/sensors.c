@@ -89,7 +89,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return false;
 
     int chip_id = READ(0x57);
-    if(chip_id == 0x06) {
+    if (chip_id == 0x06) {
         sprintf(ctx->sensor_id, "IMX347");
         return true;
     }
@@ -157,7 +157,6 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         sprintf(ctx->sensor_id, "IMX185");
         return true;
     }
-
 
     if (READ(0x5b8) == 0xfa) {
         sprintf(ctx->sensor_id, "IMX294");
@@ -271,13 +270,13 @@ static int detect_soi_sensor(sensor_ctx_t *ctx, int fd,
         sprintf(ctx->sensor_id, "JXH%x", ver);
         return true;
     case 0x5:
-        if(ver == 0x07)
+        if (ver == 0x07)
             sprintf(ctx->sensor_id, "JXQ03");
         else
             sprintf(ctx->sensor_id, "JXK%.2x", ver);
         return true;
     case 0x8:
-        if(ver == 0x43) {
+        if (ver == 0x43) {
             sprintf(ctx->sensor_id, "JXQ03P");
             return true;
         }
