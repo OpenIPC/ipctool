@@ -1,11 +1,11 @@
 name: ipctool-mips32
 
 on:
-#  push:
-#    branches:
-#      - master
-#    tags:
-#      - 'v*'
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 
