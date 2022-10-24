@@ -182,26 +182,6 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
-    if (READ(0x1e) == 0xb2 && READ(0x1f) == 0x1) {
-        int ret9c = READ(0x9c);
-        switch (ret9c) {
-        case 0x20:
-        case 0x22:
-            sprintf(ctx->sensor_id, "IMX291");
-            break;
-        case 0:
-            sprintf(ctx->sensor_id, "IMX290");
-            break;
-        default:
-            SENSOR_ERR("Sony29x", ret9c);
-            return false;
-        }
-#ifndef STANDALONE_LIBRARY
-        sony_imx291_params(ctx, fd, i2c_addr);
-#endif
-        return true;
-    }
-
     // IMX326 too?
     if (READ(0x45) == 0x32) {
         sprintf(ctx->sensor_id, "IMX226");
@@ -233,18 +213,27 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         case 6:
             sprintf(ctx->sensor_id, "IMX327");
             return true;
-            //         default: {
-            //             int ret3010 = READ(0x10);
-            //             if (((ret3010 == 0x21) || (ret3010 == 0x1)) &&
-            //                 (READ(0x08) == 0xa0) && (READ(0x0e) == 0x01) &&
-            //                 (READ(0x1e) == 0xb2) && (READ(0x1f) == 0x01)) {
-            //                 sprintf(ctx->sensor_id, "IMX29%d", ret1dc & 7);
-            // #ifndef STANDALONE_LIBRARY
-            //                 sony_imx291_params(ctx, fd, i2c_addr);
-            // #endif
-            //                 return true;
-            //             }
-            //         }
+        default: {
+            if (READ(0x1e) == 0xb2 && READ(0x1f) == 0x1) {
+                int ret9c = READ(0x9c);
+                switch (ret9c) {
+                case 0x20:
+                case 0x22:
+                    sprintf(ctx->sensor_id, "IMX291");
+                    break;
+                case 0:
+                    sprintf(ctx->sensor_id, "IMX290");
+                    break;
+                default:
+                    SENSOR_ERR("Sony29x", ret9c);
+                    return false;
+                }
+#ifndef STANDALONE_LIBRARY
+                sony_imx291_params(ctx, fd, i2c_addr);
+#endif
+                return true;
+            }
+        }
         }
     }
 
@@ -341,8 +330,8 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    // xm_i2c_write(0x103, 1); // reset all registers (2 times and then delay)
-    // msDelay(100);
+    // xm_i2c_write(0x103, 1); // reset all registers (2 times and then
+    // delay) msDelay(100);
 
     // could be 0x3005 for SC1035, SC1145, SC1135
     int high = i2c_read_register(fd, i2c_addr, 0x3107, 2, 1);
