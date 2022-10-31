@@ -677,6 +677,8 @@ static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int (*detect_fn)(sensor_ctx_t *ctx, int,
                                                     unsigned char),
                                    int type) {
+    if (possible_i2c_addrs == NULL)
+        return false;
     sensor_addr_t *sdata = possible_i2c_addrs;
 
     while (sdata->sensor_type) {
