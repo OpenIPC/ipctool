@@ -31,6 +31,8 @@ endif()
 include_directories(./src/)
 
 set(COMMON_LIB_SRC
+    src/chipid.c
+    src/chipid.h
     src/hal_common.c
     src/hal_common.h
     src/hal_fh.c
@@ -41,14 +43,14 @@ set(COMMON_LIB_SRC
     src/hal_ingenic.h
     src/hal_novatek.c
     src/hal_novatek.h
+    src/hal_rockchip.c
+    src/hal_rockchip.h
     src/hal_sstar.c
     src/hal_sstar.h
     src/hal_xm.c
     src/hal_xm.h
     src/hisi/hal_hisi.c
     src/hisi/hal_hisi.h
-    src/chipid.c
-    src/chipid.h
     src/hwinfo.c
     src/hwinfo.h
     src/mmap.h

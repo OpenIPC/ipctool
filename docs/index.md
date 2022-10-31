@@ -288,6 +288,7 @@ Tested on:
 |[HiSilicon](https://github.com/openIPC/camerasrnd/#chip-families-information)|Hi3516CV100/200/300, Hi3516EV100/200/300, Hi3516DV300, Hi3518EV100|
 |[SigmaStar](http://linux-chenxing.org/)|SSC335|
 |[Xiongmai](http://www.xiongmaitech.com/product)|XM510, XM530, XM550|
+|[Rockchip](https://www.rock-chips.com/)|RV1109|
 
 Please test on your device to help us extend the list.
 

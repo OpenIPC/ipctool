@@ -210,6 +210,8 @@ void setup_hal_drivers() {
         setup_hal_fh();
     else if (!strcmp(VENDOR_INGENIC, chip_manufacturer))
         setup_hal_ingenic();
+    else if (!strcmp(VENDOR_ROCKCHIP, chip_manufacturer))
+        setup_hal_rockchip();
 }
 
 typedef struct meminfo {
@@ -264,6 +266,8 @@ void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
         *total_mem = fh_totalmem(media_mem);
     else if (!strcmp(VENDOR_INGENIC, chip_manufacturer))
         *total_mem = ingenic_totalmem(media_mem);
+    else if (!strcmp(VENDOR_ROCKCHIP, chip_manufacturer))
+        *total_mem = rockchip_totalmem(media_mem);
 
     if (!*total_mem)
         *total_mem = kernel_mem();

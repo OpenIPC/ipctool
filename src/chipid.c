@@ -12,7 +12,6 @@
 
 #include "chipid.h"
 #include "hal_common.h"
-#include "hal_fh.h"
 #include "tools.h"
 
 char system_id[128];
@@ -60,6 +59,12 @@ static bool generic_detect_cpu() {
         return fh_detect_cpu();
     else if (!strcmp(chip_manufacturer, "isvp"))
         return ingenic_detect_cpu();
+
+    if (rockchip_detect_cpu()) {
+        strcpy(chip_manufacturer, VENDOR_ROCKCHIP);
+        return true;
+    }
+
     strcpy(chip_name, "unknown");
     return true;
 }
@@ -105,7 +110,7 @@ const char *getchipname() {
 }
 
 const char *getchipfamily() {
-    const char* chip_name = getchipname();
+    const char *chip_name = getchipname();
     switch (chip_generation) {
     case HISI_V1:
         return "hi3516cv100";
