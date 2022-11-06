@@ -2,11 +2,13 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <math.h>
+#include <mtd/mtd-user.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -51,7 +53,7 @@ static bool find_xm_mac(int i, size_t size) {
     return false;
 }
 
-void print_usage() {
+static void print_usage() {
     printf(
         "Usage: ipcinfo [OPTIONS]\n"
         "Where:\n"
@@ -60,6 +62,7 @@ void print_usage() {
         "  -v, --vendor              read chip manufacturer\n"
         "  -l, --long-sensor         read sensor model and control line\n"
         "  -s, --short-sensor        read sensor model\n"
+        "  -F, --flash-type          read flash type (nor, nand)\n"
         "  -t, --temp                read chip temperature (where supported)\n"
         "  -x, --xm-mac              read MAC address (for XM chips)\n"
         "  -S, --streamer            read streamer name\n"
@@ -67,16 +70,16 @@ void print_usage() {
         "  -h, --help                display this help\n");
 }
 
-void print_chip_family() { puts(getchipfamily()); }
+static void print_chip_family() { puts(getchipfamily()); }
 
-void print_chip_name() {
+static void print_chip_name() {
     const char *chipname = getchipname();
     if (!chipname)
         exit(EXIT_FAILURE);
     puts(chipname);
 }
 
-void print_chip_temperature() {
+static void print_chip_temperature() {
     float temp = gethwtemp();
     if (isnan(temp)) {
         fprintf(stderr, "Temperature cannot be retrieved\n");
@@ -85,21 +88,45 @@ void print_chip_temperature() {
     printf("%.2f\n", temp);
 }
 
-void print_sensor_long() {
+static void print_sensor_long() {
     const char *sensor = getsensoridentity();
     if (!sensor)
         exit(EXIT_FAILURE);
     puts(sensor);
 }
 
-void print_sensor_short() {
+static void print_sensor_short() {
     const char *sensor = getsensorshort();
     if (!sensor)
         exit(EXIT_FAILURE);
     puts(sensor);
 }
 
-void print_vendor() {
+static const char *flash_type(int a) {
+    switch (a) {
+    case MTD_NORFLASH:
+        return "nor";
+    case MTD_NANDFLASH:
+        return "nand";
+    default:
+        return "";
+    }
+}
+
+static void print_flash_type() {
+    int devfd = open("/dev/mtd0", O_RDONLY);
+    if (devfd < 0)
+        return;
+
+    mtd_info_t mtd_info;
+    if (ioctl(devfd, MEMGETINFO, &mtd_info) >= 0) {
+        puts(flash_type(mtd_info.type));
+    }
+
+    close(devfd);
+}
+
+static void print_vendor() {
     const char *vendor = getchipvendor();
     size_t len = strlen(vendor);
     char *str = alloca(len + 1);
@@ -110,7 +137,7 @@ void print_vendor() {
     puts((const char *)str);
 }
 
-void print_streamer() {
+static void print_streamer() {
     char sname[1024];
     pid_t godpid;
 
@@ -127,7 +154,7 @@ void print_streamer() {
     }
 }
 
-void print_version() {
+static void print_version() {
 #ifndef SKIP_VERSION
     printf("ipcinfo, version: ");
     const char *vers = get_git_version();
@@ -139,7 +166,7 @@ void print_version() {
 #endif
 }
 
-void print_xm_mac() {
+static void print_xm_mac() {
     FILE *fp;
     char dev[80], name[80];
     int i, es, ee;
@@ -163,7 +190,7 @@ void print_xm_mac() {
 }
 
 int main(int argc, char **argv) {
-    const char *short_options = "cfvhlstSxV";
+    const char *short_options = "cfvhlstFSxV";
     const struct option long_options[] = {
         {"chip-name", no_argument, NULL, 'c'},
         {"family", no_argument, NULL, 'f'},
@@ -171,6 +198,7 @@ int main(int argc, char **argv) {
         {"help", no_argument, NULL, 'h'},
         {"long-sensor", no_argument, NULL, 'l'},
         {"short-sensor", no_argument, NULL, 's'},
+        {"flash-type", no_argument, NULL, 'F'},
         {"temp", no_argument, NULL, 't'},
         {"streamer", no_argument, NULL, 'S'},
         {"xm-mac", no_argument, NULL, 'x'},
@@ -196,6 +224,9 @@ int main(int argc, char **argv) {
             break;
         case 's':
             print_sensor_short();
+            break;
+        case 'F':
+            print_flash_type();
             break;
         case 't':
             print_chip_temperature();
