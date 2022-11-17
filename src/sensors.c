@@ -600,6 +600,9 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2063:
         res = 0x2063;
         break;
+    case 0x2083:
+        res = 0x2083;
+        break;
     case 0xffff:
         // no response
         return false;
