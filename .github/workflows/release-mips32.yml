@@ -55,7 +55,7 @@ jobs:
           wget -qO- https://github.com/OpenIPC/firmware/releases/download/latest/$ARCHIVE.tgz | \
             tar xfz - -C /opt
           export PATH=/opt/$PLATFORM/bin:$PATH
-          sudo apt install -y cmake upx-ucl
+          sudo apt-get install -y cmake upx-ucl
           cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           upx build/ipctool
