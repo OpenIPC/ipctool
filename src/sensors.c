@@ -562,12 +562,12 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    int prod_msb = i2c_read_register(fd, i2c_addr, 0xf0, 1, 1);
-    int prod_lsb = i2c_read_register(fd, i2c_addr, 0xf1, 1, 1);
+    int prod_msb = i2c_read_register(fd, i2c_addr, 0x3f0, 2, 1);
+    int prod_lsb = i2c_read_register(fd, i2c_addr, 0x3f1, 2, 1);
 
     if (prod_msb == -1 || prod_lsb == -1) {
-        prod_msb = i2c_read_register(fd, i2c_addr, 0x3f0, 2, 1);
-        prod_lsb = i2c_read_register(fd, i2c_addr, 0x3f1, 2, 1);
+        prod_msb = i2c_read_register(fd, i2c_addr, 0xf0, 1, 1);
+        prod_lsb = i2c_read_register(fd, i2c_addr, 0xf1, 1, 1);
     }
 
     if (prod_msb == -1 || prod_lsb == -1)
@@ -677,6 +677,7 @@ static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int type) {
     if (possible_i2c_addrs == NULL)
         return false;
+
     sensor_addr_t *sdata = possible_i2c_addrs;
 
     while (sdata->sensor_type) {
