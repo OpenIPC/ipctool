@@ -5,7 +5,7 @@ PACK=--pack
 : '
 # EV300
 wget -qO-  \
-  https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516ev300-br.tgz \
+  https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516ev300-nor-lite.tgz \
   | tar xvfz - -C /tmp
 ./upgrade_bundle.py \
   --kernel /tmp/uImage.hi3516ev300 \
@@ -16,7 +16,7 @@ wget -qO-  \
 
 # CV300
 wget -qO-  \
-  https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516cv300-br.tgz \
+  https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516cv300-nor-lite.tgz \
   | tar xvfz - -C /tmp
 wget -P /tmp \
   https://github.com/OpenIPC/chaos_calmer/releases/download/latest/openwrt-hi35xx-16cv300-u-boot.bin
@@ -29,7 +29,7 @@ rm /tmp/openwrt-hi35xx-16cv300-u-boot.bin
 '
 # CV500
 wget -qO-  \
-  https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516cv500-br.tgz \
+  https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516cv500-nor-lite.tgz \
   | tar xvfz - -C /tmp
 
 ./upgrade_bundle.py \
