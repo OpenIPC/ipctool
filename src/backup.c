@@ -669,15 +669,23 @@ static int do_upgrade(const char *filename, bool force) {
         return 1;
     }
 
-    get_board_id();
-    char board[1024] = {0};
-    if (*board_manufacturer) {
-        strcpy(board, board_manufacturer);
+    cJSON *binfo = get_board_info();
+    char board[1024] = {0}, board_id[1024] = {0};
+    cJSON *c_vendor = cJSON_GetObjectItem(binfo, "vendor");
+    if (c_vendor) {
+        char *bstr = cJSON_GetStringValue(binfo);
+        if (bstr)
+            strcpy(board, bstr);
     }
-    if (*board_id) {
+    cJSON *c_model = cJSON_GetObjectItem(binfo, "model");
+    if (c_model) {
+        char *bstr = cJSON_GetStringValue(binfo);
+	strcpy(board_id, bstr);
         strcat(board, " ");
-        strcat(board, board_id);
+        strcat(board, bstr);
     }
+    if (binfo)
+        cJSON_Delete(binfo);
 
     uint32_t ram_start = platform_ramstart();
     if (!ram_start) {

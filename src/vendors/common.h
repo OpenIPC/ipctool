@@ -3,6 +3,6 @@
 
 #include <stdbool.h>
 
-bool get_board_id();
+cJSON *get_board_info();
 
 #endif /* COMMON_H */

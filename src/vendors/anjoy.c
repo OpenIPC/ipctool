@@ -10,13 +10,14 @@
 
 bool is_anjoy_board() {
     if (!access("/opt/ch/star.flag", 0)) {
-        strcpy(board_manufacturer, "Anjoy");
         return true;
     }
     return false;
 }
 
-bool gather_anjoy_board_info() {
+bool gather_anjoy_board_info(cJSON *j_inner) {
+    ADD_PARAM("vendor", "Anjoy");
+
     DIR *dir = opendir("/opt/ch");
     if (!dir)
         return false;
@@ -31,10 +32,9 @@ bool gather_anjoy_board_info() {
             if (len < 0 || strcmp(entry->d_name + len, ".flag"))
                 continue;
 
-            strcpy(board_id, entry->d_name);
-            board_id[len] = 0;
             for (int i = 0; i < len; i++)
-                board_id[i] = toupper(board_id[i]);
+                entry->d_name[i] = toupper(entry->d_name[i]);
+	    ADD_PARAM("model", entry->d_name);
             found = true;
             break;
         }

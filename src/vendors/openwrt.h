@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 
-void gather_openwrt_board_info();
+#include "cjson/cJSON.h"
+
+bool gather_openwrt_board_info();
 bool is_openwrt_board();
 
 #endif /* OPENWRT_H */

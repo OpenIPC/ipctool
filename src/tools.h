@@ -8,6 +8,8 @@
 #include <sys/syscall.h>
 #include <sys/types.h>
 
+#define ARRCNT(a) (sizeof(a)/sizeof((a)[0]))
+
 #define ADD_PARAM(param, val)                                                  \
     {                                                                          \
         cJSON *strval = cJSON_CreateString(val);                               \

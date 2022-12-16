@@ -5,10 +5,6 @@
 
 extern char system_id[128];
 extern char system_manufacturer[128];
-extern char board_id[128];
-extern char board_ver[128];
-extern char board_manufacturer[128];
-extern char board_specific[1024];
 // vendor specific data
 extern int chip_generation;
 extern char chip_name[128];

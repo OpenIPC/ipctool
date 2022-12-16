@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include "cjson/cJSON.h"
+
 bool is_anjoy_board();
 bool gather_anjoy_board_info();
 

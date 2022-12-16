@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include "cjson/cJSON.h"
+
 bool is_hankvision_board();
 bool gather_hankvision_board_info();
 

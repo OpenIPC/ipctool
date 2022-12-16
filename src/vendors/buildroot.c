@@ -26,27 +26,27 @@ bool is_br_board() {
     return false;
 }
 
-static bool detect_br_product() {
+bool gather_br_board_info(cJSON *j_inner) {
     char buf[256];
     if (get_regex_line_from_file("/etc/os-release", "OPENIPC_VERSION=(.+)", buf,
                                  sizeof(buf))) {
-        strcpy(board_ver, buf);
-        strcpy(board_manufacturer, "OpenIPC");
+        ADD_PARAM("version", buf);
+        ADD_PARAM("vendor", "OpenIPC");
         return true;
     }
     if (get_regex_line_from_file("/etc/os-release", "VERSION_ID=(.+)", buf,
                                  sizeof(buf))) {
-        strcpy(board_ver, buf);
+        ADD_PARAM("version", buf);
         return true;
     }
     return false;
 }
 
 bool is_openipc_board() {
-    detect_br_product();
-    return (!strcmp(board_manufacturer, "OpenIPC"));
-}
-
-void gather_br_board_info() {
-    detect_br_product();
+    char buf[256];
+    if (get_regex_line_from_file("/etc/os-release", "OPENIPC_VERSION=(.+)", buf,
+                                 sizeof(buf))) {
+        return true;
+    }
+    return false;
 }

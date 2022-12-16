@@ -2515,6 +2515,48 @@ static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
     }
 }
 
+char* gpio_ircut_detect(char* outbuf, size_t outlen) {
+    int GPIO_Groups = 0;
+    size_t GPIO_Base = 0;
+    size_t GPIO_Offset = 0;
+
+    *outbuf = 0;
+    if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
+        return NULL;
+
+    size_t enabled[GPIO_Groups];
+    fill_enabled_gpios(enabled, GPIO_Groups);
+
+    for (int group = 0; group < GPIO_Groups; group++) {
+        size_t mask = enabled[group] << 2;
+        size_t address = GPIO_Base + (group * GPIO_Offset) + mask;
+        size_t value;
+        if (!mem_reg(address, &value, OP_READ)) {
+            fprintf(stderr, "Error at %#x\n", address);
+            return NULL;
+        }
+        address = GPIO_Base + (group * GPIO_Offset) + 0x400;
+        size_t direct;
+        if (!mem_reg(address, &direct, OP_READ)) {
+            fprintf(stderr, "Error at %#x\n", address);
+            return NULL;
+        }
+
+        for (int i = 0; i < 8; i++) {
+            uint8_t bit_mask = 1 << i;
+            if (enabled[group] >> i & 1)
+		    if ((direct & bit_mask) && ((value & bit_mask) == 0)) {
+			int nlen = snprintf(outbuf, outlen, ",%d", group * 8 + i);
+		    }
+        }
+    }
+
+    if (strlen(outbuf)>0)
+	return outbuf + 1;
+    else
+	    return NULL;
+}
+
 static int gpio_scan_cmd() {
     int GPIO_Groups = 0;
     size_t GPIO_Base = 0;

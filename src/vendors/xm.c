@@ -27,7 +27,6 @@ bool is_xm_board() {
 
     if (!access("/mnt/mtd/Config/Account1", 0) ||
         !access("/proc/xm/xminfo", 0)) {
-        strcpy(board_manufacturer, "Xiongmai");
         detected = true;
         return true;
     }
@@ -165,7 +164,7 @@ bool xm_flash_init(int fd) {
     return true;
 }
 
-static bool detect_xm_product() {
+static bool detect_xm_product(cJSON *j_inner) {
     char buf[256];
 
     if (!get_regex_line_from_file("/mnt/custom/ProductDefinition",
@@ -173,29 +172,29 @@ static bool detect_xm_product() {
                                   sizeof(buf))) {
         return false;
     }
-    strcpy(board_id, buf);
+    ADD_PARAM("param", buf);
     return true;
 }
 
-static bool extract_cloud_id() {
+static bool extract_cloud_id(cJSON *j_inner) {
     char buf[256];
 
     if (!get_regex_line_from_file("/mnt/mtd/Config/SerialNumber", "([0-9a-f]+)",
                                   buf, sizeof(buf))) {
         return false;
     }
-    sprintf(board_specific + strlen(board_specific), "  cloudId: %s\n", buf);
+    ADD_PARAM("cloudId", buf);
     return true;
 }
 
-static bool extract_snsType() {
+static bool extract_snsType(cJSON *j_inner) {
     char buf[256];
 
     if (!get_regex_line_from_file("/mnt/mtd/Config/SensorType.bat",
                                   "snsType:([0-9]+)", buf, sizeof(buf))) {
         return false;
     }
-    sprintf(board_specific + strlen(board_specific), "  snsType: %s\n", buf);
+    ADD_PARAM("snsType", buf);
     return true;
 }
 
@@ -234,15 +233,17 @@ bailout:
         cJSON_Delete(json);
 }
 
-void gather_xm_board_info() {
+bool gather_xm_board_info(cJSON *j_inner) {
     char username[64] = {0}, password[64] = {0};
     extract_netip_creds(username, password);
     // printf("%s/%s\n", username, password);
 
-    detect_xm_product();
-    extract_cloud_id();
-    extract_snsType();
+    ADD_PARAM("vendor", "Xiongmai");
+    detect_xm_product(j_inner);
+    extract_cloud_id(j_inner);
+    extract_snsType(j_inner);
     detect_nor_chip();
+    return true;
 }
 
 static uint32_t CV200_WDG_CONTROL = 0x20040000 + 0x0008;

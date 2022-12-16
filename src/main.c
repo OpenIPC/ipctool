@@ -21,13 +21,13 @@
 #include "hisi/hal_hisi.h"
 #include "hwinfo.h"
 #include "i2cspi.h"
-#include "snstool.h"
 #include "mtd.h"
 #include "network.h"
 #include "ptrace.h"
 #include "ram.h"
 #include "reginfo.h"
 #include "sensors.h"
+#include "snstool.h"
 #include "tools.h"
 #include "uboot.h"
 #include "version.h"
@@ -73,11 +73,13 @@ void print_usage() {
         "  -t, --temp                read chip temperature (where supported)\n"
         "\n"
         "  backup <filename>         save backup into a file\n"
-        "  restore [mac|filename]    restore from backup (cloud-based or local file)\n"
+        "  restore [mac|filename]    restore from backup (cloud-based or local "
+        "file)\n"
         "     [-s, --skip-env]       skip environment\n"
         "     [-f, --force]          enforce\n"
         "  upgrade <bundle>          upgrade to OpenIPC firmware\n"
-        "                            (experimental! use only on cameras with UART)\n"
+        "                            (experimental! use only on cameras with "
+        "UART)\n"
         "     [-f, --force]          enforce\n"
         "  printenv                  drop-in replacement for fw_printenv\n"
         "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
@@ -94,8 +96,10 @@ void print_usage() {
         "  i2cdetect                 attempt to detect devices on I2C bus\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
         "  gpio (scan|mux)           GPIO utilities\n"
-        "  trace [--skip=usleep] <full/path/to/executable> [program arguments]\n"
-        "                            dump original firmware calls and data structures\n"
+        "  trace [--skip=usleep] <full/path/to/executable> [program "
+        "arguments]\n"
+        "                            dump original firmware calls and data "
+        "structures\n"
         "  -h, --help                this help\n");
 }
 
@@ -117,6 +121,17 @@ void show_yaml(cJSON *json) {
     if (!json)
         return;
 
+    cJSON *root;
+    int cnt = 0;
+    cJSON_ArrayForEach(root, json) {
+        cJSON *sub;
+        cJSON_ArrayForEach(sub, root) cnt++;
+    }
+
+    // Don't show empty section
+    if (cnt == 0)
+        return;
+
     char *string = cYAML_Print(json);
     fprintf(stdout, "%s", string);
     if (backup_fp)
@@ -132,22 +147,6 @@ void print_system_id() {
     yaml_printf("vendor: %s\n"
                 "model: %s\n",
                 system_manufacturer, system_id);
-}
-
-void print_board_id() {
-    if (!*board_manufacturer && !*board_id)
-        return;
-
-    yaml_printf("board:\n");
-
-    if (*board_manufacturer)
-        yaml_printf("  vendor: %s\n", board_manufacturer);
-    if (*board_id)
-        yaml_printf("  model: %s\n", board_id);
-    if (*board_ver)
-        yaml_printf("  version: %s\n", board_ver);
-    if (*board_specific)
-        yaml_printf("%s", board_specific);
 }
 
 void print_chip_id() {
@@ -233,18 +232,19 @@ int main(int argc, char *argv[]) {
             return mtd_unlock_cmd();
         else if (!strcmp(argv[optind], "sensor"))
             return snstool_cmd(argc - 1, argv + 1);
-        #ifdef __arm__
+#ifdef __arm__
         else if (!strcmp(argv[1], "trace"))
             return ptrace_cmd(argc - 1, argv + 1);
-        #endif
+#endif
     }
 
-    const struct option long_options[] = {{"chip-name", no_argument, NULL, 'c'},
-                                          {"help", no_argument, NULL, 'h'},
-                                          {"sensor-name", no_argument, NULL, 's'},
-                                          {"temp", no_argument, NULL, 't'},
-                                          {"wait", no_argument, NULL, 'w'},
-                                          {NULL, 0, NULL, 0}};
+    const struct option long_options[] = {
+        {"chip-name", no_argument, NULL, 'c'},
+        {"help", no_argument, NULL, 'h'},
+        {"sensor-name", no_argument, NULL, 's'},
+        {"temp", no_argument, NULL, 't'},
+        {"wait", no_argument, NULL, 'w'},
+        {NULL, 0, NULL, 0}};
 
     int res;
     int option_index;
@@ -328,9 +328,7 @@ int main(int argc, char *argv[]) {
 start_yaml:
     if (getchipname()) {
         yaml_printf("---\n");
-        if (get_board_id()) {
-            print_board_id();
-        }
+        show_yaml(get_board_info());
         print_system_id();
         print_chip_id();
         show_yaml(detect_ethernet());

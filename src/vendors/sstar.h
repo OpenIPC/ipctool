@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 
+#include "cjson/cJSON.h"
+
 bool is_sstar_board();
-void gather_sstar_board_info();
+bool gather_sstar_board_info(cJSON *j_inner);
 
 #endif

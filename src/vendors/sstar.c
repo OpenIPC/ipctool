@@ -10,8 +10,8 @@
 
 typedef enum fmt_option_e {
     str_none = 0,
-    str_rtrim = (1<<0),
-    str_kebab_case = (1<<1),
+    str_rtrim = (1 << 0),
+    str_ltrim = (1 << 1),
 } fmt_option_t;
 
 static void strrtrim(char *str) {
@@ -23,44 +23,54 @@ static void strrtrim(char *str) {
         *s-- = 0;
 }
 
-static void str_kebab(char *str)
-{
-    if(!str || !strlen(str))
-        return;
+static char *strltrim(char *str) {
+    if (!str || !strlen(str))
+        return NULL;
     char *s = str;
-    while(*s) {
-        *s=tolower(*s);
-        if(*s == '_')
-            *s = '-';
+    while (*s != 0) {
+        if (isspace(*s))
+            return s + 1;
         s++;
     }
+    return str;
 }
 
-static void append_board_param(char *fname, char *dst, char *fmt, fmt_option_t fmt_option) {
+static void append_board_param(cJSON *j_inner, char *fname, char *param,
+                               fmt_option_t fmt_option) {
     char buf[255];
     FILE *fp = NULL;
     if (!access(fname, R_OK)) {
         if ((fp = fopen(fname, "rb"))) {
             memset(buf, 0, sizeof(buf));
             if (fread(buf, 1, sizeof(buf), fp) > 0) {
+                int n = strlen(buf);
+                if (buf[n - 1] == '\n')
+                    buf[n - 1] = 0;
                 if (fmt_option & str_rtrim)
                     strrtrim(buf);
-                if (fmt_option & str_kebab_case)
-                    str_kebab(buf);
-                sprintf(dst + strlen(dst), fmt, buf);
+
+                if (fmt_option & str_ltrim)
+                    ADD_PARAM(param, strltrim(buf))
+                else
+                    ADD_PARAM(param, buf);
             }
             fclose(fp);
         }
     }
 }
 
-void gather_sstar_board_info() {
-    append_board_param("/sys/devices/soc0/machine", board_id, "%s", str_rtrim);
-    append_board_param("/sys/class/mstar/msys/CHIP_ID", board_specific, "  %s", str_kebab_case);
-    append_board_param("/sys/class/mstar/msys/CHIP_VERSION", board_specific, "  %s", str_kebab_case);
-    append_board_param("/sys/devices/soc0/family", board_specific, "  soc-family: %s", 0);
-    append_board_param("/sys/devices/soc0/soc_id", board_specific, "  soc-id: %s", 0);
-    append_board_param("/sys/devices/soc0/revision", board_specific, "  soc-revision: %s", 0);
+bool gather_sstar_board_info(cJSON *j_inner) {
+    append_board_param(j_inner, "/sys/devices/soc0/machine", "model",
+                       str_rtrim);
+    append_board_param(j_inner, "/sys/class/mstar/msys/CHIP_ID", "chip-id",
+                       str_ltrim);
+    append_board_param(j_inner, "/sys/class/mstar/msys/CHIP_VERSION",
+                       "chip-version", str_ltrim);
+    append_board_param(j_inner, "/sys/devices/soc0/family", "soc-family", 0);
+    append_board_param(j_inner, "/sys/devices/soc0/soc_id", "soc-id", 0);
+    append_board_param(j_inner, "/sys/devices/soc0/revision", "soc-revision",
+                       0);
+    return true;
 }
 
 bool is_sstar_board() {

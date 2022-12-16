@@ -12,21 +12,21 @@
 
 bool is_openwrt_board() {
     if (!access("/etc/openwrt_version", 0)) {
-        strcpy(board_manufacturer, "OpenWrt");
         return true;
     }
     return false;
 }
 
-static bool detect_openwrt_product() {
+static bool detect_openwrt_product(cJSON *j_inner) {
     char buf[256];
 
     if (!get_regex_line_from_file("/etc/openwrt_version", "(.+)", buf,
                                   sizeof(buf))) {
         return false;
     }
-    strcpy(board_ver, buf);
+    ADD_PARAM("vendor", "OpenWrt");
+    ADD_PARAM("version", buf);
     return true;
 }
 
-void gather_openwrt_board_info() { detect_openwrt_product(); }
+bool gather_openwrt_board_info(cJSON *j_inner) { return detect_openwrt_product(j_inner); }
