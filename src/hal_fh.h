@@ -11,7 +11,7 @@
 #define REG_PMU_FW_VER (PMU_REG_BASE + 0x0008)
 #define REG_PMU_SYS_CTRL (PMU_REG_BASE + 0x000c)
 
-bool fh_detect_cpu();
+bool fh_detect_cpu(char *chip_name);
 unsigned long fh_totalmem(unsigned long *media_mem);
 void setup_hal_fh();
 

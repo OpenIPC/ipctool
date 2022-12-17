@@ -5,8 +5,8 @@
 
 #define VENDOR_GM "Grain-Media"
 
-bool gm_detect_cpu();
+bool gm_detect_cpu(char *chip_name);
 unsigned long gm_totalmem(unsigned long *media_mem);
-void setup_hal_gm();
+void gm_setup_hal();
 
 #endif /* HAL_GM_H */

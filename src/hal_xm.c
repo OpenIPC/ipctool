@@ -6,7 +6,6 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include "chipid.h"
 #include "hal_common.h"
 #include "ram.h"
 #include "tools.h"
@@ -81,6 +80,9 @@ void setup_hal_xm() {
     i2c_write_register = xm_sensor_write_register;
     possible_i2c_addrs = xm_possible_i2c_addrs;
     hal_cleanup = xm_hal_cleanup;
+#ifndef STANDALONE_LIBRARY
+    hal_totalmem = xm_totalmem;
+#endif
 }
 
 static unsigned long xm_media_mem() {
@@ -129,15 +131,16 @@ unsigned long xm_totalmem(unsigned long *media_mem) {
     return *media_mem + kernel_mem();
 }
 
-bool xm_detect_cpu() {
+bool xm_detect_cpu(char *chip_name, uint32_t base) {
     char buf[256];
+    (void)base;
 
     bool res = get_regex_line_from_file("/proc/cpuinfo", "^Hardware.+(xm.+)",
                                         buf, sizeof(buf));
     if (!res) {
         return false;
     }
-    strncpy(chip_name, buf, sizeof(chip_name));
+    strcpy(chip_name, buf);
     char *ptr = chip_name;
     while (*ptr) {
         *ptr = toupper(*ptr);
@@ -152,6 +155,5 @@ bool xm_detect_cpu() {
         }
     }
 
-    strcpy(chip_manufacturer, VENDOR_XM);
     return true;
 }

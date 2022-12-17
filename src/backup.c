@@ -758,8 +758,7 @@ static int do_upgrade(const char *filename, bool force) {
     char total_mem[32] = {0};
     if (setTotalMem && cJSON_IsBool(setTotalMem) && cJSON_IsTrue(setTotalMem)) {
         unsigned long mmem;
-        uint32_t tmem;
-        hal_ram(&mmem, &tmem);
+        uint32_t tmem = hal_totalmem(&mmem);
         snprintf(total_mem, sizeof(total_mem), "%uM", rounded_num(tmem / 1024));
     }
 

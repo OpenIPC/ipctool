@@ -6,7 +6,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "chipid.h"
 #include "hal_common.h"
 #include "tools.h"
 
@@ -21,13 +20,13 @@ sensor_addr_t rockchip_possible_i2c_addrs[] = {
     {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OMNIVISION, omni_addrs},
     {SENSOR_GALAXYCORE, gc_addrs}, {0, NULL}};
 
-bool rockchip_detect_cpu() {
+bool rockchip_detect_cpu(char *chip_name) {
     char buf[256];
 
     if (!get_regex_line_from_file("/proc/device-tree/compatible",
-                                  "rockchip,r[kv]([0-9]+)", buf, sizeof(buf)))
+                                  "rockchip,(r[kv][0-9]+)", buf, sizeof(buf)))
         return false;
-    snprintf(chip_name, sizeof(chip_name), "RV%s", buf);
+    strcpy(chip_name, buf);
     return true;
 }
 
@@ -91,4 +90,7 @@ void setup_hal_rockchip() {
     open_i2c_sensor_fd = i2c1_open_sensor_fd;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = rockchip_get_temp;
+#ifndef STANDALONE_LIBRARY
+    hal_totalmem = rockchip_totalmem;
+#endif
 }

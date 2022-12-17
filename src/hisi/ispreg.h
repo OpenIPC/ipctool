@@ -17,4 +17,6 @@ struct EV300_PERI_CRG60 {
 
 #define EV300_PERI_CRG60_ADDR 0x120100F0
 
+const char *hisi_detect_fmc();
+
 #endif /* HISI_ISPREG_H */

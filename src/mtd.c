@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include "chipid.h"
+#include "hal_common.h"
 #include "hisi/hal_hisi.h"
 #include "mtd.h"
 #include "sha1.h"
@@ -285,8 +286,12 @@ void print_mtd_info() {
 
     if (ctx.totalsz)
         yaml_printf("    size: %dM\n", ctx.totalsz / 1024 / 1024);
-    if (!strcmp(VENDOR_HISI, chip_manufacturer))
-        hisi_detect_fmc();
+
+    if (hal_fmc_mode) {
+        const char *fmc_mode = hal_fmc_mode();
+        if (fmc_mode)
+            printf("    addr-mode: %s\n", fmc_mode);
+    }
 }
 
 static bool xm_warning;
@@ -337,7 +342,8 @@ bool mtd_write_block(int fd, int offset, const char *data, size_t size) {
     return true;
 }
 
-bool mtd_verify_block(int mtd, int fd, int offset, const char *data, size_t size) {
+bool mtd_verify_block(int mtd, int fd, int offset, const char *data,
+                      size_t size) {
     bool res = false;
 
     // fprintf(stderr, "Seeking on mtd device to: %x\n", offset);
@@ -354,7 +360,10 @@ bool mtd_verify_block(int mtd, int fd, int offset, const char *data, size_t size
     }
 
     if (memcmp(buf, data, size) != 0) {
-        fprintf(stderr, "Block mtd%d [%#x, %#x] write verify error, possibly dead flash\n", mtd, offset, size);
+        fprintf(
+            stderr,
+            "Block mtd%d [%#x, %#x] write verify error, possibly dead flash\n",
+            mtd, offset, size);
         goto quit;
     }
 

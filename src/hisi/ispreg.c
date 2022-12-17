@@ -881,9 +881,10 @@ static const char *hisi_fmc_mode(uint32_t addr) {
     struct FMC_CFG val;
     if (mem_reg(addr, (uint32_t *)&val, OP_READ))
         return (hisi_flash_mode(val.spi_nor_addr_mode));
+    return NULL;
 }
 
-void hisi_detect_fmc() {
+const char *hisi_detect_fmc() {
     const char *mode = NULL;
     switch (chip_generation) {
     case HISI_V1: {
@@ -902,8 +903,7 @@ void hisi_detect_fmc() {
         mode = hisi_fmc_mode(EV300_FMC_CFG);
         break;
     }
-    if (mode)
-        printf("    addr-mode: %s\n", mode);
+    return mode;
 }
 
 // for IMX291 1920x1110

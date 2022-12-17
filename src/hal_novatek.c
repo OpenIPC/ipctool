@@ -5,7 +5,6 @@
 
 #include <unistd.h>
 
-#include "chipid.h"
 #include "hal_common.h"
 #include "tools.h"
 
@@ -22,13 +21,13 @@ sensor_addr_t novatek_possible_i2c_addrs[] = {
     {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OMNIVISION, omni_addrs},
     {SENSOR_GALAXYCORE, gc_addrs}, {0, NULL}};
 
-bool novatek_detect_cpu() {
+bool novatek_detect_cpu(char *chip_name) {
     char buf[256];
 
     if (!get_regex_line_from_file("/proc/device-tree/model",
                                   "Novatek ([A-Z]+[0-9]+)", buf, sizeof(buf)))
         return false;
-    strncpy(chip_name, buf, sizeof(chip_name) - 1);
+    strcpy(chip_name, buf);
     return true;
 }
 
@@ -57,10 +56,13 @@ float novatek_get_temp() {
     return ret;
 }
 
-void setup_hal_novatek() {
+void novatek_setup_hal() {
     possible_i2c_addrs = novatek_possible_i2c_addrs;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = novatek_get_temp;
+#ifndef STANDALONE_LIBRARY
+    hal_totalmem = novatek_totalmem;
+#endif
 }
 
 enum CHIP_ID {

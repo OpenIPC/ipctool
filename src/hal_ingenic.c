@@ -5,7 +5,6 @@
 
 #include <unistd.h>
 
-#include "chipid.h"
 #include "hal_common.h"
 #include "tools.h"
 
@@ -205,7 +204,7 @@ static const char *ingenic_cpu_name() {
     return "unknown";
 }
 
-bool ingenic_detect_cpu() {
+bool ingenic_detect_cpu(char *chip_name) {
 
     // chipid (serial number?)
     // 0x13540200: 0xEBD9102F
@@ -214,7 +213,6 @@ bool ingenic_detect_cpu() {
     // result: 2f10d9eb0128923a56140000
 
     strcpy(chip_name, ingenic_cpu_name());
-    strcpy(chip_manufacturer, VENDOR_INGENIC);
     return true;
 }
 
@@ -247,4 +245,7 @@ void setup_hal_ingenic() {
     possible_i2c_addrs = ingenic_possible_i2c_addrs;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = ingenic_get_temp;
+#ifndef STANDALONE_LIBRARY
+    hal_totalmem = ingenic_totalmem;
+#endif
 }

@@ -32,7 +32,7 @@
 bool hisi_ev300_get_die_id(char *buf, ssize_t len);
 void hisi_vi_information(sensor_ctx_t *ctx);
 unsigned long hisi_totalmem(unsigned long *media_mem);
-void hisi_detect_fmc();
-bool hisi_detect_cpu(uint32_t SC_CTRL_base);
+bool hisi_detect_cpu(char *chip_name, uint32_t SC_CTRL_base);
+void setup_hal_hisi();
 
 #endif /* HAL_HISI_H */

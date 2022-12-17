@@ -24,6 +24,8 @@ float (*hal_temperature)();
 void (*hal_cleanup)();
 
 void (*hal_detect_ethernet)(cJSON *root);
+unsigned long (*hal_totalmem)(unsigned long *media_mem);
+const char *(*hal_fmc_mode)(void);
 
 int universal_open_sensor_fd(const char *dev_name) {
     int fd;
@@ -178,7 +180,13 @@ static int fallback_open_sensor_fd() {
 
 static void universal_hal_cleanup() {}
 
-static void setup_hal_fallback() {
+static unsigned long default_totalmem(unsigned long *media_mem) {
+    (void)media_mem;
+
+    return kernel_mem();
+}
+
+void setup_hal_fallback() {
     open_i2c_sensor_fd = fallback_open_sensor_fd;
     close_sensor_fd = universal_close_sensor_fd;
     i2c_change_addr = universal_i2c_change_addr;
@@ -186,32 +194,8 @@ static void setup_hal_fallback() {
     spi_read_register = universal_spi_read_register;
     i2c_write_register = universal_i2c_write_register;
     spi_write_register = universal_spi_write_register;
+    hal_totalmem = default_totalmem;
     hal_cleanup = universal_hal_cleanup;
-}
-
-void setup_hal_drivers() {
-    setup_hal_fallback();
-    if (!strcmp(VENDOR_HISI, chip_manufacturer))
-        setup_hal_hisi();
-    else if (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_name == '7') {
-        setup_hal_hisi();
-        strcpy(short_manufacturer, "GK");
-    } else if (!strcmp(VENDOR_XM, chip_manufacturer))
-        setup_hal_xm();
-    else if (!strcmp(VENDOR_SSTAR, chip_manufacturer))
-        setup_hal_sstar();
-    else if (!strcmp(VENDOR_MSTAR, chip_manufacturer))
-        setup_hal_sstar();
-    else if (!strcmp(VENDOR_NOVATEK, chip_manufacturer))
-        setup_hal_novatek();
-    else if (!strcmp(VENDOR_GM, chip_manufacturer))
-        setup_hal_gm();
-    else if (!strcmp(VENDOR_FH, chip_manufacturer))
-        setup_hal_fh();
-    else if (!strcmp(VENDOR_INGENIC, chip_manufacturer))
-        setup_hal_ingenic();
-    else if (!strcmp(VENDOR_ROCKCHIP, chip_manufacturer))
-        setup_hal_rockchip();
 }
 
 typedef struct meminfo {
@@ -245,30 +229,4 @@ uint32_t rounded_num(uint32_t n) {
         n /= 2;
     }
     return 1 << i;
-}
-
-void hal_ram(unsigned long *media_mem, uint32_t *total_mem) {
-    if (!strcmp(VENDOR_HISI, chip_manufacturer))
-        *total_mem = hisi_totalmem(media_mem);
-    else if (!strcmp(VENDOR_GOKE, chip_manufacturer) && *chip_name == '7')
-        *total_mem = hisi_totalmem(media_mem);
-    else if (!strcmp(VENDOR_XM, chip_manufacturer))
-        *total_mem = xm_totalmem(media_mem);
-    else if (!strcmp(VENDOR_SSTAR, chip_manufacturer))
-        *total_mem = sstar_totalmem(media_mem);
-    else if (!strcmp(VENDOR_MSTAR, chip_manufacturer))
-        *total_mem = sstar_totalmem(media_mem);
-    else if (!strcmp(VENDOR_NOVATEK, chip_manufacturer))
-        *total_mem = novatek_totalmem(media_mem);
-    else if (!strcmp(VENDOR_GM, chip_manufacturer))
-        *total_mem = gm_totalmem(media_mem);
-    else if (!strcmp(VENDOR_FH, chip_manufacturer))
-        *total_mem = fh_totalmem(media_mem);
-    else if (!strcmp(VENDOR_INGENIC, chip_manufacturer))
-        *total_mem = ingenic_totalmem(media_mem);
-    else if (!strcmp(VENDOR_ROCKCHIP, chip_manufacturer))
-        *total_mem = rockchip_totalmem(media_mem);
-
-    if (!*total_mem)
-        *total_mem = kernel_mem();
 }

@@ -130,31 +130,16 @@ void yaml_fragment(cJSON *json) {
 
     // Don't show empty section
     if (cnt == 0)
-        return;
+        goto bailout;
 
     char *string = cYAML_Print(json);
     fprintf(stdout, "%s", string);
     if (backup_fp)
         fprintf(backup_fp, "%s", string);
+    free(string);
 
+bailout:
     cJSON_Delete(json);
-}
-
-static cJSON *detect_chip() {
-    cJSON *fake_root = cJSON_CreateObject();
-    cJSON *j_inner = cJSON_CreateObject();
-    cJSON_AddItemToObject(fake_root, "chip", j_inner);
-
-    ADD_PARAM("vendor", chip_manufacturer);
-    ADD_PARAM("model", chip_name);
-    if (chip_generation == HISI_V4) {
-        char buf[1024];
-        if (hisi_ev300_get_die_id(buf, sizeof buf)) {
-            ADD_PARAM("id", buf);
-        }
-    }
-
-    return fake_root;
 }
 
 enum {

@@ -5,7 +5,6 @@
 
 #include <unistd.h>
 
-#include "chipid.h"
 #include "hal_common.h"
 #include "tools.h"
 
@@ -20,7 +19,7 @@ sensor_addr_t gm_possible_i2c_addrs[] = {
     {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OMNIVISION, omni_addrs},
     {SENSOR_GALAXYCORE, gc_addrs}, {0, NULL}};
 
-bool gm_detect_cpu() {
+bool gm_detect_cpu(char *chip_name) {
 
     char buf[256];
     char chip[256];
@@ -28,8 +27,7 @@ bool gm_detect_cpu() {
     if (!get_regex_line_from_file("/proc/pmu/chipver", "([0-9]+)", buf,
                                   sizeof(buf)))
         return false;
-    snprintf(chip, sizeof(chip), "GM%.4s", buf);
-    strncpy(chip_name, chip, sizeof(chip_name) - 1);
+    sprintf(chip_name, "GM%.4s", buf);
     return true;
 }
 
@@ -57,8 +55,11 @@ float gm_get_temp() {
     return ret;
 }
 
-void setup_hal_gm() {
+void gm_setup_hal() {
     possible_i2c_addrs = gm_possible_i2c_addrs;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = gm_get_temp;
+#ifndef STANDALONE_LIBRARY
+    hal_totalmem = gm_totalmem;
+#endif
 }

@@ -408,10 +408,11 @@ void setup_hal_hisi() {
         i2c_write_register = hisi_sensor_write_register;
     }
     possible_i2c_addrs = hisi_possible_i2c_addrs;
-    strcpy(short_manufacturer, "HI");
     hal_temperature = hisi_get_temp;
 #ifndef STANDALONE_LIBRARY
     hal_detect_ethernet = hisi_ethdetect;
+    hal_totalmem = hisi_totalmem;
+    hal_fmc_mode = hisi_detect_fmc;
 #endif
 }
 
@@ -661,7 +662,7 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
 
 #define SCSYSID0 0xEE0
 
-bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
+bool hisi_detect_cpu(char *chip_name, uint32_t SC_CTRL_base) {
     uint32_t SCSYSID[4] = {0};
 
     uint32_t family_id = 0;
@@ -677,13 +678,7 @@ bool hisi_detect_cpu(uint32_t SC_CTRL_base) {
         family_id |= (SCSYSID[i] & 0xff) << i * 8;
     }
 
-    strncpy(chip_name, get_hisi_chip_id(family_id, SCSYSID[0] >> 24),
-            sizeof(chip_name));
-
-    if (*chip_name == '7')
-        strcpy(chip_manufacturer, VENDOR_GOKE);
-    else
-        strcpy(chip_manufacturer, VENDOR_HISI);
+    strcpy(chip_name, get_hisi_chip_id(family_id, SCSYSID[0] >> 24));
 
     return true;
 }

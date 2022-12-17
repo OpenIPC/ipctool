@@ -22,28 +22,31 @@ sensor_addr_t sstar_possible_i2c_addrs[] = {
     {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OMNIVISION, omni_addrs},
     {SENSOR_GALAXYCORE, gc_addrs}, {0, NULL}};
 
-bool sstar_detect_cpu() {
+bool mstar_detect_cpu(char *chip_name) {
     uint32_t val;
 
-    if (!strcmp(chip_manufacturer, VENDOR_MSTAR)) {
-        if (mem_reg(0x1f2025a4, (uint32_t *)&val, OP_READ)) {
-            switch (val & 0xF000) {
-            case 0x6000:
-                strcpy(chip_name, "MSC313E");
-                break;
-            case 0x7000:
-                strcpy(chip_name, "MSC316DC");
-                break;
-            case 0x8000:
-                strcpy(chip_name, "MSC318");
-                break;
-            }
-        return true;
+    if (mem_reg(0x1f2025a4, (uint32_t *)&val, OP_READ)) {
+        switch (val & 0xF000) {
+        case 0x6000:
+            strcpy(chip_name, "MSC313E");
+            break;
+        case 0x7000:
+            strcpy(chip_name, "MSC316DC");
+            break;
+        case 0x8000:
+            strcpy(chip_name, "MSC318");
+            break;
         }
+        return true;
     }
+    return false;
+}
+
+bool sstar_detect_cpu(char *chip_name) {
+    uint32_t val;
 
     if (mem_reg(0x1f003c00, &val, OP_READ)) {
-        snprintf(chip_name, sizeof(chip_name), "id %#x", val);
+        sprintf(chip_name, "id %#x", val);
         chip_generation = val;
         return true;
     }
@@ -87,10 +90,13 @@ float sstar_get_temp() {
     return ret;
 }
 
-void setup_hal_sstar() {
+void sstar_setup_hal() {
     open_i2c_sensor_fd = sstar_open_sensor_fd;
     possible_i2c_addrs = sstar_possible_i2c_addrs;
     hal_cleanup = sstar_hal_cleanup;
     if (!access("/sys/class/mstar/msys/TEMP_R", R_OK))
         hal_temperature = sstar_get_temp;
+#ifndef STANDALONE_LIBRARY
+    hal_totalmem = sstar_totalmem;
+#endif
 }

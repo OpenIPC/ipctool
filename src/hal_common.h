@@ -82,10 +82,10 @@ extern write_register_t spi_write_register;
 extern float (*hal_temperature)();
 extern void (*hal_cleanup)();
 extern void (*hal_detect_ethernet)(cJSON *handle);
+extern unsigned long (*hal_totalmem)(unsigned long *media_mem);
+extern const char *(*hal_fmc_mode)(void);
 
-void setup_hal_drivers();
-void setup_hal_hisi();
-void setup_hal_xm();
+void setup_hal_fallback();
 
 int universal_open_sensor_fd(const char *dev_name);
 bool universal_close_sensor_fd(int fd);

@@ -5,7 +5,6 @@
 
 #include <unistd.h>
 
-#include "chipid.h"
 #include "hal_common.h"
 #include "tools.h"
 
@@ -20,7 +19,7 @@ sensor_addr_t fh_possible_i2c_addrs[] = {
     {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OMNIVISION, omni_addrs},
     {SENSOR_GALAXYCORE, gc_addrs}, {0, NULL}};
 
-bool fh_detect_cpu() {
+bool fh_detect_cpu(char *chip_name) {
 
     char buf[256];
     uint32_t sysctrl, ipver, reg;
@@ -102,9 +101,9 @@ bool fh_detect_cpu() {
             strcpy(chip_name, buf);
             break;
         }
-        strcpy(chip_manufacturer, VENDOR_FH);
         return true;
     }
+    return false;
 }
 
 static unsigned long fh_media_mem() {
@@ -135,4 +134,7 @@ void setup_hal_fh() {
     possible_i2c_addrs = fh_possible_i2c_addrs;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = fh_get_temp;
+#ifndef STANDALONE_LIBRARY
+    hal_totalmem = fh_totalmem;
+#endif
 }

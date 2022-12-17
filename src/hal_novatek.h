@@ -5,8 +5,8 @@
 
 #define VENDOR_NOVATEK "Novatek"
 
-bool novatek_detect_cpu();
+bool novatek_detect_cpu(char *chip_name);
 unsigned long novatek_totalmem(unsigned long *media_mem);
-void setup_hal_novatek();
+void novatek_setup_hal();
 
 #endif /* HAL_NOVATEK_H */
