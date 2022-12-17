@@ -2357,7 +2357,7 @@ static int gpio_manipulate(char **argv, bool set_op) {
             return EXIT_FAILURE;
 
         size_t daddress = GPIO_Base + (group * GPIO_Offset) + 0x400;
-        size_t direct;
+        uint32_t direct;
         if (!mem_reg(daddress, &direct, OP_READ)) {
             fprintf(stderr, "read reg %#x error\n", address);
             return EXIT_FAILURE;
@@ -2371,7 +2371,7 @@ static int gpio_manipulate(char **argv, bool set_op) {
             }
         }
 
-        size_t cmd = val << num;
+        uint32_t cmd = val << num;
         if (!mem_reg(address, &cmd, OP_WRITE)) {
             printf("write reg %#x error\n", address);
             return EXIT_FAILURE;
@@ -2515,7 +2515,7 @@ static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
     }
 }
 
-char* gpio_ircut_detect(char* outbuf, size_t outlen) {
+char *gpio_possible_ircut(char *outbuf, size_t outlen) {
     int GPIO_Groups = 0;
     size_t GPIO_Base = 0;
     size_t GPIO_Offset = 0;
@@ -2527,34 +2527,37 @@ char* gpio_ircut_detect(char* outbuf, size_t outlen) {
     size_t enabled[GPIO_Groups];
     fill_enabled_gpios(enabled, GPIO_Groups);
 
+    char *ptr = outbuf;
     for (int group = 0; group < GPIO_Groups; group++) {
         size_t mask = enabled[group] << 2;
         size_t address = GPIO_Base + (group * GPIO_Offset) + mask;
-        size_t value;
+        uint32_t value;
         if (!mem_reg(address, &value, OP_READ)) {
-            fprintf(stderr, "Error at %#x\n", address);
+            fprintf(stderr, "Error at %#zx\n", address);
             return NULL;
         }
         address = GPIO_Base + (group * GPIO_Offset) + 0x400;
-        size_t direct;
+        uint32_t direct;
         if (!mem_reg(address, &direct, OP_READ)) {
-            fprintf(stderr, "Error at %#x\n", address);
+            fprintf(stderr, "Error at %#zx\n", address);
             return NULL;
         }
 
         for (int i = 0; i < 8; i++) {
             uint8_t bit_mask = 1 << i;
             if (enabled[group] >> i & 1)
-		    if ((direct & bit_mask) && ((value & bit_mask) == 0)) {
-			int nlen = snprintf(outbuf, outlen, ",%d", group * 8 + i);
-		    }
+                if ((direct & bit_mask) && ((value & bit_mask) == 0)) {
+                    int nlen = snprintf(ptr, outlen, ",%d", group * 8 + i);
+                    outlen -= nlen;
+                    ptr += nlen;
+                }
         }
     }
 
-    if (strlen(outbuf)>0)
-	return outbuf + 1;
+    if (strlen(outbuf) > 0)
+        return outbuf + 1;
     else
-	    return NULL;
+        return NULL;
 }
 
 static int gpio_scan_cmd() {
@@ -2573,22 +2576,21 @@ static int gpio_scan_cmd() {
     for (int group = 0; group < GPIO_Groups; group++) {
         size_t mask = enabled[group] << 2;
         size_t address = GPIO_Base + (group * GPIO_Offset) + mask;
-        size_t value;
+        uint32_t value;
         if (!mem_reg(address, &value, OP_READ)) {
-            fprintf(stderr, "Error at %#x\n", address);
+            fprintf(stderr, "Error at %#zx\n", address);
             return EXIT_FAILURE;
         }
         state[group] = value;
-        printf("Gr:%2d, Addr:0x%08zX, Data:0x%02zX = 0b", group, address,
-               value);
+        printf("Gr:%2d, Addr:0x%08zX, Data:0x%02X = 0b", group, address, value);
         print_bin(value, enabled[group]);
         address = GPIO_Base + (group * GPIO_Offset) + 0x400;
-        size_t direct;
+        uint32_t direct;
         if (!mem_reg(address, &direct, OP_READ)) {
-            fprintf(stderr, "Error at %#x\n", address);
+            fprintf(stderr, "Error at %#zx\n", address);
             return EXIT_FAILURE;
         }
-        printf(", Addr:0x%08zX, Dir:0x%02zX = 0b", address, direct);
+        printf(", Addr:0x%08zX, Dir:0x%02X = 0b", address, direct);
         print_bin(direct, enabled[group]);
         printf("\n");
     }
@@ -2599,9 +2601,9 @@ static int gpio_scan_cmd() {
         for (int group = 0; group < GPIO_Groups; group++) {
             size_t mask = enabled[group] << 2;
             size_t address = GPIO_Base + (group * GPIO_Offset) + mask;
-            size_t value;
+            uint32_t value;
             if (!mem_reg(address, &value, OP_READ)) {
-                fprintf(stderr, "Error at %#x\n", address);
+                fprintf(stderr, "Error at %#zx\n", address);
                 break;
             }
             if (state[group] != value) {
@@ -2612,7 +2614,7 @@ static int gpio_scan_cmd() {
                     if (old_bit != new_bit) {
                         if (HeaderByte == false) {
                             print_line(86);
-                            printf("Gr:%d, Addr:0x%08X, Data:0x%02X = 0b",
+                            printf("Gr:%d, Addr:0x%08zX, Data:0x%02zX = 0b",
                                    group, address, state[group]);
                             print_bin(state[group], enabled[group]);
                             printf(" --> 0x%02X = 0b", value);
@@ -2621,9 +2623,9 @@ static int gpio_scan_cmd() {
                             HeaderByte = true;
                         }
                         address = GPIO_Base + (group * GPIO_Offset) + 0x400;
-                        size_t direct;
+                        uint32_t direct;
                         if (!mem_reg(address, &direct, OP_READ)) {
-                            fprintf(stderr, "Error at %#x\n", address);
+                            fprintf(stderr, "Error at %#zx\n", address);
                             break;
                         }
                         direct = (direct >> bit) & 1;

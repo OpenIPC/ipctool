@@ -4,6 +4,7 @@
 #include "cjson/cYAML.h"
 
 #include "common.h"
+#include "reginfo.h"
 #include "tools.h"
 
 #include "vendors/anjoy.h"
@@ -43,6 +44,12 @@ cJSON *detect_board() {
         if (vendors[i].detector_fn())
             if (vendors[i].gatherinfo_fn(j_inner))
                 break;
+    }
+
+    char buf[1024] = {0};
+    const char *ircuts = gpio_possible_ircut(buf, sizeof(buf));
+    if (ircuts) {
+        ADD_PARAM("possible-IR-cut-GPIO", ircuts);
     }
 
     return fake_root;

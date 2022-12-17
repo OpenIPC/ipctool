@@ -308,8 +308,8 @@ int main(int argc, char *argv[]) {
 start_yaml:
     if (getchipname()) {
         yaml_printf("---\n");
-        yaml_fragment(detect_board());
         yaml_fragment(detect_chip());
+        yaml_fragment(detect_board());
         yaml_fragment(detect_ethernet());
         print_mtd_info();
         yaml_fragment(detect_ram());
