@@ -117,7 +117,7 @@ int yaml_printf(char *format, ...) {
     return ret;
 }
 
-void show_yaml(cJSON *json) {
+void yaml_fragment(cJSON *json) {
     if (!json)
         return;
 
@@ -140,17 +140,21 @@ void show_yaml(cJSON *json) {
     cJSON_Delete(json);
 }
 
-void print_chip_id() {
-    yaml_printf("chip:\n"
-                "  vendor: %s\n"
-                "  model: %s\n",
-                chip_manufacturer, chip_name);
+static cJSON *detect_chip() {
+    cJSON *fake_root = cJSON_CreateObject();
+    cJSON *j_inner = cJSON_CreateObject();
+    cJSON_AddItemToObject(fake_root, "chip", j_inner);
+
+    ADD_PARAM("vendor", chip_manufacturer);
+    ADD_PARAM("model", chip_name);
     if (chip_generation == 0x3516E300) {
         char buf[1024];
         if (hisi_ev300_get_die_id(buf, sizeof buf)) {
-            yaml_printf("  id: %s\n", buf);
+            ADD_PARAM("id", buf);
         }
     }
+
+    return fake_root;
 }
 
 enum {
@@ -319,19 +323,19 @@ int main(int argc, char *argv[]) {
 start_yaml:
     if (getchipname()) {
         yaml_printf("---\n");
-        show_yaml(get_board_info());
-        print_chip_id();
-        show_yaml(detect_ethernet());
+        yaml_fragment(detect_board());
+        yaml_fragment(detect_chip());
+        yaml_fragment(detect_ethernet());
         print_mtd_info();
-        show_yaml(detect_ram());
-        show_yaml(detect_firmare());
+        yaml_fragment(detect_ram());
+        yaml_fragment(detect_firmare());
     } else
         return EXIT_FAILURE;
 
     // flush stdout before go to sensor detection to avoid buggy kernel
     // freezes
     tcdrain(STDOUT_FILENO);
-    show_yaml(detect_sensors());
+    yaml_fragment(detect_sensors());
 
     if (modes & BACKUP_WAIT && backup_fp) {
         // trigger child process

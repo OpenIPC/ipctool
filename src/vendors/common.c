@@ -34,7 +34,7 @@ static const board_vendors_t vendors[] = {
     {is_sstar_board, gather_sstar_board_info},
 };
 
-cJSON *get_board_info() {
+cJSON *detect_board() {
     cJSON *fake_root = cJSON_CreateObject();
     cJSON *j_inner = cJSON_CreateObject();
     cJSON_AddItemToObject(fake_root, "board", j_inner);

@@ -669,7 +669,7 @@ static int do_upgrade(const char *filename, bool force) {
         return 1;
     }
 
-    cJSON *binfo = get_board_info();
+    cJSON *binfo = detect_board();
     char board[1024] = {0}, board_id[1024] = {0};
     cJSON *c_vendor = cJSON_GetObjectItem(binfo, "vendor");
     if (c_vendor) {
@@ -680,7 +680,7 @@ static int do_upgrade(const char *filename, bool force) {
     cJSON *c_model = cJSON_GetObjectItem(binfo, "model");
     if (c_model) {
         char *bstr = cJSON_GetStringValue(binfo);
-	strcpy(board_id, bstr);
+        strcpy(board_id, bstr);
         strcat(board, " ");
         strcat(board, bstr);
     }
