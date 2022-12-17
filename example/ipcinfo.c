@@ -121,13 +121,13 @@ static const char *flash_type(int a) {
 static void print_flash_type() {
     int devfd = open("/dev/mtd0", O_RDONLY);
     if (devfd < 0)
-        return;
+        exit(EXIT_FAILURE);
 
     mtd_info_t mtd_info;
-    if (ioctl(devfd, MEMGETINFO, &mtd_info) >= 0) {
-        puts(flash_type(mtd_info.type));
-    }
+    if (ioctl(devfd, MEMGETINFO, &mtd_info) < 0)
+        exit(EXIT_FAILURE);
 
+    puts(flash_type(mtd_info.type));
     close(devfd);
 }
 
@@ -250,6 +250,7 @@ int main(int argc, char **argv) {
             break;
         default:
             print_usage();
+            exit(EXIT_FAILURE);
         }
     }
 
