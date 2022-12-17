@@ -687,15 +687,26 @@ static void hisi_ev300_sensor_clock(cJSON *j_inner) {
 
 bool hisi_ev300_get_die_id(char *buf, ssize_t len) {
     uint32_t base_id_addr = 0x12020400;
+    char *ptr = buf;
     for (uint32_t id_addr = base_id_addr + 5 * 4; id_addr >= base_id_addr;
          id_addr -= 4) {
         uint32_t val;
         if (!mem_reg(id_addr, &val, OP_READ))
             return false;
-        int outsz = snprintf(buf, len, "%08x", val);
-        buf += outsz;
+        int outsz = snprintf(ptr, len, "%08x", val);
+        ptr += outsz;
         len -= outsz;
     }
+
+    // remove trailing zeroes
+    int nlen = strlen(buf);
+    for (int i = nlen; i > 0; i--) {
+        if (buf[i - 1] != '0') {
+            buf[i] = 0;
+            break;
+        }
+    }
+
     return true;
 }
 
