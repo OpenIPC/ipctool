@@ -70,7 +70,12 @@ static void print_usage() {
         "  -h, --help                display this help\n");
 }
 
-static void print_chip_family() { puts(getchipfamily()); }
+static void print_chip_family() {
+    const char *family = getchipfamily();
+    if (!family)
+        exit(EXIT_FAILURE);
+    puts(family);
+}
 
 static void print_chip_name() {
     const char *chipname = getchipname();

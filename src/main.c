@@ -147,7 +147,7 @@ static cJSON *detect_chip() {
 
     ADD_PARAM("vendor", chip_manufacturer);
     ADD_PARAM("model", chip_name);
-    if (chip_generation == 0x3516E300) {
+    if (chip_generation == HISI_V4) {
         char buf[1024];
         if (hisi_ev300_get_die_id(buf, sizeof buf)) {
             ADD_PARAM("id", buf);
