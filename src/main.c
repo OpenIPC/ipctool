@@ -140,15 +140,6 @@ void show_yaml(cJSON *json) {
     cJSON_Delete(json);
 }
 
-void print_system_id() {
-    if (!*system_manufacturer && !*system_id)
-        return;
-
-    yaml_printf("vendor: %s\n"
-                "model: %s\n",
-                system_manufacturer, system_id);
-}
-
 void print_chip_id() {
     yaml_printf("chip:\n"
                 "  vendor: %s\n"
@@ -329,7 +320,6 @@ start_yaml:
     if (getchipname()) {
         yaml_printf("---\n");
         show_yaml(get_board_info());
-        print_system_id();
         print_chip_id();
         show_yaml(detect_ethernet());
         print_mtd_info();

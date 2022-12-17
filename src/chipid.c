@@ -14,8 +14,6 @@
 #include "hal_common.h"
 #include "tools.h"
 
-char system_id[128];
-char system_manufacturer[128];
 int chip_generation;
 char chip_name[128];
 char chip_manufacturer[128];
