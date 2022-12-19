@@ -357,7 +357,7 @@ static bool umount_all() {
 }
 
 static void print_flash_progress(int cur, int max, char status) {
-    char *bar = alloca(max) + 1;
+    char *bar = alloca(max + 1);
     for (int i = 0; i < max; i++) {
         if (cur == i)
             bar[i] = status;
@@ -380,9 +380,10 @@ static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
             return -1;
         if (mtd->part[i].size + cur_off > find_off) {
             *new_offset = find_off - cur_off;
-            // printf("[%.8x] Map %d,%.8x -> %d,%.8x\n", find_off, old_num,
-            // find_off,
-            //       i, *new_offset);
+#if 0
+            printf("[%.8x] Map %d,%.8x -> %d,%.8x\n", find_off, old_num,
+                   find_off, i, *new_offset);
+#endif
             return i;
         }
         cur_off += mtd->part[i].size;
@@ -418,13 +419,14 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
                     printf("mtd_write(%d, %x, %x, %p, %zx)\n", newi,
                            this_offset, mtd->erasesize,
                            mtdbackup[i].data + c * chunk, chunk);
-#endif
+#else
                     if (!mtd_write(newi, this_offset, mtd->erasesize,
                                    mtdbackup[i].data + c * chunk, chunk)) {
                         fprintf(stderr,
                                 "\nSomething went wrong, aborting...\n");
                         return false;
                     }
+#endif
                 }
             }
         }
