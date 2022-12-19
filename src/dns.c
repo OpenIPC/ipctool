@@ -170,9 +170,9 @@ bool resolv_name(nservers_t *ns, const char *hostname, a_records_t *srv) {
 
     uint8_t response[MAX_DNS_PACKET];
     memset(&response, 0, MAX_DNS_PACKET);
-    ssize_t rlen;
+    ssize_t rlen = 0;
 
-    for (int i = 0; i < ns->len; i++) {
+    for (size_t i = 0; i < ns->len; i++) {
         address.sin_addr.s_addr = ns->ipv4_addr[i];
 
         /* Send the packet to DNS server, then request the response */
@@ -209,7 +209,7 @@ void add_predefined_ns(nservers_t *ns, ...) {
 }
 
 void print_nservers(nservers_t *ns) {
-    for (int i = 0; i < ns->len; i++) {
+    for (size_t i = 0; i < ns->len; i++) {
         char buf[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &ns->ipv4_addr[i], buf, sizeof(buf));
         printf("nameserver %s\n", buf);
@@ -217,7 +217,7 @@ void print_nservers(nservers_t *ns) {
 }
 
 static void print_a_records(a_records_t *srv) {
-    for (int i = 0; i < srv->len; i++) {
+    for (size_t i = 0; i < srv->len; i++) {
         char buf[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &srv->ipv4_addr[i], buf, sizeof(buf));
         printf("IP: %s\n", buf);

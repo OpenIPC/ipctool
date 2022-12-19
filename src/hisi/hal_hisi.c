@@ -259,7 +259,7 @@ int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
     rdwr.msgs = &msg[0];
     rdwr.nmsgs = (__u32)2;
 
-    for (int cur_addr = reg_addr; cur_addr <= reg_addr_end; cur_addr += 1) {
+    for (size_t cur_addr = reg_addr; cur_addr <= reg_addr_end; cur_addr += 1) {
         if (reg_width == 2) {
             buf[0] = (cur_addr >> 8) & 0xff;
             buf[1] = cur_addr & 0xff;

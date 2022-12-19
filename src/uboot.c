@@ -64,10 +64,10 @@ int uboot_detect_env(void *buf, size_t size, size_t erasesize) {
     // Jump over memory by step
     int scan_step = erasesize;
 
-    for (int baddr = 0; baddr < size; baddr += scan_step) {
+    for (size_t baddr = 0; baddr < size; baddr += scan_step) {
         uint32_t expected_crc = *(int *)(buf + baddr);
 
-        for (int i = 0; i < sizeof(possible_lens) / sizeof(possible_lens[0]);
+        for (size_t i = 0; i < sizeof(possible_lens) / sizeof(possible_lens[0]);
              i++) {
             if (possible_lens[i] + baddr > size)
                 continue;
@@ -208,6 +208,7 @@ typedef struct {
 
 static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
                          void *ctx) {
+    (void)name;
     int fd;
     char *addr = open_mtdblock(i, &fd, mtd->size, 0);
     if (!addr)
@@ -215,7 +216,7 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
 
     ctx_uboot_t *c = (ctx_uboot_t *)ctx;
     if (i < ENV_MTD_NUM) {
-        size_t u_off = uboot_detect_env(addr, mtd->size, mtd->erasesize);
+        int u_off = uboot_detect_env(addr, mtd->size, mtd->erasesize);
         if (u_off != -1) {
             switch (c->op) {
             case OP_PRINTENV:

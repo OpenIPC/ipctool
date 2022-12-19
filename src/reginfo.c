@@ -2148,7 +2148,7 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func);
 
 static const char *get_function(const char *const *func, unsigned val) {
-    for (int i = 0; func[i]; i++) {
+    for (size_t i = 0; func[i]; i++) {
         if (i == val)
             return func[i] ? func[i] : "reserved";
     }
@@ -2157,7 +2157,7 @@ static const char *get_function(const char *const *func, unsigned val) {
 }
 
 static void show_function(const char *const *func, unsigned val) {
-    for (int i = 0; func[i]; i++) {
+    for (size_t i = 0; func[i]; i++) {
         if (i == val)
             printf(" [%s]", func[i] ? func[i] : "reserved");
         else
@@ -2195,14 +2195,14 @@ static const muxctrl_reg_t **regs_by_chip() {
             return _8EV300regs;
         else if (IS_16DV200)
             return DV200regs;
+        break;
     case HISI_3536C:
         return RCV100regs;
     case HISI_3536D:
         return DV100regs;
-    default:
-        fprintf(stderr, "Platform is not supported\n");
-        exit(EXIT_FAILURE);
     }
+    fprintf(stderr, "Platform is not supported\n");
+    exit(EXIT_FAILURE);
 }
 
 static int dump_regs(bool script_mode) {
@@ -2494,7 +2494,7 @@ static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
     memset(enabled, 0, sizeof(size_t) * GPIO_Groups);
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         const char *const *func = regs[reg_num]->funcs;
-        for (int i = 0; func[i]; i++) {
+        for (size_t i = 0; func[i]; i++) {
             if (!strncmp("GPIO", func[i], 4)) {
                 uint32_t val;
                 if (!mem_reg(regs[reg_num]->address, &val, OP_READ)) {

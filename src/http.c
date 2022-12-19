@@ -143,6 +143,7 @@ int connect_with_timeout(int sockfd, const struct sockaddr *addr,
 static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
                           int *s) {
     int ret = ERR_GENERAL;
+    (void)uri;
 
     a_records_t srv;
     if (!resolv_name(ns, hostname, &srv)) {
@@ -156,7 +157,7 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
     addr.sin_family = AF_INET;
     addr.sin_port = htons(80);
 
-    for (int i = 0; i < srv.len; i++) {
+    for (size_t i = 0; i < srv.len; i++) {
         memcpy(&addr.sin_addr, &srv.ipv4_addr[i], sizeof(uint32_t));
 
 #ifndef NDEBUG
@@ -264,7 +265,7 @@ int upload(const char *hostname, const char *uri, nservers_t *ns,
     }
 
     size_t len = 0;
-    for (int i = 0; i < blocks_num; i++) {
+    for (size_t i = 0; i < blocks_num; i++) {
         len += blocks[i].len;
         // add len header
         if (i)
@@ -289,7 +290,7 @@ int upload(const char *hostname, const char *uri, nservers_t *ns,
     if (nsent != tosent)
         return ERR_SEND;
 
-    for (int i = 0; i < blocks_num; i++) {
+    for (size_t i = 0; i < blocks_num; i++) {
         if (i) {
             uint32_t len_header = blocks[i].len;
             write(s, &len_header, sizeof(len_header));

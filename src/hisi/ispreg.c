@@ -759,7 +759,7 @@ struct PT_INTF_MOD {
 // cv500 - 0x1000 + PT_N x 0x100
 // ev300 - 0x1000 + PT_N x 0x100
 
-const int hisi_vi_is_running(cJSON *j_inner) {
+int hisi_vi_is_running(cJSON *j_inner) {
     uint32_t vicap0 = 0, vicap1 = 0, PT_N = 0;
     switch (chip_generation) {
     case HISI_V1:

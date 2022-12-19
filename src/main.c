@@ -273,6 +273,7 @@ int main(int argc, char *argv[]) {
 
         default:
             printf("found unknown option\n");
+            // fall through
         case '?':
             print_usage();
             return EXIT_FAILURE;

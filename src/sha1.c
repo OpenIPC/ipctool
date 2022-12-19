@@ -269,7 +269,7 @@ void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
 
 void SHA1(char *hash_out, const char *str, int len) {
     SHA1_CTX ctx;
-    unsigned int ii;
+    int ii;
 
     SHA1Init(&ctx);
     for (ii = 0; ii < len; ii += 1)

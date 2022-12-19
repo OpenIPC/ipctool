@@ -61,7 +61,7 @@ static bool generic_detect_cpu() {
     }
     strcpy(chip_manufacturer, buf);
 
-    for (int i = 0; i < ARRCNT(manufacturers); i++) {
+    for (size_t i = 0; i < ARRCNT(manufacturers); i++) {
         if (!strcmp(manufacturers[i].hardware_pattern, chip_manufacturer))
             if (manufacturers[i].detect_fn(chip_name)) {
                 if (manufacturers[i].override_vendor)

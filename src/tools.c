@@ -272,7 +272,7 @@ pid_t get_god_pid(char *shortname, size_t shortsz) {
 
     unsigned long max = 0;
     char sname[1024], prname[255], maxname[255] = {0};
-    pid_t godpid;
+    pid_t godpid = -1;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
         if (*entry->d_name && isdigit(entry->d_name[0])) {

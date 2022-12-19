@@ -50,7 +50,12 @@ bool universal_close_sensor_fd(int fd) {
 
 // Set I2C slave address,
 // actually do nothing
-int dummy_sensor_i2c_change_addr(int fd, unsigned char addr) { return 0; }
+int dummy_sensor_i2c_change_addr(int fd, unsigned char addr) {
+    (void)fd;
+    (void)addr;
+
+    return 0;
+}
 
 // Universal I2C code
 int universal_i2c_change_addr(int fd, unsigned char addr) {
@@ -63,6 +68,8 @@ int universal_i2c_change_addr(int fd, unsigned char addr) {
 int universal_i2c_write_register(int fd, unsigned char i2c_addr,
                                  unsigned int reg_addr, unsigned int reg_width,
                                  unsigned int data, unsigned int data_width) {
+    (void)i2c_addr;
+    (void)data;
     char buf[2];
 
     if (reg_width == 2) {
@@ -72,7 +79,7 @@ int universal_i2c_write_register(int fd, unsigned char i2c_addr,
         buf[0] = reg_addr & 0xff;
     }
 
-    if (write(fd, buf, data_width) != data_width) {
+    if (write(fd, buf, data_width) != (int)data_width) {
         return -1;
     }
     return 0;
@@ -81,6 +88,7 @@ int universal_i2c_write_register(int fd, unsigned char i2c_addr,
 int universal_i2c_read_register(int fd, unsigned char i2c_addr,
                                 unsigned int reg_addr, unsigned int reg_width,
                                 unsigned int data_width) {
+    (void)i2c_addr;
     unsigned char recvbuf[4];
     unsigned int data;
 
@@ -120,6 +128,9 @@ static int universal_spi_read_register(int fd, unsigned char i2c_addr,
                                        unsigned int reg_addr,
                                        unsigned int reg_width,
                                        unsigned int data_width) {
+    (void)i2c_addr;
+    (void)reg_width;
+    (void)data_width;
     int ret = 0;
     struct spi_ioc_transfer mesg[1];
     unsigned char tx_buf[8] = {0};
@@ -149,6 +160,9 @@ static int universal_spi_read_register(int fd, unsigned char i2c_addr,
 int universal_spi_write_register(int fd, unsigned char i2c_addr,
                                  unsigned int reg_addr, unsigned int reg_width,
                                  unsigned int data, unsigned int data_width) {
+    (void)i2c_addr;
+    (void)reg_width;
+    (void)data_width;
     int ret = 0;
     struct spi_ioc_transfer mesg[1];
     unsigned char tx_buf[8] = {0};

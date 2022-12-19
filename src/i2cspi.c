@@ -127,7 +127,7 @@ static void hexdump(read_register_t cb, int fd, unsigned char i2c_addr,
                     unsigned int from_reg_addr, unsigned int to_reg_addr) {
     char ascii[17] = {0};
 
-    int size = to_reg_addr - from_reg_addr;
+    size_t size = to_reg_addr - from_reg_addr;
     printf("       0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
     for (size_t i = from_reg_addr; i < to_reg_addr; ++i) {
         int res = cb(fd, i2c_addr, i, SELECT_WIDE(i), 1);
@@ -187,6 +187,9 @@ static int i2cdump(int argc, char **argv, bool script_mode) {
 }
 
 static int i2cdetect(int argc, char **argv, bool script_mode) {
+    (void)argv;
+    (void)script_mode;
+
     if (argc != 0) {
         puts("Usage: ipctool i2cdetect");
         return EXIT_FAILURE;
@@ -202,7 +205,7 @@ static int i2cdetect(int argc, char **argv, bool script_mode) {
         if (i2c_addr % 16 == 0)
             printf("%4.x: ", i2c_addr);
 
-        if (res != 0xffffffff) {
+        if (res != -1) {
             printf("%x ", i2c_addr);
         } else {
             printf("xx ");

@@ -45,7 +45,7 @@ struct {
     uint8_t be;
 } sns_regs[] = {
     {"SC2315E", sc2315e_regs, .be = 1},
-    {"IMX385", imx385_regs},
+    {"IMX385", imx385_regs, .be = 0},
 };
 
 static int prepare_i2c_sensor(unsigned char i2c_addr) {

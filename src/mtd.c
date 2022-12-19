@@ -149,7 +149,7 @@ static bool examine_part(int part_num, size_t size, size_t erasesize,
     }
 
     if (!uenv_detected && part_num < 2) {
-        size_t u_off = uboot_detect_env(addr, size, erasesize);
+        int u_off = uboot_detect_env(addr, size, erasesize);
         if (u_off != -1) {
             uenv_detected = true;
             sprintf(contains + strlen(contains),
@@ -201,11 +201,12 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     }
     if (!c->mpoints[i].rw) {
         char contains[1024] = {0};
-        uint32_t sha1;
-        examine_part(i, mtd->size, mtd->erasesize, &sha1, contains);
-        yaml_printf("        sha1: %.8x\n", sha1);
-        if (*contains) {
-            yaml_printf("        contains:\n%s", contains);
+        uint32_t sha1 = 0;
+        if (examine_part(i, mtd->size, mtd->erasesize, &sha1, contains)) {
+            yaml_printf("        sha1: %.8x\n", sha1);
+            if (*contains) {
+                yaml_printf("        contains:\n%s", contains);
+            }
         }
     }
     c->totalsz += mtd->size;
@@ -333,7 +334,7 @@ bool mtd_write_block(int fd, int offset, const char *data, size_t size) {
 
     // fprintf(stderr, "Writing buffer sized: %x\n", size);
     int nbytes = write(fd, data, size);
-    if (nbytes != size) {
+    if (nbytes != (int)size) {
         fprintf(stderr, "Writed block size is equal to %d rather than %d\n",
                 nbytes, size);
         return false;
@@ -353,7 +354,7 @@ bool mtd_verify_block(int mtd, int fd, int offset, const char *data,
 
     // fprintf(stderr, "Reading buffer sized: %x\n", size);
     int nbytes = read(fd, buf, size);
-    if (nbytes != size) {
+    if (nbytes != (int)size) {
         fprintf(stderr, "Readed block size is equal to %d rather than %d\n",
                 nbytes, size);
         goto quit;

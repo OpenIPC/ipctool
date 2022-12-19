@@ -97,14 +97,14 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
     }
 
     size_t len = 0;
-    for (int i = 0; i < blocks_num; i++) {
+    for (size_t i = 0; i < blocks_num; i++) {
         len += blocks[i].len;
         // add len header
         if (i)
             len += sizeof(uint32_t);
     }
 
-    for (int i = 0; i < blocks_num; i++) {
+    for (size_t i = 0; i < blocks_num; i++) {
         if (i) {
             uint32_t len_header = blocks[i].len;
             fwrite(&len_header, 1, sizeof(len_header), fp);
@@ -241,7 +241,7 @@ static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
                     offset += mi[i].size;
                 } else if (!strncmp(param, "name: ", 6)) {
                     memcpy(mi[i].name, param + 6,
-                           MIN(ptr - param - 6, sizeof(mi[i]) - 1));
+                           MIN(ptr - param - 6, (int)sizeof(mi[i]) - 1));
                 } else if (!strncmp(param, "sha1: ", 6))
                     memcpy(mi[i].sha1, param + 6, MIN(ptr - param - 6, 8));
             }
@@ -267,7 +267,7 @@ typedef struct {
     size_t env_offset;
 } mtd_restore_ctx_t;
 
-static size_t mtd_size_by_name(mtd_restore_ctx_t *ctx, const char *name) {
+static ssize_t mtd_size_by_name(mtd_restore_ctx_t *ctx, const char *name) {
     for (int i = 0; i < MAX_MTDBLOCKS; i++) {
         if (!strcmp(ctx->part[i].name, name))
             return ctx->part[i].size;
@@ -286,7 +286,7 @@ static bool cb_mtd_restore(int i, const char *name, struct mtd_info_user *mtd,
         char *addr = open_mtdblock(i, &fd, mtd->size, 0);
         if (!addr)
             return true;
-        size_t u_off = uboot_detect_env(addr, mtd->size, mtd->erasesize);
+        int u_off = uboot_detect_env(addr, mtd->size, mtd->erasesize);
         if (u_off != -1) {
             c->env_dev = i;
             c->env_offset = u_off;
@@ -500,7 +500,7 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
 
     if (backup) {
         char *pptr = backup + strnlen(backup, size) + 1;
-        if (pptr - backup >= size) {
+        if (pptr - backup >= (int)size) {
             fprintf(stderr, "Broken description found, aborting...\n");
             goto bailout;
         }
@@ -541,7 +541,7 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
                 goto bailout;
             }
             pptr += 4;
-            if (pptr + blen - backup > size) {
+            if (pptr + blen - backup > (int)size) {
                 fprintf(stderr, "Early backup end found, aborting...\n");
                 goto bailout;
             }
@@ -574,7 +574,7 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
 
             pptr += blen;
         }
-        if (tsize != mtd.totalsz) {
+        if ((ssize_t)tsize != mtd.totalsz) {
             fprintf(stderr,
                     "Broken backup: backup size: 0x%x, real flash size: 0x%x\n",
                     tsize, mtd.totalsz);
@@ -776,7 +776,7 @@ static int do_upgrade(const char *filename, bool force) {
         cJSON_ArrayForEach(skip_env, skip_envs) {
             if (cJSON_IsString(skip_env)) {
                 const char *name = skip_env->valuestring;
-                size_t size = mtd_size_by_name(&mtd, name);
+                ssize_t size = mtd_size_by_name(&mtd, name);
                 if (size != -1) {
                     add_mtdpart(mtdparts, name, size);
                     curr_mtd_part++;

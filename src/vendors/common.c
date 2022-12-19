@@ -40,7 +40,7 @@ cJSON *detect_board() {
     cJSON *j_inner = cJSON_CreateObject();
     cJSON_AddItemToObject(fake_root, "board", j_inner);
 
-    for (int i = 0; i < ARRCNT(vendors); i++) {
+    for (size_t i = 0; i < ARRCNT(vendors); i++) {
         if (vendors[i].detector_fn())
             if (vendors[i].gatherinfo_fn(j_inner))
                 break;

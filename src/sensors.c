@@ -44,18 +44,21 @@ static int sony_imx291_fps(u_int8_t frsel, u_int16_t hmax) {
             return 30;
         else if (hmax == 0x14A0)
             return 25;
+        break;
     case 1:
         // 60/50
         if (hmax == 0x0898)
             return 60;
         else if (hmax == 0x0A50)
             return 50;
+        break;
     case 0:
         // 120/100
         if (hmax == 0x044C)
             return 120;
         else if (hmax == 0x0528)
             return 100;
+        break;
     }
     return 0;
 }
@@ -274,8 +277,9 @@ static int detect_soi_sensor(sensor_ctx_t *ctx, int fd,
             sprintf(ctx->sensor_id, "JXQ03P");
             return true;
         }
-    // it can be another sensor type
+        // fall through
     case 0:
+    // it can be another sensor type
     case 0xff:
         return false;
     default:
