@@ -514,7 +514,7 @@ static void puttabs(int cnt) {
 #define INT_ARRAY(name, data)                                                  \
     puttabs(level);                                                            \
     printf("." #name " = {");                                                  \
-    for (int i = 0; i < ARRAY_SIZE(data); i++) {                               \
+    for (size_t i = 0; i < ARRCNT(data); i++) {                                \
         printf("%s%d", i != 0 ? ", " : "", data[i]);                           \
     }                                                                          \
     puts("},")

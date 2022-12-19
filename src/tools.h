@@ -37,7 +37,6 @@
     }
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof(*array))
 
 enum REG_OPS { OP_READ, OP_WRITE };
 

@@ -126,7 +126,7 @@ static int monitor() {
         return EXIT_FAILURE;
     }
 
-    for (int i = 0; i < ARRAY_SIZE(sns_regs); i++) {
+    for (size_t i = 0; i < ARRCNT(sns_regs); i++) {
         if (!strcmp(sns_regs[i].sns_name, ctx.sensor_id))
             return monitor_sensor(&ctx, sns_regs[i].reg, sns_regs[i].be);
     }
