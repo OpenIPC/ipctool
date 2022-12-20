@@ -67,7 +67,6 @@ static bool generic_detect_cpu() {
                 if (manufacturers[i].override_vendor)
                     strcpy(chip_manufacturer, manufacturers[i].override_vendor);
                 manufacturers[i].setup_hal_fn();
-                puts("setup_hal_fn");
                 return true;
             }
     }

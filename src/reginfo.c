@@ -2321,7 +2321,6 @@ static bool get_chip_gpio_adress(size_t *GPIO_Base, size_t *GPIO_Offset,
         *GPIO_Groups = 6;
         break;
     default:
-        fprintf(stderr, "Chip is not supported\n");
         return false;
     }
     return true;
@@ -2333,8 +2332,10 @@ static int gpio_manipulate(char **argv, bool set_op) {
     size_t GPIO_Offset = 0;
 
     getchipname();
-    if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
+    if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups)) {
+        fprintf(stderr, "Chip is not supported\n");
         return EXIT_FAILURE;
+    }
 
     const char *gpio_num = argv[1];
     gpio_mux_by(gpio_num, -1, NULL);

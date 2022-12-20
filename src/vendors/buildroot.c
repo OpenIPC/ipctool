@@ -30,8 +30,8 @@ bool gather_br_board_info(cJSON *j_inner) {
     char buf[256];
     if (get_regex_line_from_file("/etc/os-release", "OPENIPC_VERSION=(.+)", buf,
                                  sizeof(buf))) {
-        ADD_PARAM("version", buf);
         ADD_PARAM("vendor", "OpenIPC");
+        ADD_PARAM("version", buf);
         return true;
     }
     if (get_regex_line_from_file("/etc/os-release", "VERSION_ID=(.+)", buf,
