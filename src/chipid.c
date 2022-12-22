@@ -48,13 +48,14 @@ static const manufacturers_t manufacturers[] = {
     {"Grain-Media", gm_detect_cpu, NULL, gm_setup_hal},
     {"FH", fh_detect_cpu, "Fullhan", setup_hal_fh},
     {"isvp", ingenic_detect_cpu, "Ingenic", setup_hal_ingenic},
-    {"Rockchip", rockchip_detect_cpu, NULL, setup_hal_rockchip},
+    {NULL, rockchip_detect_cpu, "Rockchip", setup_hal_rockchip},
     {"Xilinx", xilinx_detect_cpu, NULL, setup_hal_xilinx},
 };
 
 static bool generic_detect_cpu() {
     char buf[256];
 
+    strcpy(chip_name, "unknown");
     bool res = get_regex_line_from_file(
         "/proc/cpuinfo", "Hardware\\t+: ([a-zA-Z-]+)", buf, sizeof(buf));
     if (!res) {
@@ -66,17 +67,19 @@ static bool generic_detect_cpu() {
     strcpy(chip_manufacturer, buf);
 
     for (size_t i = 0; i < ARRCNT(manufacturers); i++) {
-        if (!strcmp(manufacturers[i].hardware_pattern, chip_manufacturer))
-            if (manufacturers[i].detect_fn(chip_name)) {
-                if (manufacturers[i].override_vendor)
-                    strcpy(chip_manufacturer, manufacturers[i].override_vendor);
-                manufacturers[i].setup_hal_fn();
-                return true;
-            }
+        if (manufacturers[i].hardware_pattern &&
+            strcmp(manufacturers[i].hardware_pattern, chip_manufacturer))
+            continue;
+
+        if (manufacturers[i].detect_fn(chip_name)) {
+            if (manufacturers[i].override_vendor)
+                strcpy(chip_manufacturer, manufacturers[i].override_vendor);
+            manufacturers[i].setup_hal_fn();
+            return true;
+        }
     }
 
-    strcpy(chip_name, "unknown");
-    return true;
+    return false;
 }
 
 static bool detect_and_set(const char *manufacturer,
