@@ -122,8 +122,50 @@ int dmesg() {
     return EXIT_SUCCESS;
 }
 
-bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
-                              size_t buflen) {
+bool dts_items_by_regex(const char *filename, const char *re, char *outbuf,
+                        size_t outlen) {
+    long res = false;
+
+    FILE *f = fopen(filename, "r");
+    if (!f)
+        return false;
+
+    fseek(f, 0L, SEEK_END);
+    int fsize = ftell(f);
+    rewind(f);
+    char *text = malloc(fsize + 1);
+    fread(text, 1, fsize, f);
+    text[fsize] = 0;
+
+    for (int i = 0; i < fsize; i++) {
+        if (text[i] == 0)
+            text[i] = '\n';
+    }
+
+    regex_t regex;
+    regmatch_t matches[2];
+    if (!compile_regex(&regex, re))
+        goto exit;
+
+    if (regexec(&regex, text, ARRCNT(matches), matches, 0) == 0) {
+        regoff_t start = matches[1].rm_so;
+        regoff_t end = matches[1].rm_eo;
+
+        text[end] = 0;
+        strncpy(outbuf, text + start, outlen);
+        res = true;
+    }
+
+exit:
+    free(text);
+    regfree(&regex);
+    fclose(f);
+
+    return res;
+}
+
+bool get_regex_line_from_file(const char *filename, const char *re,
+                              char *outbuf, size_t outlen) {
     long res = false;
 
     FILE *f = fopen(filename, "r");
@@ -137,16 +179,14 @@ bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
 
     char *line = NULL;
     size_t len = 0;
-    ssize_t read;
 
-    while ((read = getline(&line, &len, f)) != -1) {
-        if (regexec(&regex, line, sizeof(matches) / sizeof(matches[0]),
-                    (regmatch_t *)&matches, 0) == 0) {
+    while (getline(&line, &len, f) != -1) {
+        if (regexec(&regex, line, ARRCNT(matches), matches, 0) == 0) {
             regoff_t start = matches[1].rm_so;
             regoff_t end = matches[1].rm_eo;
 
             line[end] = 0;
-            strncpy(buf, line + start, buflen);
+            strncpy(outbuf, line + start, outlen);
             res = true;
             break;
         }
