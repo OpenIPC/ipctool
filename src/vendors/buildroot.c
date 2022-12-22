@@ -36,6 +36,7 @@ bool gather_br_board_info(cJSON *j_inner) {
     }
     if (get_regex_line_from_file("/etc/os-release", "VERSION_ID=(.+)", buf,
                                  sizeof(buf))) {
+        ADD_PARAM("vendor", "Buildroot");
         ADD_PARAM("version", buf);
         return true;
     }
