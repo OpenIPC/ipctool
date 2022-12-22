@@ -28,6 +28,7 @@ void (*hal_detect_ethernet)(cJSON *root);
 unsigned long (*hal_totalmem)(unsigned long *media_mem);
 const char *(*hal_fmc_mode)(void);
 void (*hal_chip_properties)(cJSON *root);
+void (*hal_firmware_props)(cJSON *root);
 #endif
 
 int universal_open_sensor_fd(const char *dev_name) {

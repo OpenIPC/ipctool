@@ -12,6 +12,7 @@
 #include "cjson/cYAML.h"
 
 #include "firmware.h"
+#include "hal_common.h"
 #include "tools.h"
 #include "uboot.h"
 
@@ -29,23 +30,6 @@ static void get_god_app(cJSON *j_inner) {
         ADD_PARAM("main-app", sname);
 
         fclose(fp);
-    }
-}
-
-static void get_hisi_sdk(cJSON *j_inner) {
-    char buf[1024];
-
-    if (get_regex_line_from_file("/proc/umap/sys", "Version: \\[(.+)\\]", buf,
-                                 sizeof(buf))) {
-        char *ptr = strchr(buf, ']');
-        char *build = strchr(buf, '[');
-        if (!ptr || !build)
-            return;
-        *ptr++ = ' ';
-        *ptr++ = '(';
-        strcpy(ptr, build + 1);
-        strcat(ptr, ")");
-        ADD_PARAM("sdk", buf);
     }
 }
 
@@ -142,7 +126,8 @@ cJSON *detect_firmare() {
 
     get_kernel_version(j_inner);
     get_libc(j_inner);
-    get_hisi_sdk(j_inner);
+    if (hal_firmware_props)
+        hal_firmware_props(j_inner);
     get_god_app(j_inner);
 
     return fake_root;

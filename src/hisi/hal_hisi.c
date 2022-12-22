@@ -383,6 +383,23 @@ static void hisi_hal_cleanup() {
     restore_printk();
 }
 
+static void get_hisi_sdk(cJSON *j_inner) {
+    char buf[1024];
+
+    if (get_regex_line_from_file("/proc/umap/sys", "Version: \\[(.+)\\]", buf,
+                                 sizeof(buf))) {
+        char *ptr = strchr(buf, ']');
+        char *build = strchr(buf, '[');
+        if (!ptr || !build)
+            return;
+        *ptr++ = ' ';
+        *ptr++ = '(';
+        strcpy(ptr, build + 1);
+        strcat(ptr, ")");
+        ADD_PARAM("sdk", buf);
+    }
+}
+
 void setup_hal_hisi() {
     disable_printk();
     if (chip_generation == HISI_V3)
@@ -414,6 +431,7 @@ void setup_hal_hisi() {
     hal_totalmem = hisi_totalmem;
     hal_fmc_mode = hisi_detect_fmc;
     hal_chip_properties = hisi_chip_properties;
+    hal_firmware_props = get_hisi_sdk;
 #endif
 }
 

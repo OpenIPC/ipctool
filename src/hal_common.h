@@ -13,6 +13,7 @@
 #include "hal_novatek.h"
 #include "hal_rockchip.h"
 #include "hal_sstar.h"
+#include "hal_tegra.h"
 #include "hal_xilinx.h"
 #include "hal_xm.h"
 #include "hisi/hal_hisi.h"
@@ -88,6 +89,7 @@ extern void (*hal_detect_ethernet)(cJSON *handle);
 extern unsigned long (*hal_totalmem)(unsigned long *media_mem);
 extern const char *(*hal_fmc_mode)(void);
 extern void (*hal_chip_properties)(cJSON *root);
+extern void (*hal_firmware_props)(cJSON *root);
 #endif
 
 void setup_hal_fallback();

@@ -19,11 +19,11 @@
 #include "sensors.h"
 #include "tools.h"
 
-int (*sensor_read_register)(int fd, unsigned char i2c_addr,
-                            unsigned int reg_addr, unsigned int reg_width,
-                            unsigned int data_width);
+static read_register_t sensor_read_register;
+static write_register_t sensor_write_register;
 
-#define READ(addr) sensor_read_register(fd, i2c_addr, addr + 0x3000, 2, 1)
+#define READ_0(addr) sensor_read_register(fd, i2c_addr, addr, 2, 1)
+#define READ(addr) READ_0((addr) + 0x3000)
 
 #ifndef STANDALONE_LIBRARY
 #define SENSOR_ERR(name, code)                                                 \
@@ -35,6 +35,64 @@ int (*sensor_read_register)(int fd, unsigned char i2c_addr,
 #endif
 
 #ifndef STANDALONE_LIBRARY
+
+#define IMX219_TEMP 0x140
+static int sony_imx219_tempc(int code) {
+    if (code < 6)
+        return -10;
+    if (code < 12)
+        return -5;
+    if (code < 18)
+        return 0;
+    if (code < 24)
+        return 5;
+    if (code < 30)
+        return 10;
+    if (code < 36)
+        return 15;
+    if (code < 43)
+        return 20;
+    if (code < 49)
+        return 25;
+    if (code < 55)
+        return 30;
+    if (code < 61)
+        return 35;
+    if (code < 67)
+        return 40;
+    if (code < 73)
+        return 45;
+    if (code < 79)
+        return 50;
+    if (code < 85)
+        return 55;
+    if (code < 91)
+        return 60;
+    if (code < 97)
+        return 65;
+    if (code < 104)
+        return 70;
+    if (code < 110)
+        return 75;
+    if (code < 116)
+        return 80;
+    if (code < 122)
+        return 85;
+    if (code < 128)
+        return 90;
+    return 95;
+}
+
+static void sony_imx219_params(sensor_ctx_t *ctx, int fd,
+                               unsigned char i2c_addr) {
+    cJSON *j_inner = cJSON_CreateObject();
+
+    sensor_write_register(fd, i2c_addr, IMX219_TEMP, 2, 0x80, 1);
+    // https://forums.developer.nvidia.com/t/i2c-regmap-read-issue/154601/4
+    usleep(500000);
+    int temp = sony_imx219_tempc(READ_0(IMX219_TEMP));
+    ADD_PARAM_NUM("temp", temp);
+}
 
 static int sony_imx291_fps(u_int8_t frsel, u_int16_t hmax) {
     switch (frsel) {
@@ -92,7 +150,6 @@ static void sony_imx291_params(sensor_ctx_t *ctx, int fd,
     ADD_PARAM_NUM("fps", sony_imx291_fps(frsel, hmax))
     ctx->j_params = j_inner;
 }
-
 #endif
 
 static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
@@ -238,6 +295,15 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
             }
         }
         }
+    }
+
+    // special case for IMX219 (it has own chip id registers)
+    if (READ_0(0) == 0x2 && READ_0(1) == 0x19) {
+        sprintf(ctx->sensor_id, "IMX219");
+#ifndef STANDALONE_LIBRARY
+        sony_imx219_params(ctx, fd, i2c_addr);
+#endif
+        return true;
     }
 
     return false;
@@ -707,6 +773,7 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
         return false;
 
     sensor_read_register = i2c_read_register;
+    sensor_write_register = i2c_write_register;
     if (detect_possible_sensors(ctx, fd, detect_soi_sensor, SENSOR_SOI)) {
         strcpy(ctx->vendor, "Silicon Optronics");
         ctx->reg_width = 1;

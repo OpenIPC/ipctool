@@ -52,6 +52,8 @@ set(COMMON_LIB_SRC
     src/hal_rockchip.h
     src/hal_sstar.c
     src/hal_sstar.h
+    src/hal_tegra.c
+    src/hal_tegra.h
     src/hal_xilinx.c
     src/hal_xilinx.h
     src/hal_xm.c
@@ -104,7 +106,7 @@ set(IPCTOOL_SRC
     src/sha1.h
     src/snstool.c
     src/snstool.h
-    src/stack.c
+    #src/stack.c
     src/uboot.c
     src/uboot.h
     src/watchdog.c

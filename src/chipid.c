@@ -55,11 +55,12 @@ static const manufacturers_t manufacturers[] = {
     {"Xilinx", xilinx_detect_cpu, NULL, setup_hal_xilinx},
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
+    {NULL, tegra_detect_cpu, "Nvidia", tegra_setup_hal},
 #endif
 };
 
 static bool generic_detect_cpu() {
-    char buf[256];
+    char buf[256] = "unknown";
 
     strcpy(chip_name, "unknown");
     bool res = get_regex_line_from_file(
@@ -67,8 +68,6 @@ static bool generic_detect_cpu() {
     if (!res) {
         res = get_regex_line_from_file("/proc/cpuinfo", "vendor_id\t+: (.+)",
                                        buf, sizeof(buf));
-        if (!res)
-            return false;
     }
     strcpy(chip_manufacturer, buf);
 
