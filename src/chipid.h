@@ -7,7 +7,6 @@ extern int chip_generation;
 extern char chip_name[128];
 extern char control[128];
 extern char sensor_id[128];
-extern char sensor_manufacturer[128];
 extern char nor_chip[128];
 
 const char *getchipname();

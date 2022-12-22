@@ -19,7 +19,7 @@
 
 int chip_generation;
 char chip_name[128];
-char chip_manufacturer[128];
+static char chip_manufacturer[128];
 char nor_chip[128];
 
 static long get_uart0_address() {
@@ -48,7 +48,7 @@ static const manufacturers_t manufacturers[] = {
     {"Grain-Media", gm_detect_cpu, NULL, gm_setup_hal},
     {"FH", fh_detect_cpu, "Fullhan", setup_hal_fh},
     {"isvp", ingenic_detect_cpu, "Ingenic", setup_hal_ingenic},
-    {NULL, rockchip_detect_cpu, "Rockchip", setup_hal_rockchip},
+    {NULL /* Generic */, rockchip_detect_cpu, "Rockchip", setup_hal_rockchip},
     {"Xilinx", xilinx_detect_cpu, NULL, setup_hal_xilinx},
 };
 
