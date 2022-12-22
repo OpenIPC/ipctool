@@ -1,7 +1,12 @@
 #include "hal_xilinx.h"
+#include "hal_common.h"
 #include "tools.h"
 
 #include <string.h>
+
+#ifndef STANDALONE_LIBRARY
+#include "cjson/cJSON.h"
+#endif
 
 /* Register PSS_IDCODE Details */
 typedef struct {
@@ -12,6 +17,8 @@ typedef struct {
     unsigned family : 7;
     unsigned revision : 4;
 } pss_idcode_t;
+
+static bool is_zynq;
 
 bool xilinx_detect_cpu(char *chip_name) {
     char buf[256];
@@ -25,6 +32,7 @@ bool xilinx_detect_cpu(char *chip_name) {
         fprintf(stderr, "%s is not supported yet\n", buf);
     }
 
+    is_zynq = true;
     pss_idcode_t idcode;
     if (mem_reg(0xF8000530, (uint32_t *)&idcode, OP_READ)) {
         if (!(idcode.family == 0x1b && idcode.subfamily == 0x9 &&
@@ -72,4 +80,22 @@ bool xilinx_detect_cpu(char *chip_name) {
     return false;
 }
 
-void setup_hal_xilinx() {}
+#ifndef STANDALONE_LIBRARY
+typedef struct {
+    unsigned reserved : 28;
+    unsigned ps_version : 4;
+} mctrl_t;
+
+static void chip_properties(cJSON *j_inner) {
+    mctrl_t mctrl;
+    if (is_zynq && mem_reg(0xF8007080, (uint32_t *)&mctrl, OP_READ)) {
+        ADD_PARAM_NUM("versionId", mctrl.ps_version);
+    }
+}
+#endif
+
+void setup_hal_xilinx() {
+#ifndef STANDALONE_LIBRARY
+    hal_chip_properties = chip_properties;
+#endif
+}

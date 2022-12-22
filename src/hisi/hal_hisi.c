@@ -413,6 +413,7 @@ void setup_hal_hisi() {
     hal_detect_ethernet = hisi_ethdetect;
     hal_totalmem = hisi_totalmem;
     hal_fmc_mode = hisi_detect_fmc;
+    hal_chip_properties = hisi_chip_properties;
 #endif
 }
 

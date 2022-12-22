@@ -82,9 +82,13 @@ extern write_register_t i2c_write_register;
 extern write_register_t spi_write_register;
 extern float (*hal_temperature)();
 extern void (*hal_cleanup)();
+
+#ifndef STANDALONE_LIBRARY
 extern void (*hal_detect_ethernet)(cJSON *handle);
 extern unsigned long (*hal_totalmem)(unsigned long *media_mem);
 extern const char *(*hal_fmc_mode)(void);
+extern void (*hal_chip_properties)(cJSON *root);
+#endif
 
 void setup_hal_fallback();
 

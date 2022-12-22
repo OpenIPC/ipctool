@@ -23,9 +23,12 @@ int (*i2c_change_addr)(int fd, unsigned char addr);
 float (*hal_temperature)();
 void (*hal_cleanup)();
 
+#ifndef STANDALONE_LIBRARY
 void (*hal_detect_ethernet)(cJSON *root);
 unsigned long (*hal_totalmem)(unsigned long *media_mem);
 const char *(*hal_fmc_mode)(void);
+void (*hal_chip_properties)(cJSON *root);
+#endif
 
 int universal_open_sensor_fd(const char *dev_name) {
     int fd;
@@ -208,8 +211,10 @@ void setup_hal_fallback() {
     spi_read_register = universal_spi_read_register;
     i2c_write_register = universal_i2c_write_register;
     spi_write_register = universal_spi_write_register;
-    hal_totalmem = default_totalmem;
     hal_cleanup = universal_hal_cleanup;
+#ifndef STANDALONE_LIBRARY
+    hal_totalmem = default_totalmem;
+#endif
 }
 
 typedef struct meminfo {

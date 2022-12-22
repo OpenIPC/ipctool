@@ -920,3 +920,12 @@ struct PT_OFFSET {
 };
 
 // PT_UNIFY_TIMING_CFG
+
+void hisi_chip_properties(cJSON *j_inner) {
+    if (chip_generation == HISI_V4) {
+        char buf[1024];
+        if (hisi_ev300_get_die_id(buf, sizeof buf)) {
+            ADD_PARAM("id", buf);
+        }
+    }
+}
