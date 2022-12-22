@@ -42,14 +42,20 @@ typedef struct {
 } manufacturers_t;
 
 static const manufacturers_t manufacturers[] = {
+#if defined(mips) || defined(__mips__) || defined(__mips)
+    {"isvp", ingenic_detect_cpu, "Ingenic", setup_hal_ingenic},
+#endif
+#ifdef __arm__
     {"SStar", sstar_detect_cpu, NULL, sstar_setup_hal},
     {"MStar", mstar_detect_cpu, NULL, sstar_setup_hal},
     {"Novatek", novatek_detect_cpu, NULL, novatek_setup_hal},
     {"Grain-Media", gm_detect_cpu, NULL, gm_setup_hal},
     {"FH", fh_detect_cpu, "Fullhan", setup_hal_fh},
-    {"isvp", ingenic_detect_cpu, "Ingenic", setup_hal_ingenic},
     {NULL /* Generic */, rockchip_detect_cpu, "Rockchip", setup_hal_rockchip},
     {"Xilinx", xilinx_detect_cpu, NULL, setup_hal_xilinx},
+#endif
+#if defined(__aarch64__) || defined(_M_ARM64)
+#endif
 };
 
 static bool generic_detect_cpu() {
@@ -97,6 +103,7 @@ static bool detect_and_set(const char *manufacturer,
 static bool hw_detect_system() {
     long uart_base = get_uart0_address();
     switch (uart_base) {
+#ifdef __arm__
     // xm510
     case 0x10030000:
         return detect_and_set("Xiongmai", xm_detect_cpu, setup_hal_xm, 0);
@@ -121,6 +128,7 @@ static bool hw_detect_system() {
     case 0x20080000:
         return detect_and_set(VENDOR_HISI, hisi_detect_cpu, setup_hal_hisi,
                               0x20050000);
+#endif
     default:
         return generic_detect_cpu();
     }
