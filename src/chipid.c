@@ -14,6 +14,9 @@
 #include "hal_common.h"
 #include "tools.h"
 
+#define VENDOR_HISI "HiSilicon"
+#define VENDOR_GOKE "Goke"
+
 int chip_generation;
 char chip_name[128];
 char chip_manufacturer[128];
@@ -39,13 +42,13 @@ typedef struct {
 } manufacturers_t;
 
 static const manufacturers_t manufacturers[] = {
-    {VENDOR_SSTAR, sstar_detect_cpu, NULL, sstar_setup_hal},
-    {VENDOR_MSTAR, mstar_detect_cpu, NULL, sstar_setup_hal},
-    {VENDOR_NOVATEK, novatek_detect_cpu, NULL, novatek_setup_hal},
-    {VENDOR_GM, gm_detect_cpu, NULL, gm_setup_hal},
-    {"FH", fh_detect_cpu, VENDOR_FH, setup_hal_fh},
-    {"isvp", ingenic_detect_cpu, VENDOR_INGENIC, setup_hal_ingenic},
-    {VENDOR_ROCKCHIP, rockchip_detect_cpu, NULL, setup_hal_rockchip},
+    {"SStar", sstar_detect_cpu, NULL, sstar_setup_hal},
+    {"MStar", mstar_detect_cpu, NULL, sstar_setup_hal},
+    {"Novatek", novatek_detect_cpu, NULL, novatek_setup_hal},
+    {"Grain-Media", gm_detect_cpu, NULL, gm_setup_hal},
+    {"FH", fh_detect_cpu, "Fullhan", setup_hal_fh},
+    {"isvp", ingenic_detect_cpu, "Ingenic", setup_hal_ingenic},
+    {"Rockchip", rockchip_detect_cpu, NULL, setup_hal_rockchip},
     {"Xilinx", xilinx_detect_cpu, NULL, setup_hal_xilinx},
 };
 
@@ -93,7 +96,7 @@ static bool hw_detect_system() {
     switch (uart_base) {
     // xm510
     case 0x10030000:
-        return detect_and_set(VENDOR_XM, xm_detect_cpu, setup_hal_xm, 0);
+        return detect_and_set("Xiongmai", xm_detect_cpu, setup_hal_xm, 0);
     // hi3516cv300
     case 0x12100000:
     // hi3516ev200

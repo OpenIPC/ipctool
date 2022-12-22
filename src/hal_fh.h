@@ -3,8 +3,6 @@
 
 #include <stdbool.h>
 
-#define VENDOR_FH "Fullhan"
-
 #define PMU_REG_BASE 0xf0000000
 #define REG_PMU_CHIP_ID (PMU_REG_BASE + 0x0000)
 #define REG_PMU_IP_VER (PMU_REG_BASE + 0x0004)

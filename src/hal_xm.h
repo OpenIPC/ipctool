@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-#define VENDOR_XM "Xiongmai"
-
 #define CMD_I2C_WRITE 0x01
 #define CMD_I2C_READ 0x03
 

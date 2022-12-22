@@ -3,8 +3,6 @@
 
 #include <stdbool.h>
 
-#define VENDOR_INGENIC "Ingenic"
-
 bool ingenic_detect_cpu(char *chip_name);
 unsigned long ingenic_totalmem(unsigned long *media_mem);
 void setup_hal_ingenic();
