@@ -46,6 +46,7 @@ static const manufacturers_t manufacturers[] = {
     {"FH", fh_detect_cpu, VENDOR_FH, setup_hal_fh},
     {"isvp", ingenic_detect_cpu, VENDOR_INGENIC, setup_hal_ingenic},
     {VENDOR_ROCKCHIP, rockchip_detect_cpu, NULL, setup_hal_rockchip},
+    {"Xilinx", xilinx_detect_cpu, NULL, setup_hal_xilinx},
 };
 
 static bool generic_detect_cpu() {

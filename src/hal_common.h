@@ -13,6 +13,7 @@
 #include "hal_novatek.h"
 #include "hal_rockchip.h"
 #include "hal_sstar.h"
+#include "hal_xilinx.h"
 #include "hal_xm.h"
 #include "hisi/hal_hisi.h"
 

@@ -52,6 +52,8 @@ set(COMMON_LIB_SRC
     src/hal_rockchip.h
     src/hal_sstar.c
     src/hal_sstar.h
+    src/hal_xilinx.c
+    src/hal_xilinx.h
     src/hal_xm.c
     src/hal_xm.h
     src/hisi/hal_hisi.c
