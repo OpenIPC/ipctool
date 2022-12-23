@@ -1,4 +1,4 @@
-#include "hal_rockchip.h"
+#include "hal/rockchip.h"
 
 #include <arpa/inet.h>
 #include <dirent.h>
@@ -6,7 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "hal_common.h"
+#include "hal/common.h"
 #include "tools.h"
 
 static unsigned char sony_addrs[] = {0x34, 0};

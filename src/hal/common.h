@@ -7,16 +7,16 @@
 #include <sys/ioctl.h>
 
 #include "cjson/cJSON.h"
-#include "hal_fh.h"
-#include "hal_gm.h"
-#include "hal_ingenic.h"
-#include "hal_novatek.h"
-#include "hal_rockchip.h"
-#include "hal_sstar.h"
-#include "hal_tegra.h"
-#include "hal_xilinx.h"
-#include "hal_xm.h"
-#include "hisi/hal_hisi.h"
+#include "hal/fh.h"
+#include "hal/gm.h"
+#include "hal/hisi/hal_hisi.h"
+#include "hal/ingenic.h"
+#include "hal/novatek.h"
+#include "hal/rockchip.h"
+#include "hal/sstar.h"
+#include "hal/tegra.h"
+#include "hal/xilinx.h"
+#include "hal/xm.h"
 
 #define SPI_CPHA 0x01
 #define SPI_CPOL 0x02

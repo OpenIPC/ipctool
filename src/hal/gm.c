@@ -1,11 +1,11 @@
-#include "hal_gm.h"
+#include "hal/gm.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 #include <unistd.h>
 
-#include "hal_common.h"
+#include "hal/common.h"
 #include "tools.h"
 
 static unsigned char sony_addrs[] = {0x34, 0};

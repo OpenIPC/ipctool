@@ -15,10 +15,10 @@
 
 #include "chipid.h"
 #include "cjson/cJSON.h"
-#include "hal_common.h"
-#include "hisi/ethernet.h"
-#include "hisi/hal_hisi.h"
-#include "hisi/ispreg.h"
+#include "hal/common.h"
+#include "hal/hisi/ethernet.h"
+#include "hal/hisi/hal_hisi.h"
+#include "hal/hisi/ispreg.h"
 #include "ram.h"
 #include "tools.h"
 

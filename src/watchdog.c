@@ -1,6 +1,6 @@
 #include "watchdog.h"
 #include "chipid.h"
-#include "hisi/hal_hisi.h"
+#include "hal/hisi/hal_hisi.h"
 
 #include <errno.h>
 #include <fcntl.h>

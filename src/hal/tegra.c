@@ -1,5 +1,6 @@
-#include "hal_tegra.h"
-#include "hal_common.h"
+#include "hal/tegra.h"
+
+#include "hal/common.h"
 #include "tools.h"
 
 #include <ctype.h>

@@ -14,8 +14,8 @@
 
 #include "chipid.h"
 #include "cjson/cJSON.h"
-#include "hal_common.h"
-#include "hal_xm.h"
+#include "hal/common.h"
+#include "hal/xm.h"
 #include "sensors.h"
 #include "tools.h"
 

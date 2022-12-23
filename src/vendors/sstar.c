@@ -1,6 +1,6 @@
 #include "vendors/sstar.h"
 #include "chipid.h"
-#include "hal_sstar.h"
+#include "hal/sstar.h"
 #include "tools.h"
 #include <ctype.h>
 #include <stdio.h>

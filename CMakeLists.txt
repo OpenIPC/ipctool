@@ -38,28 +38,28 @@ include_directories(./src/)
 set(COMMON_LIB_SRC
     src/chipid.c
     src/chipid.h
-    src/hal_common.c
-    src/hal_common.h
-    src/hal_fh.c
-    src/hal_fh.h
-    src/hal_gm.c
-    src/hal_gm.h
-    src/hal_ingenic.c
-    src/hal_ingenic.h
-    src/hal_novatek.c
-    src/hal_novatek.h
-    src/hal_rockchip.c
-    src/hal_rockchip.h
-    src/hal_sstar.c
-    src/hal_sstar.h
-    src/hal_tegra.c
-    src/hal_tegra.h
-    src/hal_xilinx.c
-    src/hal_xilinx.h
-    src/hal_xm.c
-    src/hal_xm.h
-    src/hisi/hal_hisi.c
-    src/hisi/hal_hisi.h
+    src/hal/common.c
+    src/hal/common.h
+    src/hal/fh.c
+    src/hal/fh.h
+    src/hal/gm.c
+    src/hal/gm.h
+    src/hal/hisi/hal_hisi.c
+    src/hal/hisi/hal_hisi.h
+    src/hal/ingenic.c
+    src/hal/ingenic.h
+    src/hal/novatek.c
+    src/hal/novatek.h
+    src/hal/rockchip.c
+    src/hal/rockchip.h
+    src/hal/sstar.c
+    src/hal/sstar.h
+    src/hal/tegra.c
+    src/hal/tegra.h
+    src/hal/xilinx.c
+    src/hal/xilinx.h
+    src/hal/xm.c
+    src/hal/xm.h
     src/hwinfo.c
     src/hwinfo.h
     src/mmap.h
@@ -79,14 +79,14 @@ set(IPCTOOL_SRC
     src/fake_symbols.c
     src/firmware.c
     src/firmware.h
+    src/hal/hisi/ethernet.c
+    src/hal/hisi/ethernet.h
+    src/hal/hisi/ispreg.c
+    src/hal/hisi/ispreg.h
+    src/hal/hisi/ptrace.c
+    src/hal/hisi/ptrace.h
     src/hashtable.c
     src/hashtable.h
-    src/hisi/ethernet.c
-    src/hisi/ethernet.h
-    src/hisi/ispreg.c
-    src/hisi/ispreg.h
-    src/hisi/ptrace.c
-    src/hisi/ptrace.h
     src/http.c
     src/http.h
     src/i2cspi.c

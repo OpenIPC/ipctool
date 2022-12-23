@@ -1,6 +1,6 @@
 #include "reginfo.h"
 #include "chipid.h"
-#include "hisi/hal_hisi.h"
+#include "hal/hisi/hal_hisi.h"
 #include "tools.h"
 
 #include <assert.h>

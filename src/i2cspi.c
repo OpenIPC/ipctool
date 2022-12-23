@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "chipid.h"
-#include "hal_common.h"
+#include "hal/common.h"
 #include "i2cspi.h"
 
 #define SELECT_WIDE(reg_addr) reg_addr > 0xff ? 2 : 1

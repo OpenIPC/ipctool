@@ -1,7 +1,7 @@
 #include <math.h>
 
 #include "chipid.h"
-#include "hal_common.h"
+#include "hal/common.h"
 #include "hwinfo.h"
 
 float gethwtemp() {

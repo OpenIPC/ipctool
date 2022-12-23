@@ -22,11 +22,11 @@
 #include <unistd.h>
 
 #include "chipid.h"
-#include "hal_common.h"
-#include "hal_xm.h"
+#include "hal/common.h"
+#include "hal/hisi/hal_hisi.h"
+#include "hal/hisi/ptrace.h"
+#include "hal/xm.h"
 #include "hashtable.h"
-#include "hisi/hal_hisi.h"
-#include "hisi/ptrace.h"
 
 #define ASSERT_PTRACE                                                          \
     if (ret == -1 && errno) {                                                  \

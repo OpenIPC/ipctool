@@ -1,11 +1,11 @@
-#include "hal_novatek.h"
+#include "hal/novatek.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 #include <unistd.h>
 
-#include "hal_common.h"
+#include "hal/common.h"
 #include "tools.h"
 
 // TODO: /proc/nvt_info/nvt_pinmux/chip_id

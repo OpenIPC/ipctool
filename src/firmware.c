@@ -12,7 +12,7 @@
 #include "cjson/cYAML.h"
 
 #include "firmware.h"
-#include "hal_common.h"
+#include "hal/common.h"
 #include "tools.h"
 #include "uboot.h"
 

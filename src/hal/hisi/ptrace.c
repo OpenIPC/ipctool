@@ -15,9 +15,9 @@
 
 #include "chipid.h"
 #include "cjson/cJSON.h"
-#include "hal_common.h"
-#include "hisi/ethernet.h"
-#include "hisi/ptrace.h"
+#include "hal/common.h"
+#include "hal/hisi/ethernet.h"
+#include "hal/hisi/ptrace.h"
 #include "ram.h"
 #include "tools.h"
 

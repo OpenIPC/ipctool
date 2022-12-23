@@ -6,7 +6,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include "hal_common.h"
+#include "hal/common.h"
 #include "ram.h"
 #include "tools.h"
 

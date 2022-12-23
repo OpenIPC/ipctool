@@ -5,8 +5,8 @@
 
 #include "chipid.h"
 #include "cjson/cYAML.h"
-#include "hisi/ethernet.h"
-#include "hisi/hal_hisi.h"
+#include "hal/hisi/ethernet.h"
+#include "hal/hisi/hal_hisi.h"
 #include "network.h"
 #include "tools.h"
 

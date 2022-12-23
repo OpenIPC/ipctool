@@ -1,5 +1,6 @@
-#include "hal_xilinx.h"
-#include "hal_common.h"
+#include "hal/xilinx.h"
+
+#include "hal/common.h"
 #include "tools.h"
 
 #include <string.h>

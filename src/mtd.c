@@ -14,8 +14,8 @@
 #include <unistd.h>
 
 #include "chipid.h"
-#include "hal_common.h"
-#include "hisi/hal_hisi.h"
+#include "hal/common.h"
+#include "hal/hisi/hal_hisi.h"
 #include "mtd.h"
 #include "sha1.h"
 #include "tools.h"

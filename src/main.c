@@ -18,7 +18,7 @@
 #include "cjson/cYAML.h"
 #include "ethernet.h"
 #include "firmware.h"
-#include "hisi/hal_hisi.h"
+#include "hal/hisi/hal_hisi.h"
 #include "hwinfo.h"
 #include "i2cspi.h"
 #include "mtd.h"

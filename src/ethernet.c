@@ -1,6 +1,6 @@
-#include "cjson/cYAML.h"
 #include "ethernet.h"
-#include "hal_common.h"
+#include "cjson/cYAML.h"
+#include "hal/common.h"
 #include "network.h"
 #include "tools.h"
 
