@@ -34,7 +34,7 @@ static int tegra_open_sensor_fd() {
     return universal_open_sensor_fd("/dev/i2c-6");
 }
 
-static int i2c_no_change_addr(int fd, unsigned char addr) {
+static int i2c_change_plain_addr(int fd, unsigned char addr) {
     if (ioctl(fd, I2C_SLAVE_FORCE, addr) < 0) {
         return -1;
     }
@@ -65,7 +65,7 @@ static void firmware_props(cJSON *j_inner) {
 void tegra_setup_hal() {
     open_i2c_sensor_fd = tegra_open_sensor_fd;
     possible_i2c_addrs = tegra_possible_i2c_addrs;
-    i2c_change_addr = i2c_no_change_addr;
+    i2c_change_addr = i2c_change_plain_addr;
 #ifndef STANDALONE_LIBRARY
     hal_chip_properties = chip_properties;
     hal_firmware_props = firmware_props;

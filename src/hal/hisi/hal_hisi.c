@@ -28,7 +28,7 @@ static unsigned char omni_addrs[] = {0x60, 0x6c, 0x42, 0};
 static unsigned char gc_addrs[] = {0x6e, 0x52, 0};
 static unsigned char superpix_addrs[] = {0x79, 0};
 
-sensor_addr_t hisi_possible_i2c_addrs[] = {
+static sensor_addr_t my_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},         {SENSOR_SOI, soi_addrs},
     {SENSOR_ONSEMI, onsemi_addrs},     {SENSOR_SMARTSENS, ssens_addrs},
     {SENSOR_OMNIVISION, omni_addrs},   {SENSOR_GALAXYCORE, gc_addrs},
@@ -429,7 +429,7 @@ void setup_hal_hisi() {
         i2c_read_register = hisi_sensor_read_register;
         i2c_write_register = hisi_sensor_write_register;
     }
-    possible_i2c_addrs = hisi_possible_i2c_addrs;
+    possible_i2c_addrs = my_possible_i2c_addrs;
     hal_temperature = hisi_get_temp;
 #ifndef STANDALONE_LIBRARY
     hal_detect_ethernet = hisi_ethdetect;

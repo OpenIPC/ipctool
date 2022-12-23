@@ -557,15 +557,15 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
     res = prod_msb << 8 | prod_lsb;
 
     switch (res) {
-    case 0x4688:
-        res = 0x4689;
-        sprintf(ctx->sensor_id, "OV4689");
-        return true;
     case 0x2710:
     case 0x2715:
     case 0x2718:
+    case 0x5647:
     case 0x9732:
         sprintf(ctx->sensor_id, "OV%04x", res);
+        return true;
+    case 0x4688:
+        sprintf(ctx->sensor_id, "OV4689");
         return true;
     case 0x5305:
         sprintf(ctx->sensor_id, "OS05A");
