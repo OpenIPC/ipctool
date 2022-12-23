@@ -264,6 +264,7 @@ static bool xm_disable_watchdog() {
         break;
     case HISI_V4:
         ret = delete_module("hi3516ev200_wdt", 0);
+        ret |= delete_module("open_wdt", 0);
         mem_reg(EV300_WDG_CONTROL, &zero, OP_WRITE);
         break;
     default:
