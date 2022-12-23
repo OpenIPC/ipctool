@@ -10,12 +10,15 @@
 #include <unistd.h>
 
 #include "chipid.h"
-#include "cjson/cJSON.h"
 #include "hal_common.h"
 #include "hisi/ethernet.h"
 #include "hisi/ispreg.h"
 #include "ram.h"
 #include "tools.h"
+
+#ifndef STANDALONE_LIBRARY
+#include "cjson/cJSON.h"
+#endif
 
 static unsigned char sony_addrs[] = {0x34, 0};
 static unsigned char soi_addrs[] = {0x80, 0x60, 0};
@@ -383,6 +386,7 @@ static void hisi_hal_cleanup() {
     restore_printk();
 }
 
+#ifndef STANDALONE_LIBRARY
 static void get_hisi_sdk(cJSON *j_inner) {
     char buf[1024];
 
@@ -399,6 +403,7 @@ static void get_hisi_sdk(cJSON *j_inner) {
         ADD_PARAM("sdk", buf);
     }
 }
+#endif
 
 void setup_hal_hisi() {
     disable_printk();
