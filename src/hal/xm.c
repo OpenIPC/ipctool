@@ -10,13 +10,13 @@
 #include "ram.h"
 #include "tools.h"
 
-static unsigned char sony_addrs[] = {0x1a, 0};
-static unsigned char onsemi_addrs[] = {0x10, 0};
-static unsigned char soi_addrs[] = {0x30, 0x40, 0};
-static unsigned char ssens_addrs[] = {0x30, 0};
-static unsigned char omni_addrs[] = {0x36, 0};
+static unsigned char sony_addrs[] = {0x34, 0};
+static unsigned char soi_addrs[] = {0x60, 0x80, 0};
+static unsigned char onsemi_addrs[] = {0x20, 0};
+static unsigned char ssens_addrs[] = {0x60, 0};
+static unsigned char omni_addrs[] = {0x6c, 0};
 // only for reference, used in XM510
-static unsigned char bg_addrs[] = {0x32, 0};
+static unsigned char bg_addrs[] = {0x64, 0};
 
 static sensor_addr_t xm_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
                                                 {SENSOR_SMARTSENS, ssens_addrs},
@@ -34,7 +34,7 @@ int xm_sensor_read_register(int fd, unsigned char i2c_addr,
     int ret;
     I2C_DATA_S i2c_data;
 
-    i2c_data.dev_addr = i2c_addr;
+    i2c_data.dev_addr = i2c_addr >> 1;
     i2c_data.reg_addr = reg_addr;
     i2c_data.addr_byte_num = reg_width;
     i2c_data.data_byte_num = data_width;
@@ -54,7 +54,7 @@ int xm_sensor_write_register(int fd, unsigned char i2c_addr,
     int ret;
     I2C_DATA_S i2c_data;
 
-    i2c_data.dev_addr = i2c_addr;
+    i2c_data.dev_addr = i2c_addr >> 1;
     i2c_data.reg_addr = reg_addr;
     i2c_data.addr_byte_num = reg_width;
     i2c_data.data = data;
