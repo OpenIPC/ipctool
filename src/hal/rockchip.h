@@ -5,6 +5,6 @@
 
 bool rockchip_detect_cpu();
 unsigned long rockchip_totalmem(unsigned long *media_mem);
-void setup_hal_rockchip();
+void rockchip_setup_hal();
 
 #endif /* HAL_ROCKCHIP_H */

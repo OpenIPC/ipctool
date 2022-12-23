@@ -7,6 +7,7 @@
 #include <sys/ioctl.h>
 
 #include "cjson/cJSON.h"
+#include "hal/bcm.h"
 #include "hal/fh.h"
 #include "hal/gm.h"
 #include "hal/hisi/hal_hisi.h"

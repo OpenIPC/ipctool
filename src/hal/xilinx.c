@@ -95,7 +95,7 @@ static void chip_properties(cJSON *j_inner) {
 }
 #endif
 
-void setup_hal_xilinx() {
+void xilinx_setup_hal() {
 #ifndef STANDALONE_LIBRARY
     hal_chip_properties = chip_properties;
 #endif

@@ -11,6 +11,6 @@
 
 bool fh_detect_cpu(char *chip_name);
 unsigned long fh_totalmem(unsigned long *media_mem);
-void setup_hal_fh();
+void fh_setup_hal();
 
 #endif /* HAL_FH_H */

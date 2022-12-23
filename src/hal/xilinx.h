@@ -4,6 +4,6 @@
 #include <stdbool.h>
 
 bool xilinx_detect_cpu(char *chip_name);
-void setup_hal_xilinx();
+void xilinx_setup_hal();
 
 #endif /* HAL_XILINX_H */

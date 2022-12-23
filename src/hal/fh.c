@@ -130,7 +130,7 @@ float fh_get_temp() {
     return ret;
 }
 
-void setup_hal_fh() {
+void fh_setup_hal() {
     possible_i2c_addrs = fh_possible_i2c_addrs;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = fh_get_temp;

@@ -35,7 +35,7 @@ static long get_uart0_address() {
 }
 
 typedef struct {
-    const char *hardware_pattern;
+    const char *pattern;
     bool (*detect_fn)(char *);
     const char *override_vendor;
     void (*setup_hal_fn)(void);
@@ -50,9 +50,10 @@ static const manufacturers_t manufacturers[] = {
     {"MStar", mstar_detect_cpu, NULL, sstar_setup_hal},
     {"Novatek", novatek_detect_cpu, NULL, novatek_setup_hal},
     {"Grain-Media", gm_detect_cpu, NULL, gm_setup_hal},
-    {"FH", fh_detect_cpu, "Fullhan", setup_hal_fh},
-    {NULL /* Generic */, rockchip_detect_cpu, "Rockchip", setup_hal_rockchip},
-    {"Xilinx", xilinx_detect_cpu, NULL, setup_hal_xilinx},
+    {"FH", fh_detect_cpu, "Fullhan", fh_setup_hal},
+    {NULL /* Generic */, rockchip_detect_cpu, "Rockchip", rockchip_setup_hal},
+    {"Xilinx", xilinx_detect_cpu, NULL, xilinx_setup_hal},
+    {"BCM", bcm_detect_cpu, NULL, bcm_setup_hal}
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
     {NULL, tegra_detect_cpu, "Nvidia", tegra_setup_hal},
@@ -72,8 +73,9 @@ static bool generic_detect_cpu() {
     strcpy(chip_manufacturer, buf);
 
     for (size_t i = 0; i < ARRCNT(manufacturers); i++) {
-        if (manufacturers[i].hardware_pattern &&
-            strcmp(manufacturers[i].hardware_pattern, chip_manufacturer))
+        if (manufacturers[i].pattern &&
+            strncmp(manufacturers[i].pattern, chip_manufacturer,
+                    strlen(manufacturers[i].pattern)))
             continue;
 
         if (manufacturers[i].detect_fn(chip_name)) {

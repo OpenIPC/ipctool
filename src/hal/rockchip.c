@@ -85,7 +85,7 @@ static int i2c1_open_sensor_fd() {
     return universal_open_sensor_fd("/dev/i2c-1");
 }
 
-void setup_hal_rockchip() {
+void rockchip_setup_hal() {
     possible_i2c_addrs = rockchip_possible_i2c_addrs;
     open_i2c_sensor_fd = i2c1_open_sensor_fd;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
