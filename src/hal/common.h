@@ -99,7 +99,8 @@ int universal_open_sensor_fd(const char *dev_name);
 bool universal_close_sensor_fd(int fd);
 
 int dummy_sensor_i2c_change_addr(int fd, unsigned char addr);
-int universal_i2c_change_addr(int fd, unsigned char addr);
+int i2c_change_plain_addr(int fd, unsigned char addr);
+int i2c_changenshift_addr(int fd, unsigned char addr);
 int universal_i2c_write_register(int fd, unsigned char i2c_addr,
                                  unsigned int reg_addr, unsigned int reg_width,
                                  unsigned int data, unsigned int data_width);

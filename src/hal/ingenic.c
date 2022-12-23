@@ -15,13 +15,14 @@ static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char gc_addrs[] = {0x6e, 0x52, 0};
 static unsigned char soi_addrs[] = {0x60, 0x80, 0};
 
-sensor_addr_t ingenic_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
-                                              {SENSOR_SMARTSENS, ssens_addrs},
-                                              {SENSOR_ONSEMI, onsemi_addrs},
-                                              {SENSOR_OMNIVISION, omni_addrs},
-                                              {SENSOR_GALAXYCORE, gc_addrs},
-                                              {SENSOR_SOI, soi_addrs},
-                                              {0, NULL}};
+static sensor_addr_t ingenic_possible_i2c_addrs[] = {
+    {SENSOR_SONY, sony_addrs},
+    {SENSOR_SMARTSENS, ssens_addrs},
+    {SENSOR_ONSEMI, onsemi_addrs},
+    {SENSOR_OMNIVISION, omni_addrs},
+    {SENSOR_GALAXYCORE, gc_addrs},
+    {SENSOR_SOI, soi_addrs},
+    {0, NULL}};
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;

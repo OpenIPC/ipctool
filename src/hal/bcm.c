@@ -45,13 +45,6 @@ static void chip_properties(cJSON *j_inner) {
 }
 #endif
 
-static int i2c_change_plain_addr(int fd, unsigned char addr) {
-    if (ioctl(fd, I2C_SLAVE_FORCE, addr) < 0) {
-        return -1;
-    }
-    return 0;
-}
-
 /* For using I2C functions make sure you have:
  * dtparam=i2c_arm=on
  * dtparam=i2c0=on

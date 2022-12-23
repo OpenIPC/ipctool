@@ -62,8 +62,15 @@ int dummy_sensor_i2c_change_addr(int fd, unsigned char addr) {
 }
 
 // Universal I2C code
-int universal_i2c_change_addr(int fd, unsigned char addr) {
+int i2c_changenshift_addr(int fd, unsigned char addr) {
     if (ioctl(fd, I2C_SLAVE_FORCE, addr >> 1) < 0) {
+        return -1;
+    }
+    return 0;
+}
+
+int i2c_change_plain_addr(int fd, unsigned char addr) {
+    if (ioctl(fd, I2C_SLAVE_FORCE, addr) < 0) {
         return -1;
     }
     return 0;
@@ -207,7 +214,7 @@ static unsigned long default_totalmem(unsigned long *media_mem) {
 void setup_hal_fallback() {
     open_i2c_sensor_fd = fallback_open_sensor_fd;
     close_sensor_fd = universal_close_sensor_fd;
-    i2c_change_addr = universal_i2c_change_addr;
+    i2c_change_addr = i2c_changenshift_addr;
     i2c_read_register = universal_i2c_read_register;
     spi_read_register = universal_spi_read_register;
     i2c_write_register = universal_i2c_write_register;

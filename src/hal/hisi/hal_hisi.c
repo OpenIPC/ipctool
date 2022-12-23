@@ -92,14 +92,6 @@ static int hisi_gen1_open_spi_sensor_fd() {
     return universal_open_sensor_fd("/dev/ssp");
 }
 
-// Set I2C slave address
-int hisi_gen2_sensor_i2c_change_addr(int fd, unsigned char addr) {
-    if (ioctl(fd, I2C_SLAVE_FORCE, addr) < 0) {
-        return -1;
-    }
-    return 0;
-}
-
 #define I2C_16BIT_REG 0x0709  /* 16BIT REG WIDTH */
 #define I2C_16BIT_DATA 0x070a /* 16BIT DATA WIDTH */
 int hisi_gen2_set_width(int fd, unsigned int reg_width,
@@ -424,7 +416,7 @@ void setup_hal_hisi() {
     } else if (chip_generation == HISI_V2 || chip_generation == HISI_V2A) {
         i2c_read_register = hisi_gen2_sensor_read_register;
         i2c_write_register = hisi_gen2_sensor_write_register;
-        i2c_change_addr = hisi_gen2_sensor_i2c_change_addr;
+        i2c_change_addr = i2c_change_plain_addr;
     } else {
         i2c_read_register = hisi_sensor_read_register;
         i2c_write_register = hisi_sensor_write_register;

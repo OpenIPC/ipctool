@@ -8,8 +8,8 @@
 
 // /sys/bus/i2c/drivers/imx219/6-0010/name -> i2c-6 and 0x10
 static unsigned char sony_addrs[] = {0x10, 0};
-sensor_addr_t tegra_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
-                                            {0, NULL}};
+static sensor_addr_t tegra_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
+                                                   {0, NULL}};
 
 bool tegra_detect_cpu(char *chip_name) {
     char buf[256];
@@ -32,13 +32,6 @@ static int tegra_open_sensor_fd() {
      * 0x19
      */
     return universal_open_sensor_fd("/dev/i2c-6");
-}
-
-static int i2c_change_plain_addr(int fd, unsigned char addr) {
-    if (ioctl(fd, I2C_SLAVE_FORCE, addr) < 0) {
-        return -1;
-    }
-    return 0;
 }
 
 #ifndef STANDALONE_LIBRARY
