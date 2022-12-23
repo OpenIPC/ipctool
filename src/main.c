@@ -33,8 +33,8 @@
 #include "version.h"
 #include "watchdog.h"
 
-#include "vendors/buildroot.h"
-#include "vendors/common.h"
+#include "boards/buildroot.h"
+#include "boards/common.h"
 
 #define RESET_CL "\x1b[0m"
 #define FG_RED "\x1b[31m"

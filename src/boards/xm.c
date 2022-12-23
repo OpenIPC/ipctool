@@ -13,11 +13,11 @@
 
 #include "cjson/cJSON.h"
 
+#include "boards/xm.h"
 #include "chipid.h"
 #include "firmware.h"
 #include "hal/hisi/hal_hisi.h"
 #include "tools.h"
-#include "vendors/xm.h"
 
 bool is_xm_board() {
     // crucial to keep detection status in memory for deal with XM flash ops

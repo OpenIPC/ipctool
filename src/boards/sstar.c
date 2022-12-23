@@ -1,4 +1,4 @@
-#include "vendors/sstar.h"
+#include "boards/sstar.h"
 #include "chipid.h"
 #include "hal/sstar.h"
 #include "tools.h"

@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "boards/xm.h"
 #include "chipid.h"
 #include "hal/common.h"
 #include "hal/hisi/hal_hisi.h"
@@ -20,7 +21,6 @@
 #include "sha1.h"
 #include "tools.h"
 #include "uboot.h"
-#include "vendors/xm.h"
 
 // TODO: refactor later
 int yaml_printf(char *format, ...);

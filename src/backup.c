@@ -24,6 +24,8 @@
 #include <unistd.h>
 
 #include "backup.h"
+#include "boards/common.h"
+#include "boards/xm.h"
 #include "chipid.h"
 #include "cjson/cJSON.h"
 #include "dns.h"
@@ -34,8 +36,6 @@
 #include "sha1.h"
 #include "tools.h"
 #include "uboot.h"
-#include "vendors/common.h"
-#include "vendors/xm.h"
 
 #define UDP_LOCK_PORT 1025
 

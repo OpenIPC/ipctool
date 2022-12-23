@@ -117,24 +117,24 @@ set(IPCTOOL_SRC
     src/cjson/cJSON.h
     src/cjson/cYAML.c
     src/cjson/cYAML.h
-    src/vendors/anjoy.c
-    src/vendors/anjoy.h
-    src/vendors/buildroot.c
-    src/vendors/buildroot.h
-    src/vendors/common.c
-    src/vendors/common.h
-    src/vendors/hankvision.c
-    src/vendors/hankvision.h
-    src/vendors/linux.c
-    src/vendors/linux.h
-    src/vendors/openwrt.c
-    src/vendors/openwrt.h
-    src/vendors/ruision.c
-    src/vendors/ruision.h
-    src/vendors/xm.c
-    src/vendors/xm.h
-    src/vendors/sstar.c
-    src/vendors/sstar.h
+    src/boards/anjoy.c
+    src/boards/anjoy.h
+    src/boards/buildroot.c
+    src/boards/buildroot.h
+    src/boards/common.c
+    src/boards/common.h
+    src/boards/hankvision.c
+    src/boards/hankvision.h
+    src/boards/linux.c
+    src/boards/linux.h
+    src/boards/openwrt.c
+    src/boards/openwrt.h
+    src/boards/ruision.c
+    src/boards/ruision.h
+    src/boards/xm.c
+    src/boards/xm.h
+    src/boards/sstar.c
+    src/boards/sstar.h
     ${VERSION_SRC})
 
 add_library(ipchw STATIC ${COMMON_LIB_SRC})

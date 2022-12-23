@@ -7,13 +7,13 @@
 #include "reginfo.h"
 #include "tools.h"
 
-#include "vendors/anjoy.h"
-#include "vendors/buildroot.h"
-#include "vendors/hankvision.h"
-#include "vendors/openwrt.h"
-#include "vendors/ruision.h"
-#include "vendors/sstar.h"
-#include "vendors/xm.h"
+#include "boards/anjoy.h"
+#include "boards/buildroot.h"
+#include "boards/hankvision.h"
+#include "boards/openwrt.h"
+#include "boards/ruision.h"
+#include "boards/sstar.h"
+#include "boards/xm.h"
 
 typedef struct {
     bool (*detector_fn)(void);

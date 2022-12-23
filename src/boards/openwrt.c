@@ -6,9 +6,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include "boards/openwrt.h"
 #include "chipid.h"
 #include "tools.h"
-#include "vendors/openwrt.h"
 
 bool is_openwrt_board() {
     if (!access("/etc/openwrt_version", 0)) {
