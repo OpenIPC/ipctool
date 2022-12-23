@@ -12,8 +12,8 @@
 bool bcm_detect_cpu(char *chip_name) {
     char buf[256];
 
-    if (!get_regex_line_from_file("/proc/cpuinfo", "Hardware.+: (BCM[0-9-]+)",
-                                  buf, sizeof(buf)))
+    if (!line_from_file("/proc/cpuinfo", "Hardware.+: (BCM[0-9-]+)", buf,
+                        sizeof(buf)))
         return false;
 
     strcpy(chip_name, buf);
@@ -26,7 +26,7 @@ static void cpuinfo_param(cJSON *j_inner, char *name) {
     char out[256], pattern[256];
 
     snprintf(pattern, sizeof(pattern), "%s.+: (.+)", name);
-    if (!get_regex_line_from_file("/proc/cpuinfo", pattern, out, sizeof(out)))
+    if (!line_from_file("/proc/cpuinfo", pattern, out, sizeof(out)))
         return;
 
     lsnprintf(pattern, sizeof(pattern), name);

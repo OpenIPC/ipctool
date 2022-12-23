@@ -40,13 +40,13 @@
 
 enum REG_OPS { OP_READ, OP_WRITE };
 
-int compile_regex(regex_t *r, const char *regex_text);
+int regex_compile(regex_t *r, const char *regex_text);
 bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op);
 void lsnprintf(char *buf, size_t n, char *fmt, ...);
 bool dts_items_by_regex(const char *filename, const char *re, char *outbuf,
                         size_t outlen);
-bool get_regex_line_from_file(const char *filename, const char *re,
-                              char *outbuf, size_t outlen);
+bool line_from_file(const char *filename, const char *re, char *outbuf,
+                    size_t outlen);
 int dmesg();
 uint32_t read_le32(const char *ptr);
 char *file_to_buf(const char *filename, size_t *len);

@@ -18,8 +18,7 @@ bool is_hankvision_board() {
 bool gather_hankvision_board_info(cJSON *j_inner) {
     char buf[256];
 
-    if (!get_regex_line_from_file(DEVICE_ID, "DEVICEID (.+)", buf,
-                                  sizeof(buf))) {
+    if (!line_from_file(DEVICE_ID, "DEVICEID (.+)", buf, sizeof(buf))) {
         return false;
     }
     ADD_PARAM("vendor", "Hankvision");

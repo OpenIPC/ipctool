@@ -56,9 +56,8 @@ bool sstar_detect_cpu(char *chip_name) {
 static unsigned long sstar_media_mem() {
     char buf[256];
 
-    if (!get_regex_line_from_file("/proc/cmdline",
-                                  "mma_heap=.+sz=(0x[0-9A-Fa-f]+)", buf,
-                                  sizeof(buf)))
+    if (!line_from_file("/proc/cmdline", "mma_heap=.+sz=(0x[0-9A-Fa-f]+)", buf,
+                        sizeof(buf)))
         return 0;
     return strtoul(buf, NULL, 16) / 1024;
 }
@@ -83,8 +82,8 @@ static void sstar_hal_cleanup() {}
 float sstar_get_temp() {
     float ret = -237.0;
     char buf[16];
-    if (get_regex_line_from_file("/sys/class/mstar/msys/TEMP_R",
-                                 "Temperature\\s+(.+)", buf, sizeof(buf))) {
+    if (line_from_file("/sys/class/mstar/msys/TEMP_R", "Temperature\\s+(.+)",
+                       buf, sizeof(buf))) {
         ret = strtof(buf, NULL);
     }
     return ret;

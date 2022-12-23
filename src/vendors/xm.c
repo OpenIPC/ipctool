@@ -167,9 +167,8 @@ bool xm_flash_init(int fd) {
 static bool detect_xm_product(cJSON *j_inner) {
     char buf[256];
 
-    if (!get_regex_line_from_file("/mnt/custom/ProductDefinition",
-                                  "\"Hardware\" : \"(.+)\"", buf,
-                                  sizeof(buf))) {
+    if (!line_from_file("/mnt/custom/ProductDefinition",
+                        "\"Hardware\" : \"(.+)\"", buf, sizeof(buf))) {
         return false;
     }
     ADD_PARAM("param", buf);
@@ -179,8 +178,8 @@ static bool detect_xm_product(cJSON *j_inner) {
 static bool extract_cloud_id(cJSON *j_inner) {
     char buf[256];
 
-    if (!get_regex_line_from_file("/mnt/mtd/Config/SerialNumber", "([0-9a-f]+)",
-                                  buf, sizeof(buf))) {
+    if (!line_from_file("/mnt/mtd/Config/SerialNumber", "([0-9a-f]+)", buf,
+                        sizeof(buf))) {
         return false;
     }
     ADD_PARAM("cloudId", buf);
@@ -190,8 +189,8 @@ static bool extract_cloud_id(cJSON *j_inner) {
 static bool extract_snsType(cJSON *j_inner) {
     char buf[256];
 
-    if (!get_regex_line_from_file("/mnt/mtd/Config/SensorType.bat",
-                                  "snsType:([0-9]+)", buf, sizeof(buf))) {
+    if (!line_from_file("/mnt/mtd/Config/SensorType.bat", "snsType:([0-9]+)",
+                        buf, sizeof(buf))) {
         return false;
     }
     ADD_PARAM("snsType", buf);

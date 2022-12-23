@@ -18,8 +18,7 @@ bool is_ruision_board() {
 bool gather_ruision_board_info(cJSON *j_inner) {
     char buf[256];
 
-    if (!get_regex_line_from_file(DEVICE_ID, "DeviceModel=(.+)", buf,
-                                  sizeof(buf))) {
+    if (!line_from_file(DEVICE_ID, "DeviceModel=(.+)", buf, sizeof(buf))) {
         return false;
     }
     ADD_PARAM("vendor", "Ruision");

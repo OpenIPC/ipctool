@@ -20,8 +20,7 @@ bool is_openwrt_board() {
 static bool detect_openwrt_product(cJSON *j_inner) {
     char buf[256];
 
-    if (!get_regex_line_from_file("/etc/openwrt_version", "(.+)", buf,
-                                  sizeof(buf))) {
+    if (!line_from_file("/etc/openwrt_version", "(.+)", buf, sizeof(buf))) {
         return false;
     }
     ADD_PARAM("vendor", "OpenWrt");
@@ -29,4 +28,6 @@ static bool detect_openwrt_product(cJSON *j_inner) {
     return true;
 }
 
-bool gather_openwrt_board_info(cJSON *j_inner) { return detect_openwrt_product(j_inner); }
+bool gather_openwrt_board_info(cJSON *j_inner) {
+    return detect_openwrt_product(j_inner);
+}

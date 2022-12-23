@@ -45,8 +45,8 @@ static int i2c_no_change_addr(int fd, unsigned char addr) {
 static void chip_properties(cJSON *j_inner) {
     char buf[256];
 
-    if (!get_regex_line_from_file("/proc/device-tree/model", "NVIDIA (.+)", buf,
-                                  sizeof(buf)))
+    if (!line_from_file("/proc/device-tree/model", "NVIDIA (.+)", buf,
+                        sizeof(buf)))
         return;
 
     ADD_PARAM("board", buf);
@@ -55,9 +55,8 @@ static void chip_properties(cJSON *j_inner) {
 static void firmware_props(cJSON *j_inner) {
     char buf[1024];
 
-    if (get_regex_line_from_file("/sys/class/tegra-firmware/versions",
-                                 "Firmware timestamp: (.+)", buf,
-                                 sizeof(buf))) {
+    if (line_from_file("/sys/class/tegra-firmware/versions",
+                       "Firmware timestamp: (.+)", buf, sizeof(buf))) {
         ADD_PARAM("tegra-firmware", buf);
     }
 }

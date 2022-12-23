@@ -47,7 +47,7 @@ static void get_rootfs(mpoint_t mpoints[MAX_MPOINTS]) {
 
     regex_t regex;
     regmatch_t matches[3];
-    if (!compile_regex(&regex, "root=/dev/mtdblock([0-9]) rootfstype=(\\w+)"))
+    if (!regex_compile(&regex, "root=/dev/mtdblock([0-9]) rootfstype=(\\w+)"))
         goto exit;
 
     char *line = NULL;

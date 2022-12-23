@@ -23,8 +23,8 @@ sensor_addr_t rockchip_possible_i2c_addrs[] = {
 bool rockchip_detect_cpu(char *chip_name) {
     char buf[256];
 
-    if (!get_regex_line_from_file("/proc/device-tree/compatible",
-                                  "rockchip,(r[kv][0-9]+)", buf, sizeof(buf)))
+    if (!line_from_file("/proc/device-tree/compatible",
+                        "rockchip,(r[kv][0-9]+)", buf, sizeof(buf)))
         return false;
     strcpy(chip_name, buf);
     return true;
@@ -74,8 +74,8 @@ unsigned long rockchip_totalmem(unsigned long *media_mem) {
 float rockchip_get_temp() {
     float ret = -237.0;
     char buf[16];
-    if (get_regex_line_from_file("/sys/class/thermal/thermal_zone0/temp",
-                                 "(.+)", buf, sizeof(buf))) {
+    if (line_from_file("/sys/class/thermal/thermal_zone0/temp", "(.+)", buf,
+                       sizeof(buf))) {
         ret = strtof(buf, NULL);
     }
     return (float)ret / 1000;

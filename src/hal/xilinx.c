@@ -24,9 +24,8 @@ static bool is_zynq;
 bool xilinx_detect_cpu(char *chip_name) {
     char buf[256];
 
-    if (!get_regex_line_from_file("/proc/cpuinfo",
-                                  "Hardware.+: Xilinx ([a-zA-Z0-9-]+)", buf,
-                                  sizeof(buf)))
+    if (!line_from_file("/proc/cpuinfo", "Hardware.+: Xilinx ([a-zA-Z0-9-]+)",
+                        buf, sizeof(buf)))
         return false;
 
     if (strcmp(buf, "Zynq")) {

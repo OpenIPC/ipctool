@@ -93,7 +93,7 @@ static unsigned long xm_media_mem() {
     unsigned long mmem = 0;
     regex_t regex;
     regmatch_t matches[3];
-    if (!compile_regex(&regex, "\\[(0x[0-9a-f]+)-+(0x[0-9a-f]+)\\]"))
+    if (!regex_compile(&regex, "\\[(0x[0-9a-f]+)-+(0x[0-9a-f]+)\\]"))
         goto exit;
 
     char *line = NULL;
@@ -135,8 +135,8 @@ bool xm_detect_cpu(char *chip_name, uint32_t base) {
     char buf[256];
     (void)base;
 
-    bool res = get_regex_line_from_file("/proc/cpuinfo", "^Hardware.+(xm.+)",
-                                        buf, sizeof(buf));
+    bool res =
+        line_from_file("/proc/cpuinfo", "^Hardware.+(xm.+)", buf, sizeof(buf));
     if (!res) {
         return false;
     }

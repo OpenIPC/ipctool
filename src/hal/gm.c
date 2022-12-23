@@ -24,8 +24,7 @@ bool gm_detect_cpu(char *chip_name) {
     char buf[256];
     char chip[256];
 
-    if (!get_regex_line_from_file("/proc/pmu/chipver", "([0-9]+)", buf,
-                                  sizeof(buf)))
+    if (!line_from_file("/proc/pmu/chipver", "([0-9]+)", buf, sizeof(buf)))
         return false;
     sprintf(chip_name, "GM%.4s", buf);
     return true;
@@ -34,8 +33,8 @@ bool gm_detect_cpu(char *chip_name) {
 static unsigned long gm_media_mem() {
     char buf[256];
     // Fixme: this seems to be currently allocated size
-    if (!get_regex_line_from_file("/proc/frammap/ddr_info",
-                                  "size:.([0-9A-Fx]+)", buf, sizeof(buf)))
+    if (!line_from_file("/proc/frammap/ddr_info", "size:.([0-9A-Fx]+)", buf,
+                        sizeof(buf)))
         return 0;
     return strtoul(buf, NULL, 16) / 1024;
 }
@@ -48,8 +47,8 @@ unsigned long gm_totalmem(unsigned long *media_mem) {
 float gm_get_temp() {
     float ret = -237.0;
     char buf[16];
-    if (get_regex_line_from_file("/sys/class/thermal/thermal_zone0/temp",
-                                 "(.+)", buf, sizeof(buf))) {
+    if (line_from_file("/sys/class/thermal/thermal_zone0/temp", "(.+)", buf,
+                       sizeof(buf))) {
         ret = strtof(buf, NULL);
     }
     return ret;

@@ -25,8 +25,8 @@ bool fh_detect_cpu(char *chip_name) {
     uint32_t sysctrl, ipver, reg;
     unsigned int chip_id = 0;
 
-    if (!get_regex_line_from_file(
-            "/proc/cpuinfo", "Hardware.+: ([a-zA-Z0-9-]+)", buf, sizeof(buf)))
+    if (!line_from_file("/proc/cpuinfo", "Hardware.+: ([a-zA-Z0-9-]+)", buf,
+                        sizeof(buf)))
         return false;
 
     mem_reg(REG_PMU_SYS_CTRL, (uint32_t *)&sysctrl, OP_READ);
@@ -109,8 +109,8 @@ bool fh_detect_cpu(char *chip_name) {
 static unsigned long fh_media_mem() {
     char buf[256];
 
-    if (!get_regex_line_from_file("/proc/driver/vmm", "total.size=([0-9A-Fx]+)",
-                                  buf, sizeof(buf)))
+    if (!line_from_file("/proc/driver/vmm", "total.size=([0-9A-Fx]+)", buf,
+                        sizeof(buf)))
         return 0;
     return strtoul(buf, NULL, 10) * 1024;
 }
@@ -123,8 +123,8 @@ unsigned long fh_totalmem(unsigned long *media_mem) {
 float fh_get_temp() {
     float ret = -237.0;
     char buf[16];
-    if (get_regex_line_from_file("/sys/class/thermal/thermal_zone0/temp",
-                                 "(.+)", buf, sizeof(buf))) {
+    if (line_from_file("/sys/class/thermal/thermal_zone0/temp", "(.+)", buf,
+                       sizeof(buf))) {
         ret = strtof(buf, NULL);
     }
     return ret;

@@ -304,8 +304,8 @@ int sony_ssp_read_register(int fd, unsigned char i2c_addr,
 static unsigned long hisi_media_mem() {
     char buf[256];
 
-    if (!get_regex_line_from_file("/proc/media-mem", "total size=([0-9]+)KB",
-                                  buf, sizeof(buf))) {
+    if (!line_from_file("/proc/media-mem", "total size=([0-9]+)KB", buf,
+                        sizeof(buf))) {
         return 0;
     }
     return strtoul(buf, NULL, 10);
@@ -313,8 +313,8 @@ static unsigned long hisi_media_mem() {
 
 static bool is_cma_allocator() {
     char buf[64];
-    if (get_regex_line_from_file("/proc/cmdline", "mmz_allocator=(\\w+)", buf,
-                                 sizeof(buf))) {
+    if (line_from_file("/proc/cmdline", "mmz_allocator=(\\w+)", buf,
+                       sizeof(buf))) {
         if (!strcmp(buf, "cma"))
             return true;
     }
@@ -390,8 +390,8 @@ static void hisi_hal_cleanup() {
 static void get_hisi_sdk(cJSON *j_inner) {
     char buf[1024];
 
-    if (get_regex_line_from_file("/proc/umap/sys", "Version: \\[(.+)\\]", buf,
-                                 sizeof(buf))) {
+    if (line_from_file("/proc/umap/sys", "Version: \\[(.+)\\]", buf,
+                       sizeof(buf))) {
         char *ptr = strchr(buf, ']');
         char *build = strchr(buf, '[');
         if (!ptr || !build)

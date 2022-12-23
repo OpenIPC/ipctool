@@ -15,10 +15,13 @@ static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char gc_addrs[] = {0x6e, 0x52, 0};
 static unsigned char soi_addrs[] = {0x60, 0x80, 0};
 
-sensor_addr_t ingenic_possible_i2c_addrs[] = {
-    {SENSOR_SONY, sony_addrs},     {SENSOR_SMARTSENS, ssens_addrs},
-    {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OMNIVISION, omni_addrs},
-    {SENSOR_GALAXYCORE, gc_addrs}, {SENSOR_SOI, soi_addrs}, {0, NULL}};
+sensor_addr_t ingenic_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
+                                              {SENSOR_SMARTSENS, ssens_addrs},
+                                              {SENSOR_ONSEMI, onsemi_addrs},
+                                              {SENSOR_OMNIVISION, omni_addrs},
+                                              {SENSOR_GALAXYCORE, gc_addrs},
+                                              {SENSOR_SOI, soi_addrs},
+                                              {0, NULL}};
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;
@@ -219,8 +222,7 @@ bool ingenic_detect_cpu(char *chip_name) {
 static unsigned long ingenic_media_mem() {
     char buf[256];
 
-    if (!get_regex_line_from_file("/proc/cmdline", "rmem=([0-9x]+)", buf,
-                                  sizeof(buf)))
+    if (!line_from_file("/proc/cmdline", "rmem=([0-9x]+)", buf, sizeof(buf)))
         return 0;
     return strtoul(buf, NULL, 10);
 }
@@ -233,8 +235,8 @@ unsigned long ingenic_totalmem(unsigned long *media_mem) {
 float ingenic_get_temp() {
     float ret = -237.0;
     char buf[16];
-    if (get_regex_line_from_file("/sys/class/thermal/thermal_zone0/temp",
-                                 "(.+)", buf, sizeof(buf))) {
+    if (line_from_file("/sys/class/thermal/thermal_zone0/temp", "(.+)", buf,
+                       sizeof(buf))) {
         ret = strtof(buf, NULL);
     }
     return ret;

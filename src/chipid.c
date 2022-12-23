@@ -25,9 +25,9 @@ char nor_chip[128];
 static long get_uart0_address() {
     char buf[256];
 
-    bool res = get_regex_line_from_file(
-        "/proc/iomem", "^([0-9a-f]+)-[0-9a-f]+ : .*uart[@:][0-9]", buf,
-        sizeof(buf));
+    bool res = line_from_file("/proc/iomem",
+                              "^([0-9a-f]+)-[0-9a-f]+ : .*uart[@:][0-9]", buf,
+                              sizeof(buf));
     if (!res) {
         return -1;
     }
@@ -53,7 +53,7 @@ static const manufacturers_t manufacturers[] = {
     {"FH", fh_detect_cpu, "Fullhan", fh_setup_hal},
     {NULL /* Generic */, rockchip_detect_cpu, "Rockchip", rockchip_setup_hal},
     {"Xilinx", xilinx_detect_cpu, NULL, xilinx_setup_hal},
-    {"BCM", bcm_detect_cpu, NULL, bcm_setup_hal}
+    {"BCM", bcm_detect_cpu, "Broadcom", bcm_setup_hal}
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
     {NULL, tegra_detect_cpu, "Nvidia", tegra_setup_hal},
@@ -64,11 +64,11 @@ static bool generic_detect_cpu() {
     char buf[256] = "unknown";
 
     strcpy(chip_name, "unknown");
-    bool res = get_regex_line_from_file(
-        "/proc/cpuinfo", "Hardware\\t+: ([a-zA-Z-]+)", buf, sizeof(buf));
+    bool res = line_from_file("/proc/cpuinfo", "Hardware\\t+: ([a-zA-Z-]+)",
+                              buf, sizeof(buf));
     if (!res) {
-        res = get_regex_line_from_file("/proc/cpuinfo", "vendor_id\t+: (.+)",
-                                       buf, sizeof(buf));
+        res = line_from_file("/proc/cpuinfo", "vendor_id\t+: (.+)", buf,
+                             sizeof(buf));
     }
     strcpy(chip_manufacturer, buf);
 

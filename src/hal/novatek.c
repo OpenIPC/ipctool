@@ -24,8 +24,8 @@ sensor_addr_t novatek_possible_i2c_addrs[] = {
 bool novatek_detect_cpu(char *chip_name) {
     char buf[256];
 
-    if (!get_regex_line_from_file("/proc/device-tree/model",
-                                  "Novatek ([A-Z]+[0-9]+)", buf, sizeof(buf)))
+    if (!line_from_file("/proc/device-tree/model", "Novatek ([A-Z]+[0-9]+)",
+                        buf, sizeof(buf)))
         return false;
     strcpy(chip_name, buf);
     return true;
@@ -34,9 +34,8 @@ bool novatek_detect_cpu(char *chip_name) {
 static unsigned long novatek_media_mem() {
     char buf[256];
 
-    if (!get_regex_line_from_file("/proc/hdal/comm/info",
-                                  "DDR[0-9]:.+size = ([0-9A-Fx]+)", buf,
-                                  sizeof(buf)))
+    if (!line_from_file("/proc/hdal/comm/info",
+                        "DDR[0-9]:.+size = ([0-9A-Fx]+)", buf, sizeof(buf)))
         return 0;
     return strtoul(buf, NULL, 16) / 1024;
 }
@@ -49,8 +48,8 @@ unsigned long novatek_totalmem(unsigned long *media_mem) {
 float novatek_get_temp() {
     float ret = -237.0;
     char buf[16];
-    if (get_regex_line_from_file("/sys/class/thermal/thermal_zone0/temp",
-                                 "(.+)", buf, sizeof(buf))) {
+    if (line_from_file("/sys/class/thermal/thermal_zone0/temp", "(.+)", buf,
+                       sizeof(buf))) {
         ret = strtof(buf, NULL);
     }
     return ret;

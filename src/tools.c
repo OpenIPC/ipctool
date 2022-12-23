@@ -14,8 +14,8 @@
 #include "tools.h"
 
 #define MAX_ERROR_MSG 0x1000
-int compile_regex(regex_t *r, const char *regex_text) {
-    int status = regcomp(r, regex_text, REG_EXTENDED | REG_NEWLINE | REG_ICASE);
+int regex_compile(regex_t *r, const char *regex_text) {
+    int status = regcomp(r, regex_text, REG_EXTENDED | REG_NEWLINE);
     if (status != 0) {
         char error_message[MAX_ERROR_MSG];
         regerror(status, r, error_message, MAX_ERROR_MSG);
@@ -144,7 +144,7 @@ bool dts_items_by_regex(const char *filename, const char *re, char *outbuf,
 
     regex_t regex;
     regmatch_t matches[2];
-    if (!compile_regex(&regex, re))
+    if (!regex_compile(&regex, re))
         goto exit;
 
     if (regexec(&regex, text, ARRCNT(matches), matches, 0) == 0) {
@@ -164,8 +164,8 @@ exit:
     return res;
 }
 
-bool get_regex_line_from_file(const char *filename, const char *re,
-                              char *outbuf, size_t outlen) {
+bool line_from_file(const char *filename, const char *re, char *outbuf,
+                    size_t outlen) {
     long res = false;
 
     FILE *f = fopen(filename, "r");
@@ -174,7 +174,7 @@ bool get_regex_line_from_file(const char *filename, const char *re,
 
     regex_t regex;
     regmatch_t matches[2];
-    if (!compile_regex(&regex, re))
+    if (!regex_compile(&regex, re))
         goto exit;
 
     char *line = NULL;
