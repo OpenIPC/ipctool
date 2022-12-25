@@ -11,7 +11,7 @@ on:
 
 jobs:
   build-musl-static:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     env:
       ARCHIVE: mips_xburst-gcc8.4.0-musl-3_10-1e913a17
