@@ -118,6 +118,28 @@ int hisi_gen2_set_width(int fd, unsigned int reg_width,
     return 0;
 }
 
+int hisi_gen1_sensor_write_register(int fd, unsigned char i2c_addr,
+                             unsigned int reg_addr, unsigned int reg_width,
+                             unsigned int data, unsigned int data_width) {
+    int ret;
+    I2C_DATA_S i2c_data;
+
+    i2c_data.dev_addr = i2c_addr;
+    i2c_data.reg_addr = reg_addr;
+    i2c_data.addr_byte_num = reg_width;
+    i2c_data.data = data;
+    i2c_data.data_byte_num = data_width;
+
+    ret = ioctl(fd, CMD_I2C_WRITE, &i2c_data);
+
+    if (ret) {
+        printf("i2c write failed!\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int hisi_gen2_sensor_write_register(int fd, unsigned char i2c_addr,
                                     unsigned int reg_addr,
                                     unsigned int reg_width, unsigned int data,
@@ -192,6 +214,26 @@ int hisi_sensor_write_register(int fd, unsigned char i2c_addr,
         return -1;
     }
     return 0;
+}
+
+int hisi_gen1_sensor_read_register(int fd, unsigned char i2c_addr,
+                            unsigned int reg_addr, unsigned int reg_width,
+                            unsigned int data_width) {
+    int ret;
+    I2C_DATA_S i2c_data;
+
+    i2c_data.dev_addr = i2c_addr;
+    i2c_data.reg_addr = reg_addr;
+    i2c_data.addr_byte_num = reg_width;
+    i2c_data.data_byte_num = data_width;
+
+    ret = ioctl(fd, CMD_I2C_READ, &i2c_data);
+    if (ret) {
+        printf("i2c read failed!\n");
+        return -1;
+    }
+
+    return i2c_data.data;
 }
 
 int hisi_gen2_sensor_read_register(int fd, unsigned char i2c_addr,
@@ -410,8 +452,8 @@ void setup_hal_hisi() {
     if (chip_generation == HISI_V1) {
         open_i2c_sensor_fd = hisi_gen1_open_i2c_sensor_fd;
         open_spi_sensor_fd = hisi_gen1_open_spi_sensor_fd;
-        i2c_read_register = xm_sensor_read_register;
-        i2c_write_register = xm_sensor_write_register;
+        i2c_read_register = hisi_gen1_sensor_read_register;
+        i2c_write_register = hisi_gen1_sensor_write_register;
         spi_read_register = sony_ssp_read_register;
     } else if (chip_generation == HISI_V2 || chip_generation == HISI_V2A) {
         i2c_read_register = hisi_gen2_sensor_read_register;
