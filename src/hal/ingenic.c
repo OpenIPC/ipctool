@@ -48,7 +48,7 @@ static int get_cpu_id() {
         return -1;
     if (soc_id >> 28 != 1)
         return -1;
-    switch ((soc_id >> 12) & 0xff) {
+    switch ((soc_id << 4) >> 0x10) { // T10/T20 have different calculation method
     case 5:
         switch ((uint8_t)cppsr) {
         case 0:
@@ -69,6 +69,8 @@ static int get_cpu_id() {
         default:
             return -1;
         }
+    }
+    switch ((soc_id >> 12) & 0xff) {
     case 0x30:
         if ((uint8_t)cppsr == 1) {
             switch (HIWORD(subsoctype)) {
