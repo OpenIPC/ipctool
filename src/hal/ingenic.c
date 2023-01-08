@@ -216,7 +216,8 @@ static unsigned long ingenic_media_mem() {
 }
 
 unsigned long ingenic_totalmem(unsigned long *media_mem) {
-    *media_mem = ingenic_media_mem();
+    *media_mem = (ingenic_media_mem() < 1024) ? ingenic_media_mem() * 1024
+                                              : ingenic_media_mem();
     return kernel_mem();
 }
 
