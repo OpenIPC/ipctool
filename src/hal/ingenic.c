@@ -92,20 +92,6 @@ static int get_cpu_id() {
         }
     case 0x21:
         if ((uint8_t)cppsr == 1) {
-            if (BYTE2(subremark)) {
-                if (BYTE2(subremark) != (uint8_t)cppsr) {
-                    if (BYTE2(subremark) != 3) {
-                        if (BYTE2(subremark) != 7) {
-                            if (BYTE2(subremark) != 0xF)
-                                return -1;
-                            return 11;
-                        }
-                        return 12;
-                    }
-                    return 11;
-                }
-                return 12;
-            } else {
                 if (HIWORD(subsoctype) != 0x3333) {
                     if (HIWORD(subsoctype) != 0x1111) {
                         if (HIWORD(subsoctype) == 0x5555)
@@ -115,7 +101,6 @@ static int get_cpu_id() {
                     return 12;
                 }
                 return 11;
-            }
         } else if ((uint8_t)cppsr != 0x10) {
             return -1;
         }
