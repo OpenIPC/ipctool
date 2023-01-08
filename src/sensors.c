@@ -290,30 +290,24 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
-    if (READ(0x4) == 0x10 && READ(0xc) == 0 && READ(0xe) == 0x1) {
-        if (READ(0x6) == 0 && READ(0xd) == 0x20 && READ(0xf) == 0x1 && READ(0x10) == 0x39 && READ(0x12) == 0x50) {
-            sprintf(ctx->sensor_id, "IMX138");
-            return true;
+    if (READ(0x4) == 0x10) {
+        if (READ(0xc) == 0 && READ(0xe) == 0x1) {
+            int val_0xd = READ(0xd);
+	    int val_0x10 = READ(0x10);
+
+            if (val_0xd == 0x20 && val_0x10 == 0x39 && READ(0x6) == 0 && READ(0xf) == 0x1 && READ(0x12) == 0x50) {
+                sprintf(ctx->sensor_id, "IMX138");
+                return true;
+            }
+
+            if (val_0xd == 0 && val_0x10 == 0x1 && READ(0x11) == 0 && READ(0x1e) == 0x1 && READ(0x1f) == 0) {
+                sprintf(ctx->sensor_id, "IMX225");
+                return true;
+            }
         }
 
-        if (READ(0xd) == 0 && READ(0x10) == 0x1 && READ(0x11) == 0 && READ(0x1e) == 0x1 && READ(0x1f) == 0) {
-            sprintf(ctx->sensor_id, "IMX225");
-            return true;
-        }
-    }
-
-    if (READ(0x4) == 0x10 && READ(0x9e) == 0x71) {
-        sprintf(ctx->sensor_id, "IMX123");
-        return true;
-    }
-
-    if (READ(0x1e0) > 0 && READ(0x1e) == 0x1) {
-        uint8_t val = (0xc0 & READ(0x1e0)) >> 6;
-        if (val == 3) {
-            sprintf(ctx->sensor_id, "IMX224");
-            return true;
-        } else if (val == 0) {
-            sprintf(ctx->sensor_id, "IMX225");
+        if (READ(0x9e) == 0x71) {
+            sprintf(ctx->sensor_id, "IMX123");
             return true;
         }
     }
