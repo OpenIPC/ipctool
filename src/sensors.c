@@ -216,7 +216,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
-    if (READ(0x03A) == 0xd1) {
+    if (READ(0x03A) == 0xd1 && READ(0x012) == 0x2c && READ(0x013) == 0x01 && READ(0x10b) == 0x07 && READ(0x110) == 0x12 && READ(0x1ed) == 0x38) {
         sprintf(ctx->sensor_id, "IMX385");
         return true;
     }
@@ -246,22 +246,6 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     if (READ(0x45) == 0x32) {
         sprintf(ctx->sensor_id, "IMX226");
         return true;
-    }
-
-    if (READ(0x4) == 0x10 && READ(0x9e) == 0x71) {
-        sprintf(ctx->sensor_id, "IMX123");
-        return true;
-    }
-
-    if (READ(0x1e0) > 0 && READ(0x1e) == 0x1) {
-        uint8_t val = (0xc0 & READ(0x1e0)) >> 6;
-        if (val == 3) {
-            sprintf(ctx->sensor_id, "IMX224");
-            return true;
-        } else if (val == 0) {
-            sprintf(ctx->sensor_id, "IMX225");
-            return true;
-        }
     }
 
     int ret1dc = READ(0x1DC);
@@ -304,6 +288,34 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         sony_imx219_params(ctx, fd, i2c_addr);
 #endif
         return true;
+    }
+
+    if (READ(0x4) == 0x10 && READ(0xc) == 0 && READ(0xe) == 0x1) {
+        if (READ(0x6) == 0 && READ(0xd) == 0x20 && READ(0xf) == 0x1 && READ(0x10) == 0x39 && READ(0x12) == 0x50) {
+            sprintf(ctx->sensor_id, "IMX138");
+            return true;
+        }
+
+        if (READ(0xd) == 0 && READ(0x10) == 0x1 && READ(0x11) == 0 && READ(0x1e) == 0x1 && READ(0x1f) == 0) {
+            sprintf(ctx->sensor_id, "IMX225");
+            return true;
+        }
+    }
+
+    if (READ(0x4) == 0x10 && READ(0x9e) == 0x71) {
+        sprintf(ctx->sensor_id, "IMX123");
+        return true;
+    }
+
+    if (READ(0x1e0) > 0 && READ(0x1e) == 0x1) {
+        uint8_t val = (0xc0 & READ(0x1e0)) >> 6;
+        if (val == 3) {
+            sprintf(ctx->sensor_id, "IMX224");
+            return true;
+        } else if (val == 0) {
+            sprintf(ctx->sensor_id, "IMX225");
+            return true;
+        }
     }
 
     return false;
