@@ -216,11 +216,6 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
-    if (READ(0x03A) == 0xd1 && READ(0x012) == 0x2c && READ(0x013) == 0x01 && READ(0x10b) == 0x07 && READ(0x110) == 0x12 && READ(0x1ed) == 0x38) {
-        sprintf(ctx->sensor_id, "IMX385");
-        return true;
-    }
-
     // Possible check: 0x303a = 0xc9
     if (READ(0x015) == 0x3c) {
         sprintf(ctx->sensor_id, "IMX185");
@@ -301,6 +296,11 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
             }
 
             if (val_0xd == 0 && val_0x10 == 0x1 && READ(0x11) == 0 && READ(0x1e) == 0x1 && READ(0x1f) == 0) {
+                if (READ(0x338) != 0) {
+                    sprintf(ctx->sensor_id, "IMX385");
+                    return true;
+                }
+
                 sprintf(ctx->sensor_id, "IMX225");
                 return true;
             }
