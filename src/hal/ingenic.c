@@ -48,7 +48,6 @@ static int get_cpu_id() {
         return -1;
     if (soc_id >> 28 != 1)
         return -1;
-    printf("%x %x %x %x \n", soc_id, (uint8_t)cppsr,HIWORD(subsoctype),BYTE2(subremark));
     switch ((soc_id << 4) >> 0x10) { // T10/T20 have different calculation method
     case 5:
         switch ((uint8_t)cppsr) {
