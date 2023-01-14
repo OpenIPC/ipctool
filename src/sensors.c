@@ -350,6 +350,12 @@ static int detect_soi_sensor(sensor_ctx_t *ctx, int fd,
         if (ver == 0x43) {
             sprintf(ctx->sensor_id, "JXQ03P");
             return true;
+        } else if (ver == 0x41) {
+            sprintf(ctx->sensor_id, "JXF37P");
+            return true;
+        } else if (ver == 0x42) {
+            sprintf(ctx->sensor_id, "JXF53");
+            return true;
         }
         // fall through
     case 0:
@@ -625,6 +631,9 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
 
     // model mapping
     switch (res) {
+    case 0x2770:
+        res = 0x2718;
+        break;
     case 0x4688:
         res = 0x4689;
         break;
