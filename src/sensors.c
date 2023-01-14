@@ -288,14 +288,16 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     if (READ(0x4) == 0x10) {
         if (READ(0xc) == 0 && READ(0xe) == 0x1) {
             int val_0xd = READ(0xd);
-	    int val_0x10 = READ(0x10);
+            int val_0x10 = READ(0x10);
 
-            if (val_0xd == 0x20 && val_0x10 == 0x39 && READ(0x6) == 0 && READ(0xf) == 0x1 && READ(0x12) == 0x50) {
+            if (val_0xd == 0x20 && val_0x10 == 0x39 && READ(0x6) == 0 &&
+                READ(0xf) == 0x1 && READ(0x12) == 0x50) {
                 sprintf(ctx->sensor_id, "IMX138");
                 return true;
             }
 
-            if (val_0xd == 0 && val_0x10 == 0x1 && READ(0x11) == 0 && READ(0x1e) == 0x1 && READ(0x1f) == 0) {
+            if (val_0xd == 0 && val_0x10 == 0x1 && READ(0x11) == 0 &&
+                READ(0x1e) == 0x1 && READ(0x1f) == 0) {
                 if (READ(0x338) != 0) {
                     sprintf(ctx->sensor_id, "IMX385");
                     return true;
@@ -406,9 +408,6 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    // xm_i2c_write(0x103, 1); // reset all registers (2 times and then
-    // delay) msDelay(100);
-
     // could be 0x3005 for SC1035, SC1145, SC1135
     int high = i2c_read_register(fd, i2c_addr, 0x3107, 2, 1);
     // early break
@@ -423,29 +422,29 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
 
     int res = high << 8 | lower;
     switch (res) {
+    case 0x0010:
+        // aka fake Aptina AR0130
+        res = 0x1035;
+        break;
+    case 0x1045:
+        break;
+    case 0x1145:
+        break;
     case 0x1235:
-        // Untested
         break;
-    case 0x1245:
-        // Untested
-        {
-            int sw = i2c_read_register(fd, i2c_addr, 0x3020, 2, 1);
-            sprintf(ctx->sensor_id, "SC2145H_%c", sw == 2 ? 'A' : 'B');
-            return true;
-        }
-    case 0x2032:
-        strcpy(ctx->sensor_id, "SC2035");
+    case 0x1245: {
+        int sw = i2c_read_register(fd, i2c_addr, 0x3020, 2, 1);
+        sprintf(ctx->sensor_id, "SC2145H_%c", sw == 2 ? 'A' : 'B');
         return true;
-    case 0x2135:
-        break;
-    case 0x2145:
-        // Untested
+    }
+    case 0x2032:
+        res = 0x2035;
         break;
     case 0x2045:
         break;
-    case 0x0010:
-        // (Untested) aka fake Aptina AR0130
-        res = 0x1035;
+    case 0x2135:
+        break;
+    case 0x2145:
         break;
     case 0x2232: {
         if (i2c_read_register(fd, i2c_addr, 0x3109, 2, 1) == 0x20)
@@ -461,13 +460,12 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         strcpy(ctx->sensor_id, "SC2315E");
         return true;
     case 0x2245:
-        // Untested
         res = 0x1145;
         break;
-    case 0x1045:
-        break;
-    case 0x1145:
-        break;
+    case 0x2300:
+        // XM530
+        strcpy(ctx->sensor_id, "SC307P");
+        return true;
     case 0x2310:
         break;
     case 0x2311:
@@ -475,25 +473,33 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         strcpy(ctx->sensor_id, "SC2315");
         return true;
     case 0x2330:
-        // Untested
         strcpy(ctx->sensor_id, "SC307H");
     case 0x3035:
         break;
     case 0x3235:
         res = 0x4236;
         break;
+    case 0x4210:
+        break;
     case 0x5235:
-        // Untested
         break;
     case 0x5300:
         strcpy(ctx->sensor_id, "SC335E");
+        return true;
+    case 0xca13:
+        // XM530
+        strcpy(ctx->sensor_id, "SC1335T");
+        return true;
+    case 0xca18:
+        // XM530
+        strcpy(ctx->sensor_id, "SC1330T");
         return true;
     case 0xcb07:
         strcpy(ctx->sensor_id, "SC2232H");
         return true;
     case 0xcb10:
-        strcpy(ctx->sensor_id, "SC2239");
-        return true;
+        res = 0x2239;
+        break;
     case 0xcb14:
         res = 0x2335;
         break;
@@ -506,14 +512,15 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     case 0xcc05:
         // AKA AUGE
-        strcpy(ctx->sensor_id, "SC3235");
-        return true;
+        res = 0x3235;
+        break;
     case 0xcc1a:
-        strcpy(ctx->sensor_id, "SC3335");
-        return true;
-    case 0x4210:
-        strcpy(ctx->sensor_id, "SC4210");
-        return true;
+        res = 0x3335;
+        break;
+    case 0xcc41:
+        // XM530
+        res = 0x3338;
+        break;
     case 0xcd01:
         // XM
         strcpy(ctx->sensor_id, "SC4335P");
@@ -528,11 +535,15 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     case 0xce1a:
         // XM
-        strcpy(ctx->sensor_id, "SC5332");
-        return true;
+        res = 0x5332;
+        break;
     case 0xce1f:
         // XM
         strcpy(ctx->sensor_id, "SC501AI");
+        return true;
+    case 0xda23:
+        // XM 530
+        res = 0x1345;
         return true;
     case 0:
     case 0xffff:
