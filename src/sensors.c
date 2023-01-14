@@ -495,8 +495,12 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         strcpy(ctx->sensor_id, "SC1330T");
         return true;
     case 0xcb07:
+        // aka SC307C
         strcpy(ctx->sensor_id, "SC2232H");
         return true;
+    case 0xcb08:
+        res = 0x2320;
+        break;
     case 0xcb10:
         res = 0x2239;
         break;
@@ -507,7 +511,7 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         res = 0x2232;
         break;
     case 0xcb1c:
-        // XM
+        // aka SC337H
         strcpy(ctx->sensor_id, "SC307H");
         return true;
     case 0xcc05:
@@ -525,6 +529,10 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         // XM
         strcpy(ctx->sensor_id, "SC4335P");
         return true;
+    case 0xcb3a:
+        // XM530
+        res = 0x2336;
+        break;
     case 0xcb3e:
         // XM
         strcpy(ctx->sensor_id, "SC223A");
