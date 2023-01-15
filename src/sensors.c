@@ -700,6 +700,7 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
         return false;
 
     switch (res) {
+    case 0x1024:
     case 0x1034:
     case 0x2023:
     case 0x2053:
