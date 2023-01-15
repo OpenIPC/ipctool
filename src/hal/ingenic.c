@@ -48,7 +48,8 @@ static int get_cpu_id() {
         return -1;
     if (soc_id >> 28 != 1)
         return -1;
-    switch ((soc_id << 4) >> 0x10) { // T10/T20 have different calculation method
+    switch ((soc_id << 4) >>
+            0x10) { // T10/T20 have different calculation method
     case 5:
         switch ((uint8_t)cppsr) {
         case 0:
@@ -94,15 +95,15 @@ static int get_cpu_id() {
         }
     case 0x21:
         if ((uint8_t)cppsr == 1) {
-                if (HIWORD(subsoctype) != 0x3333) {
-                    if (HIWORD(subsoctype) != 0x1111) {
-                        if (HIWORD(subsoctype) == 0x5555)
-                            return 14;
-                        return 13;
-                    }
-                    return 12;
+            if (HIWORD(subsoctype) != 0x3333) {
+                if (HIWORD(subsoctype) != 0x1111) {
+                    if (HIWORD(subsoctype) == 0x5555)
+                        return 14;
+                    return 13;
                 }
-                return 11;
+                return 12;
+            }
+            return 11;
         } else if ((uint8_t)cppsr != 0x10) {
             return -1;
         }
@@ -123,21 +124,28 @@ static int get_cpu_id() {
                 }
                 return 16;
             } else {
-                if (HIWORD(subsoctype) != 0x3333) {
-                    if (HIWORD(subsoctype) != 0x1111) {
-                        if (HIWORD(subsoctype) != 0x2222) {
-                            if (HIWORD(subsoctype) != 0x4444) {
-                                if (HIWORD(subsoctype) == 0x5555)
-                                    return 19;
-                                return 20;
-                            }
-                            return 18;
-                        }
-                        return 17;
-                    }
+                switch (HIWORD(subsoctype)) {
+                case 0x1111:
+                    return 16;
+                case 0x2222:
+                    return 17;
+                case 0x3333:
+                    return 15;
+                case 0x4444:
+                    return 18;
+                case 0x5555:
+                    return 20;
+                case 0x6666:
+                    return 23;
+                case 0xcccc:
+                    return 19;
+                case 0xdddd:
+                    return 21;
+                case 0xeeee:
+                    return 22;
+                default:
                     return 16;
                 }
-                return 15;
             }
         } else if ((uint8_t)cppsr != 0x10) {
             return -1;
@@ -188,8 +196,14 @@ static const char *ingenic_cpu_name() {
     case 18:
         return "T31A";
     case 19:
-        return "T31ZL";
+        return "T31AL";
     case 20:
+        return "T31ZL";
+    case 21:
+        return "T31ZC";
+    case 22:
+        return "T31LC";
+    case 23:
         return "T31ZX";
     }
     return "unknown";
