@@ -517,8 +517,7 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         res = 0x2232;
         break;
     case 0xcb1c:
-        // aka SC337H
-        strcpy(ctx->sensor_id, "SC307H");
+        strcpy(ctx->sensor_id, "SC337H");
         return true;
     case 0xcc05:
         // AKA AUGE
