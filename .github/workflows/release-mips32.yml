@@ -94,6 +94,15 @@ jobs:
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
+      - name: Upload info to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: "build/ipcinfo"
+          asset_name: "ipcinfo-mips32"
+          tag: ${{ env.TAG_NAME }}
+          overwrite: true
+
 #     - name: Publish file on S3 for HTTP access (to test dev versions)
 #       if: env.HEAD_TAG == ''
 #       uses: tpaschalis/s3-sync-action@master
