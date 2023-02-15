@@ -58,6 +58,7 @@ jobs:
           sudo apt-get install -y cmake upx-ucl
           cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
           cmake --build build
+          upx build/ipcinfo
           upx build/ipctool
           cp build/ipctool ipctool-$GIT_HASH
         continue-on-error: true
@@ -94,7 +95,7 @@ jobs:
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
-      - name: Upload info to release
+      - name: Upload ipcinfo to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
