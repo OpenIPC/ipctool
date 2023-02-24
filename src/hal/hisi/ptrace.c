@@ -454,6 +454,53 @@ typedef struct {
     };
 } V4_combo_dev_attr_t;
 
+typedef struct VI_DEV_ATTR_S {
+    unsigned int enIntfMode;
+    unsigned int enWorkMode;
+    unsigned int au32ComponentMask[2];
+    unsigned int enScanMode;
+    int as32AdChnId[4];
+    unsigned int enDataSeq;
+    struct {
+        unsigned int enVsync;
+        unsigned int enVsyncNeg;
+        unsigned int enHsync;
+        unsigned int enHsyncNeg;
+        unsigned int enVsyncValid;
+        unsigned int enVsyncValidNeg;
+        struct {
+            unsigned int u32HsyncHfb;
+            unsigned int u32HsyncAct;
+            unsigned int u32HsyncHbb;
+            unsigned int u32VsyncVfb;
+            unsigned int u32VsyncVact;
+            unsigned int u32VsyncVbb;
+            unsigned int u32VsyncVbfb;
+            unsigned int u32VsyncVbact;
+            unsigned int u32VsyncVbbb;
+        } VI_TIMING_BLANK_S;
+    } stSynCfg;
+
+    unsigned int enInputDataType;
+    bool bDataReverse;
+    img_size_t stSize;
+    struct {
+        struct {
+            img_size_t stBasSize;
+        } stSacleAttr;
+        struct {
+            unsigned int enHRephaseMode;
+            unsigned int enVRephaseMode;
+        } stRephaseAttr;
+    } stBasAttr;
+    struct {
+        wdr_mode_t enWDRMode;
+        unsigned int u32CacheLine;
+    } stWDRAttr;
+
+    short enDataRate;
+} V4_vi_dev_attr_t;
+
 size_t hisi_sizeof_combo_dev_attr() {
     switch (chip_generation) {
     case HISI_V2A:
@@ -469,6 +516,17 @@ size_t hisi_sizeof_combo_dev_attr() {
         return sizeof(V4_combo_dev_attr_t);
     default:
         fprintf(stderr, "Not implemented combo_dev_attr for %#X\n",
+                chip_generation);
+        exit(EXIT_FAILURE);
+    }
+}
+
+size_t hisi_sizeof_vi_dev_attr() {
+    switch (chip_generation) {
+    case HISI_V4:
+        return sizeof(V4_vi_dev_attr_t);
+    default:
+        fprintf(stderr, "Not implemented vi_dev_attr for %#X\n",
                 chip_generation);
         exit(EXIT_FAILURE);
     }
@@ -708,6 +766,33 @@ static void hisi_dump_V4combo_dev_attr(V4_combo_dev_attr_t *attr,
     puts("};");
 }
 
+static void hisi_dump_V4vi_dev_attr(V4_vi_dev_attr_t *attr, unsigned int cmd) {
+    int level = 0;
+    DEFINE_VAR(pstViDevAttr VI_DEV_ATTR_S);
+    INT_PARAM(enIntfMode, attr->enIntfMode);
+    INT_PARAM(enWorkMode, attr->enWorkMode);
+    INT_ARRAY(au32ComponentMask, attr->au32ComponentMask);
+    INT_PARAM(enScanMode, attr->enScanMode);
+    INT_ARRAY(as32AdChnId, attr->as32AdChnId);
+    INT_PARAM(enDataSeq, attr->enDataSeq);
+    STRUCT_PARAM(stSynCfg, "{%d, %d, %d, %d, %d, %d}", attr->stSynCfg.enHsync,
+                 attr->stSynCfg.enHsyncNeg, attr->stSynCfg.enVsync,
+                 attr->stSynCfg.enVsyncNeg, attr->stSynCfg.enVsyncValid,
+                 attr->stSynCfg.enVsyncValidNeg);
+    INT_PARAM(enInputDataType, attr->enInputDataType);
+    INT_PARAM(bDataReverse, attr->bDataReverse);
+    STRUCT_PARAM(stSize, "{%d, %d}", attr->stSize.width, attr->stSize.height);
+    STRUCT_PARAM(stBasAttr, "{%d, %d, %d, %d}",
+                 attr->stBasAttr.stRephaseAttr.enHRephaseMode,
+                 attr->stBasAttr.stRephaseAttr.enVRephaseMode,
+                 attr->stBasAttr.stSacleAttr.stBasSize.width,
+                 attr->stBasAttr.stSacleAttr.stBasSize.height);
+    STRUCT_PARAM(stWDRAttr, "{%d, %d}", attr->stWDRAttr.enWDRMode,
+                 attr->stWDRAttr.u32CacheLine);
+    INT_PARAM(enDataRate, attr->enDataRate);
+    puts("};");
+}
+
 void hisi_dump_combo_dev_attr(void *ptr, unsigned int cmd) {
     switch ((cmd >> 16) & 0x1ff) {
     case sizeof(V2_combo_dev_attr_t):
@@ -720,6 +805,15 @@ void hisi_dump_combo_dev_attr(void *ptr, unsigned int cmd) {
         return hisi_dump_V4Acombo_dev_attr(ptr, cmd);
     case sizeof(V4_combo_dev_attr_t):
         return hisi_dump_V4combo_dev_attr(ptr, cmd);
+    default:
+        fprintf(stderr, "Not implemented\n");
+    }
+}
+
+void hisi_dump_vi_dev_attr(void *ptr, unsigned int cmd) {
+    switch ((cmd >> 16) & 0x1ff) {
+    case sizeof(V4_vi_dev_attr_t):
+        return hisi_dump_V4vi_dev_attr(ptr, cmd);
     default:
         fprintf(stderr, "Not implemented\n");
     }

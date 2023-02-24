@@ -453,6 +453,16 @@ static void dump_hisi_read_mipi(pid_t child, unsigned int cmd,
     hisi_dump_combo_dev_attr(buf, cmd);
 }
 
+static void dump_hisi_vi_dev_attr(pid_t child, unsigned int cmd,
+                                size_t remote_addr) {
+    size_t stsize = hisi_sizeof_vi_dev_attr();
+    char *buf = alloca(stsize);
+    if (!copy_from_process(child, remote_addr, buf, stsize))
+        return;
+
+    hisi_dump_vi_dev_attr(buf, cmd);
+}
+
 static void hisi_mipi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
                                     size_t arg, ssize_t sysret) {
     switch (cmd) {
@@ -471,8 +481,22 @@ static void hisi_mipi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
     case HIV4_MIPI_SET_DEV_ATTR:
         dump_hisi_read_mipi(proc->pid, cmd, arg);
         break;
+    case HIV4_VI_SET_DEV_ATTR:
+        dump_hisi_vi_dev_attr(proc->pid, cmd, arg);
+        break;
     default:
         printf("ERR: uknown cmd %#x for himipi\n", cmd);
+    }
+}
+
+static void hisi_vi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                                    size_t arg, ssize_t sysret) {
+    switch (cmd) {
+    case HIV4_VI_SET_DEV_ATTR:
+        dump_hisi_vi_dev_attr(proc->pid, cmd, arg);
+        break;
+    default:
+        break;
     }
 }
 
@@ -875,6 +899,8 @@ static void syscall_open(process_t *proc, int fd, int offset) {
     } else if (!strcmp(filename, "/dev/hi_mipi") ||
                !strcmp(filename, "/dev/mipi")) {
         proc->fds[fd].ioctl_exit = hisi_mipi_ioctl_exit_cb;
+    } else if (!strcmp(filename, "/dev/vi")) {
+        proc->fds[fd].ioctl_exit = hisi_vi_ioctl_exit_cb;
     }
 }
 
