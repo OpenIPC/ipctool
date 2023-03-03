@@ -57,6 +57,7 @@ float novatek_get_temp() {
 
 void novatek_setup_hal() {
     possible_i2c_addrs = novatek_possible_i2c_addrs;
+    i2c_change_addr = i2c_changenshift_addr; 
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = novatek_get_temp;
 #ifndef STANDALONE_LIBRARY
