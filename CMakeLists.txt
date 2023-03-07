@@ -38,6 +38,8 @@ include_directories(./src/)
 set(COMMON_LIB_SRC
     src/chipid.c
     src/chipid.h
+    src/hal/allwinner.c
+    src/hal/allwinner.h
     src/hal/bcm.c
     src/hal/bcm.h
     src/hal/common.c

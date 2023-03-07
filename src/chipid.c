@@ -53,7 +53,8 @@ static const manufacturers_t manufacturers[] = {
     {"FH", fh_detect_cpu, "Fullhan", fh_setup_hal},
     {NULL /* Generic */, rockchip_detect_cpu, "Rockchip", rockchip_setup_hal},
     {"Xilinx", xilinx_detect_cpu, NULL, xilinx_setup_hal},
-    {"BCM", bcm_detect_cpu, "Broadcom", bcm_setup_hal}
+    {"BCM", bcm_detect_cpu, "Broadcom", bcm_setup_hal},
+    {NULL, allwinner_detect_cpu, "Allwinner", allwinner_setup_hal}
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
     {NULL, tegra_detect_cpu, "Nvidia", tegra_setup_hal},
