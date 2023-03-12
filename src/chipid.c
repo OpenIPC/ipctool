@@ -65,7 +65,7 @@ static bool generic_detect_cpu() {
     char buf[256] = "unknown";
 
     strcpy(chip_name, "unknown");
-    bool res = line_from_file("/proc/cpuinfo", "Hardware\\t+: ([a-zA-Z-]+)",
+    bool res = line_from_file("/proc/cpuinfo", "Hardware\t+: ([a-zA-Z-]+)",
                               buf, sizeof(buf));
     if (!res) {
         res = line_from_file("/proc/cpuinfo", "vendor_id\t+: (.+)", buf,
@@ -176,6 +176,12 @@ const char *getchipfamily() {
             return "gk7205v200";
         else
             return "hi3516ev200";
+    case INFITITY6:
+        return "infinity6";
+    case INFITITY6B0:
+        return "infinity6b0";
+    case INFITITY6E:
+        return "infinity6e";
     default:
         return chip_name;
     }
