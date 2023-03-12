@@ -65,7 +65,7 @@ static bool generic_detect_cpu() {
     char buf[256] = "unknown";
 
     strcpy(chip_name, "unknown");
-    bool res = line_from_file("/proc/cpuinfo", "Hardware\\t+: ([a-zA-Z-]+)",
+    bool res = line_from_file("/proc/cpuinfo", "Hardware\t+: ([a-zA-Z-]+)",
                               buf, sizeof(buf));
     if (!res) {
         res = line_from_file("/proc/cpuinfo", "vendor_id\t+: (.+)", buf,
