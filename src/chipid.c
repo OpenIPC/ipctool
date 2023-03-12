@@ -176,6 +176,12 @@ const char *getchipfamily() {
             return "gk7205v200";
         else
             return "hi3516ev200";
+    case INFITITY6:
+        return "infinity6";
+    case INFITITY6B0:
+        return "infinity6b0";
+    case INFITITY6E:
+        return "infinity6e";
     default:
         return chip_name;
     }
