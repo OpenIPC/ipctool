@@ -22,7 +22,7 @@ typedef struct {
 
 static bool gather_anjoy_board(cJSON *j_inner) {
     gather_sstar_board_info(j_inner);
-    return gather_anjoy_board_info();
+    return gather_anjoy_board_info(j_inner);
 }
 
 static const board_vendors_t vendors[] = {
