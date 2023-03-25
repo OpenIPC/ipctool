@@ -356,6 +356,9 @@ static int detect_soi_sensor(sensor_ctx_t *ctx, int fd,
         } else if (ver == 0x42) {
             sprintf(ctx->sensor_id, "JXF53");
             return true;
+        } else if (ver == 0x44) {
+            sprintf(ctx->sensor_id, "JXF38P");
+            return true;
         }
         // fall through
     case 0:
@@ -487,10 +490,16 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         break;
     case 0x4210:
         break;
+    case 0x4235:
+        res = 0x4238;
+        break;
     case 0x5235:
         break;
     case 0x5300:
         strcpy(ctx->sensor_id, "SC335E");
+        return true;
+    case 0xbd2f:
+        strcpy(ctx->sensor_id, "SC450AI");
         return true;
     case 0xca13:
         // XM530
@@ -526,6 +535,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0xcc1a:
         res = 0x3335;
         break;
+    case 0xcc40:
+        strcpy(ctx->sensor_id, "SC301IoT");
+        return true;
     case 0xcc41:
         // XM530
         res = 0x3338;
@@ -557,6 +569,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0xda23:
         // XM 530
         res = 0x1345;
+        return true;
+    case 0xdc42:
+        res = 0x4336;
         return true;
     case 0:
     case 0xffff:
@@ -702,12 +717,17 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     case 0x1004:
     case 0x1024:
     case 0x1034:
+    case 0x1054:
     case 0x2023:
     case 0x2033:
     case 0x2053:
     case 0x2063:
     case 0x2083:
+    case 0x2093:
+    case 0x3003:
     case 0x4653:
+    case 0x46c3:
+    case 0x5035:
         sprintf(ctx->sensor_id, "GC%04x", res);
         return true;
     case 0xffff:
