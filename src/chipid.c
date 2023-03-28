@@ -49,7 +49,7 @@ static const manufacturers_t manufacturers[] = {
     {"SStar", sstar_detect_cpu, NULL, sstar_setup_hal},
     {"MStar", mstar_detect_cpu, NULL, sstar_setup_hal},
     {"Novatek", novatek_detect_cpu, NULL, novatek_setup_hal},
-    {"Grain-Media", gm_detect_cpu, NULL, gm_setup_hal},
+    {"Grain", gm_detect_cpu, NULL, gm_setup_hal},
     {"FH", fh_detect_cpu, "Fullhan", fh_setup_hal},
     {NULL /* Generic */, rockchip_detect_cpu, "Rockchip", rockchip_setup_hal},
     {"Xilinx", xilinx_detect_cpu, NULL, xilinx_setup_hal},
@@ -65,11 +65,9 @@ static bool generic_detect_cpu() {
     char buf[256] = "unknown";
 
     strcpy(chip_name, "unknown");
-    bool res = line_from_file("/proc/cpuinfo", "Hardware\t+: ([a-zA-Z-]+)",
-                              buf, sizeof(buf));
+    bool res = line_from_file("/proc/cpuinfo", "Hardware.+:.(\\w+)", buf, sizeof(buf));
     if (!res) {
-        res = line_from_file("/proc/cpuinfo", "vendor_id\t+: (.+)", buf,
-                             sizeof(buf));
+        res = line_from_file("/proc/cpuinfo", "vendor_id.+:.(\\w+)", buf, sizeof(buf));
     }
     strcpy(chip_manufacturer, buf);
 
