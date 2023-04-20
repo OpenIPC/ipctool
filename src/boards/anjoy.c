@@ -34,6 +34,7 @@ bool gather_anjoy_board_info(cJSON *j_inner) {
 
             for (int i = 0; i < len; i++)
                 entry->d_name[i] = toupper(entry->d_name[i]);
+            entry->d_name[len] = 0;
 	    ADD_PARAM("model", entry->d_name);
             found = true;
             break;

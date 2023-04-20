@@ -42,11 +42,25 @@ bool mstar_detect_cpu(char *chip_name) {
     return false;
 }
 
+static bool sstar_detect_brom_tag(uint32_t addr, char *buf) {
+    mem_reg(addr, (uint32_t*)buf, OP_READ);
+    if (buf[0] == 'M' && buf[1] == 'V' && buf[2] == 'X') {
+        for (int i = 1; i < 8; i++)
+            mem_reg(addr + i * 4, (uint32_t*)(buf + i * 4), OP_READ);
+        return true;
+    } else {
+        buf[0] = 0;
+    }
+    return false;
+}
+
 bool sstar_detect_cpu(char *chip_name) {
     uint32_t val;
-
+    int offset;
     if (mem_reg(0x1f003c00, &val, OP_READ)) {
-        sprintf(chip_name, "id %#x", val);
+        offset = sprintf(chip_name, "id %#x ", val);
+        sstar_detect_brom_tag(0x3fe0, chip_name + offset) || 
+        sstar_detect_brom_tag(0x7fe0, chip_name + offset);
         chip_generation = val;
         return true;
     }
