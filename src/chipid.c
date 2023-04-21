@@ -44,6 +44,7 @@ typedef struct {
 static const manufacturers_t manufacturers[] = {
 #if defined(mips) || defined(__mips__) || defined(__mips)
     {"isvp", ingenic_detect_cpu, "Ingenic", setup_hal_ingenic},
+    {"ingenic", ingenic_detect_cpu, "Ingenic", setup_hal_ingenic},
 #endif
 #ifdef __arm__
     {"SStar", sstar_detect_cpu, NULL, sstar_setup_hal},
@@ -68,6 +69,9 @@ static bool generic_detect_cpu() {
     bool res = line_from_file("/proc/cpuinfo", "Hardware.+:.(\\w+)", buf, sizeof(buf));
     if (!res) {
         res = line_from_file("/proc/cpuinfo", "vendor_id.+:.(\\w+)", buf, sizeof(buf));
+    }
+    if (!res) {
+        res = line_from_file("/proc/cpuinfo", "machine.+:.(\\w+)", buf, sizeof(buf));
     }
     strcpy(chip_manufacturer, buf);
 

@@ -36,7 +36,7 @@ typedef unsigned short uint16;
 
 static int get_cpu_id() {
     uint32_t soc_id = 0, cppsr = 0;
-    uint32_t subsoctype = 0, subremark = 0;
+    uint32_t subsoctype = 0, subremark = 0, subsoctypet40 = 0;
 
     if (!mem_reg(0x1300002C, &soc_id, OP_READ))
         return -1;
@@ -151,6 +151,17 @@ static int get_cpu_id() {
             return -1;
         }
         return 15;
+    case 0x40:
+        if (!mem_reg(0x13540250, &subsoctypet40, OP_READ))
+            return -1;
+        switch (HIWORD(subsoctypet40)) {
+        case 0x1111:
+            return 24;
+        case 0x7777:
+            return 25;
+        case 0x4444:
+            return 26;
+        }
     default:
         return -1;
     }
@@ -205,6 +216,12 @@ static const char *ingenic_cpu_name() {
         return "T31LC";
     case 23:
         return "T31ZX";
+    case 24:
+        return "T40N";
+    case 25:
+        return "T40XP";
+    case 26:
+        return "T40A";
     }
     return "unknown";
 }
