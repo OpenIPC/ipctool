@@ -206,7 +206,7 @@ static int i2cdetect(int argc, char **argv, bool script_mode) {
             printf("%4.x: ", i2c_addr);
 
         if (res != -1) {
-            printf("%x ", i2c_addr);
+            printf("%02x ", i2c_addr);
         } else {
             printf("xx ");
         }
