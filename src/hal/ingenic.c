@@ -5,6 +5,7 @@
 
 #include <unistd.h>
 
+#include "chipid.h"
 #include "hal/common.h"
 #include "tools.h"
 
@@ -262,9 +263,32 @@ float ingenic_get_temp() {
     return ret;
 }
 
+static int ingenic_open_i2c_fd() {
+    int adapter_nr = 0;
+    if (!strncmp(chip_name, "T40", 3))
+        adapter_nr = 1;
+    char adapter_name[FILENAME_MAX];
+
+    snprintf(adapter_name, sizeof(adapter_name), "/dev/i2c-%d", adapter_nr);
+
+    return universal_open_sensor_fd(adapter_name);
+}
+
+static void ingenic_enable_sensor_clock() {
+    FILE *f;
+    f = fopen("/proc/jz/sinfo/info", "w");
+
+    if (f) {
+        fprintf(f, "%s", "open:jxf22"); /* open any sensor to enable mclk*/
+        fclose(f);
+    }
+}
+
 void setup_hal_ingenic() {
     disable_printk();
+    ingenic_enable_sensor_clock();
     possible_i2c_addrs = ingenic_possible_i2c_addrs;
+    open_i2c_sensor_fd = ingenic_open_i2c_fd;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = ingenic_get_temp;
 #ifndef STANDALONE_LIBRARY
