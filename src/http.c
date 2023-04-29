@@ -293,7 +293,7 @@ int upload(const char *hostname, const char *uri, nservers_t *ns,
     for (size_t i = 0; i < blocks_num; i++) {
         if (i) {
             uint32_t len_header = blocks[i].len;
-            write(s, &len_header, sizeof(len_header));
+            int ret = write(s, &len_header, sizeof(len_header));
         }
 
         int nbytes = write(s, blocks[i].data, blocks[i].len);

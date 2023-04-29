@@ -36,7 +36,7 @@ static unsigned get_size_from_proc(const char *filename) {
         return 0;
 
     unsigned value = 0;
-    fread(&value, 1, sizeof(value), fp);
+    int ret = fread(&value, 1, sizeof(value), fp);
     value = ntohl(value);
 
     fclose(fp);
@@ -45,7 +45,7 @@ static unsigned get_size_from_proc(const char *filename) {
 
 static unsigned long rockchip_media_mem() {
     unsigned long total = 0;
-    char buf[256] = {0};
+    char buf[512] = {0};
 
     const char *proc_dir = "/proc/device-tree/reserved-memory";
     DIR *dir = opendir(proc_dir);

@@ -162,6 +162,8 @@ static int get_cpu_id() {
             return 25;
         case 0x4444:
             return 26;
+        default:
+            return -1;
         }
     default:
         return -1;

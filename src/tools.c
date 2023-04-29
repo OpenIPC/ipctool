@@ -134,7 +134,7 @@ bool dts_items_by_regex(const char *filename, const char *re, char *outbuf,
     int fsize = ftell(f);
     rewind(f);
     char *text = malloc(fsize + 1);
-    fread(text, 1, fsize, f);
+    int ret = fread(text, 1, fsize, f);
     text[fsize] = 0;
 
     for (int i = 0; i < fsize; i++) {
