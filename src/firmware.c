@@ -38,7 +38,7 @@ static void get_kernel_version(cJSON *j_inner) {
     if (!fp)
         return;
 
-    char line[1024];
+    char line[512];
     if (!fgets(line, sizeof(line), fp))
         return;
     fclose(fp);

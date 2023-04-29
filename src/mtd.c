@@ -86,7 +86,7 @@ static void parse_partitions(mpoint_t mpoints[MAX_MPOINTS]) {
     if ((fp = fopen("/proc/mounts", "r"))) {
         char mount[80];
         while (fgets(mount, sizeof mount, fp)) {
-            char path[80], fs[80], attrs[80];
+            char path[40], fs[40], attrs[40];
             int n;
 
             if (sscanf(mount, "/dev/mtdblock%d %s %s %s", &n, path, fs,
@@ -140,7 +140,7 @@ static bool examine_part(int part_num, size_t size, size_t erasesize,
         while (off > 0) {
             uint16_t magic = *(uint16_t *)(addr + off);
             if (magic == 0xD4D2) {
-                sprintf(contains, "%010s- name: xmcrypto\n%012soffset: 0x%x\n",
+                sprintf(contains, "%10s- name: xmcrypto\n%12soffset: 0x%x\n",
                         "", "", off);
                 break;
             }
@@ -153,7 +153,7 @@ static bool examine_part(int part_num, size_t size, size_t erasesize,
         if (u_off != -1) {
             uenv_detected = true;
             sprintf(contains + strlen(contains),
-                    "%010s- name: uboot-env\n%012soffset: 0x%x\n", "", "",
+                    "%10s- name: uboot-env\n%12soffset: 0x%x\n", "", "",
                     u_off);
             uboot_copyenv_int(addr + u_off);
         }

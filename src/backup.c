@@ -513,7 +513,7 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
         if (!force) {
             char c;
             fprintf(stderr, "Are you sure to proceed? (y/n)? ");
-            scanf(" %c", &c);
+            int ret = scanf(" %c", &c);
             if (c != 'y')
                 goto bailout;
         }
@@ -582,7 +582,7 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
                     tsize, mtd.totalsz);
             char c;
             fprintf(stderr, "Are you sure to proceed? (y/n)? ");
-            scanf(" %c", &c);
+            int ret = scanf(" %c", &c);
             if (c != 'y')
                 goto bailout;
         }

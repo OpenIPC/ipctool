@@ -102,15 +102,15 @@ typedef struct process {
 HashTable pids;
 
 static void dump_regs(struct user const *regs, FILE *outfp) {
-    fprintf(outfp, "r0   = 0x%08x, r1 = 0x%08x\n", regs->regs.uregs[0],
+    fprintf(outfp, "r0   = 0x%08lx, r1 = 0x%08lx\n", regs->regs.uregs[0],
             regs->regs.uregs[1]);
-    fprintf(outfp, "r2   = 0x%08x, r3 = 0x%08x\n", regs->regs.uregs[2],
+    fprintf(outfp, "r2   = 0x%08lx, r3 = 0x%08lx\n", regs->regs.uregs[2],
             regs->regs.uregs[3]);
-    fprintf(outfp, "r4   = 0x%08x, r5 = 0x%08x\n", regs->regs.uregs[4],
+    fprintf(outfp, "r4   = 0x%08lx, r5 = 0x%08lx\n", regs->regs.uregs[4],
             regs->regs.uregs[5]);
-    fprintf(outfp, "r6   = 0x%08x, r7 = 0x%08x\n", regs->regs.uregs[6],
+    fprintf(outfp, "r6   = 0x%08lx, r7 = 0x%08lx\n", regs->regs.uregs[6],
             regs->regs.uregs[7]);
-    fprintf(outfp, "r8   = 0x%08x, r9 = 0x%08x\n", regs->regs.uregs[8],
+    fprintf(outfp, "r8   = 0x%08lx, r9 = 0x%08lx\n", regs->regs.uregs[8],
             regs->regs.uregs[9]);
 }
 
@@ -503,6 +503,7 @@ static void hisi_vi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
 static void hisi_gen2_read_exit_cb(process_t *proc, int fd, size_t remote_addr,
                                    size_t nbyte, ssize_t sysret) {
     unsigned char *buf = alloca(nbyte);
+    memset(&buf, 0, sizeof(nbyte));
     copy_from_process(proc->pid, remote_addr, buf, nbyte);
     // reg_width
     if (nbyte == 2) {
