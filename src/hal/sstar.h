@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+#define INFITITY5 0xED
 #define INFITITY6 0xEF
 #define INFITITY6B0 0xF2
 #define INFITITY6E 0xF1

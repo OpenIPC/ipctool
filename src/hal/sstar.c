@@ -56,14 +56,26 @@ static bool sstar_detect_brom_tag(uint32_t addr, char *buf) {
 
 bool sstar_detect_cpu(char *chip_name) {
     uint32_t val;
-    int offset;
+
     if (mem_reg(0x1f003c00, &val, OP_READ)) {
-        offset = sprintf(chip_name, "id %#x ", val);
-        sstar_detect_brom_tag(0x3fe0, chip_name + offset) || 
-        sstar_detect_brom_tag(0x7fe0, chip_name + offset);
         chip_generation = val;
+        switch (val) {
+        case INFITITY5:
+            strcpy(chip_name, "SSC326/SSC328/SSC329");
+            break;
+        case INFITITY6:
+            strcpy(chip_name, "SSC323/SSC325/SSC327");
+            break;
+        case INFITITY6B0:
+            strcpy(chip_name, "SSC333/SSC335/SSC337");
+            break;
+        case INFITITY6E:
+            strcpy(chip_name, "SSC336/SSC338/SSC339");
+            break;
+        }
         return true;
     }
+
     return false;
 }
 
