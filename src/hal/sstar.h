@@ -3,10 +3,10 @@
 
 #include <stdbool.h>
 
-#define INFITITY5 0xED
-#define INFITITY6 0xEF
-#define INFITITY6B0 0xF2
-#define INFITITY6E 0xF1
+#define INFINITY5 0xED
+#define INFINITY6 0xEF
+#define INFINITY6E 0xF1
+#define INFINITY6B 0xF2
 
 bool mstar_detect_cpu(char *chip_name);
 bool sstar_detect_cpu(char *chip_name);
