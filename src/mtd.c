@@ -211,7 +211,8 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
             }
         }
     }
-    c->totalsz += mtd->size;
+    if (mtd->type == MTD_NORFLASH || mtd->type == MTD_NANDFLASH)
+        c->totalsz += mtd->size;
     return true;
 }
 
