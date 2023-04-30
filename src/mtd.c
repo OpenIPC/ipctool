@@ -86,7 +86,7 @@ static void parse_partitions(mpoint_t mpoints[MAX_MPOINTS]) {
     if ((fp = fopen("/proc/mounts", "r"))) {
         char mount[80];
         while (fgets(mount, sizeof mount, fp)) {
-            char path[40], fs[40], attrs[40];
+            char path[60], fs[30], attrs[80];
             int n;
 
             if (sscanf(mount, "/dev/mtdblock%d %s %s %s", &n, path, fs,

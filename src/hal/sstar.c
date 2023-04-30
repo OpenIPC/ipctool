@@ -61,16 +61,16 @@ bool sstar_detect_cpu(char *chip_name) {
         chip_generation = val;
         switch (val) {
         case INFINITY5:
-            strcpy(chip_name, "SSC326/SSC328/SSC329");
+            strcpy(chip_name, "SSC326X/SSC328X/SSC329X");
             break;
         case INFINITY6:
-            strcpy(chip_name, "SSC323/SSC325/SSC327");
+            strcpy(chip_name, "SSC323X/SSC325X/SSC327X");
             break;
         case INFINITY6E:
-            strcpy(chip_name, "SSC336/SSC338/SSC339");
+            strcpy(chip_name, "SSC336X/SSC338X/SSC339X");
             break;
         case INFINITY6B:
-            strcpy(chip_name, "SSC333/SSC335/SSC337");
+            strcpy(chip_name, "SSC333X/SSC335X/SSC337X");
             break;
         }
         return true;
