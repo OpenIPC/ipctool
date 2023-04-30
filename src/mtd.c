@@ -128,6 +128,8 @@ static bool uenv_detected;
 static bool examine_part(int part_num, size_t size, size_t erasesize,
                          uint32_t *sha1, char contains[1024]) {
     bool res = false;
+    if (size > 0x1000000)
+        return res;
 
     int fd;
     char *addr = open_mtdblock(
