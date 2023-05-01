@@ -1,33 +1,44 @@
 #!/bin/python3
 
-import argparse
-import telnetlib
+import os, sys, _thread
+from Exscript.protocols import telnetlib
 
-argparser = argparse.ArgumentParser()
-argparser.add_argument('--host', required=True)
-argparser.add_argument('--port', type=int, default=23)
-argparser.add_argument('--user', type=str, default="root")
-argparser.add_argument('--password', type=str, default="12345")
-argparser.add_argument('src')
-args = argparser.parse_args()
+port = 23
 
-print("Connect to: " + args.host)
-t = telnetlib.Telnet(args.host, args.port)
+def transfer():
+    payload = open(file, 'r')
+    t.write("rm -f /tmp/ipctool\n")
+    for line in payload.readlines():
+        t.write("echo -ne '" + line.strip() + "' >> /tmp/ipctool\n")
+    t.write("chmod 755 /tmp/ipctool\n")
+    t.write("cd /tmp\n")
 
-t.read_until(b"login")
-t.write(args.user.encode() + b"\n")
+def interact():
+    _thread.start_new_thread(t.listener, ())
+    while True:
+        line = sys.stdin.readline()
+        if line.strip() == "transfer":
+            transfer()
+        else:
+            t.write(line.encode())
 
-t.read_until(b"Password")
-t.write(args.password.encode() + b"\n")
+if len(sys.argv) < 3:
+    print("Usage:", sys.argv[0], "[file] [host] [port]")
+    exit()
 
-payload = open(args.src, 'rb')
-payload_lines = payload.readlines()
+file = os.path.join(os.getcwd(), sys.argv[1])
+if not os.path.isfile(file):
+    print("File not found:", file)
+    exit()
 
-t.write(b"cd /tmp\n")
-t.write(b"rm -f ipctool\n")
+host = sys.argv[2]
+if len(sys.argv) > 3:
+    port = sys.argv[3]
 
-for line in payload_lines:
-  t.write(b"echo -ne '" + line.strip() + b"' >> ipctool\n")
-
-t.write(b"chmod 755 ipctool\n")
-t.mt_interact()
+print("Connect to:", host + ":" + str(port))
+try:
+    t = telnetlib.Telnet(host, port, timeout=5)
+except:
+    print("Cannot connect to host")
+else:
+    interact()
