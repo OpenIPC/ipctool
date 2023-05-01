@@ -53,11 +53,18 @@ C library to work on vast majority of hardware.
   ```
 
 * *Using telnet/console only*: uses a python script to transfer ipctool via
-  telnet/echo to the camera:
+  telnet/echo to the camera.
+
+  **On a desktop computer:**
   ```
-  wget https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool
-  od -An -tx1 ipctool | sed 's/ /\\x/g' > ipctool.hex
-  tools/telnet_upload.py --host 192.168.1.10 --user root --password 12345 ipctool.hex
+  $ pip install Exscript
+  $ wget https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool
+  $ od -An -tx1 ipctool | sed 's/ /\\x/g' > ipctool.hex
+  $ tools/telnet_upload.py ipctool.hex 192.168.1.10
+  ```
+  **On the shell:**
+  ```
+  # transfer
   ```
 
 ## Usage
