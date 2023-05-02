@@ -79,6 +79,29 @@ bool sstar_detect_cpu(char *chip_name) {
     return false;
 }
 
+bool sstar_get_die_id(char *buf, ssize_t len) {
+    uint32_t base, val;
+
+    if (!chip_generation)
+        return false;
+
+    if (chip_generation = INFINITY6E)
+        base = 0x1F203150;
+    else
+        base = 0x1F004058;
+
+    char *ptr = buf;
+    for (uint32_t addr = base + 8; addr >= base; addr -= 4) {
+        if (!mem_reg(addr, &val, OP_READ))
+            return false;
+        int outsz = snprintf(ptr, len, "%04X", val);
+        ptr += outsz;
+        len -= outsz;
+    }
+
+    return true;
+}
+
 static unsigned long sstar_media_mem() {
     char buf[256];
 
@@ -115,6 +138,13 @@ float sstar_get_temp() {
     return ret;
 }
 
+void sstar_chip_properties(cJSON *j_inner) {
+    char buf[1024];
+    if (sstar_get_die_id(buf, sizeof buf)) {
+        ADD_PARAM("id", buf);
+    }
+}
+
 void sstar_setup_hal() {
     open_i2c_sensor_fd = sstar_open_sensor_fd;
     possible_i2c_addrs = sstar_possible_i2c_addrs;
@@ -123,5 +153,6 @@ void sstar_setup_hal() {
         hal_temperature = sstar_get_temp;
 #ifndef STANDALONE_LIBRARY
     hal_totalmem = sstar_totalmem;
+    hal_chip_properties = sstar_chip_properties;
 #endif
 }
