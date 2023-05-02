@@ -85,7 +85,7 @@ bool sstar_get_die_id(char *buf, ssize_t len) {
     if (!chip_generation)
         return false;
 
-    if (chip_generation = INFINITY6E)
+    if (chip_generation == INFINITY6E)
         base = 0x1F203150;
     else
         base = 0x1F004058;
