@@ -278,11 +278,22 @@ static int ingenic_open_i2c_fd() {
 
 static void ingenic_enable_sensor_clock() {
     FILE *f;
-    f = fopen("/proc/jz/sinfo/info", "w");
+    char buf[16];
 
-    if (f) {
-        fprintf(f, "%s", "open:jxf22"); /* open any sensor to enable mclk*/
-        fclose(f);
+    if (line_from_file("/proc/jz/clock/cgu_cim/enable", "(.+)", buf,
+                       sizeof(buf))) {
+        if (!strcmp(buf, "disabled")) {
+            f = fopen("/proc/jz/clock/cgu_cim/enable", "w");
+            fprintf(f, "%s", "1");
+            uint32_t direct;
+            mem_reg(0x10010030, &direct, OP_READ);
+            direct &= ~(1 << 18);
+            mem_reg(0x10010030, &direct, OP_WRITE);
+            mem_reg(0x10010040, &direct, OP_READ);
+            direct |= 1 << 18;
+            mem_reg(0x10010040, &direct, OP_WRITE);
+            fclose(f);
+        }
     }
 }
 
@@ -291,8 +302,6 @@ void setup_hal_ingenic() {
     ingenic_enable_sensor_clock();
     possible_i2c_addrs = ingenic_possible_i2c_addrs;
     open_i2c_sensor_fd = ingenic_open_i2c_fd;
-    if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
-        hal_temperature = ingenic_get_temp;
 #ifndef STANDALONE_LIBRARY
     hal_totalmem = ingenic_totalmem;
 #endif
