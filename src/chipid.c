@@ -66,12 +66,15 @@ static bool generic_detect_cpu() {
     char buf[256] = "unknown";
 
     strcpy(chip_name, "unknown");
-    bool res = line_from_file("/proc/cpuinfo", "Hardware.+:.(\\w+)", buf, sizeof(buf));
+    bool res = line_from_file("/proc/cpuinfo", "Hardware.+:.(\\w+)",
+                buf, sizeof(buf));
     if (!res) {
-        res = line_from_file("/proc/cpuinfo", "vendor_id.+:.(\\w+)", buf, sizeof(buf));
+        res = line_from_file("/proc/cpuinfo", "vendor_id.+:.(\\w+)",
+                buf, sizeof(buf));
     }
     if (!res) {
-        res = line_from_file("/proc/cpuinfo", "machine.+:.(\\w+)", buf, sizeof(buf));
+        res = line_from_file("/proc/cpuinfo", "machine.+:.(\\w+)",
+                buf, sizeof(buf));
     }
     strcpy(chip_manufacturer, buf);
 
