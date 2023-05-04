@@ -112,19 +112,15 @@ static int sstar_open_sensor_fd() {
     return universal_open_sensor_fd("/dev/i2c-1");
 }
 
-static int sstar_i2c_write(int fd, unsigned char slave_addr,
-            unsigned char *reg_addr, unsigned char reg_width) {
-    unsigned int data_size = reg_width * sizeof(unsigned char);
-    return 0;
-}
-
 static void sstar_hal_cleanup() {
+    //
 }
 
 static float sstar_get_temp() {
     char buf[16];
 
-    if (!line_from_file(TEMP_PATH, "Temperature\\s+(.+)", buf, sizeof(buf))) {
+    if (!line_from_file(TEMP_PATH, "Temperature.(.+)",
+                buf, sizeof(buf))) {
         return 0;
     }
 
@@ -134,7 +130,8 @@ static float sstar_get_temp() {
 static unsigned long sstar_media_mem() {
     char buf[256];
 
-    if (!line_from_file(CMD_PATH, "mma_heap=.+sz=(\\w+)", buf,sizeof(buf))) {
+    if (!line_from_file(CMD_PATH, "mma_heap=.+sz=(\\w+)",
+                buf, sizeof(buf))) {
         return 0;
     }
 

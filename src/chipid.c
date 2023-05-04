@@ -19,18 +19,17 @@
 
 int chip_generation;
 char chip_name[128];
-static char chip_manufacturer[128];
 char nor_chip[128];
+static char chip_manufacturer[128];
 
 static long get_uart0_address() {
     char buf[256];
 
-    bool res = line_from_file("/proc/iomem",
-                              "^([0-9a-f]+)-[0-9a-f]+ : .*uart[@:][0-9]", buf,
-                              sizeof(buf));
-    if (!res) {
+    if (!line_from_file("/proc/iomem", "^(\\w+)-.+:.+uart",
+                buf, sizeof(buf))) {
         return -1;
     }
+
     return strtol(buf, NULL, 16);
 }
 
@@ -47,10 +46,10 @@ static const manufacturers_t manufacturers[] = {
     {"ingenic", ingenic_detect_cpu, "Ingenic", setup_hal_ingenic},
 #endif
 #ifdef __arm__
-    {"SStar", sstar_detect_cpu, NULL, sstar_setup_hal},
+    {"SStar", sstar_detect_cpu, "SigmaStar", sstar_setup_hal},
     {"MStar", mstar_detect_cpu, NULL, sstar_setup_hal},
     {"Novatek", novatek_detect_cpu, NULL, novatek_setup_hal},
-    {"Grain", gm_detect_cpu, NULL, gm_setup_hal},
+    {"Grain", gm_detect_cpu, "GrainMedia", gm_setup_hal},
     {"FH", fh_detect_cpu, "Fullhan", fh_setup_hal},
     {NULL /* Generic */, rockchip_detect_cpu, "Rockchip", rockchip_setup_hal},
     {"Xilinx", xilinx_detect_cpu, NULL, xilinx_setup_hal},
