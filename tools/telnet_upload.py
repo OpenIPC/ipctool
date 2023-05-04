@@ -1,17 +1,23 @@
 #!/bin/python3
 
-import os, sys, _thread
+import os, sys, _thread, urllib.request
 from Exscript.protocols import telnetlib
 
 port = 23
+name = "ipctool"
+link = "https://github.com/openipc/ipctool/releases/download/latest/ipctool"
+
+size = 200
+path = "/tmp/ipctool"
 
 def transfer():
-    payload = open(file, 'r')
-    t.write("rm -f /tmp/ipctool\n")
-    for line in payload.readlines():
-        t.write("echo -ne '" + line.strip() + "' >> /tmp/ipctool\n")
-    t.write("chmod 755 /tmp/ipctool\n")
-    t.write("cd /tmp\n")
+    t.write("rm -f " + path + "\n")
+    for index in range(0, len(file), size):
+        data = file[index : index + size]
+        text = data.hex("-").replace("-", "\\x")
+        t.write("echo -ne '\\x" + text.strip() + "' >> " + path + "\n")
+    t.write("chmod 755 " + path + "\n")
+    t.write(path + "\n")
 
 def interact():
     _thread.start_new_thread(t.listener, ())
@@ -20,20 +26,22 @@ def interact():
         if line.strip() == "transfer":
             transfer()
         else:
-            t.write(line.encode())
+            t.write(line)
 
-if len(sys.argv) < 3:
-    print("Usage:", sys.argv[0], "[file] [host] [port]")
+if len(sys.argv) < 2:
+    print("Usage:", sys.argv[0], "[host] [port]")
     exit()
 
-file = os.path.join(os.getcwd(), sys.argv[1])
-if not os.path.isfile(file):
-    print("File not found:", file)
-    exit()
+host = sys.argv[1]
+if len(sys.argv) > 2:
+    port = sys.argv[2]
 
-host = sys.argv[2]
-if len(sys.argv) > 3:
-    port = sys.argv[3]
+try:
+    urllib.request.urlretrieve(link, name)
+    file = open(name, "rb").read()
+except:
+    print("Cannot download or access", name)
+    exit()
 
 print("Connect to:", host + ":" + str(port))
 try:
