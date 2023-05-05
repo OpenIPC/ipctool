@@ -184,7 +184,7 @@ static void print_xm_mac() {
 
     while (fgets(dev, sizeof dev, fp)) {
         name[0] = 0;
-        if (sscanf(dev, "mtd%d: %x %x \"%64[^\"]\"", &i, &es, &ee, name)) {
+        if (sscanf(dev, "mtd%d: %x %x \"%64[^\"]\"", &i, &es, &ee, name) && i<=1) {
             if (find_xm_mac(i, es))
                 return;
         }
