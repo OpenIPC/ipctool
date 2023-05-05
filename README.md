@@ -58,9 +58,7 @@ C library to work on vast majority of hardware.
   **On a desktop computer:**
   ```
   $ pip install Exscript
-  $ wget https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool
-  $ od -An -tx1 ipctool | sed 's/ /\\x/g' > ipctool.hex
-  $ tools/telnet_upload.py ipctool.hex 192.168.1.10
+  $ tools/telnet_upload.py 192.168.1.10
   ```
   **On the shell:**
   ```
