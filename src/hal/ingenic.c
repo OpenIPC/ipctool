@@ -52,6 +52,7 @@ static int get_cpu_id() {
     switch ((soc_id << 4) >>
             0x10) { // T10/T20 have different calculation method
     case 5:
+        chip_generation = 0x10;
         switch ((uint8_t)cppsr) {
         case 0:
             return 1;
@@ -63,6 +64,7 @@ static int get_cpu_id() {
             return -1;
         }
     case 0x2000:
+        chip_generation = 0x20;
         switch ((uint8_t)cppsr) {
         case 1:
             return 3;
@@ -74,6 +76,7 @@ static int get_cpu_id() {
     }
     switch ((soc_id >> 12) & 0xff) {
     case 0x30:
+        chip_generation = 0x30;
         if ((uint8_t)cppsr == 1) {
             switch (HIWORD(subsoctype)) {
             case 0x1111:
@@ -95,6 +98,7 @@ static int get_cpu_id() {
             return -1;
         }
     case 0x21:
+        chip_generation = 0x21;
         if ((uint8_t)cppsr == 1) {
             if (HIWORD(subsoctype) != 0x3333) {
                 if (HIWORD(subsoctype) != 0x1111) {
@@ -110,6 +114,7 @@ static int get_cpu_id() {
         }
         return 11;
     case 0x31:
+        chip_generation = 0x31;
         if ((uint8_t)cppsr == 1) {
             if (BYTE2(subremark)) {
                 if (BYTE2(subremark) != (uint8_t)cppsr) {
@@ -153,6 +158,7 @@ static int get_cpu_id() {
         }
         return 15;
     case 0x40:
+        chip_generation = 0x40;
         if (!mem_reg(0x13540250, &subsoctypet40, OP_READ))
             return -1;
         switch (HIWORD(subsoctypet40)) {

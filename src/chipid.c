@@ -190,6 +190,20 @@ const char *getchipfamily() {
         return "infinity6b0";
     case INFINITY6E:
         return "infinity6e";
+    case T10:
+        return "t10";
+    case T20:
+        return "t20";
+    case T21:
+        return "t21";
+    case T30:
+        return "t30";
+    case T31:
+        return "t31";
+    case T40:
+        return "t40";
+    case T41:
+        return "t41";
     default:
         return chip_name;
     }
