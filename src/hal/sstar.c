@@ -139,7 +139,13 @@ static unsigned long sstar_media_mem() {
 }
 
 unsigned long sstar_totalmem(unsigned long *media_mem) {
+    uint32_t val = 0;
+
     *media_mem = sstar_media_mem();
+    if (mem_reg(MSTAR_ADDR, &val, OP_READ)) {
+        return (1 << (val >> 12)) * 1024 - 1;
+    }
+
     return *media_mem + kernel_mem();
 }
 
