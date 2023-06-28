@@ -13,7 +13,7 @@ static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char sony_addrs[] = {0x34, 0};
 static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char omni_addrs[] = {0x6C, 0};
-static unsigned char gc_addrs[] = {0x6E, 0};
+static unsigned char gc_addrs[] = {0x42, 0x52, 0x6E, 0};
 
 static sensor_addr_t sstar_possible_i2c_addrs[] = {
     {SENSOR_ONSEMI, onsemi_addrs},
