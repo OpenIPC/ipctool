@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-20.04
 
     env:
-      ARCHIVE: mips_xburst-gcc8.4.0-musl-3_10-1e913a17
+      ARCHIVE: mips_xburst-gcc12-musl-3_10
       PLATFORM: mipsel-openipc-linux-musl_sdk-buildroot
       TOOLCHAIN: mipsel-openipc-linux-musl
 
