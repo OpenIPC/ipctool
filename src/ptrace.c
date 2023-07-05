@@ -73,7 +73,7 @@ typedef struct {
 
 static const char *arc_cstr(arc_str_t *file) {
     if (!file)
-        return NULL;
+        return "NULL";
 
     return file->str;
 }

@@ -13,7 +13,7 @@ static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char sony_addrs[] = {0x34, 0};
 static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char omni_addrs[] = {0x6C, 0};
-static unsigned char gc_addrs[] = {0x6E, 0};
+static unsigned char gc_addrs[] = {0x42, 0x52, 0x6E, 0};
 
 static sensor_addr_t sstar_possible_i2c_addrs[] = {
     {SENSOR_ONSEMI, onsemi_addrs},
@@ -139,7 +139,13 @@ static unsigned long sstar_media_mem() {
 }
 
 unsigned long sstar_totalmem(unsigned long *media_mem) {
+    uint32_t val = 0;
+
     *media_mem = sstar_media_mem();
+    if (mem_reg(MSTAR_ADDR, &val, OP_READ)) {
+        return (1 << (val >> 12)) * 1024 - 1;
+    }
+
     return *media_mem + kernel_mem();
 }
 
