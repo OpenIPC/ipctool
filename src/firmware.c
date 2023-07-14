@@ -112,9 +112,7 @@ static void get_libc(cJSON *j_inner) {
 }
 
 cJSON *detect_firmare() {
-    cJSON *fake_root = cJSON_CreateObject();
     cJSON *j_inner = cJSON_CreateObject();
-    cJSON_AddItemToObject(fake_root, "firmware", j_inner);
 
     const char *uver = uboot_env_get_param("ver");
     if (uver) {
@@ -130,5 +128,5 @@ cJSON *detect_firmare() {
         hal_firmware_props(j_inner);
     get_god_app(j_inner);
 
-    return fake_root;
+    return j_inner;
 }

@@ -73,6 +73,7 @@ void print_usage() {
         "  -t, --temp                read chip temperature (where supported)\n"
         "\n"
         "  backup <filename>         save backup into a file\n"
+        "  upload                    upload full backup to the OpenIPC cloud\n"
         "  restore [mac|filename]    restore from backup (cloud-based or local "
         "file)\n"
         "     [-s, --skip-env]       skip environment\n"
@@ -103,90 +104,43 @@ void print_usage() {
         "  -h, --help                this help\n");
 }
 
-// backup mode pipe end
-FILE *backup_fp;
-
-int yaml_printf(char *format, ...) {
-    va_list arglist;
-
-    va_start(arglist, format);
-    int ret = vfprintf(stdout, format, arglist);
-    if (backup_fp)
-        vfprintf(backup_fp, format, arglist);
-    va_end(arglist);
-    return ret;
-}
-
-void yaml_fragment(cJSON *json) {
+void add_yaml_fragment(cJSON *root, const char *key, cJSON *json) {
     if (!json)
         return;
 
-    cJSON *root;
-    int cnt = 0;
-    cJSON_ArrayForEach(root, json) {
-        cJSON *sub;
-        cJSON_ArrayForEach(sub, root) cnt++;
-    }
-
     // Don't show empty section
-    if (cnt == 0)
-        goto bailout;
+    if (!json->child) {
+        cJSON_Delete(json);
+        return;
+    }
 
-    char *string = cYAML_Print(json);
-    fprintf(stdout, "%s", string);
-    if (backup_fp)
-        fprintf(backup_fp, "%s", string);
+    cJSON_AddItemToObject(root, key, json);
+}
+
+static cJSON *build_yaml() {
+    if (!getchipname()) return NULL;
+
+    cJSON *root = cJSON_CreateObject();
+    add_yaml_fragment(root, "chip", detect_chip());
+    add_yaml_fragment(root, "board", detect_board());
+    add_yaml_fragment(root, "ethernet", detect_ethernet());
+    add_yaml_fragment(root, "rom", get_mtd_info());
+    add_yaml_fragment(root, "ram", detect_ram());
+    add_yaml_fragment(root, "firmware", detect_firmare());
+    add_yaml_fragment(root, "sensors", detect_sensors());
+
+    return root;
+}
+
+static int backup_with_yaml(const char *backup_file) {
+    cJSON *yaml = build_yaml();
+    if (!yaml) return EXIT_FAILURE;
+    char *string = cYAML_Print(yaml);
+
+    int ret = do_backup(string, strlen(string), backup_file);
+    
     free(string);
-
-bailout:
-    cJSON_Delete(json);
-}
-
-enum {
-    BACKUP_WAIT = 1 << 0,
-};
-
-#define MAX_YAML (1024 * 64)
-static bool backup_with_yaml(const char *backup_file, unsigned modes) {
-    int fds[2];
-    if (pipe(fds) == -1) {
-        fprintf(stderr, "Pipe Failed");
-        exit(1);
-    }
-
-    pid_t child_pid = fork();
-    if (child_pid < 0) {
-        exit(1);
-    } else if (child_pid > 0) {
-        // parent process
-        close(fds[0]);
-        backup_fp = fdopen(fds[1], "w");
-        return false;
-    } else {
-        close(fds[1]);
-        char *yaml = calloc(MAX_YAML, 1);
-        char *ptr = yaml, *end = yaml + MAX_YAML;
-        size_t n;
-        while ((n = read(fds[0], ptr, 10)) && ptr != end) {
-            ptr += n;
-        }
-        size_t yaml_sz = ptr - yaml;
-        close(fds[0]);
-        int ret = do_backup(yaml, yaml_sz, modes & BACKUP_WAIT, backup_file);
-        free(yaml);
-
-        if (ret)
-            exit(ret);
-        return true;
-    }
-}
-
-static bool auto_backup(unsigned modes) {
-    // prevent double backup creation and don't back up OpenWrt firmware
-    if (!udp_lock() || is_openipc_board())
-        return false;
-
-    return backup_with_yaml(NULL, modes);
+    cJSON_Delete(yaml);
 }
 
 int main(int argc, char *argv[]) {
@@ -223,14 +177,12 @@ int main(int argc, char *argv[]) {
         {"help", no_argument, NULL, 'h'},
         {"sensor-name", no_argument, NULL, 's'},
         {"temp", no_argument, NULL, 't'},
-        {"wait", no_argument, NULL, 'w'},
         {NULL, 0, NULL, 0}};
 
     int res;
     int option_index;
-    unsigned modes = 0;
 
-    while ((res = getopt_long_only(argc, argv, "chstw", long_options,
+    while ((res = getopt_long_only(argc, argv, "chst", long_options,
                                    &option_index)) != -1) {
         switch (res) {
         case 'h':
@@ -265,10 +217,6 @@ int main(int argc, char *argv[]) {
             return EXIT_SUCCESS;
         }
 
-        case 'w':
-            modes |= BACKUP_WAIT;
-            break;
-
         case '0':
 
         default:
@@ -280,21 +228,17 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    const char *backupAction = "upload";
     if (argc > optind) {
         if (!strcmp(argv[optind], "backup")) {
             if (argv[optind + 1] == NULL) {
                 print_usage();
                 return EXIT_FAILURE;
             }
+            return backup_with_yaml(argv[optind + 1]);
 
-            modes |= BACKUP_WAIT;
-            backupAction = "save";
-            if (backup_with_yaml(argv[optind + 1], modes)) {
-                // child process
-                return EXIT_SUCCESS;
-            }
-            goto start_yaml;
+        } else if (!strcmp(argv[optind], "upload")) {
+            return backup_with_yaml(NULL);
+
         } else {
             printf("found unknown command: %s\n\n", argv[optind]);
             print_usage();
@@ -302,36 +246,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (auto_backup(modes))
-        // child process
-        return EXIT_SUCCESS;
-
-start_yaml:
-    if (getchipname()) {
-        yaml_printf("---\n");
-        yaml_fragment(detect_chip());
-        yaml_fragment(detect_board());
-        yaml_fragment(detect_ethernet());
-        print_mtd_info();
-        yaml_fragment(detect_ram());
-        yaml_fragment(detect_firmare());
-    } else
-        return EXIT_FAILURE;
-
-    // flush stdout before go to sensor detection to avoid buggy kernel
-    // freezes
-    tcdrain(STDOUT_FILENO);
-    yaml_fragment(detect_sensors());
-
-    if (modes & BACKUP_WAIT && backup_fp) {
-        // trigger child process
-        printf("---\n");
-        printf("state: %sStart\n", backupAction);
-        fclose(backup_fp);
-        int status;
-        wait(&status);
-        printf("state: %sEnd, %d\n", backupAction, WEXITSTATUS(status));
-    }
+    cJSON *yaml = build_yaml();
+    if (!yaml) return EXIT_FAILURE;
+    char *string = cYAML_Print(yaml);
+    printf("%s", string);
+    free(string);
+    cJSON_Delete(yaml);
 
     return EXIT_SUCCESS;
 }

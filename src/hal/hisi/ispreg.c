@@ -370,7 +370,7 @@ static void ev300_enum_lanes(cJSON *j_inner, size_t lanes) {
 static void lvds_code_set(cJSON *j_inner, const char *param,
                           lvds_bit_endian_t val) {
     if (val == LVDS_ENDIAN_LITTLE)
-        ADD_PARAM(param, "LVDS_ENDIAN_LITTLE")
+        ADD_PARAM(param, "LVDS_ENDIAN_LITTLE");
     else
         ADD_PARAM(param, "LVDS_ENDIAN_BIG");
 }
@@ -522,7 +522,7 @@ static void hisi_cv300_sensor_data(cJSON *j_root) {
                 ADD_PARAM("raw-data-type", raw);
         }
         if (lvds0_ctrl.lvds_sync_mode == LVDS_SYNC_MODE_SOF)
-            ADD_PARAM("sync-mode", "LVDS_SYNC_MODE_SOF")
+            ADD_PARAM("sync-mode", "LVDS_SYNC_MODE_SOF");
         else
             ADD_PARAM("sync-mode", "LVDS_SYNC_MODE_SAV");
 

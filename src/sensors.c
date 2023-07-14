@@ -147,7 +147,7 @@ static void sony_imx291_params(sensor_ctx_t *ctx, int fd,
 
     int frsel = (READ(9) & 3);
     int hmax = READ(0x1d) << 8 | READ(0x1c);
-    ADD_PARAM_NUM("fps", sony_imx291_fps(frsel, hmax))
+    ADD_PARAM_NUM("fps", sony_imx291_fps(frsel, hmax));
     ctx->j_params = j_inner;
 }
 #endif
@@ -920,14 +920,13 @@ cJSON *detect_sensors() {
     sensor_ctx_t ctx;
     memset(&ctx, 0, sizeof(ctx));
 
-    cJSON *fake_root = cJSON_CreateObject();
-    cJSON *j_sensors = cJSON_AddArrayToObject(fake_root, "sensors");
+    cJSON *j_sensors = cJSON_CreateArray();
     ctx.j_sensor = cJSON_CreateObject();
     cJSON *j_inner = ctx.j_sensor;
     cJSON_AddItemToArray(j_sensors, j_inner);
 
     if (!getsensorid(&ctx)) {
-        cJSON_Delete(fake_root);
+        cJSON_Delete(j_sensors);
         return NULL;
     }
 
@@ -946,7 +945,7 @@ cJSON *detect_sensors() {
         hisi_vi_information(&ctx);
     }
 
-    return fake_root;
+    return j_sensors;
 }
 
 #endif

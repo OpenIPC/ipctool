@@ -172,6 +172,8 @@ bailout:
 }
 
 typedef struct {
+    cJSON *json;
+    cJSON *j_part;
     const char *mtd_type;
     ssize_t totalsz;
     mpoint_t mpoints[MAX_MPOINTS];
@@ -180,34 +182,37 @@ typedef struct {
 static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
                         void *ctx) {
     enum_mtd_ctx *c = (enum_mtd_ctx *)ctx;
+    cJSON *j_inner = c->json;
 
     if (!c->mtd_type) {
         if (mtd->type == MTD_NORFLASH)
             c->mtd_type = "nor";
         else if (mtd->type == MTD_NANDFLASH)
             c->mtd_type = "nand";
-        yaml_printf("rom:\n"
-                    "  - type: %s\n"
-                    "    block: %dK\n",
-                    c->mtd_type, mtd->erasesize / 1024);
+        ADD_PARAM("type", c->mtd_type);
+        ADD_PARAM_FMT("block", "%dK", mtd->erasesize / 1024);
         if (strlen(nor_chip)) {
-            yaml_printf("    chip:\n%s", nor_chip);
+            ADD_PARAM("chip", nor_chip);
         }
-        yaml_printf("    partitions:\n");
+        cJSON_AddItemToObject(j_inner, "partitions", c->j_part);
     }
-    yaml_printf("      - name: %s\n"
-                "        size: 0x%x\n",
-                name, mtd->size);
+
+    j_inner = cJSON_CreateObject();
+    cJSON_AddItemToArray(c->j_part, j_inner);
+
+    ADD_PARAM("name", name);
+    ADD_PARAM_FMT("size", "0x%x", mtd->size);
+
     if (i < MAX_MPOINTS && *c->mpoints[i].path) {
-        yaml_printf("        path: %s\n", c->mpoints[i].path);
+        ADD_PARAM("path", c->mpoints[i].path);
     }
     if (!c->mpoints[i].rw) {
         char contains[1024] = {0};
         uint32_t sha1 = 0;
         if (examine_part(i, mtd->size, mtd->erasesize, &sha1, contains)) {
-            yaml_printf("        sha1: %.8x\n", sha1);
+            ADD_PARAM_FMT("sha1", "%.8x", sha1);
             if (*contains) {
-                yaml_printf("        contains:\n%s", contains);
+                ADD_PARAM("contains", contains);
             }
         }
     }
@@ -282,20 +287,34 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
     }
 }
 
-void print_mtd_info() {
+cJSON *get_mtd_info() {
     enum_mtd_ctx ctx;
     memset(&ctx, 0, sizeof(ctx));
+    ctx.json = cJSON_CreateObject();
+    ctx.j_part = cJSON_CreateArray();
+
     parse_partitions(ctx.mpoints);
+
     enum_mtd_info(&ctx, cb_mtd_info);
+    if (!ctx.mtd_type) {
+        // cb_mtd_info was never called.
+        cJSON_Delete(ctx.j_part);
+    }
+
+    cJSON *j_inner = ctx.json;
 
     if (ctx.totalsz)
-        yaml_printf("    size: %dM\n", ctx.totalsz / 1024 / 1024);
+        ADD_PARAM_FMT("size", "%dM", ctx.totalsz / 1024 / 1024);
 
     if (hal_fmc_mode) {
         const char *fmc_mode = hal_fmc_mode();
         if (fmc_mode)
-            printf("    addr-mode: %s\n", fmc_mode);
+            ADD_PARAM("addr-mode", fmc_mode);
     }
+
+    cJSON *json = cJSON_CreateArray();
+    cJSON_AddItemToArray(json, ctx.json);
+    return json;
 }
 
 static bool xm_warning;

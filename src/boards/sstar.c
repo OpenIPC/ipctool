@@ -50,7 +50,7 @@ static void append_board_param(cJSON *j_inner, char *fname, char *param,
                     strrtrim(buf);
 
                 if (fmt_option & str_ltrim)
-                    ADD_PARAM(param, strltrim(buf))
+                    ADD_PARAM(param, strltrim(buf));
                 else
                     ADD_PARAM(param, buf);
             }
