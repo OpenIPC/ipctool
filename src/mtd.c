@@ -22,9 +22,6 @@
 #include "tools.h"
 #include "uboot.h"
 
-// TODO: refactor later
-int yaml_printf(char *format, ...);
-
 #ifndef MEMGETINFO
 #define MEMGETINFO _IOR('M', 1, struct mtd_info_user)
 #endif
@@ -126,7 +123,7 @@ char *open_mtdblock(int i, int *fd, uint32_t size, int flags) {
 static bool uenv_detected;
 
 static bool examine_part(int part_num, size_t size, size_t erasesize,
-                         uint32_t *sha1, char contains[1024]) {
+                         uint32_t *sha1, cJSON **contains) {
     bool res = false;
     if (size > 0x1000000)
         return res;
@@ -142,8 +139,12 @@ static bool examine_part(int part_num, size_t size, size_t erasesize,
         while (off > 0) {
             uint16_t magic = *(uint16_t *)(addr + off);
             if (magic == 0xD4D2) {
-                sprintf(contains, "%10s- name: xmcrypto\n%12soffset: 0x%x\n",
-                        "", "", off);
+                *contains = (*contains) ?: cJSON_CreateArray();
+                cJSON *j_inner = cJSON_CreateObject();
+                ADD_PARAM("name", "xmcrypto");
+                ADD_PARAM_FMT("offset", "0x%x", off);
+                cJSON_AddItemToArray(*contains, j_inner);
+
                 break;
             }
             off -= 0x10000;
@@ -154,9 +155,13 @@ static bool examine_part(int part_num, size_t size, size_t erasesize,
         int u_off = uboot_detect_env(addr, size, erasesize);
         if (u_off != -1) {
             uenv_detected = true;
-            sprintf(contains + strlen(contains),
-                    "%10s- name: uboot-env\n%12soffset: 0x%x\n", "", "",
-                    u_off);
+
+            *contains = (*contains) ?: cJSON_CreateArray();
+            cJSON *j_inner = cJSON_CreateObject();
+            ADD_PARAM("name", "uboot-env");
+            ADD_PARAM_FMT("offset", "0x%x", u_off);
+            cJSON_AddItemToArray(*contains, j_inner);
+
             uboot_copyenv_int(addr + u_off);
         }
     }
@@ -207,12 +212,12 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
         ADD_PARAM("path", c->mpoints[i].path);
     }
     if (!c->mpoints[i].rw) {
-        char contains[1024] = {0};
+        cJSON *contains = NULL;
         uint32_t sha1 = 0;
-        if (examine_part(i, mtd->size, mtd->erasesize, &sha1, contains)) {
+        if (examine_part(i, mtd->size, mtd->erasesize, &sha1, &contains)) {
             ADD_PARAM_FMT("sha1", "%.8x", sha1);
-            if (*contains) {
-                ADD_PARAM("contains", contains);
+            if (contains) {
+                cJSON_AddItemToObject(j_inner, "contains", contains);
             }
         }
     }
