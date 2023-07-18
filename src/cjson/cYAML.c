@@ -169,7 +169,6 @@ static bool print_number(string_buffer *buf, double d) {
 }
 
 static bool do_indent(string_buffer *buf, int depth, int dashes, bool in_list) {
-    if (depth <= 0) return true;
 
     /* In the YAML 1.2.2 spec, top-level lists, and lists one level below the
      * top are both rendered with the dash in column 0. */
@@ -279,7 +278,12 @@ CJSON_PUBLIC(char *) cYAML_Print(const cJSON *item) {
     if (!buf) return NULL;
 
     if (!strbuf_push(buf, "---\n")) goto bail;
-    if (!print_value(buf, item, 0, 0, false)) goto bail;
+
+    /* Hack to correctly print top-level lists. */
+    int depth = 0;
+    if ((item->type & 0xFF) == cJSON_Array) depth = 1;
+
+    if (!print_value(buf, item, depth, 0, false)) goto bail;
 
     ret = strdup(buf->data);
 
