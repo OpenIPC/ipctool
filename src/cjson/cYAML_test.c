@@ -46,19 +46,19 @@ int main(int argc, char *argv[]) {
         "  size: 4096\n"
         "  name: \"mRA\\bM\"\n"
         "list:\n"
-        "  - item1\n"
-        "  - item2\n"
-        "  - - sub1\n"
-        "    - sub2\n"
-        "  - item3\n"
-        "  - - - subsub1\n"
-        "    - - 1\n"
-        "      - 2\n"
-        "      - val: 3\n"
-        "        spelled: three\n"
-        "      - 4\n"
-        "    - - subsub3\n"
-        "  - item4\n";
+        "- item1\n"
+        "- item2\n"
+        "- - sub1\n"
+        "  - sub2\n"
+        "- item3\n"
+        "- - - subsub1\n"
+        "  - - 1\n"
+        "    - 2\n"
+        "    - val: 3\n"
+        "      spelled: three\n"
+        "    - 4\n"
+        "  - - subsub3\n"
+        "- item4\n";
 
     char *got = cYAML_Print(root);
     if (!got) {

@@ -24,7 +24,7 @@ typedef struct string_buffer {
 } string_buffer;
 
 
-static bool print_value(string_buffer *buf, const cJSON *item, int depth, int dashes);
+static bool print_value(string_buffer *buf, const cJSON *item, int depth, int dashes, bool in_list);
 
 
 static string_buffer *strbuf_new() {
@@ -168,8 +168,12 @@ static bool print_number(string_buffer *buf, double d) {
     return true;
 }
 
-static bool do_indent(string_buffer *buf, int depth, int dashes) {
+static bool do_indent(string_buffer *buf, int depth, int dashes, bool in_list) {
     if (depth <= 0) return true;
+
+    /* In the YAML 1.2.2 spec, top-level lists, and lists one level below the
+     * top are both rendered with the dash in column 0. */
+    if (in_list) depth--;
 
     int i = 0;
     for (; i < depth - dashes; i++) {
@@ -182,10 +186,10 @@ static bool do_indent(string_buffer *buf, int depth, int dashes) {
     return true;
 }
 
-static bool print_key_value(string_buffer *buf, const cJSON *item, int depth, int dashes) {
+static bool print_key_value(string_buffer *buf, const cJSON *item, int depth, int dashes, bool in_list) {
     TRY(item->string);
 
-    TRY(do_indent(buf, depth, dashes));
+    TRY(do_indent(buf, depth, dashes, in_list));
 
     /* print the key */
     TRY(print_string(buf, item->string));
@@ -195,21 +199,21 @@ static bool print_key_value(string_buffer *buf, const cJSON *item, int depth, in
     case cJSON_Object:
     case cJSON_Array:
         TRY(strbuf_push(buf, "\n"));
-        TRY(print_value(buf, item, depth + 1, dashes));
+        TRY(print_value(buf, item, depth + 1, dashes, in_list));
         break;
     default:
         TRY(strbuf_push(buf, " "));
-        TRY(print_value(buf, item, 0, 0));
+        TRY(print_value(buf, item, 0, 0, false));
     }
 
     return true;
 }
 
-static bool print_object(string_buffer *buf, const cJSON *item, int depth, int dashes) {
+static bool print_object(string_buffer *buf, const cJSON *item, int depth, int dashes, bool in_list) {
     cJSON *it = item->child;
 
     while (it) {
-        TRY(print_key_value(buf, it, depth, dashes));
+        TRY(print_key_value(buf, it, depth, dashes, in_list));
         dashes = 0;
         it = it->next;
     }
@@ -217,11 +221,11 @@ static bool print_object(string_buffer *buf, const cJSON *item, int depth, int d
     return true;
 }
 
-static bool print_array(string_buffer *buf, const cJSON *item, int depth, int dashes) {
+static bool print_array(string_buffer *buf, const cJSON *item, int depth, int dashes, bool in_list) {
     cJSON *it = item->child;
 
     while (it) {
-        TRY(print_value(buf, it, depth + 1, dashes + 1));
+        TRY(print_value(buf, it, depth + 1, dashes + 1, true));
         dashes = 0;
         it = it->next;
     }
@@ -229,35 +233,35 @@ static bool print_array(string_buffer *buf, const cJSON *item, int depth, int da
     return true;
 }
 
-static bool print_value(string_buffer *buf, const cJSON *item, int depth, int dashes) {
+static bool print_value(string_buffer *buf, const cJSON *item, int depth, int dashes, bool in_list) {
     switch ((item->type) & 0xFF) {
     case cJSON_NULL:
-        TRY(do_indent(buf, depth, dashes));
+        TRY(do_indent(buf, depth, dashes, in_list));
         return strbuf_push(buf, "null\n");
 
     case cJSON_False:
-        TRY(do_indent(buf, depth, dashes));
+        TRY(do_indent(buf, depth, dashes, in_list));
         return strbuf_push(buf, "false\n");
 
     case cJSON_True:
-        TRY(do_indent(buf, depth, dashes));
+        TRY(do_indent(buf, depth, dashes, in_list));
         return strbuf_push(buf, "true\n");
 
     case cJSON_Number:
-        TRY(do_indent(buf, depth, dashes));
+        TRY(do_indent(buf, depth, dashes, in_list));
         TRY(print_number(buf, item->valuedouble));
         return strbuf_push(buf, "\n");
 
     case cJSON_String:
-        TRY(do_indent(buf, depth, dashes));
+        TRY(do_indent(buf, depth, dashes, in_list));
         TRY(print_string(buf, item->valuestring));
         return strbuf_push(buf, "\n");
 
     case cJSON_Array:
-        return print_array(buf, item, depth, dashes);
+        return print_array(buf, item, depth, dashes, in_list);
 
     case cJSON_Object:
-        return print_object(buf, item, depth, dashes);
+        return print_object(buf, item, depth, dashes, in_list);
 
     case cJSON_Raw:
         TRY(item->valuestring);
@@ -275,7 +279,7 @@ CJSON_PUBLIC(char *) cYAML_Print(const cJSON *item) {
     if (!buf) return NULL;
 
     if (!strbuf_push(buf, "---\n")) goto bail;
-    if (!print_value(buf, item, 0, 0)) goto bail;
+    if (!print_value(buf, item, 0, 0, false)) goto bail;
 
     ret = strdup(buf->data);
 
