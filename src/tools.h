@@ -11,30 +11,29 @@
 #define ARRCNT(a) (sizeof(a) / sizeof((a)[0]))
 
 #define ADD_PARAM(param, val)                                                  \
-    {                                                                          \
+    do {                                                                       \
         cJSON *strval = cJSON_CreateString(val);                               \
         cJSON_AddItemToObject(j_inner, param, strval);                         \
-    }
+    } while (0)
 
 #define ADD_PARAM_NOTNULL(param, val)                                          \
-    {                                                                          \
-        if (val != NULL) {                                                     \
+    do {                                                                       \
+        if (val != NULL)                                                       \
             ADD_PARAM(param, val);                                             \
-        }                                                                      \
-    }
+    } while (0)
 
 #define ADD_PARAM_NUM(param, num)                                              \
-    {                                                                          \
+    do {                                                                       \
         cJSON *numval = cJSON_CreateNumber(num);                               \
         cJSON_AddItemToObject(j_inner, param, numval);                         \
-    }
+    } while (0)
 
 #define ADD_PARAM_FMT(param, fmt, ...)                                         \
-    {                                                                          \
+    do {                                                                       \
         char val[1024];                                                        \
         snprintf(val, sizeof(val), fmt, __VA_ARGS__);                          \
         ADD_PARAM(param, val);                                                 \
-    }
+    } while (0)
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 

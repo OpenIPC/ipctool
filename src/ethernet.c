@@ -6,9 +6,7 @@
 #include "tools.h"
 
 cJSON *detect_ethernet() {
-    cJSON *fake_root = cJSON_CreateObject();
     cJSON *j_inner = cJSON_CreateObject();
-    cJSON_AddItemToObject(fake_root, "ethernet", j_inner);
 
     char mac[20];
     if (get_mac_address(mac, sizeof mac)) {
@@ -18,5 +16,5 @@ cJSON *detect_ethernet() {
     if (hal_detect_ethernet)
         hal_detect_ethernet(j_inner);
 
-    return fake_root;
+    return j_inner;
 }

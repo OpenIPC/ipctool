@@ -139,6 +139,13 @@ set(IPCTOOL_SRC
     src/boards/sstar.h
     ${VERSION_SRC})
 
+set(CYAML_TEST_SRC
+    src/cjson/cYAML_test.c
+    src/cjson/cJSON.c
+    src/cjson/cJSON.h
+    src/cjson/cYAML.c
+    src/cjson/cYAML.h)
+
 add_library(ipchw STATIC ${COMMON_LIB_SRC})
 target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY)
 target_link_libraries(ipchw m)
@@ -153,4 +160,6 @@ if(NOT ONLY_LIBRARY)
   target_include_directories(ipcinfo PUBLIC include)
   target_link_libraries(ipcinfo ipchw)
   install(TARGETS ipcinfo RUNTIME DESTINATION /usr/bin/)
+
+  add_executable(cYAML_test ${CYAML_TEST_SRC})
 endif()

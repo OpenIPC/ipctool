@@ -37,25 +37,8 @@
 #include "tools.h"
 #include "uboot.h"
 
-#define UDP_LOCK_PORT 1025
-
 static char mybackups[] = "camware.s3.eu-north-1.amazonaws.com";
 static const char *downcode = "reil9phiFahng8aiPh5Kooshag8eiVae";
-
-bool udp_lock() {
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock == -1)
-        return false;
-
-    struct sockaddr_in name;
-    name.sin_family = AF_INET;
-    name.sin_port = htons(UDP_LOCK_PORT);
-    name.sin_addr.s_addr = htonl(INADDR_ANY);
-    if (bind(sock, (struct sockaddr *)&name, sizeof(name)) < 0)
-        return false;
-
-    return true;
-}
 
 typedef struct {
     size_t count;
@@ -130,8 +113,7 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
     add_predefined_ns(&ns, 0xd043dede /* 208.67.222.222 of OpenDNS */,         \
                       0x01010101 /* 1.1.1.1 of Cloudflare */, 0);
 
-int do_backup(const char *yaml, size_t yaml_len, bool wait_mode,
-              const char *filename) {
+int do_backup(const char *yaml, size_t yaml_len, const char *filename) {
     FILL_NS;
 
     char mac[32];
@@ -150,9 +132,6 @@ int do_backup(const char *yaml, size_t yaml_len, bool wait_mode,
     else
         ret = upload(mybackups, mac, &ns, blocks, bl_num);
 
-    // don't release UDP lock for 30 days to prevent to do often snapshots
-    if (!filename && !wait_mode)
-        sleep(60 * 60 * 24 * 30);
     return ret;
 }
 

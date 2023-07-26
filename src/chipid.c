@@ -216,15 +216,13 @@ const char *getchipvendor() {
 
 #ifndef STANDALONE_LIBRARY
 cJSON *detect_chip() {
-    cJSON *fake_root = cJSON_CreateObject();
     cJSON *j_inner = cJSON_CreateObject();
-    cJSON_AddItemToObject(fake_root, "chip", j_inner);
 
     ADD_PARAM("vendor", chip_manufacturer);
     ADD_PARAM("model", chip_name);
     if (hal_chip_properties)
         hal_chip_properties(j_inner);
 
-    return fake_root;
+    return j_inner;
 }
 #endif
