@@ -118,5 +118,20 @@ int main(int argc, char *argv[]) {
              "  - - subsub3\n"
              "- item4\n"
              );
+
+    run_test("empty objects",
+
+             "{ "
+             "  \"object\": {},"
+             "  \"array\": [],"
+             "  \"string\" : \"\""
+             "}",
+
+             "---\n"
+             "object: {}\n"
+             "array: []\n"
+             "string: \"\"\n"
+             );
+
     return 0;
 }
