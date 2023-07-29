@@ -138,7 +138,8 @@ static unsigned long sstar_media_mem() {
     return strtoul(buf, NULL, 16) / 1024;
 }
 
-unsigned long sstar_totalmem(unsigned long *media_mem) {
+#ifndef STANDALONE_LIBRARY
+static unsigned long sstar_totalmem(unsigned long *media_mem) {
     uint32_t val = 0;
 
     *media_mem = sstar_media_mem();
@@ -161,6 +162,7 @@ static void sstar_chip_properties(cJSON *j_inner) {
         ADD_PARAM("tag", buf);
     }
 }
+#endif
 
 void sstar_setup_hal() {
     open_i2c_sensor_fd = sstar_open_sensor_fd;
