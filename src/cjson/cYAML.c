@@ -107,7 +107,7 @@ static bool print_string(string_buffer *buf, const char *s) {
         if (*c < 32) {
             /* Expand non-printable characters. */
             char repl[10];
-            TRY(snprintf(repl, sizeof(repl), "\\u%04x", *c) < sizeof(repl));
+            TRY(snprintf(repl, sizeof(repl), "\\u%04x", *c) < (int)sizeof(repl));
             TRY(strbuf_push(buf, repl));
             continue;
         }
@@ -146,13 +146,13 @@ static bool print_number(string_buffer *buf, double d) {
 
     char tmp[26];
     /* Try 15 decimal places to avoid nonsignificant nonzero digits. */
-    TRY(snprintf(tmp, sizeof(tmp), "%1.15g", d) < sizeof(tmp));
+    TRY(snprintf(tmp, sizeof(tmp), "%1.15g", d) < (int)sizeof(tmp));
 
     /* Check whether the original double can be recovered. */
     double test = 0.0;
     if ((sscanf(tmp, "%lg", &test) != 1) || !compare_double(test, d)) {
         /* If not, print with 17 decimal places of precision. */
-        TRY(snprintf(tmp, sizeof(tmp), "%1.17g", d) < sizeof(tmp));
+        TRY(snprintf(tmp, sizeof(tmp), "%1.17g", d) < (int)sizeof(tmp));
     }
 
     /* Replace locale dependent decimal point with '.'. */
