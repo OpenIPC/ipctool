@@ -712,6 +712,10 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
         // new chip in the line?
         chip_generation = HISI_V4;
         return "7205V210";
+    case 0x72050500:
+        // A new chip that was received in the OpenIPC lab 2023.07.28
+        chip_generation = HISI_V4;
+        return "7205V500";
     default:
         fprintf(stderr, "Got unexpected ID 0x%x for HiSilicon\n", family_id);
         return "unknown";
