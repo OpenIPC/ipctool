@@ -73,7 +73,7 @@ static bool strbuf_push(string_buffer *buf, const char *s) {
 }
 
 static bool print_string(string_buffer *buf, const char *s) {
-    if (!s) {
+    if (!s || !*s) {
         TRY(strbuf_push(buf, "\"\""));
         return true;
     }
@@ -197,6 +197,10 @@ static bool print_key_value(string_buffer *buf, const cJSON *item, int depth, in
     switch (item->type & 0xFF) {
     case cJSON_Object:
     case cJSON_Array:
+        if (!item->child) {
+            TRY(strbuf_push(buf, (item->type & 0xFF) == cJSON_Object ? " {}\n" : " []\n"));
+            break;
+        }
         TRY(strbuf_push(buf, "\n"));
         TRY(print_value(buf, item, depth + 1, dashes, in_list));
         break;
@@ -257,9 +261,17 @@ static bool print_value(string_buffer *buf, const cJSON *item, int depth, int da
         return strbuf_push(buf, "\n");
 
     case cJSON_Array:
+        if (!item->child) {
+            TRY(strbuf_push(buf, "[]\n"));
+            break;
+        }
         return print_array(buf, item, depth, dashes, in_list);
 
     case cJSON_Object:
+        if (!item->child) {
+            TRY(strbuf_push(buf, "{}\n"));
+            break;
+        }
         return print_object(buf, item, depth, dashes, in_list);
 
     case cJSON_Raw:
@@ -269,6 +281,8 @@ static bool print_value(string_buffer *buf, const cJSON *item, int depth, int da
     default:
         return false;
     }
+
+    return true;
 }
 
 CJSON_PUBLIC(char *) cYAML_Print(const cJSON *item) {
