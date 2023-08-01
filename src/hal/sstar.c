@@ -109,6 +109,26 @@ static bool sstar_detect_brom_tag(uint32_t addr, char *buf) {
 }
 
 static int sstar_open_sensor_fd() {
+    uint32_t reg = 0;
+
+    if (mem_reg(SNR_PIN_ADDR, &reg, OP_READ)) {
+        if (!reg) {
+            if (chip_generation == INFINITY6B) {
+                reg = 0x0A80;
+                mem_reg(SNR_CHP_ADDR, &reg, OP_WRITE);
+            }
+            if (chip_generation == INFINITY6E) {
+                reg = 0x0111;
+                mem_reg(SNR_PAD_ADDR, &reg, OP_WRITE);
+            }
+
+            reg = 0x0001;
+            mem_reg(SNR_CLK_ADDR, &reg, OP_WRITE);
+            reg = 0x0003;
+            mem_reg(SNR_PIN_ADDR, &reg, OP_WRITE);
+        }
+    }
+
     return universal_open_sensor_fd("/dev/i2c-1");
 }
 
@@ -120,7 +140,7 @@ static float sstar_get_temp() {
     char buf[16];
 
     if (!line_from_file(TEMP_PATH, "Temperature.(.+)",
-                buf, sizeof(buf))) {
+            buf, sizeof(buf))) {
         return 0;
     }
 
@@ -131,7 +151,7 @@ static unsigned long sstar_media_mem() {
     char buf[256];
 
     if (!line_from_file(CMD_PATH, "mma_heap=.+sz=(\\w+)",
-                buf, sizeof(buf))) {
+            buf, sizeof(buf))) {
         return 0;
     }
 

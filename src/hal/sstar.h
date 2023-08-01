@@ -11,6 +11,11 @@
 #define MSTAR_ADDR 0x1F2025A4
 #define SSTAR_ADDR 0x1F003C00
 
+#define SNR_CHP_ADDR 0x1F203C18
+#define SNR_PAD_ADDR 0x1F2079A4
+#define SNR_CLK_ADDR 0x1F207188
+#define SNR_PIN_ADDR 0x1F2608FC
+
 #define INFINITY3  0xC2 // Twinkie
 #define INFINITY5  0xED // Pretzel
 #define MERCURY5   0xEE // Mercury5
