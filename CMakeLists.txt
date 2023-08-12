@@ -67,10 +67,12 @@ set(COMMON_LIB_SRC
     src/hwinfo.c
     src/hwinfo.h
     src/mmap.h
+    src/mtd.c
     src/sensors.c
     src/sensors.h
     src/tools.c
     src/tools.h
+    src/uboot.c
     src/version.h)
 
 set(IPCTOOL_SRC
