@@ -48,14 +48,15 @@ bool mstar_detect_cpu(char *chip_name) {
 bool sstar_detect_cpu(char *chip_name) {
     uint32_t val = 0;
 
-    char *soc_env = getenv("SOC");
-    if (soc_env && *soc_env) {
-        strcpy(chip_name, soc_env);
-        return true;
-    }
-
     if (mem_reg(SSTAR_ADDR, &val, OP_READ)) {
         chip_generation = val;
+
+        char *soc_env = getenv("SOC");
+        if (soc_env && *soc_env) {
+            strcpy(chip_name, soc_env);
+            return true;
+        }
+
         switch (val) {
         case INFINITY5:
             strcpy(chip_name, "SSC326X/SSC328X/SSC329X");
