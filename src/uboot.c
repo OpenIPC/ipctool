@@ -181,11 +181,13 @@ static void uboot_setenv_cb(int mtd, uint32_t offset, const char *env,
     towrite = newenv;
 
 rewrite:
+#ifndef STANDALONE_LIBRARY
     if (fop == FOP_INTERACTIVE || fop == FOP_ROM) {
         crc32(towrite + CRC_SZ, env_len - CRC_SZ, &res_crc);
         *(uint32_t *)towrite = res_crc;
         mtd_write(mtd, offset, erasesize, towrite, env_len);
     }
+#endif
     if (uenv != towrite)
         memcpy(uenv, towrite, env_len);
 
@@ -197,6 +199,7 @@ bailout:
 enum {
     OP_PRINTENV = 0,
     OP_SETENV,
+    OP_GETENV,
 };
 
 typedef struct {
@@ -226,6 +229,9 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
                 uboot_setenv_cb(i, u_off, addr + u_off, c->key, c->value,
                                 mtd->erasesize, c->fop);
                 break;
+            case OP_GETENV:
+                uenv = addr + u_off;
+                break;
             }
             close(fd);
             return false;
@@ -247,6 +253,13 @@ int cmd_printenv() {
     };
     enum_mtd_info(&ctx, cb_uboot_env);
     return EXIT_SUCCESS;
+}
+
+void cmd_getenv_initial() {
+    ctx_uboot_t ctx = {
+        .op = OP_GETENV,
+    };
+    enum_mtd_info(&ctx, cb_uboot_env);
 }
 
 void set_env_param_ram(const char *key, const char *value) {

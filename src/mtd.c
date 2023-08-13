@@ -292,6 +292,7 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
     }
 }
 
+#ifndef STANDALONE_LIBRARY
 cJSON *get_mtd_info() {
     enum_mtd_ctx ctx;
     memset(&ctx, 0, sizeof(ctx));
@@ -472,3 +473,4 @@ int mtd_unlock_cmd() {
 
     return EXIT_SUCCESS;
 }
+#endif
