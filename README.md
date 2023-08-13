@@ -57,7 +57,6 @@ C library to work on vast majority of hardware.
 
   **On a desktop computer:**
   ```
-  $ pip install Exscript
   $ tools/telnet_upload.py 192.168.1.10
   ```
   **On the shell:**
