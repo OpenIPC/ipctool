@@ -1,23 +1,28 @@
 #!/bin/python3
 
-import os, sys, _thread, urllib.request
-from Exscript.protocols import telnetlib
+import os, sys, telnetlib, _thread, urllib.request
+
+arm = "https://github.com/openipc/ipctool/releases/download/latest/ipctool"
+mips = "https://github.com/openipc/ipctool/releases/download/latest/ipctool-mips32"
 
 port = 23
 name = "ipctool"
-link = "https://github.com/openipc/ipctool/releases/download/latest/ipctool"
 
 size = 200
 path = "/tmp/ipctool"
 
 def transfer():
-    t.write("rm -f " + path + "\n")
+    code = "rm -f " + path + "\n"
+    t.write(code.encode())
     for index in range(0, len(file), size):
         data = file[index : index + size]
-        text = data.hex("-").replace("-", "\\x")
-        t.write("echo -ne '\\x" + text.strip() + "' >> " + path + "\n")
-    t.write("chmod 755 " + path + "\n")
-    t.write(path + "\n")
+        text = "\\x".join(["{:02x}".format(x) for x in data])
+        code = "echo -ne '\\x" + text.strip() + "' >> " + path + "\n"
+        t.write(code.encode())
+    code = "chmod 755 " + path + "\n"
+    t.write(code.encode())
+    code = path + "\n"
+    t.write(code.encode())
 
 def interact():
     _thread.start_new_thread(t.listener, ())
@@ -26,7 +31,7 @@ def interact():
         if line.strip() == "transfer":
             transfer()
         else:
-            t.write(line)
+            t.write(line.encode())
 
 if len(sys.argv) < 2:
     print("Usage:", sys.argv[0], "[host] [port]")
@@ -37,7 +42,7 @@ if len(sys.argv) > 2:
     port = sys.argv[2]
 
 try:
-    urllib.request.urlretrieve(link, name)
+    urllib.request.urlretrieve(arm, name)
     file = open(name, "rb").read()
 except:
     print("Cannot download or access", name)
