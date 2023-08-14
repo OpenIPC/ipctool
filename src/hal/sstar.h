@@ -23,6 +23,5 @@
 bool mstar_detect_cpu(char *chip_name);
 bool sstar_detect_cpu(char *chip_name);
 void sstar_setup_hal();
-void cmd_getenv_initial();
 
 #endif /* HAL_SSTAR_H */

@@ -8,7 +8,6 @@
 #include "hal/common.h"
 #include "hal/sstar.h"
 #include "tools.h"
-#include "uboot.h"
 
 static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char sony_addrs[] = {0x34, 0};
@@ -51,13 +50,6 @@ bool sstar_detect_cpu(char *chip_name) {
 
     if (mem_reg(SSTAR_ADDR, &val, OP_READ)) {
         chip_generation = val;
-
-        cmd_getenv_initial();
-        const char *soc_env = uboot_env_get_param("soc");
-        if (soc_env) {
-            strcpy(chip_name, soc_env);
-            return true;
-        }
 
         switch (val) {
         case INFINITY5:
