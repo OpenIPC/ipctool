@@ -188,6 +188,8 @@ const char *getchipfamily() {
         return "infinity6";
     case INFINITY6B:
         return "infinity6b0";
+    case INFINITY6C:
+        return "infinity6c";        
     case INFINITY6E:
         return "infinity6e";
     case T10:

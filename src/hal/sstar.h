@@ -19,6 +19,7 @@
 #define INFINITY6E 0xF1 // Pudding
 #define INFINITY6B 0xF2 // Ispahan
 #define PIONEER3   0xF5 // Ikayaki
+#define INFINITY6C 0xF9 // Maruko
 
 bool mstar_detect_cpu(char *chip_name);
 bool sstar_detect_cpu(char *chip_name);
