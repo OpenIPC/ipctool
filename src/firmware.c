@@ -21,15 +21,8 @@ static void get_god_app(cJSON *j_inner) {
     pid_t godpid;
 
     if ((godpid = get_god_pid(NULL, 0)) > 0) {
-        snprintf(sname, sizeof(sname), "/proc/%d/cmdline", godpid);
-        FILE *fp = fopen(sname, "r");
-        if (!fp)
-            return;
-        if (!fgets(sname, sizeof(sname), fp))
-            return;
-        ADD_PARAM("main-app", sname);
-
-        fclose(fp);
+        if (get_pid_cmdline(godpid, sname))
+            ADD_PARAM("main-app", sname);
     }
 }
 
