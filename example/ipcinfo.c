@@ -147,15 +147,8 @@ static void print_streamer() {
     pid_t godpid;
 
     if ((godpid = get_god_pid(NULL, 0)) > 0) {
-        snprintf(sname, sizeof(sname), "/proc/%d/cmdline", godpid);
-        FILE *fp = fopen(sname, "r");
-        if (!fp)
-            exit(EXIT_FAILURE);
-        if (!fgets(sname, sizeof(sname), fp))
-            exit(EXIT_FAILURE);
-        puts(sname);
-
-        fclose(fp);
+        if (get_pid_cmdline(godpid, sname))
+            puts(sname);
     }
 }
 
