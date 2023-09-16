@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <ipchw.h>
+#include <hal/common.h>
 
 #include "tools.h"
 #include "version.h"
@@ -64,6 +65,7 @@ static void print_usage() {
         "  -s, --short-sensor        read sensor model\n"
         "  -F, --flash-type          read flash type (nor, nand)\n"
         "  -t, --temp                read chip temperature (where supported)\n"
+        "  -i, --info                read chip serial (where supported)\n"
         "  -x, --xm-mac              read MAC address (for XM chips)\n"
         "  -S, --streamer            read streamer name\n"
         "  -V, --version             display version\n"
@@ -91,6 +93,18 @@ static void print_chip_temperature() {
         exit(EXIT_FAILURE);
     }
     printf("%.2f\n", temp);
+}
+
+static void print_serial() {
+    char serial[128];
+
+    const char *vendor = getchipvendor();
+    if (strstr(vendor, "SigmaStar"))
+        sstar_get_die_id(serial, sizeof serial);
+
+    if (!serial)
+        exit(EXIT_FAILURE);
+    puts(serial);
 }
 
 static void print_sensor_long() {
@@ -188,7 +202,7 @@ static void print_xm_mac() {
 }
 
 int main(int argc, char **argv) {
-    const char *short_options = "cfvhlstFSxV";
+    const char *short_options = "cfvhlstiFSxV";
     const struct option long_options[] = {
         {"chip-name", no_argument, NULL, 'c'},
         {"family", no_argument, NULL, 'f'},
@@ -198,6 +212,7 @@ int main(int argc, char **argv) {
         {"short-sensor", no_argument, NULL, 's'},
         {"flash-type", no_argument, NULL, 'F'},
         {"temp", no_argument, NULL, 't'},
+        {"info", no_argument, NULL, 'i'},
         {"streamer", no_argument, NULL, 'S'},
         {"xm-mac", no_argument, NULL, 'x'},
         {"version", no_argument, NULL, 'V'},
@@ -228,6 +243,9 @@ int main(int argc, char **argv) {
             break;
         case 't':
             print_chip_temperature();
+            break;
+        case 'i':
+            print_serial();
             break;
         case 'v':
             print_vendor();
