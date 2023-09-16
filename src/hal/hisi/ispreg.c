@@ -686,6 +686,10 @@ static void hisi_ev300_sensor_clock(cJSON *j_inner) {
 }
 
 bool hisi_ev300_get_die_id(char *buf, ssize_t len) {
+    if (chip_generation != HISI_V4) {
+        return false;
+    }
+
     uint32_t base_id_addr = 0x12020400;
     char *ptr = buf;
     for (uint32_t id_addr = base_id_addr + 5 * 4; id_addr >= base_id_addr;
@@ -922,10 +926,8 @@ struct PT_OFFSET {
 // PT_UNIFY_TIMING_CFG
 
 void hisi_chip_properties(cJSON *j_inner) {
-    if (chip_generation == HISI_V4) {
-        char buf[1024];
-        if (hisi_ev300_get_die_id(buf, sizeof buf)) {
-            ADD_PARAM("id", buf);
-        }
+    char buf[1024];
+    if (hisi_ev300_get_die_id(buf, sizeof buf)) {
+        ADD_PARAM("id", buf);
     }
 }

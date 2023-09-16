@@ -24,5 +24,6 @@
 bool mstar_detect_cpu(char *chip_name);
 bool sstar_detect_cpu(char *chip_name);
 void sstar_setup_hal();
+bool sstar_get_die_id(char *buf, size_t len);
 
 #endif /* HAL_SSTAR_H */

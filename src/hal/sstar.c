@@ -74,7 +74,7 @@ bool sstar_detect_cpu(char *chip_name) {
     return false;
 }
 
-static bool sstar_get_die_id(char *buf, ssize_t len) {
+bool sstar_get_die_id(char *buf, size_t len) {
     uint32_t base = 0, val = 0;
 
     if (!chip_generation) {

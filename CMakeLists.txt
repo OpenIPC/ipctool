@@ -50,6 +50,7 @@ set(COMMON_LIB_SRC
     src/hal/gm.h
     src/hal/hisi/hal_hisi.c
     src/hal/hisi/hal_hisi.h
+    src/hal/hisi/ispreg.c
     src/hal/ingenic.c
     src/hal/ingenic.h
     src/hal/novatek.c
