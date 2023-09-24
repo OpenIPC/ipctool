@@ -291,6 +291,16 @@ sensors:
     # ipctool trace /usr/bin/Sofia
     ```
 
+### To help the researcher
+
+On Ingenic devices, the original Sensor I2C address needs to be right shifted by 1bit, example:
+
+```
+IMX335: (0x34 >> 1) = 0x1A
+SC2230: (0x60 >> 1) = 0x30
+GC2053: (0x6E >> 1) = 0x37
+```
+
 ## Supported SoCs
 
 Tested on:
