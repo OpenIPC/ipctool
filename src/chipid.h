@@ -3,6 +3,16 @@
 
 #include <stdbool.h>
 
+#define VENDOR_ALLWINNER "Allwinner"
+#define VENDOR_BCM "Broadcom"
+#define VENDOR_FH "Fullhan"
+#define VENDOR_GM "GrainMedia"
+#define VENDOR_GOKE "Goke"
+#define VENDOR_HISI "HiSilicon"
+#define VENDOR_INGENIC "Ingenic"
+#define VENDOR_ROCKCHIP "Rockchip"
+#define VENDOR_SSTAR "SigmaStar"
+
 extern int chip_generation;
 extern char chip_name[128];
 extern char control[128];
