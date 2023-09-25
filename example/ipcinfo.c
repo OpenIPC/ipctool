@@ -99,7 +99,7 @@ static void print_serial() {
     char serial[512];
 
     const char *vendor = getchipvendor();
-    if (strstr(vendor, "HiSilicon"))
+    if (strstr(vendor, "HiSilicon") || strstr(vendor, "Goke"))
         hisi_ev300_get_die_id(serial, sizeof serial);
     if (strstr(vendor, "SigmaStar"))
         sstar_get_die_id(serial, sizeof serial);
