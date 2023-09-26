@@ -15,6 +15,7 @@
 #include <ipchw.h>
 #include <hal/common.h>
 
+#include "chipid.h"
 #include "tools.h"
 #include "version.h"
 
@@ -99,9 +100,9 @@ static void print_serial() {
     char serial[512];
 
     const char *vendor = getchipvendor();
-    if (strstr(vendor, "HiSilicon") || strstr(vendor, "Goke"))
+    if (strstr(vendor, VENDOR_HISI) || strstr(vendor, VENDOR_GOKE))
         hisi_ev300_get_die_id(serial, sizeof serial);
-    if (strstr(vendor, "SigmaStar"))
+    if (strstr(vendor, VENDOR_SSTAR))
         sstar_get_die_id(serial, sizeof serial);
 
     if (!serial)
