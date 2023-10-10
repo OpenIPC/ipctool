@@ -33,6 +33,10 @@ C library to work on vast majority of hardware.
     $ /utils/ipctool
     ```
 
+   As an alternative, you may run your own NFS server, putting ipctool on it.
+
+* *Using UART and rx busybox applet on camera side*. This option was described in [@themactep blog post](https://themactep.com/notes/how-to-upload-a-file-onto-ip-camera-via-serial-uart-conection).
+
 * *Using telnet/console and uget utility*: basically convert small `uget` binary
   into `echo`/`printf` chunks and deploy to `/tmp` partition. Read
   [more in documentation](https://github.com/widgetii/uget)
