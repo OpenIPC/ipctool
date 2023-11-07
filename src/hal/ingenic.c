@@ -176,21 +176,21 @@ static int get_cpu_id() {
         if (!mem_reg(0x13540250, &subsoctypet41, OP_READ))
             return -1;
         switch (HIWORD(subsoctypet41)) {
-        case 0x33331111:
+        case 0x3333:
             return 28;
-        case 0x55551111:
+        case 0x5555:
             return 29;
-        case 0x88881111:
+        case 0x8888:
             return 30;
-        case 0x99991111:
+        case 0x9999:
             return 31;
-        case 0x11112222:
+        case 0x1111:
             return 32;
-        case 0x77772222:
+        case 0x7777:
             return 33;
-        case 0xAAAA2222:
+        case 0xAAAA:
             return 34;
-        case 0x66662222:
+        case 0x6666:
             return 35;
         default:
             return -1;
