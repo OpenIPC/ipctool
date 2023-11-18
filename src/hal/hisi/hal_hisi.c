@@ -492,6 +492,16 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
     return 0;
 }
 
+// PMC register 68
+#define CV200_PERI_PMC68 0x20270110
+// PMC register 69
+#define CV200_PERI_PMC69 0x20270114
+
+// Tsensor control register
+#define AV200_PERI_PMC68 0x120A0110
+// Tsensor measurement value 0/1 register
+#define AV200_PERI_PMC70 0x120A0118
+
 // T-sensor temperature record register 0
 #define CV300_MISC_CTRL41 0x120300A4
 // Temperature sensor (T-Sensor) control register
@@ -502,26 +512,38 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
 // Temperature sensor (T-Sensor) control register
 #define AV300_MISC_CTRL45 0x120300B4
 
+// T-Sensor temperature record register 0
+#define EV300_MISC_CTRL46 0x120280BC
+// Temperature sensor (T-Sensor) control register
+#define EV300_MISC_CTRL45 0x120280B4
+
 static float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
     case HISI_V2:
-        tempo = hisi_reg_temp(0x20270114, 8, 0x20270110, 0x60FA0000);
+        tempo =
+            hisi_reg_temp(CV200_PERI_PMC69, 8, CV200_PERI_PMC68, 0x60FA0000);
         tempo = ((tempo * 180) / 256) - 40;
+        break;
+    case HISI_V3A:
+        tempo =
+            hisi_reg_temp(AV200_PERI_PMC70, 16, AV200_PERI_PMC68, 0x40000000);
+        tempo = ((tempo - 125) / 806) * 165 - 40;
         break;
     case HISI_V3:
         tempo =
             hisi_reg_temp(CV300_MISC_CTRL41, 16, CV300_MISC_CTRL39, 0x60FA0000);
         tempo = ((tempo - 125) / 806) * 165 - 40;
         break;
-    case HISI_V4:
-        tempo = hisi_reg_temp(0x120280BC, 16, 0x120280B4, 0xC3200000);
-        tempo = ((tempo - 117) / 798) * 165 - 40;
-        break;
     case HISI_V4A:
         tempo =
             hisi_reg_temp(AV300_MISC_CTRL47, 16, AV300_MISC_CTRL45, 0x60FA0000);
         tempo = ((tempo - 136) / 793 * 165) - 40;
+        break;
+    case HISI_V4:
+        tempo =
+            hisi_reg_temp(EV300_MISC_CTRL46, 16, EV300_MISC_CTRL45, 0xC3200000);
+        tempo = ((tempo - 117) / 798) * 165 - 40;
         break;
     default:
         return NAN;
