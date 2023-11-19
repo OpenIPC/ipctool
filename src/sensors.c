@@ -758,7 +758,6 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
         return false;
 
     int res = prod_msb << 8 | prod_lsb;
-
     if (!res)
         return false;
 
@@ -766,8 +765,16 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     // Omnivision-SuperPix OV2735
     case 0x2735:
         sprintf(ctx->sensor_id, "OV%04x", res);
-        return res;
-        break;
+        return true;
+    case 0x4308:
+        sprintf(ctx->sensor_id, "OS04B10");
+        return true;
+    case 0x5303:
+        sprintf(ctx->sensor_id, "OS03B10");
+        return true;
+    case 0x5602:
+        sprintf(ctx->sensor_id, "OS02G10");
+        return true;
     }
 
     prod_msb = i2c_read_register(fd, i2c_addr, 0xfa, 1, 1);
@@ -778,8 +785,8 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     prod_lsb = i2c_read_register(fd, i2c_addr, 0xfb, 1, 1);
     if (prod_lsb == -1)
         return false;
-    res = prod_msb << 8 | prod_lsb;
 
+    res = prod_msb << 8 | prod_lsb;
     if (!res)
         return false;
 
@@ -800,6 +807,7 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     if (res) {
         sprintf(ctx->sensor_id, "SP%04x", res);
     }
+
     return res;
 }
 
