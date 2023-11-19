@@ -476,18 +476,17 @@ void setup_hal_hisi() {
 
 static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
                               uint32_t prep_addr, uint32_t prep_val) {
-    uint32_t val;
+    uint32_t readed;
 
-    if (mem_reg(prep_addr, &val, OP_READ)) {
-        if (!val) {
-            val = prep_val;
-            mem_reg(prep_addr, &val, OP_WRITE);
+    if (mem_reg(prep_addr, &readed, OP_READ)) {
+        if (readed == prep_addr) {
+            mem_reg(prep_addr, &prep_val, OP_WRITE);
             usleep(100000);
         }
     }
 
-    if (mem_reg(read_addr, &val, OP_READ)) {
-        return val & ((1 << temp_bitness) - 1);
+    if (mem_reg(read_addr, &readed, OP_READ)) {
+        return readed & ((1 << temp_bitness) - 1);
     }
     return 0;
 }
@@ -513,7 +512,7 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
 #define AV300_MISC_CTRL45 0x120300B4
 
 // T-Sensor temperature record register 0
-#define EV300_MISC_CTRL46 0x120280BC
+#define EV300_MISC_CTRL47 0x120280BC
 // Temperature sensor (T-Sensor) control register
 #define EV300_MISC_CTRL45 0x120280B4
 
@@ -521,28 +520,33 @@ static float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
     case HISI_V2:
+        // PERI_PMC69 bit[7:0]
         tempo =
             hisi_reg_temp(CV200_PERI_PMC69, 8, CV200_PERI_PMC68, 0x60FA0000);
         tempo = ((tempo * 180) / 256) - 40;
         break;
     case HISI_V3A:
+        // PERI_PMC70 bit[9:0]
         tempo =
-            hisi_reg_temp(AV200_PERI_PMC70, 16, AV200_PERI_PMC68, 0x40000000);
+            hisi_reg_temp(AV200_PERI_PMC70, 10, AV200_PERI_PMC68, 0x60FA0000);
         tempo = ((tempo - 125) / 806) * 165 - 40;
         break;
     case HISI_V3:
+        // MISC_CTRL41 bit[9:0]
         tempo =
-            hisi_reg_temp(CV300_MISC_CTRL41, 16, CV300_MISC_CTRL39, 0x60FA0000);
+            hisi_reg_temp(CV300_MISC_CTRL41, 10, CV300_MISC_CTRL39, 0x60FA0000);
         tempo = ((tempo - 125) / 806) * 165 - 40;
         break;
     case HISI_V4A:
+        // MISC_CTRL47 bit[9:0]
         tempo =
-            hisi_reg_temp(AV300_MISC_CTRL47, 16, AV300_MISC_CTRL45, 0x60FA0000);
+            hisi_reg_temp(AV300_MISC_CTRL47, 10, AV300_MISC_CTRL45, 0x60FA0000);
         tempo = ((tempo - 136) / 793 * 165) - 40;
         break;
     case HISI_V4:
+        // MISC_CTRL47 bit[9:0]
         tempo =
-            hisi_reg_temp(EV300_MISC_CTRL46, 16, EV300_MISC_CTRL45, 0xC3200000);
+            hisi_reg_temp(EV300_MISC_CTRL47, 10, EV300_MISC_CTRL45, 0xC3200000);
         tempo = ((tempo - 117) / 798) * 165 - 40;
         break;
     default:
