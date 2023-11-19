@@ -479,7 +479,7 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
     uint32_t readed;
 
     if (mem_reg(prep_addr, &readed, OP_READ)) {
-        if (readed == prep_addr) {
+        if (readed != prep_val) {
             mem_reg(prep_addr, &prep_val, OP_WRITE);
             usleep(100000);
         }
