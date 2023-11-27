@@ -159,6 +159,11 @@ static unsigned long sstar_totalmem(unsigned long *media_mem) {
 static void sstar_chip_properties(cJSON *j_inner) {
     char buf[128];
 
+    const char *chip_family = getchipfamily();
+    if (chip_family) {
+        ADD_PARAM("family", chip_family);
+    }
+
     if (sstar_get_die_id(buf, sizeof buf)) {
         ADD_PARAM("id", buf);
     }
