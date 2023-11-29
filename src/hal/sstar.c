@@ -79,7 +79,7 @@ bool sstar_detect_cpu(char *chip_name) {
 bool sstar_get_die_id(char *buf, size_t len) {
     uint32_t base = 0, val = 0;
 
-    if (!chip_generation) {
+    if (!chip_generation || chip_generation == INFINITY6C) {
         return false;
     }
 
