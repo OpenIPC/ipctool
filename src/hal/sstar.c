@@ -15,6 +15,7 @@ static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char superpix_addrs[] = {0x78, 0};
 static unsigned char omni_addrs[] = {0x6C, 0};
 static unsigned char onsemi_addrs[] = {0x20, 0};
+static unsigned char soi_addrs[] = {0x80, 0};
 
 static sensor_addr_t sstar_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},
@@ -23,6 +24,7 @@ static sensor_addr_t sstar_possible_i2c_addrs[] = {
     {SENSOR_SUPERPIX, superpix_addrs},
     {SENSOR_OMNIVISION, omni_addrs},
     {SENSOR_ONSEMI, onsemi_addrs},
+    {SENSOR_SOI, soi_addrs},
     {0, NULL},
 };
 
