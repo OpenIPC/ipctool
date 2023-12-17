@@ -749,6 +749,11 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
+    // Set page 0
+    int page = i2c_read_register(fd, i2c_addr, 0xFD, 1, 1);
+    if (page > 0)
+        i2c_write_register(fd, i2c_addr, 0xFD, 1, 0x00, 2);
+
     int prod_msb = i2c_read_register(fd, i2c_addr, 0x02, 1, 1);
     if (prod_msb == -1)
         return false;
