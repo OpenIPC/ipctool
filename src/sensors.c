@@ -526,7 +526,10 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         res = 0x2232;
         break;
     case 0xcb1c:
-        strcpy(ctx->sensor_id, "SC337H");
+        if (strstr(getchipvendor(), VENDOR_SSTAR))
+            strcpy(ctx->sensor_id, "SC200AI");
+        else
+            strcpy(ctx->sensor_id, "SC337H");
         return true;
     case 0xcc05:
         // AKA AUGE

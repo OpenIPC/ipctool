@@ -15,6 +15,7 @@ typedef struct {
     cJSON *j_params;
 } sensor_ctx_t;
 
+const char *getchipvendor();
 const char *getsensoridentity();
 cJSON *detect_sensors();
 bool getsensorid(sensor_ctx_t *ctx);
