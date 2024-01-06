@@ -1,0 +1,13 @@
+version: '3.7'
+
+services:
+  builder:
+    build:
+      context: ./
+      dockerfile: scripts/Dockerfile
+    command: scripts/build.sh
+    environment:
+      TOOLCHAIN: arm-unknown-linux-musleabi
+      BUILD_TYPE: Release
+    volumes:
+      - ./:/app
