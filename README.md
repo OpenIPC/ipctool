@@ -161,7 +161,7 @@ ram:
 firmware:
   u-boot: "2010.06-svn1098 (Jun 11 2018 - 13:17:42)"
   kernel: "3.18.20 (Thu Jul 5 14:44:19 CST 2018)"
-  toolchain: gcc version 4.9.4 20150629 (prerelease) (Hisilicon_v500_20170922) 
+  toolchain: gcc version 4.9.4 20150629 (prerelease) (Hisilicon_v500_20170922)
   libc: uClibc 0.9.33.2
   sdk: "Hi3516CV300_MPP_V1.0.0.0 B010 Release (Jun 22 2018, 19:22:22)"
   main-app: /usr/bin/Sofia
@@ -191,22 +191,22 @@ sensors:
     data-endian: LVDS_ENDIAN_BIG
     sync-code-endian: LVDS_ENDIAN_BIG
     sync-code:
-    - 
+    -
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
-    - 
+    -
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
-    - 
+    -
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
-    - 
+    -
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
       - 0xab0, 0xb60, 0x800, 0x9d0
@@ -360,6 +360,11 @@ strategy for both parties, that would contribute to the stability your business,
 to work on the project full-time.
 
 If you have any specific questions concerning our project, feel free to [contact us](mailto:dev@openipc.org).
+
+### Compiling binaries locally
+
+Easy way not to bloat your machine with toolchains is to build with containers.
+`docker compose up` builds docker image with ARM(by default) toolchain and build binaries at build directory.
 
 ### Participating and Contribution
 
