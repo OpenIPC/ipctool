@@ -178,7 +178,7 @@ static bool detect_xm_product(cJSON *j_inner) {
 static bool extract_cloud_id(cJSON *j_inner) {
     char buf[256];
 
-    if (!line_from_file("/mnt/mtd/Config/SerialNumber", "([0-9a-f]+)", buf,
+    if (!line_from_file("/mnt/mtd/Config/SerialNumber", "([0-9a-z]+)", buf,
                         sizeof(buf))) {
         return false;
     }
