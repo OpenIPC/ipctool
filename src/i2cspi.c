@@ -9,13 +9,15 @@
 
 #define SELECT_WIDE(reg_addr) reg_addr > 0xff ? 2 : 1
 
+int i2c_adapter_nr = 0;
+
 static int prepare_i2c_sensor(unsigned char i2c_addr) {
     if (!getchipname()) {
         puts("Unknown chip");
         exit(EXIT_FAILURE);
     }
 
-    int fd = open_i2c_sensor_fd();
+    int fd = open_i2c_sensor_fd(i2c_adapter_nr);
     if (fd == -1) {
         puts("Device not found");
         exit(EXIT_FAILURE);
@@ -254,20 +256,26 @@ static int spidump(int argc, char **argv, bool script_mode) {
 extern void print_usage();
 
 int i2cspi_cmd(int argc, char **argv) {
-    const char *short_options = "s";
+    const char *short_options = "sb:";
     const struct option long_options[] = {
         {"script", no_argument, NULL, 's'},
+        {"bus", 1, NULL, 'b'},
         {NULL, 0, NULL, 0},
     };
     bool script_mode = false;
     int res;
     int option_index;
+    int flags;
 
     while ((res = getopt_long_only(argc, argv, short_options, long_options,
                                    &option_index)) != -1) {
         switch (res) {
         case 's':
             script_mode = true;
+            break;
+        case 'b':
+            flags = strtoul(optarg, NULL, 0);
+            i2c_adapter_nr = flags;
             break;
         case '?':
             print_usage();

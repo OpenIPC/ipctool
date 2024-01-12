@@ -199,8 +199,11 @@ int universal_spi_write_register(int fd, unsigned char i2c_addr,
     return 0;
 }
 
-static int fallback_open_sensor_fd() {
-    return universal_open_sensor_fd("/dev/i2c-0");
+static int fallback_open_sensor_fd(int i2c_adapter_nr) {
+    char adapter_name[FILENAME_MAX];
+
+    snprintf(adapter_name, sizeof(adapter_name), "/dev/i2c-%d", i2c_adapter_nr);
+    return universal_open_sensor_fd(adapter_name);
 }
 
 static void universal_hal_cleanup() {}

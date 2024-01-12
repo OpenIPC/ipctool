@@ -39,6 +39,8 @@
 #define RESET_CL "\x1b[0m"
 #define FG_RED "\x1b[31m"
 
+extern int i2c_adapter_nr;
+
 void print_usage() {
 #ifndef SKIP_VERSION
     printf("ipctool, version: ");
@@ -91,10 +93,10 @@ void print_usage() {
         "  i2cset <device address> <register> <new value>\n"
         "  spiset <register> <new value>\n"
         "                            write a value to I2C/SPI device\n"
-        "  i2cdump [--script] <device address> <from register> <to register>\n"
+        "  i2cdump [--script] [-b, --bus] <device address> <from register> <to register>\n"
         "  spidump [--script] <from register> <to register>\n"
         "                            dump data from I2C/SPI device\n"
-        "  i2cdetect                 attempt to detect devices on I2C bus\n"
+        "  i2cdetect [-b, --bus]     attempt to detect devices on I2C bus\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
         "  gpio (scan|mux)           GPIO utilities\n"
         "  trace [--skip=usleep] <full/path/to/executable> [program "
