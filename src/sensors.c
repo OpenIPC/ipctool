@@ -523,8 +523,11 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         res = 0x2335;
         break;
     case 0xcb17:
-        res = 0x2232;
-        break;
+        if (strstr(getchipvendor(), VENDOR_INGENIC))
+            strcpy(ctx->sensor_id, "SC2332");
+        else
+            strcpy(ctx->sensor_id, "SC2232");
+        return true;
     case 0xcb1c:
         if (strstr(getchipvendor(), VENDOR_SSTAR))
             strcpy(ctx->sensor_id, "SC200AI");
