@@ -5,6 +5,7 @@
 
 #include <unistd.h>
 
+#include "chipid.h"
 #include "hal/common.h"
 #include "tools.h"
 
@@ -15,11 +16,13 @@ static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char omni_addrs[] = {0x6c, 0};
 static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char gc_addrs[] = {0x6e, 0};
+static unsigned char tp_addrs[] = {0x88, 0};
 
 static sensor_addr_t novatek_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},     {SENSOR_SMARTSENS, ssens_addrs},
     {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OMNIVISION, omni_addrs},
-    {SENSOR_GALAXYCORE, gc_addrs}, {0, NULL}};
+    {SENSOR_GALAXYCORE, gc_addrs}, {SENSOR_TECHPOINT, tp_addrs},
+    {0, NULL}};
 
 bool novatek_detect_cpu(char *chip_name) {
     char buf[256];
@@ -27,6 +30,7 @@ bool novatek_detect_cpu(char *chip_name) {
     if (!line_from_file("/proc/device-tree/model", "Novatek ([A-Z]+[0-9]+)",
                         buf, sizeof(buf)))
         return false;
+
     strcpy(chip_name, buf);
     return true;
 }
@@ -55,9 +59,23 @@ float novatek_get_temp() {
     return ret;
 }
 
+static int novatek_open_i2c_fd() {
+    int adapter_nr = 0;
+
+    if (!strncmp(chip_name, "NA51068", 7) ||
+        !strncmp(chip_name, "NA51103", 7) || !strncmp(chip_name, "NA51090", 7))
+        adapter_nr = 1;
+    char adapter_name[FILENAME_MAX];
+
+    snprintf(adapter_name, sizeof(adapter_name), "/dev/i2c-%d", adapter_nr);
+
+    return universal_open_sensor_fd(adapter_name);
+}
+
 void novatek_setup_hal() {
     possible_i2c_addrs = novatek_possible_i2c_addrs;
-    i2c_change_addr = i2c_changenshift_addr; 
+    i2c_change_addr = i2c_changenshift_addr;
+    open_i2c_sensor_fd = novatek_open_i2c_fd;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = novatek_get_temp;
 #ifndef STANDALONE_LIBRARY

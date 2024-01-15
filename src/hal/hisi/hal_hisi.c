@@ -27,12 +27,14 @@ static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char omni_addrs[] = {0x60, 0x6c, 0x42, 0};
 static unsigned char gc_addrs[] = {0x6e, 0x52, 0x42, 0x78, 0};
 static unsigned char superpix_addrs[] = {0x79, 0};
+static unsigned char tp_addrs[] = {0x88, 0};
 
 static sensor_addr_t my_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},         {SENSOR_SOI, soi_addrs},
     {SENSOR_ONSEMI, onsemi_addrs},     {SENSOR_SMARTSENS, ssens_addrs},
     {SENSOR_OMNIVISION, omni_addrs},   {SENSOR_GALAXYCORE, gc_addrs},
-    {SENSOR_SUPERPIX, superpix_addrs}, {0, NULL}};
+    {SENSOR_SUPERPIX, superpix_addrs}, {SENSOR_TECHPOINT, tp_addrs},
+    {0, NULL}};
 
 static float hisi_get_temp();
 

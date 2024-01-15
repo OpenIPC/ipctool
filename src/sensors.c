@@ -822,6 +822,28 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     return res;
 }
 
+static int detect_techpoint_adc(sensor_ctx_t *ctx, int fd,
+                                unsigned char i2c_addr) {
+    if (i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    int prod_msb = i2c_read_register(fd, i2c_addr, 0xfe, 1, 1);
+    if (prod_msb == -1)
+        return false;
+
+    int prod_lsb = i2c_read_register(fd, i2c_addr, 0xff, 1, 1);
+    if (prod_lsb == -1)
+        return false;
+
+    int res = prod_msb << 8 | prod_lsb;
+    if (!res)
+        return false;
+    else
+        sprintf(ctx->sensor_id, "TP%04x", res);
+
+    return res;
+}
+
 static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int (*detect_fn)(sensor_ctx_t *ctx, int,
                                                     unsigned char),
@@ -885,6 +907,10 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
                                        SENSOR_SUPERPIX)) {
         strcpy(ctx->vendor, "SuperPix");
         ctx->reg_width = 1;
+        detected = true;
+    } else if (detect_possible_sensors(ctx, fd, detect_techpoint_adc,
+                                       SENSOR_TECHPOINT)) {
+        strcpy(ctx->vendor, "TechPoint");
         detected = true;
     }
 exit:
