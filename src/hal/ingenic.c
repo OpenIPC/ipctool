@@ -164,10 +164,12 @@ static int get_cpu_id() {
         switch (HIWORD(subsoctypet40)) {
         case 0x1111:
             return 24;
-        case 0x7777:
+        case 0x8888:
             return 25;
-        case 0x4444:
+        case 0x7777:
             return 26;
+        case 0x4444:
+            return 27;
         default:
             return -1;
         }
@@ -252,11 +254,11 @@ static const char *ingenic_cpu_name() {
     case 24:
         return "T40N";
     case 25:
-        return "T40XP";
+        return "T40NN";
     case 26:
-        return "T40A";
+        return "T40XP";
     case 27:
-        return "T41A";
+        return "T40A";
     case 28:
         return "T41L";
     case 29:
