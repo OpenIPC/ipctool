@@ -1,6 +1,8 @@
 #include "reginfo.h"
 #include "chipid.h"
 #include "hal/hisi/hal_hisi.h"
+#include "hal/ingenic.h"
+#include "hal/ingenic_reginfo.h"
 #include "hal/sstar.h"
 #include "hal/sstar_reginfo.h"
 #include "tools.h"
@@ -2201,12 +2203,15 @@ static const muxctrl_reg_t **regs_by_chip() {
         return I6C_regs;
     case INFINITY6E:
         return I6E_regs;
+    case T31:
+        return T31_regs;
     }
     fprintf(stderr, "Platform is not supported\n");
     exit(EXIT_FAILURE);
 }
 
 static int dump_regs(bool script_mode) {
+    const char *vendor = getchipvendor();
     const muxctrl_reg_t **regs = regs_by_chip();
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
@@ -2221,7 +2226,12 @@ static int dump_regs(bool script_mode) {
             continue;
         }
 
-        val &= 0xf;
+        if (strstr(vendor, VENDOR_HISI) || strstr(vendor, VENDOR_GOKE)) {
+            val &= 0xf;
+        } else if (strstr(vendor, VENDOR_SSTAR)) {
+            val &= 0xffff;
+        }
+
         printf("muxctrl_reg%d %#x %#x", reg_num, regs[reg_num]->address, val);
         show_function(regs[reg_num]->funcs, val);
     }
