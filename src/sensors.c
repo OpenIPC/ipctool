@@ -314,6 +314,11 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         }
     }
 
+    if (((READ(0xA4) & 0xF0) == 0xA0) && (READ(0xC44) == 6)) {
+        sprintf(ctx->sensor_id, "IMX664");
+        return true;
+    }
+
     return false;
 }
 
