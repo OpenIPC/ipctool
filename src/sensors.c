@@ -320,28 +320,32 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     }
 
     int r30A4 = READ(0xA4);
+    switch (r30A4 & 0xF0) {
+    case 0xA0:
+        if (READ(0xC44) == 6) {
+            sprintf(ctx->sensor_id, "IMX664");
+            return true;
+        }
 
-    if (((r30A4 & 0xF0) == 0xA0) && (READ(0xC44) == 6)) {
-        sprintf(ctx->sensor_id, "IMX664");
-        return true;
-    }
+        // TODO: not tested yet
+        if (READ(0xC40) == 5) {
+            sprintf(ctx->sensor_id, "IMX662");
+            return true;
+        }
 
-    // TODO: not tested yet
-    if (((r30A4 & 0xF0) == 0xA0) && (READ(0xC40) == 5)) {
-        sprintf(ctx->sensor_id, "IMX662");
-        return true;
-    }
+        // TODO: not tested yet
+        if (READ(0xC7C) == 0x16) {
+            sprintf(ctx->sensor_id, "IMX675");
+            return true;
+        }
+        break;
 
-    // TODO: not tested yet
-    if (((r30A4 & 0xF0) == 0xA0) && (READ(0xC7C) == 0x16)) {
-        sprintf(ctx->sensor_id, "IMX675");
-        return true;
-    }
-
-    // TODO: not tested yet
-    if (((r30A4 & 0xF0) == 0x20) && (READ(0x152) == 0x1E)) {
-        sprintf(ctx->sensor_id, "IMX482");
-        return true;
+    case 0x20:
+        // TODO: not tested yet
+        if (READ(0x152) == 0x1E) {
+            sprintf(ctx->sensor_id, "IMX482");
+            return true;
+        }
     }
 
     return false;
