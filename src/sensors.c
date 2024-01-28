@@ -143,10 +143,10 @@ static void sony_imx291_params(sensor_ctx_t *ctx, int fd,
     int adbit = READ(0x5) & 1 ? 12 : 10;
     ADD_PARAM_NUM("bitness", adbit);
 
-    ADD_PARAM("databus", sony_imx291_databus((READ(0x46) & 0xf0) >> 4));
+    ADD_PARAM("databus", sony_imx291_databus((READ(0x46) & 0xF0) >> 4));
 
     int frsel = (READ(9) & 3);
-    int hmax = READ(0x1d) << 8 | READ(0x1c);
+    int hmax = READ(0x1D) << 8 | READ(0x1C);
     ADD_PARAM_NUM("fps", sony_imx291_fps(frsel, hmax));
     ctx->j_params = j_inner;
 }
@@ -157,17 +157,18 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
+    // HINT: 0x3057 also can be used for IMX335 (chip_id == 0x07)
+    // OR 0x3415 == 0x20 && 0x3418 == 0x27
     int chip_id = READ(0x57);
     if (chip_id == 0x06) {
         sprintf(ctx->sensor_id, "IMX347");
         return true;
     }
-    // 0x3057 also can be used for IMX335 (chip_id == 0x07)
 
-    if (READ(0x41c) == 0x47) {
-        int ret302e = READ(0x02e);
-        int ret302f = READ(0x02f);
-        if (ret302e == 0x18 && ret302f == 0xf) {
+    if (READ(0x41C) == 0x47) {
+        int r302E = READ(0x2E);
+        int r302F = READ(0x2F);
+        if (r302E == 0x18 && r302F == 0xF) {
             sprintf(ctx->sensor_id, "IMX334");
             return true;
         }
@@ -175,12 +176,13 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
 
     // from IMX335 datasheet, p.40
     // 316Ah - 2-6 bits are 1, 7 bit is 0
-    int ret16a = READ(0x16A);
+    int r316A = READ(0x16A);
     // early break
-    if (ret16a == -1)
+    if (r316A == -1)
         return false;
 
-    if (ret16a > 0 && ((ret16a & 0xfc) == 0x7c)) {
+    // HINT: possible check 0x316A == 0x7C && 0x3078 == 0x1
+    if (r316A > 0 && ((r316A & 0xFC) == 0x7C)) {
         sprintf(ctx->sensor_id, "IMX335");
         return true;
     }
@@ -188,7 +190,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     // Fixed to "40h"
     if (READ(0x13) == 0x40) {
 
-        if (READ(0x4F) == 0x07) {
+        if (READ(0x4F) == 0x7) {
             sprintf(ctx->sensor_id, "IMX323");
         } else {
             sprintf(ctx->sensor_id, "IMX322");
@@ -198,41 +200,43 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
 
     // from IMX415 datasheet, p.46
     // 3B00h, Set to "2Eh", default value after reset is 28h
-    int ret3b00 = READ(0xB00);
-    if (ret3b00 == 0x2e || ret3b00 == 0x28) {
+    // HINT: possible check 0x300B == 0xA0 && 0x30C0 == 0x20
+    int r3B00 = READ(0xB00);
+    if (r3B00 == 0x2E || r3B00 == 0x28) {
         sprintf(ctx->sensor_id, "IMX415");
         return true;
     }
 
-    // Possible check: 3015 == 0x3c
-    int ret33b4 = READ(0x3b4);
-    if (ret33b4 == 0x96 || ret33b4 == 0xfe) {
+    // HINT: possible check 0x3015 == 0x3c
+    int r33B4 = READ(0x3B4);
+    if (r33B4 == 0x96 || r33B4 == 0xFE) {
         sprintf(ctx->sensor_id, "IMX178");
         return true;
     }
 
-    if (READ(0x120) == 0x80 && READ(0x129) == 0x0d) {
+    if (READ(0x120) == 0x80 && READ(0x129) == 0xD) {
         sprintf(ctx->sensor_id, "IMX274");
         return true;
     }
 
-    // Possible check: 0x303a = 0xc9
-    if (READ(0x015) == 0x3c) {
+    // HINT: possible check 0x303A == 0xC9
+    // OR 0x3012 == 0x50 && 0x3110 == 0XE
+    if (READ(0x15) == 0x3C) {
         sprintf(ctx->sensor_id, "IMX185");
         return true;
     }
 
-    if (READ(0x5b8) == 0xfa) {
+    if (READ(0x5B8) == 0xFA) {
         sprintf(ctx->sensor_id, "IMX294");
         return true;
     }
 
-    if (READ(0x1c) == 0x8b) {
+    if (READ(0x1C) == 0x8B) {
         sprintf(ctx->sensor_id, "IMX226");
         return true;
     }
 
-    if (READ(0xce) == 0x16) {
+    if (READ(0xCE) == 0x16) {
         sprintf(ctx->sensor_id, "IMX122");
         return true;
     }
@@ -243,19 +247,20 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
-    int ret1dc = READ(0x1DC);
-    if (ret1dc != 0xff) {
-        switch (ret1dc & 6) {
+    int r31DC = READ(0x1DC);
+    if (r31DC != 0xFF) {
+        switch (r31DC & 6) {
         case 4:
             sprintf(ctx->sensor_id, "IMX307");
             return true;
         case 6:
+            // HINT: possible check 0x3004 == 0x10 && 0x3008 != 0xA0
             sprintf(ctx->sensor_id, "IMX327");
             return true;
         default: {
-            if (READ(0x1e) == 0xb2 && READ(0x1f) == 0x1) {
-                int ret9c = READ(0x9c);
-                switch (ret9c) {
+            if (READ(0x1E) == 0xB2 && READ(0x1F) == 0x1) {
+                int r309C = READ(0x9C);
+                switch (r309C) {
                 case 0x20:
                 case 0x22:
                     sprintf(ctx->sensor_id, "IMX291");
@@ -264,7 +269,7 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
                     sprintf(ctx->sensor_id, "IMX290");
                     break;
                 default:
-                    SENSOR_ERR("Sony29x", ret9c);
+                    SENSOR_ERR("Sony29x", r309C);
                     return false;
                 }
 #ifndef STANDALONE_LIBRARY
@@ -286,18 +291,18 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     }
 
     if (READ(0x4) == 0x10) {
-        if (READ(0xc) == 0 && READ(0xe) == 0x1) {
-            int val_0xd = READ(0xd);
-            int val_0x10 = READ(0x10);
+        if (READ(0xC) == 0 && READ(0xE) == 0x1) {
+            int r300D = READ(0xD);
+            int r3010 = READ(0x10);
 
-            if (val_0xd == 0x20 && val_0x10 == 0x39 && READ(0x6) == 0 &&
-                READ(0xf) == 0x1 && READ(0x12) == 0x50) {
+            if (r300D == 0x20 && r3010 == 0x39 && READ(0x6) == 0 &&
+                READ(0xF) == 0x1 && READ(0x12) == 0x50) {
                 sprintf(ctx->sensor_id, "IMX138");
                 return true;
             }
 
-            if (val_0xd == 0 && val_0x10 == 0x1 && READ(0x11) == 0 &&
-                READ(0x1e) == 0x1 && READ(0x1f) == 0) {
+            if (r300D == 0 && r3010 == 0x1 && READ(0x11) == 0 &&
+                READ(0x1E) == 0x1 && READ(0x1F) == 0) {
                 if (READ(0x338) != 0) {
                     sprintf(ctx->sensor_id, "IMX385");
                     return true;
@@ -308,14 +313,34 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
             }
         }
 
-        if (READ(0x9e) == 0x71) {
+        if (READ(0x9E) == 0x71) {
             sprintf(ctx->sensor_id, "IMX123");
             return true;
         }
     }
 
-    if (((READ(0xA4) & 0xF0) == 0xA0) && (READ(0xC44) == 6)) {
+    int r30A4 = READ(0xA4);
+
+    if (((r30A4 & 0xF0) == 0xA0) && (READ(0xC44) == 6)) {
         sprintf(ctx->sensor_id, "IMX664");
+        return true;
+    }
+
+    // TODO: not tested yet
+    if (((r30A4 & 0xF0) == 0xA0) && (READ(0xC40) == 5)) {
+        sprintf(ctx->sensor_id, "IMX662");
+        return true;
+    }
+
+    // TODO: not tested yet
+    if (((r30A4 & 0xF0) == 0xA0) && (READ(0xC7C) == 0x16)) {
+        sprintf(ctx->sensor_id, "IMX675");
+        return true;
+    }
+
+    // TODO: not tested yet
+    if (((r30A4 & 0xF0) == 0x20) && (READ(0x152) == 0x1E)) {
+        sprintf(ctx->sensor_id, "IMX482");
         return true;
     }
 
