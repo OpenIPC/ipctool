@@ -200,7 +200,7 @@ static int i2cdetect(int argc, char **argv, bool script_mode) {
     unsigned char i2c_addr;
 
     printf("       0  1  2  3  4  5  6  7   8  9  a  b  c  d  e  f\n");
-    i2c_addr = 0xff;  # will be 0x00 after first increment
+    i2c_addr = 0xff;  // will be 0x00 after first increment
     do {
         ++i2c_addr;
         int fd = prepare_i2c_sensor(i2c_addr);
