@@ -131,7 +131,7 @@ static void hexdump(read_register_t cb, int fd, unsigned char i2c_addr,
 
     size_t size = to_reg_addr - from_reg_addr;
     printf("       0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F\n");
-    for (size_t i = from_reg_addr; i < to_reg_addr; ++i) {
+    for (size_t i = from_reg_addr; i <= to_reg_addr; ++i) {
         int res = cb(fd, i2c_addr, i, SELECT_WIDE(i), 1);
         if (i % 16 == 0)
             printf("%4.x: ", i);
