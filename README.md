@@ -330,7 +330,6 @@ Tested on:
 |Ruision | RS-H649F-A0, RS-H651JAI-AO, RS-H656S-AO |
 |TP-Link | NC210 |
 
-
 ## Supported sensors
 
 Tested on:
