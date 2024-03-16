@@ -300,6 +300,7 @@ int i2cspi_cmd(int argc, char **argv) {
         else
             return spidump(argc - optind, argv + optind, script_mode);
     } else if (!strcmp(argv[0] + 3, "detect")) {
+        if (i2c_mode)
             return i2cdetect(argc - optind, argv + optind, script_mode);
     }
 
