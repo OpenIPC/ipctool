@@ -315,6 +315,7 @@ Tested on:
 |[SigmaStar](http://linux-chenxing.org/)|SSC335|
 |[Xiongmai](http://www.xiongmaitech.com/product)|XM510, XM530, XM550|
 |[Rockchip](https://www.rock-chips.com/)|RV1109|
+|[Goke](http://www.goke.com/en/)|GK7205v200/210/300|
 
 Please test on your device to help us extend the list.
 
@@ -338,7 +339,7 @@ Tested on:
 |Silicon Optronics, Inc.|JX-F22, JX-F23, JX-F37, JX-H62, JX-H65, JX-K05 |
 |Sony                   |IMX224, IMX290, IMX291, IMX307, IMX322, IMX323, IMX327, IMX335, IMX415, IMX664 |
 |ON Semiconductor       |AR0130, AR0237                         |
-|SmartSens              |SC2135, SC2232, SC2235, SC2235P, SC2239, SC2315e (SC307E, SC4239Р), SC335E (SC5300) |
+|SmartSens              |SC2135, SC223A, SC2232, SC2235, SC2235P, SC2239, SC2315e (SC307E, SC4239Р), SC335E (SC5300) |
 |OmniVision             |OV9712                                 |
 |GalaxyCore             |GC2053                                 |
 
