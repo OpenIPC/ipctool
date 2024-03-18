@@ -72,16 +72,19 @@ C library to work on vast majority of hardware.
 
 ```console
 # ipctool -h
+Usage: ipctool [OPTIONS] [COMMANDS]
 Where:
   -c, --chip-name           read chip name
   -s, --sensor-name         read sensor model and control line
   -t, --temp                read chip temperature (where supported)
 
   backup <filename>         save backup into a file
+  upload                    upload full backup to the OpenIPC cloud
   restore [mac|filename]    restore from backup (cloud-based or local file)
      [-s, --skip-env]       skip environment
      [-f, --force]          enforce
-  upgrade <bundle>          upgrade to OpenIPC firmware (experimental feature, use only on cameras with UART)
+  upgrade <bundle>          upgrade to OpenIPC firmware
+                            (experimental! use only on cameras with UART)
      [-f, --force]          enforce
   printenv                  drop-in replacement for fw_printenv
   setenv <key> <value>      drop-in replacement for fw_setenv
@@ -92,9 +95,10 @@ Where:
   i2cset <device address> <register> <new value>
   spiset <register> <new value>
                             write a value to I2C/SPI device
-  i2cdump [--script] <device address> <from register> <to register>
+  i2cdump [--script] [-b, --bus] <device address> <from register> <to register>
   spidump [--script] <from register> <to register>
                             dump data from I2C/SPI device
+  i2cdetect [-b, --bus]     attempt to detect devices on I2C bus
   reginfo [--script]        dump current status of pinmux registers
   gpio (scan|mux)           GPIO utilities
   trace [--skip=usleep] <full/path/to/executable> [program arguments]
