@@ -2,7 +2,8 @@
 
 # IP camera hardware checking tool
 
-[![Build](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml/badge.svg)](https://github.com/OpenIPC/ipctool/actions/workflows/release-it.yml)
+[![Build](https://github.com/OpenIPC/ipctool/actions/workflows/release-arm32.yml/badge.svg)](https://github.com/OpenIPC/ipctool/actions/workflows/release-arm32.yml)
+[![Build](https://github.com/OpenIPC/ipctool/actions/workflows/release-mips32.yml/badge.svg)](https://github.com/OpenIPC/ipctool/actions/workflows/release-mips32.yml)
 [![CI status](https://img.shields.io/github/downloads/OpenIPC/ipctool/total.svg)](https://github.com/OpenIPC/ipctool/releases)
 ![GitHub repo size](https://img.shields.io/github/repo-size/OpenIPC/ipctool)
 ![GitHub issues](https://img.shields.io/github/issues/OpenIPC/ipctool)
