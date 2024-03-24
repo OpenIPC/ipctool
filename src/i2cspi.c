@@ -141,11 +141,11 @@ static void hexdump(read_register_t cb, int fd, unsigned char i2c_addr,
         } else {
             ascii[i % 16] = '.';
         }
-        if ((i + 1) % 8 == 0 || i + 1 == size) {
+        if ((i + 1) % 8 == 0 || i == size) {
             printf(" ");
             if ((i + 1) % 16 == 0) {
                 printf("|  %s \n", ascii);
-            } else if (i + 1 == size) {
+            } else if (i == size) {
                 ascii[(i + 1) % 16] = '\0';
                 if ((i + 1) % 16 <= 8) {
                     printf(" ");
