@@ -200,10 +200,10 @@ static int i2cdetect(int argc, char **argv, bool script_mode) {
     unsigned char i2c_addr;
 
     printf("       0  1  2  3  4  5  6  7   8  9  a  b  c  d  e  f\n");
+    int fd = prepare_i2c_sensor(0x00);
     i2c_addr = 0xff;  // will be 0x00 after first increment
     do {
         ++i2c_addr;
-        int fd = prepare_i2c_sensor(i2c_addr);
         int res = i2c_read_register(fd, i2c_addr, 0, SELECT_WIDE(0), 1);
 
         if (i2c_addr % 16 == 0)
@@ -221,10 +221,10 @@ static int i2cdetect(int argc, char **argv, bool script_mode) {
                 printf("|  \n");
         }
 
-        close_sensor_fd(fd);
-        hal_cleanup();
     } while (i2c_addr != 0xff);
     
+    close_sensor_fd(fd);
+    hal_cleanup();    
     printf("\n");
 
     return EXIT_SUCCESS;
