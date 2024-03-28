@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ARCHIVE: arm-gcc12-musl-3_0
+      ARCHIVE: arm-gcc13-musl-3_0
       PLATFORM: arm-openipc-linux-musleabi_sdk-buildroot
       TOOLCHAIN: arm-openipc-linux-musleabi
 
