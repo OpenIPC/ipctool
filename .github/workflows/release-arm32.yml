@@ -17,6 +17,7 @@ jobs:
       ARCHIVE: arm-gcc13-musl-3_0
       PLATFORM: arm-openipc-linux-musleabi_sdk-buildroot
       TOOLCHAIN: arm-openipc-linux-musleabi
+      VERSION: 4.2.3
 
     steps:
       - uses: pozetroninc/github-action-get-latest-release@master
@@ -50,16 +51,19 @@ jobs:
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
+          wget -q https://github.com/upx/upx/releases/download/v$VERSION/upx-$VERSION-amd64_linux.tar.xz
+          tar -xf upx-$VERSION-amd64_linux.tar.xz --strip-components 1
+
           REL="${{ steps.ct-ng-release.outputs.release }}"
           echo "Got release $REL"
           wget -qO- https://github.com/OpenIPC/firmware/releases/download/latest/$ARCHIVE.tgz | \
             tar xfz - -C /opt
           export PATH=/opt/$PLATFORM/bin:$PATH
-          sudo apt-get install -y cmake upx-ucl
+          sudo apt-get install -y cmake
           cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
           cmake --build build
-          upx build/ipcinfo
-          upx build/ipctool
+          ./upx build/ipcinfo
+          ./upx build/ipctool
           cp build/ipctool ipctool-$GIT_HASH
         continue-on-error: true
 
