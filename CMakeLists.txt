@@ -17,7 +17,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 else()
   if(BUILD_SHARED_LIBS)
     set(CMAKE_C_FLAGS
-        "${CMAKE_C_FLAGS} -O1 -g -fsanitize=address -fno-omit-frame-pointer")
+        "${CMAKE_C_FLAGS} -O1 -g -fno-omit-frame-pointer")
   endif()
 endif()
 
@@ -38,6 +38,8 @@ include_directories(./src/)
 set(COMMON_LIB_SRC
     src/chipid.c
     src/chipid.h
+    src/cjson/cJSON.c
+    src/cjson/cJSON.h
     src/hal/allwinner.c
     src/hal/allwinner.h
     src/hal/bcm.c
