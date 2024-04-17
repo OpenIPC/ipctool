@@ -18,6 +18,7 @@
 #define INFINITY2M 0xF0 // Taiyaki
 #define INFINITY6E 0xF1 // Pudding
 #define INFINITY6B 0xF2 // Ispahan
+#define MERCURY6   0xF4 // Tiramisu
 #define PIONEER3   0xF5 // Ikayaki
 #define INFINITY6C 0xF9 // Maruko
 

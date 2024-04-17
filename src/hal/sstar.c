@@ -68,6 +68,9 @@ bool sstar_detect_cpu(char *chip_name) {
         case INFINITY6B:
             strcpy(chip_name, "SSC33X");
             break;
+        case MERCURY6:
+            strcpy(chip_name, "SSC35X");
+            break;
         case INFINITY6C:
             strcpy(chip_name, "SSC37X");
             break;
