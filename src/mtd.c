@@ -196,8 +196,15 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
             c->mtd_type = "nand";
         ADD_PARAM("type", c->mtd_type);
         ADD_PARAM_FMT("block", "%dK", mtd->erasesize / 1024);
-        if (strlen(nor_chip)) {
-            ADD_PARAM("chip", nor_chip);
+        if (strlen(nor_chip_name) || strlen(nor_chip_id)) {
+            cJSON *j_inner = cJSON_CreateObject();
+            if (strlen(nor_chip_name)) {
+                ADD_PARAM("name", nor_chip_name);
+            }
+            if (strlen(nor_chip_id)) {
+                ADD_PARAM("id", nor_chip_id);
+            }
+            cJSON_AddItemToObject(c->json, "chip", j_inner);
         }
         cJSON_AddItemToObject(j_inner, "partitions", c->j_part);
     }

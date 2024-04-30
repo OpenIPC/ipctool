@@ -44,13 +44,13 @@ static void detect_nor_chip() {
     // XMMTD_GETFLASHNAME
     memset(buf, 0, sizeof buf);
     if (ioctl(fd, 0x40044DAAu, &buf) >= 0) {
-        sprintf(nor_chip, "      name: \"%s\"\n", buf);
+        sprintf(nor_chip_name, "%s", buf);
     }
 
     // XMMTD_GETFLASHID
     uint32_t flash_id;
     if (ioctl(fd, 0x40044DA9u, &flash_id) >= 0) {
-        sprintf(nor_chip + strlen(nor_chip), "      id: 0x%06x\n", flash_id);
+        sprintf(nor_chip_id, "0x%06x", flash_id);
     }
 
     close(fd);
