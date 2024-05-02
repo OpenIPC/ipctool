@@ -60,6 +60,7 @@ enum SENSORS {
     SENSOR_GALAXYCORE,
     SENSOR_SUPERPIX,
     SENSOR_TECHPOINT,
+    SENSOR_IMAGEDESIGN,
 };
 
 typedef struct {
