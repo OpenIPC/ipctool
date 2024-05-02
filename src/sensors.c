@@ -556,6 +556,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0xcb14:
         res = 0x2335;
         break;
+    case 0xcb5c:
+        strcpy(ctx->sensor_id, "SC2331");
+        return true;
     case 0xcb17:
         if (strstr(getchipvendor(), VENDOR_INGENIC))
             strcpy(ctx->sensor_id, "SC2332");
