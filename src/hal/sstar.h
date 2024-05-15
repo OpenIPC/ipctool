@@ -11,7 +11,7 @@
 #define MSTAR_ADDR 0x1F2025A4
 #define SSTAR_ADDR 0x1F003C00
 
-#define INFINITY3  0xC2 // Twinkie
+#define INFINITY3  0xC2 // Infinity3
 #define INFINITY5  0xED // Pretzel
 #define MERCURY5   0xEE // Mercury5
 #define INFINITY6  0xEF // Macaron
@@ -21,6 +21,7 @@
 #define MERCURY6   0xF4 // Tiramisu
 #define PIONEER3   0xF5 // Ikayaki
 #define INFINITY6C 0xF9 // Maruko
+#define INFINITY6F 0xFB // Souffle
 
 bool mstar_detect_cpu(char *chip_name);
 bool sstar_detect_cpu(char *chip_name);
