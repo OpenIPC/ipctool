@@ -673,11 +673,14 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
     case 0x5303:
         sprintf(ctx->sensor_id, "SP4329");
         return true;
+    case 0x5304:
+        sprintf(ctx->sensor_id, "OS04A10");
+        return true;
     case 0x5305:
-        sprintf(ctx->sensor_id, "OS05A");
+        sprintf(ctx->sensor_id, "OS05A10");
         return true;
     case 0x5308:
-        sprintf(ctx->sensor_id, "OS08A");
+        sprintf(ctx->sensor_id, "OS08A10");
         return true;
     default:
         break;
