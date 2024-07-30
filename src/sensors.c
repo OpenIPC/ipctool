@@ -671,7 +671,10 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
         sprintf(ctx->sensor_id, "OV4689");
         return true;
     case 0x5303:
-        sprintf(ctx->sensor_id, "SP4329");
+        if (strstr(getchipvendor(), VENDOR_SSTAR))
+            sprintf(ctx->sensor_id, "OS03A10");
+        else
+            sprintf(ctx->sensor_id, "SP4329");
         return true;
     case 0x5304:
         sprintf(ctx->sensor_id, "OS04A10");
