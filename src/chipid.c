@@ -178,6 +178,8 @@ const char *getchipfamily() {
         return "hi3516cv300";
     case HISI_V4A:
         return "hi3516cv500";
+ case HISI_V4B:
+        return "hi3519dv500";
     case HISI_V4:
         if (*chip_name == 'g')
             return "gk7205v200";
