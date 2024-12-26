@@ -107,7 +107,7 @@ static bool detect_and_set(const char *manufacturer,
 static bool hw_detect_system() {
     long uart_base = get_uart0_address();
     switch (uart_base) {
-#ifdef __arm__
+#if defined(__aarch64__) || defined(__arm__)
     // xm510
     case 0x10030000:
         return detect_and_set("Xiongmai", xm_detect_cpu, setup_hal_xm, 0);
@@ -132,6 +132,11 @@ static bool hw_detect_system() {
     case 0x20080000:
         return detect_and_set(VENDOR_HISI, hisi_detect_cpu, setup_hal_hisi,
                               0x20050000);
+// hi3519DV500
+    case 0x11040000:
+        return detect_and_set(VENDOR_HISI, hisi_detect_cpu, setup_hal_hisi,
+                              0x11020000);
+
 #endif
     default:
         return generic_detect_cpu();
