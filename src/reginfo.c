@@ -2192,11 +2192,13 @@ static const muxctrl_reg_t **regs_by_chip() {
         else if (IS_16DV200)
             return DV200regs;
         break;
+ case HISI_V4B:
+        return CV500regs;
     case HISI_3536C:
         return RCV100regs;
     case HISI_3536D:
         return DV100regs;
-    case INFINITY6:
+      case INFINITY6:
     case INFINITY6B:
         return I6B_regs;
     case INFINITY6C:

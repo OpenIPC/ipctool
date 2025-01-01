@@ -276,17 +276,24 @@ void restore_printk() {
 
 bool get_pid_cmdline(pid_t godpid, char *cmdname) {
     char sname[1024];
-
     snprintf(sname, sizeof(sname), "/proc/%d/cmdline", godpid);
     FILE *fp = fopen(sname, "r");
+
+
+////////        /proc/10320000.usb30drd/     at 3519dv500    readed as /proc/10320000/   and call Segmentation fault
+if (fp == NULL) {
+  
+fprintf(stderr, "Failed to open file  %s \n" , sname);
+    return; // Handle error appropriately
+}
+
     if (fp && fgets(sname, sizeof(sname), fp)) {
         if (cmdname)
             strcpy(cmdname, sname);
-
         fclose(fp);
+fp = NULL;  // Set to NULL to avoid double close
         return true;
     }
-
     fclose(fp);
     return false;
 }
@@ -323,6 +330,8 @@ static unsigned long time_by_proc(const char *filename, char *shortname,
 }
 
 pid_t get_god_pid(char *shortname, size_t shortsz) {
+
+
     DIR *dir = opendir("/proc");
     if (!dir)
         return -1;
@@ -330,11 +339,11 @@ pid_t get_god_pid(char *shortname, size_t shortsz) {
     unsigned long max = 0;
     char sname[1024], prname[255], maxname[255] = {0};
     pid_t godpid = -1, tmp;
+ 
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
         if (*entry->d_name && isdigit(entry->d_name[0])) {
             snprintf(sname, sizeof(sname), "/proc/%s/stat", entry->d_name);
-
             tmp = strtol(entry->d_name, NULL, 10);
             if (get_pid_cmdline(tmp, NULL)) {
                 unsigned long curres = time_by_proc(sname, prname, sizeof(prname));
