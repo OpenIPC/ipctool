@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ARCHIVE: arm-gcc13-musl-3_0
+      ARCHIVE: toolchain.hisilicon-hi3516cv100
       PLATFORM: arm-openipc-linux-musleabi_sdk-buildroot
       TOOLCHAIN: arm-openipc-linux-musleabi
       VERSION: 4.2.3
@@ -56,7 +56,7 @@ jobs:
 
           REL="${{ steps.ct-ng-release.outputs.release }}"
           echo "Got release $REL"
-          wget -qO- https://github.com/OpenIPC/firmware/releases/download/latest/$ARCHIVE.tgz | \
+          wget -qO- https://github.com/OpenIPC/firmware/releases/download/toolchain/$ARCHIVE.tgz | \
             tar xfz - -C /opt
           export PATH=/opt/$PLATFORM/bin:$PATH
           sudo apt-get install -y cmake
