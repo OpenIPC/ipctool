@@ -40,11 +40,10 @@ static sensor_addr_t my_possible_i2c_addrs[] = {
 
 static float hisi_get_temp();
 
-static int hisi_open_i2c_fd() {
-    int adapter_nr = 0; /* probably dynamically determined */
+static int hisi_open_i2c_fd(int i2c_adapter_nr) {
     char filename[FILENAME_MAX];
 
-    snprintf(filename, sizeof(filename), "/dev/i2c-%d", adapter_nr);
+    snprintf(filename, sizeof(filename), "/dev/i2c-%d", i2c_adapter_nr);
 
     return universal_open_sensor_fd(filename);
 }
