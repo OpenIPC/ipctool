@@ -519,6 +519,11 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
 // Temperature sensor (T-Sensor) control register
 #define EV300_MISC_CTRL45 0x120280B4
 
+// T-Sensor temperature record register 0
+#define DV500_MISC_CTRL47 0x1102A008
+// Temperature sensor (T-Sensor) control register
+#define DV500_MISC_CTRL45 0x1102A000
+
 static float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
@@ -551,6 +556,12 @@ static float hisi_get_temp() {
         tempo =
             hisi_reg_temp(EV300_MISC_CTRL47, 10, EV300_MISC_CTRL45, 0xC3200000);
         tempo = ((tempo - 117) / 798) * 165 - 40;
+        break;
+ case HISI_V4B:
+        // MISC_CTRL47 bit[9:0]
+        tempo = 
+            hisi_reg_temp(DV500_MISC_CTRL47, 10, DV500_MISC_CTRL45, 0x60FA0000);
+        tempo = ((tempo - 136) / 793 * 165) - 40;
         break;
     default:
         return NAN;
@@ -745,6 +756,10 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
         // A new chip that was received in the OpenIPC lab 2023.07.28
         chip_generation = HISI_V4;
         return "7205V500";
+//3519DV500
+ case 0x3519D500:
+        chip_generation = HISI_V4B;
+        return "3519DV500";
     default:
         fprintf(stderr, "Got unexpected ID 0x%x for HiSilicon\n", family_id);
         return "unknown";
