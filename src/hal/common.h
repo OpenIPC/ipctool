@@ -68,6 +68,7 @@ typedef struct {
     unsigned char *addrs;
 } sensor_addr_t;
 
+extern int i2c_adapter_nr;
 extern sensor_addr_t *possible_i2c_addrs;
 
 typedef int (*read_register_t)(int fd, unsigned char i2c_addr,

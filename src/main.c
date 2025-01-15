@@ -39,8 +39,6 @@
 #define RESET_CL "\x1b[0m"
 #define FG_RED "\x1b[31m"
 
-extern int i2c_adapter_nr;
-
 void print_usage() {
 #ifndef SKIP_VERSION
     printf("ipctool, version: ");

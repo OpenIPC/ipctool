@@ -9,8 +9,6 @@
 
 #define SELECT_WIDE(reg_addr) reg_addr > 0xff ? 2 : 1
 
-int i2c_adapter_nr = 0;
-
 static int prepare_i2c_sensor(unsigned char i2c_addr) {
     if (!getchipname()) {
         puts("Unknown chip");
