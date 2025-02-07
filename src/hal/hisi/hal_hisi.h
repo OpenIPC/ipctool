@@ -21,10 +21,12 @@
 
 #define IS_CHIP(name) (!strcmp(chip_name, name))
 
-#define IS_16EV200 IS_CHIP("3516EV200") || IS_CHIP("7205V200") || IS_CHIP("7205V210") || IS_CHIP("7205V500")
+#define IS_16EV200 IS_CHIP("3516EV200") || IS_CHIP("7205V200") || IS_CHIP("7205V210") || IS_CHIP("7201V200") || IS_CHIP("7201V300")
 #define IS_16EV300 IS_CHIP("3516EV300") || IS_CHIP("7205V300")
-#define IS_18EV300 IS_CHIP("3518EV300") || IS_CHIP("7202V300")
+#define IS_18EV300 IS_CHIP("3518EV300") || IS_CHIP("7202V300") || IS_CHIP("7202V330")
 #define IS_16DV200 IS_CHIP("3516DV200") || IS_CHIP("7605V100")
+#define IS_7205V500 IS_CHIP("7205V500") || IS_CHIP("7205V510") || IS_CHIP("7205V530")
+
 
 bool hisi_ev300_get_die_id(char *buf, ssize_t len);
 void hisi_vi_information(sensor_ctx_t *ctx);

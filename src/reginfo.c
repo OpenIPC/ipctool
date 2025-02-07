@@ -2191,6 +2191,8 @@ static const muxctrl_reg_t **regs_by_chip() {
             return _8EV300regs;
         else if (IS_16DV200)
             return DV200regs;
+        else if (IS_7205V500)
+            return EV200regs;
         break;
     case HISI_3536C:
         return RCV100regs;
