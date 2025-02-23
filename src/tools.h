@@ -57,12 +57,6 @@ uint32_t ceil_up(uint32_t n, uint32_t offset);
 pid_t get_god_pid(char *shortname, size_t shortsz);
 bool get_pid_cmdline(pid_t godpid, char *cmdname);
 
-// avoid warnings for old compilers
-#if __GNUC__ < 7
-extern __ssize_t getline(char **__restrict __lineptr, size_t *__restrict __n,
-                         FILE *__restrict __stream) __wur;
-#endif
-
 #define delete_module(mod, flags) syscall(__NR_delete_module, mod, flags)
 
 #endif /* TOOLS_H */
