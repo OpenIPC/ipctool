@@ -582,8 +582,7 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         strcpy(ctx->sensor_id, "SC301IoT");
         return true;
     case 0xcc41:
-        // XM530
-        res = 0x3338;
+        res = 0x3336;
         break;
     case 0xcd01:
         // XM
@@ -926,6 +925,7 @@ static int detect_imagedesign_sensor(sensor_ctx_t *ctx, int fd,
     switch (res) {
     case 0x2006:
     case 0x2008: // XM states 0x2008 is MIS2009, not going to believe that yet
+    case 0x5001:
         sprintf(ctx->sensor_id, "MIS%04x", res);
         return true;
     case 0x1311:
