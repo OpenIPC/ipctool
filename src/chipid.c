@@ -204,6 +204,8 @@ const char *getchipfamily() {
         return "t40";
     case T41:
         return "t41";
+    case RV1106:
+        return "rv1106";
     default:
         return chip_name;
     }

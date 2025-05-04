@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "chipid.h"
 #include "hal/common.h"
 #include "tools.h"
 
@@ -14,11 +15,13 @@ static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char omni_addrs[] = {0x6c, 0};
 static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char gc_addrs[] = {0x6e, 0};
+static unsigned char imagedesign_addrs[] = {0x60, 0};
 
 static sensor_addr_t rockchip_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},     {SENSOR_SMARTSENS, ssens_addrs},
     {SENSOR_ONSEMI, onsemi_addrs}, {SENSOR_OMNIVISION, omni_addrs},
-    {SENSOR_GALAXYCORE, gc_addrs}, {0, NULL}};
+    {SENSOR_GALAXYCORE, gc_addrs}, {SENSOR_IMAGEDESIGN, imagedesign_addrs},
+    {0, NULL}};
 
 bool rockchip_detect_cpu(char *chip_name) {
     char buf[256];
@@ -27,6 +30,10 @@ bool rockchip_detect_cpu(char *chip_name) {
                         "rockchip,(r[kv][0-9]+)", buf, sizeof(buf)))
         return false;
     strcpy(chip_name, buf);
+
+    if (!strcmp(chip_name, "rv1103") || !strcmp(chip_name, "rv1106"))
+        chip_generation=0x1106;
+
     return true;
 }
 
@@ -81,13 +88,20 @@ float rockchip_get_temp() {
     return (float)ret / 1000;
 }
 
-static int i2c1_open_sensor_fd() {
-    return universal_open_sensor_fd("/dev/i2c-1");
+static int rockchip_open_i2c_fd() {
+    i2c_adapter_nr = 1;
+    if (chip_generation == 0x1106)
+        i2c_adapter_nr = 4;
+    char adapter_name[FILENAME_MAX];
+
+    snprintf(adapter_name, sizeof(adapter_name), "/dev/i2c-%d", i2c_adapter_nr);
+
+    return universal_open_sensor_fd(adapter_name);
 }
 
 void rockchip_setup_hal() {
     possible_i2c_addrs = rockchip_possible_i2c_addrs;
-    open_i2c_sensor_fd = i2c1_open_sensor_fd;
+    open_i2c_sensor_fd = rockchip_open_i2c_fd;
     if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = rockchip_get_temp;
 #ifndef STANDALONE_LIBRARY
