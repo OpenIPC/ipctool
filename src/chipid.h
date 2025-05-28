@@ -10,6 +10,7 @@
 #define VENDOR_GOKE "Goke"
 #define VENDOR_HISI "HiSilicon"
 #define VENDOR_INGENIC "Ingenic"
+#define VENDOR_NOVATEK "Novatek"
 #define VENDOR_ROCKCHIP "Rockchip"
 #define VENDOR_SSTAR "SigmaStar"
 

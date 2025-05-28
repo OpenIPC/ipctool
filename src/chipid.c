@@ -46,7 +46,7 @@ static const manufacturers_t manufacturers[] = {
 #ifdef __arm__
     {"SStar", sstar_detect_cpu, VENDOR_SSTAR, sstar_setup_hal},
     {"MStar", mstar_detect_cpu, NULL, sstar_setup_hal},
-    {"Novatek", novatek_detect_cpu, NULL, novatek_setup_hal},
+    {"Novatek", novatek_detect_cpu, VENDOR_NOVATEK, novatek_setup_hal},
     {"Grain", gm_detect_cpu, VENDOR_GM, gm_setup_hal},
     {"FH", fh_detect_cpu, VENDOR_FH, fh_setup_hal},
     {NULL /* Generic */, rockchip_detect_cpu, VENDOR_ROCKCHIP, rockchip_setup_hal},
@@ -55,6 +55,7 @@ static const manufacturers_t manufacturers[] = {
     {NULL, allwinner_detect_cpu, VENDOR_ALLWINNER, allwinner_setup_hal}
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
+    {NULL, novatek_detect_cpu, VENDOR_NOVATEK, novatek_setup_hal},
     {NULL, tegra_detect_cpu, "Nvidia", tegra_setup_hal},
 #endif
 };
