@@ -556,6 +556,11 @@ static float hisi_get_temp() {
         tempo = ((tempo - 117) / 798) * 165 - 40;
         break;
     case HISI_3536D:
+        // PMC70 bit[9:0]
+        tempo =
+            hisi_reg_temp(HI3536_PERI_PMC70, 10, HI3536_PERI_PMC68, 0x40000000);
+        tempo = ((tempo * 180) / 256) - 40;
+        break;
     case HISI_3536C:
         // PMC70 bit[9:0]
         tempo =
