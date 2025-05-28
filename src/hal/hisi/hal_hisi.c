@@ -519,6 +519,9 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
 // Temperature sensor (T-Sensor) control register
 #define EV300_MISC_CTRL45 0x120280B4
 
+#define HI3536_PERI_PMC68 0x120e0110
+#define HI3536_PERI_PMC70 0x120e0118
+
 static float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
@@ -551,6 +554,13 @@ static float hisi_get_temp() {
         tempo =
             hisi_reg_temp(EV300_MISC_CTRL47, 10, EV300_MISC_CTRL45, 0xC3200000);
         tempo = ((tempo - 117) / 798) * 165 - 40;
+        break;
+    case HISI_3536D:
+    case HISI_3536C:
+        // PMC70 bit[9:0]
+        tempo =
+            hisi_reg_temp(HI3536_PERI_PMC70, 10, HI3536_PERI_PMC68, 0x40000000);
+        tempo = ((tempo - 125) / 806) * 165 - 40;
         break;
     default:
         return NAN;
