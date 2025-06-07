@@ -768,6 +768,7 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     switch (res) {
     case 0x2053:
     case 0x2083:
+    case 0x2093:
     case 0x4023:
     case 0x4653:
         sprintf(ctx->sensor_id, "GC%04x", res);
@@ -796,7 +797,6 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2053:
     case 0x2063:
     case 0x2083:
-    case 0x2093:
     case 0x3003:
     case 0x4023:
     case 0x4653:
