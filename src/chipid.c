@@ -197,6 +197,8 @@ const char *getchipfamily() {
         return "t20";
     case T21:
         return "t21";
+    case T23:
+        return "t23";
     case T30:
         return "t30";
     case T31:
