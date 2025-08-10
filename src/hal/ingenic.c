@@ -113,6 +113,16 @@ static int get_cpu_id() {
             return -1;
         }
         return 11;
+    case 0x23:
+        chip_generation = 0x23;
+        switch (HIWORD(subsoctype)) {
+        case 0x1111:
+            return 36;
+        case 0x2222:
+            return 37;
+        default:
+            return -1;
+        }
     case 0x31:
         chip_generation = 0x31;
         if ((uint8_t)cppsr == 1) {
@@ -275,6 +285,10 @@ static const char *ingenic_cpu_name() {
         return "T41NQ";
     case 35:
         return "T41X";
+    case 36:
+        return "T23N";
+    case 37:
+        return "T23X";
     }
     return "unknown";
 }
