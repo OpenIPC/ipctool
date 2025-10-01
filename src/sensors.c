@@ -1089,7 +1089,7 @@ cJSON *detect_sensors() {
     {
         cJSON *j_inner = cJSON_CreateObject();
         cJSON_AddItemToObject(ctx.j_sensor, "control", j_inner);
-        ADD_PARAM_NUM("bus", 0);
+        ADD_PARAM_NUM("bus", i2c_adapter_nr);
         ADD_PARAM("type", ctx.control);
         if (ctx.addr)
             ADD_PARAM_FMT("addr", "0x%x", ctx.addr);
