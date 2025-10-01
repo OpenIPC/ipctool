@@ -202,7 +202,8 @@ static int i2cdetect(int argc, char **argv, bool script_mode) {
     i2c_addr = 0xff;  // will be 0x00 after first increment
     do {
         ++i2c_addr;
-        int res = i2c_read_register(fd, i2c_addr, 0, SELECT_WIDE(0), 1);
+        i2c_change_addr(fd, i2c_addr);
+        int res = i2c_read_register(fd, i2c_addr, 0x00, SELECT_WIDE(0), 1);
 
         if (i2c_addr % 16 == 0)
             printf("%4.x: ", i2c_addr);
