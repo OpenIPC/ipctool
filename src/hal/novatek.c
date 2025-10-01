@@ -92,15 +92,13 @@ float novatek_get_temp() {
     return ret;
 }
 
-static int novatek_open_i2c_fd() {
-    int adapter_nr = 0;
-
+static int novatek_open_i2c_fd(int i2c_adapter_nr) {
     if (!strncmp(chip_name, "NA51068", 7) ||
         !strncmp(chip_name, "NA51103", 7) || !strncmp(chip_name, "NA51090", 7))
-        adapter_nr = 1;
+        i2c_adapter_nr = 1;
     char adapter_name[FILENAME_MAX];
 
-    snprintf(adapter_name, sizeof(adapter_name), "/dev/i2c-%d", adapter_nr);
+    snprintf(adapter_name, sizeof(adapter_name), "/dev/i2c-%d", i2c_adapter_nr);
 
     return universal_open_sensor_fd(adapter_name);
 }
