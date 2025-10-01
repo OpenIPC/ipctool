@@ -93,6 +93,8 @@ float novatek_get_temp() {
 }
 
 static int novatek_open_i2c_fd(int i2c_adapter_nr) {
+    if (i2c_adapter_nr<0 || i2c_adapter_nr>4)
+        i2c_adapter_nr=0;
     if (!strncmp(chip_name, "NA51068", 7) ||
         !strncmp(chip_name, "NA51103", 7) || !strncmp(chip_name, "NA51090", 7))
         i2c_adapter_nr = 1;
