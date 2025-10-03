@@ -19,6 +19,8 @@
 #include "sensors.h"
 #include "tools.h"
 
+#define MAX_i2c_NUMBER 5
+
 static read_register_t sensor_read_register;
 static write_register_t sensor_write_register;
 
@@ -971,7 +973,7 @@ static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
 
 static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
     bool detected = false;
-    int fd = open_i2c_sensor_fd();
+    int fd = open_i2c_sensor_fd(i2c_adapter_nr);
     if (fd == -1)
         return false;
 
@@ -1045,10 +1047,12 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
 }
 
 bool getsensorid(sensor_ctx_t *ctx) {
+
+int current_i2c_adapter_nr;
     if (!getchipname())
         return NULL;
     // there is no platform specific i2c/spi access layer
-    if (!open_i2c_sensor_fd)
+    if (!open_i2c_sensor_fd(i2c_adapter_nr))
         return NULL;
 
     // Use common settings as default
@@ -1064,8 +1068,44 @@ bool getsensorid(sensor_ctx_t *ctx) {
     bool spi_detected = get_sensor_id_spi(ctx);
     if (spi_detected) {
         strcpy(ctx->control, "spi");
+       return spi_detected;
     }
-    return spi_detected;
+   puts("try hard sensor search");
+
+current_i2c_adapter_nr = i2c_adapter_nr; 
+
+for (int i = 0; i <= MAX_i2c_NUMBER; i++) {
+    if (i == current_i2c_adapter_nr) {
+        continue; // Skip the current value
+    }
+ 					//	printf("Checking adapter: %d\n", i);
+i2c_adapter_nr = i;
+					//	printf("try i2c_%d \n", i2c_adapter_nr);
+   
+if (!open_i2c_sensor_fd(i2c_adapter_nr))
+        return NULL;
+
+    // Use common settings as default
+    ctx->data_width = 1;
+    ctx->reg_width = 2;
+
+     i2c_detected = get_sensor_id_i2c(ctx);
+    if (i2c_detected) {
+        strcpy(ctx->control, "i2c");
+        return true;
+    }
+
+     spi_detected = get_sensor_id_spi(ctx);
+    if (spi_detected) {
+        strcpy(ctx->control, "spi");
+       return spi_detected;
+    }
+   puts("sensor not detected again1");
+
+   
+}
+
+
 }
 
 #ifndef STANDALONE_LIBRARY
