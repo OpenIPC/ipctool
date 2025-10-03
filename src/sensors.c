@@ -1070,7 +1070,7 @@ int current_i2c_adapter_nr;
         strcpy(ctx->control, "spi");
        return spi_detected;
     }
-   puts("try hard sensor search");
+   // "try  sensor search  at not standart i2c buses"
 
 current_i2c_adapter_nr = i2c_adapter_nr; 
 
@@ -1078,9 +1078,9 @@ for (int i = 0; i <= MAX_i2c_NUMBER; i++) {
     if (i == current_i2c_adapter_nr) {
         continue; // Skip the current value
     }
- 					//	printf("Checking adapter: %d\n", i);
+ 					
 i2c_adapter_nr = i;
-					//	printf("try i2c_%d \n", i2c_adapter_nr);
+					
    
 if (!open_i2c_sensor_fd(i2c_adapter_nr))
         return NULL;
@@ -1100,7 +1100,7 @@ if (!open_i2c_sensor_fd(i2c_adapter_nr))
         strcpy(ctx->control, "spi");
        return spi_detected;
     }
-   puts("sensor not detected again1");
+
 
    
 }
