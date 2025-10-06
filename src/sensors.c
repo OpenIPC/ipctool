@@ -19,7 +19,6 @@
 #include "sensors.h"
 #include "tools.h"
 
-#define MAX_i2c_NUMBER 5
 
 static read_register_t sensor_read_register;
 static write_register_t sensor_write_register;
@@ -1074,7 +1073,7 @@ int current_i2c_adapter_nr;
 
 current_i2c_adapter_nr = i2c_adapter_nr; 
 
-for (int i = 0; i <= MAX_i2c_NUMBER; i++) {
+for (int i = 0; i <= 5; i++) {
     if (i == current_i2c_adapter_nr) {
         continue; // Skip the current value
     }
