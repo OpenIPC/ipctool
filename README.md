@@ -26,11 +26,11 @@ C library to work on vast majority of hardware.
 
 ### Alternative launch methods
 
-* *Public NFS server* (in case your camera firmware includes NFS client
+* *Your own NFS server* (in case your camera firmware includes NFS client
     support, proven to work on XM cameras):
 
     ```console
-    $ mount -o nolock 95.217.179.189:/srv/ro /utils/
+    $ mount -o nolock 10.0.0.1:/srv/ro /utils/
     $ /utils/ipctool
     ```
 
