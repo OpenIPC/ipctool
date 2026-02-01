@@ -50,9 +50,25 @@ C library to work on vast majority of hardware.
   $ pip install ptftpd
   $ ptftpd -p 6969 en0 /directory/to/serve
   ```
+  Other option, better for Debian/Ubuntu:
+  ```
+  $ sudo apt install tftpd-hpa
+  ```
+  then edit config `/etc/default/tftpd-hpa`
+  ```
+  # /etc/default/tftpd-hpa
+    TFTP_USERNAME="tftp"
+    TFTP_DIRECTORY="/directory/to/serve"
+    TFTP_ADDRESS=":6969"
+    TFTP_OPTIONS="--secure --create"
+  ```
+  and restart the service
+  ```
+  sudo systemctl restart tftpd-hpa
+  ```
   **On the camera:**
   ```
-   # tftp -r /directory/to/serve/ipctool-mips32 -g 192.168.1.107 6969
+   # tftp -g -r ipctool-mips32 <your.tftp.server.ip> 6969
 
      46% |**************                 | 61952   0:00:01 ETA
   ```
