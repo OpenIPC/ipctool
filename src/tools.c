@@ -34,6 +34,13 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
     static uint32_t loaded_offset;
     static uint32_t loaded_size;
 
+    // do nothing if no pinmux for this GPIO
+    if (addr == 0xdeadbeef) {
+        if (op == OP_READ)
+            *data = 0xffffffff;
+        return true;
+    }
+
     uint32_t offset = addr & 0xffff0000;
     uint32_t size = 0xffff;
     if (!addr || (loaded_area && offset != loaded_offset)) {
