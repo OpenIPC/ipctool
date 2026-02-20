@@ -37,7 +37,7 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
     // do nothing if no pinmux for this GPIO
     if (addr == 0xdeadbeef) {
         if (op == OP_READ)
-            *data = 0x00000000;
+            *data = 0;  //
         return true;
     }
 
