@@ -112,6 +112,12 @@ static bool hw_detect_system() {
     // xm510
     case 0x10030000:
         return detect_and_set("Xiongmai", xm_detect_cpu, setup_hal_xm, 0);
+    // hi3516cv610
+    case 0x11040000: {
+        int ret = detect_and_set(VENDOR_HISI, hisi_detect_cpu, setup_hal_hisi,
+                                 0x11020000);
+        return ret;
+    }
     // hi3516cv300
     case 0x12100000:
     // hi3516ev200

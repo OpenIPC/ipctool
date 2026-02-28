@@ -29,14 +29,15 @@ static unsigned char gc_addrs[] = {0x6e, 0x52, 0x42, 0x78, 0};
 static unsigned char superpix_addrs[] = {0x79, 0};
 static unsigned char tp_addrs[] = {0x88, 0};
 static unsigned char imagedesign_addrs[] = {0x60, 0};
-
+static unsigned char visemi_addrs[] = {0x20, 0};
 
 static sensor_addr_t my_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},         {SENSOR_SOI, soi_addrs},
     {SENSOR_ONSEMI, onsemi_addrs},     {SENSOR_SMARTSENS, ssens_addrs},
     {SENSOR_OMNIVISION, omni_addrs},   {SENSOR_GALAXYCORE, gc_addrs},
     {SENSOR_SUPERPIX, superpix_addrs}, {SENSOR_TECHPOINT, tp_addrs},
-    {SENSOR_IMAGEDESIGN, imagedesign_addrs}, {0, NULL}};
+    {SENSOR_IMAGEDESIGN, imagedesign_addrs}, 
+    {SENSOR_VISEMI, visemi_addrs}, {0, NULL}};
 
 static float hisi_get_temp();
 
@@ -417,9 +418,36 @@ static void v4_ensure_sensor_restored() {
     }
 }
 
+static struct CV610_PERI_CRG8464 peri_crg8464;
+static bool crg8464_changed;
+static void ot_ensure_sensor_enabled() {
+    // PERI_CRG8464 0x8440
+    // PERI_CRG8472 0x8460
+    struct CV610_PERI_CRG8464 crg8464;
+    if (mem_reg(CV610_PERI_CRG8464_ADDR, (uint32_t *)&crg8464, OP_READ)) {
+        if (!crg8464.sensor0_cken) {
+            peri_crg8464 = crg8464;
+            // 1: clock enabled
+            crg8464.sensor0_cken = true;
+            // 0: reset deasserted
+            crg8464.sensor0_srst_req = false;
+            mem_reg(CV610_PERI_CRG8464_ADDR, (uint32_t *)&crg8464, OP_WRITE);
+            crg8464_changed = true;
+        }
+    }
+}
+
+static void ot_ensure_sensor_restored() {
+    if (crg8464_changed) {
+        mem_reg(CV610_PERI_CRG8464_ADDR, (uint32_t *)&peri_crg8464, OP_WRITE);
+    }
+}
+
 static void hisi_hal_cleanup() {
     if (chip_generation == HISI_V4)
         v4_ensure_sensor_restored();
+    else if (chip_generation == HISI_OT)
+        ot_ensure_sensor_restored();
     restore_printk();
 }
 
@@ -448,6 +476,8 @@ void setup_hal_hisi() {
         v3_ensure_sensor_enabled();
     else if (chip_generation == HISI_V4)
         v4_ensure_sensor_enabled();
+    else if (chip_generation == HISI_OT)
+        ot_ensure_sensor_enabled();
 
     open_i2c_sensor_fd = hisi_open_i2c_fd;
     open_spi_sensor_fd = hisi_open_spi_fd;
@@ -522,6 +552,9 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
 #define HI3536_PERI_PMC68 0x120e0110
 #define HI3536_PERI_PMC70 0x120e0118
 
+#define CV610_TSENSOR_CTRL2 0x1102A008
+#define CV610_PERI_CRG4560 0x11014740
+
 static float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
@@ -566,6 +599,12 @@ static float hisi_get_temp() {
         tempo =
             hisi_reg_temp(HI3536_PERI_PMC70, 10, HI3536_PERI_PMC68, 0x40000000);
         tempo = ((tempo - 125) / 806) * 165 - 40;
+        break;
+    case HISI_OT:
+        // TSENSOR_CTRL2 bit[9:0]
+        tempo =
+            hisi_reg_temp(CV610_TSENSOR_CTRL2, 10, CV610_PERI_CRG4560, 0x11);
+        tempo = ((tempo - 127) / 784 * 165) - 40;
         break;
     default:
         return NAN;
@@ -701,6 +740,9 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
     case 0x3516C500:
         chip_generation = HISI_V4A;
         return "3516CV500";
+    case 0x3516C610:
+        chip_generation = HISI_OT;
+        return "3516CV610";
     case 0x3516D200:
         chip_generation = HISI_V4;
         return "3516DV200";

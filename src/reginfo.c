@@ -2140,6 +2140,115 @@ static const muxctrl_reg_t *RCV100regs[] = {
     &RCV100_muxctrl_reg97, &RCV100_muxctrl_reg98, 0,
 };
 
+MUXCTRL(CV610_io0_cfg_reg0, 0x10260000, "GPIO0_0")
+MUXCTRL(CV610_io0_cfg_reg1, 0x10260004, "GPIO0_1", "PWM0_OUT3", "BOOT_SEL1")
+MUXCTRL(CV610_io0_cfg_reg2, 0x10260008, "WDG_RSTN")
+MUXCTRL(CV610_io0_cfg_reg3, 0x1026000C, "GPIO2_3", "SFC_MOSI_IO0")
+MUXCTRL(CV610_io0_cfg_reg4, 0x10260010, "GPIO2_2", "SFC_CLK", "BOOT_SEL0")
+MUXCTRL(CV610_io0_cfg_reg5, 0x10260014, "GPIO2_6", "SFC_HOLD_IO3")
+MUXCTRL(CV610_io0_cfg_reg6, 0x10260018, "GPIO2_1", "SFC_CSN0")
+MUXCTRL(CV610_io0_cfg_reg7, 0x1026001C, "GPIO2_4", "SFC_MISO_IO1")
+MUXCTRL(CV610_io0_cfg_reg8, 0x10260020, "GPIO2_5", "SFC_WP_IO2")
+MUXCTRL(CV610_io0_cfg_reg10, 0x10260028, "GPIO3_5", "SDIO0_CARD_DETECT", "EMMC_RST_N", "SFC_CSN1", "PWM1_OUT0", "I2C2_SDA", "UART2_RXD")
+MUXCTRL(CV610_io0_cfg_reg11, 0x1026002C, "GPIO3_6", "SDIO0_CDATA1/EMMC_DATA1", "SPI0_CSN1", "PWM1_OUT1", "I2C2_SCL", "UART2_TXD")
+MUXCTRL(CV610_io0_cfg_reg12, 0x10260030, "GPIO3_7", "SDIO0_CDATA0/EMMC_DATA0", "SPI0_SCLK", "PWM1_OUT2", "SENSOR1_RSTN")
+MUXCTRL(CV610_io0_cfg_reg13, 0x10260034, "GPIO4_0", "SDIO0_CCLK_OUT/EMMC_CLK_OUT", "TEST_MODE", "SPI0_SDO", "PWM1_OUT3", "I2S_MCLK")
+MUXCTRL(CV610_io0_cfg_reg14, 0x10260038, "GPIO4_1", "SDIO0_CCMD/EMMC_CMD", "SPI0_SDI", "PWM1_OUT4", "I2S_BCLK", "UART1_RXD")
+MUXCTRL(CV610_io0_cfg_reg15, 0x1026003C, "GPIO4_2", "SDIO0_CDATA3/EMMC_DATA3", "SPI0_CSN0", "PWM1_OUT5", "I2S_SD_TX", "UART1_TXD")
+MUXCTRL(CV610_io0_cfg_reg16, 0x10260040, "GPIO4_3", "SDIO0_CDATA2/EMMC_DATA2", "UART2_RXD", "PWM1_OUT6", "I2S_WS", "UART1_RTSN")
+MUXCTRL(CV610_io0_cfg_reg17, 0x10260044, "GPIO3_4", "SDIO0_CARD_POWER_EN_N", "UART2_TXD", "PWM1_OUT7", "I2S_SD_RX", "UART1_CTSN")
+MUXCTRL(CV610_io2_cfg_reg0, 0x17940000, "MIPI_RX_CK1N", "GPIO5_6", "VI_BT1120_DATA8", "VI_DATA11", "I2C0_SDA", "PWM0_OUT1")
+MUXCTRL(CV610_io2_cfg_reg1, 0x17940004, "MIPI_RX_CK1P", "GPIO5_7", "VI_BT1120_DATA9", "VI_DATA10", "I2C0_SCL", "PWM0_OUT2")
+MUXCTRL(CV610_io2_cfg_reg2, 0x17940008, "MIPI_RX_D3N", "GPIO6_2", "VI_BT1120_DATA10", "VI_DATA9", "SENSOR0_RSTN")
+MUXCTRL(CV610_io2_cfg_reg3, 0x1794000C, "MIPI_RX_D3P", "GPIO6_3", "VI_BT1120_DATA11", "VI_DATA8", "PWM0_OUT1")
+MUXCTRL(CV610_io2_cfg_reg4, 0x17940010, "MIPI_RX_D1N", "GPIO6_0", "VI_BT1120_DATA12", "VI_CLK", "PWM0_OUT2")
+MUXCTRL(CV610_io2_cfg_reg5, 0x17940014, "MIPI_RX_D1P", "GPIO6_1", "VI_BT1120_DATA13", "VI_DATA7", "PWM0_OUT3")
+MUXCTRL(CV610_io2_cfg_reg6, 0x17940018, "MIPI_RX_CK0N", "GPIO5_0", "VI_BT1120_DATA0", "VI_DATA5", "VI_CLK", "I2C0_SDA")
+MUXCTRL(CV610_io2_cfg_reg7, 0x1794001C, "MIPI_RX_CK0P", "GPIO5_1", "VI_BT1120_DATA1", "VI_DATA6", "VI_DATA7", "I2C0_SCL")
+MUXCTRL(CV610_io2_cfg_reg8, 0x17940020, "MIPI_RX_D0N", "GPIO5_2", "VI_BT1120_DATA2", "VI_DATA4", "SENSOR0_RSTN")
+MUXCTRL(CV610_io2_cfg_reg9, 0x17940024, "MIPI_RX_D0P", "GPIO5_3", "VI_BT1120_DATA3", "VI_DATA3", "VI_DATA5", "PWM0_OUT1")
+MUXCTRL(CV610_io2_cfg_reg10, 0x17940028, "MIPI_RX_D2N", "GPIO5_4", "VI_BT1120_DATA4", "VI_DATA2", "VI_DATA6", "PWM0_OUT2")
+MUXCTRL(CV610_io2_cfg_reg11, 0x1794002C, "MIPI_RX_D2P", "GPIO5_5", "VI_BT1120_DATA5", "VI_DATA1", "VI_DATA3", "PWM0_OUT3")
+MUXCTRL(CV610_io2_cfg_reg32, 0x17940080, "GPIO6_5", "SENSOR1_CLK", "FAST_BOOT_MODE", "SENSOR0_RSTN")
+MUXCTRL(CV610_io2_cfg_reg33, 0x17940084, "TEST_CLK", "SENSOR0_CLK", "GPIO6_4", "SFC_EMMC_BOOT_MODE")
+MUXCTRL(CV610_io2_cfg_reg34, 0x17940088, "GPIO7_3", "VI_BT1120_DATA6", "PWM0_OUT1", "SENSOR1_RSTN", "VI_DATA0")
+MUXCTRL(CV610_io2_cfg_reg35, 0x1794008C, "GPIO7_2", "VI_BT1120_DATA7", "PWM0_OUT2", "SENSOR0_RSTN", "VI_VS")
+MUXCTRL(CV610_io2_cfg_reg36, 0x17940090, "GPIO7_0", "VI_BT1120_CLK", "SPI0_CSN0", "I2C1_SDA", "VI_HS", "SENSOR0_HS")
+MUXCTRL(CV610_io2_cfg_reg37, 0x17940094, "GPIO7_1", "VI_BT1120_DATA14", "SPI0_SDI", "SENSOR0_RSTN", "I2C1_SCL", "SENSOR0_VS")
+MUXCTRL(CV610_io2_cfg_reg38, 0x17940098, "GPIO6_6", "VI_BT1120_DATA15", "ETH_LINK_STA_LED", "SPI0_SDO", "ETH_STA_ACT_LED", "I2C0_SDA", "VI_DATA1", "SENSOR1_HS")
+MUXCTRL(CV610_io2_cfg_reg39, 0x1794009C, "GPIO6_7", "ETH_LINK_ACT_LED", "SPI0_SCLK", "I2C0_SCL", "VI_DATA2", "SENSOR1_VS")
+MUXCTRL(CV610_io1_cfg_reg0, 0x11130000, "GPIO1_5", "I2C1_SDA", "PWM0_OUT2", "UART2_RXD", "LSADC_CH1")
+MUXCTRL(CV610_io1_cfg_reg1, 0x11130004, "GPIO1_4", "I2C1_SCL", "PWM0_OUT3", "UART2_TXD", "LSADC_CH0")
+MUXCTRL(CV610_io1_cfg_reg12, 0x11130030, "JTAG_TRSTN", "ETH_LINK_STA_LED", "GPIO0_6", "I2C0_SCL", "UART1_RXD", "SPI0_CSN1", "PWM0_OUT1")
+MUXCTRL(CV610_io1_cfg_reg13, 0x11130034, "JTAG_TDI", "ETH_LINK_ACT_LED", "ETH_STA_ACT_LED", "I2C0_SDA", "USB2_PWREN", "UART1_TXD", "GPIO0_7", "PWM0_OUT2")
+MUXCTRL(CV610_io1_cfg_reg14, 0x11130038, "GPIO7_7", "SDIO1_CDATA2", "I2S_MCLK", "UART1_RTSN", "SPI1_SDO", "PWM1_OUT0")
+MUXCTRL(CV610_io1_cfg_reg15, 0x1113003C, "GPIO1_0", "SDIO1_CDATA3", "I2S_SD_TX", "UART1_CTSN", "SPI1_SDI", "PWM1_OUT1")
+MUXCTRL(CV610_io1_cfg_reg16, 0x11130040, "GPIO1_2", "SDIO1_CCMD", "I2S_BCLK", "SENSOR1_RSTN", "SPI1_CSN", "PWM1_OUT2")
+MUXCTRL(CV610_io1_cfg_reg17, 0x11130044, "JTAG_TCK", "SDIO1_CCLK_OUT", "GPIO1_3", "I2S_WS", "SPI1_SCLK", "PWM1_OUT3")
+MUXCTRL(CV610_io1_cfg_reg18, 0x11130048, "GPIO1_1", "SDIO1_CDATA0", "I2S_SD_RX", "UART2_RXD", "SPI0_SDO", "PWM1_OUT4")
+MUXCTRL(CV610_io1_cfg_reg19, 0x1113004C, "GPIO7_6", "SDIO1_CDATA1", "UART2_TXD", "SPI0_SDI", "PWM1_OUT5")
+MUXCTRL(CV610_io1_cfg_reg20, 0x11130050, "JTAG_TMS", "SDIO1_CARD_DETECT", "SENSOR1_RSTN", "I2C2_SDA", "GPIO7_5", "SPI0_SCLK", "PWM1_OUT6")
+MUXCTRL(CV610_io1_cfg_reg21, 0x11130054, "JTAG_TDO", "SDIO1_CARD_POWER_EN_N", "I2C2_SCL", "GPIO7_4", "SPI0_CSN0", "PWM1_OUT7")
+MUXCTRL(CV610_io1_cfg_reg22, 0x11130058, "GPIO0_2", "UART0_RXD")
+MUXCTRL(CV610_io1_cfg_reg23, 0x1113005C, "GPIO0_3", "UART0_TXD")
+MUXCTRL(CV610_io1_cfg_reg26, 0x11130068, "GPIO2_0", "SVB_PWM")
+
+static const muxctrl_reg_t *CV610regs[] = {
+    &CV610_io0_cfg_reg0,
+    &CV610_io0_cfg_reg1,
+    &CV610_io0_cfg_reg2,
+    &CV610_io0_cfg_reg3,
+    &CV610_io0_cfg_reg4,
+    &CV610_io0_cfg_reg5,
+    &CV610_io0_cfg_reg6,
+    &CV610_io0_cfg_reg7,
+    &CV610_io0_cfg_reg8,
+    &CV610_io0_cfg_reg10,
+    &CV610_io0_cfg_reg11,
+    &CV610_io0_cfg_reg12,
+    &CV610_io0_cfg_reg13,
+    &CV610_io0_cfg_reg14,
+    &CV610_io0_cfg_reg15,
+    &CV610_io0_cfg_reg16,
+    &CV610_io0_cfg_reg17,
+    &CV610_io2_cfg_reg0,
+    &CV610_io2_cfg_reg1,
+    &CV610_io2_cfg_reg2,
+    &CV610_io2_cfg_reg3,
+    &CV610_io2_cfg_reg4,
+    &CV610_io2_cfg_reg5,
+    &CV610_io2_cfg_reg6,
+    &CV610_io2_cfg_reg7,
+    &CV610_io2_cfg_reg8,
+    &CV610_io2_cfg_reg9,
+    &CV610_io2_cfg_reg10,
+    &CV610_io2_cfg_reg11,
+    &CV610_io2_cfg_reg32,
+    &CV610_io2_cfg_reg33,
+    &CV610_io2_cfg_reg34,
+    &CV610_io2_cfg_reg35,
+    &CV610_io2_cfg_reg36,
+    &CV610_io2_cfg_reg37,
+    &CV610_io2_cfg_reg38,
+    &CV610_io2_cfg_reg39,
+    &CV610_io1_cfg_reg0,
+    &CV610_io1_cfg_reg1,
+    &CV610_io1_cfg_reg12,
+    &CV610_io1_cfg_reg13,
+    &CV610_io1_cfg_reg14,
+    &CV610_io1_cfg_reg15,
+    &CV610_io1_cfg_reg16,
+    &CV610_io1_cfg_reg17,
+    &CV610_io1_cfg_reg18,
+    &CV610_io1_cfg_reg19,
+    &CV610_io1_cfg_reg20,
+    &CV610_io1_cfg_reg21,
+    &CV610_io1_cfg_reg22,
+    &CV610_io1_cfg_reg23,
+    &CV610_io1_cfg_reg26,
+    0
+};
+
 static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func);
 
@@ -2194,6 +2303,8 @@ static const muxctrl_reg_t **regs_by_chip() {
         else if (IS_7205V500)
             return EV200regs;
         break;
+    case HISI_OT:
+        return CV610regs;
     case HISI_3536C:
         return RCV100regs;
     case HISI_3536D:
@@ -2318,6 +2429,12 @@ static bool get_chip_gpio_adress(size_t *GPIO_Base, size_t *GPIO_Offset,
         // AV300
         *GPIO_Base = 0x120D0000;
         *GPIO_Groups = 12;
+        *GPIO_Offset = 0x1000;
+        break;
+    case HISI_OT:
+        // CV610
+        *GPIO_Base = 0x11090000;
+        *GPIO_Groups = 11;
         *GPIO_Offset = 0x1000;
         break;
     case HISI_V4:
