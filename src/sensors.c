@@ -437,8 +437,7 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
         // no response
         break;
     default:
-        SENSOR_ERR("Aptina", pid);
-        return false;
+        break;
     }
 
     if (sid) {
@@ -948,6 +947,30 @@ static int detect_imagedesign_sensor(sensor_ctx_t *ctx, int fd,
     // MIS40C1 0xce4 @ 3107-3108 ?
 }
 
+static int detect_visemi_sensor(sensor_ctx_t *ctx, int fd,
+                                unsigned char i2c_addr) {
+    if (i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    int res = i2c_read_register(fd, i2c_addr, 0x3000, 2, 2);
+
+    switch (res) {
+    case 0x4388:
+        break;
+    case 0:
+    case 0xffffffff:
+    case 0xffff:
+        // no response
+        break;
+    default:
+        SENSOR_ERR("ViSemi", res);
+        return false;
+    }
+    sprintf(ctx->sensor_id, "VS%04x", res);
+
+    return true;
+}
+
 static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int (*detect_fn)(sensor_ctx_t *ctx, int,
                                                     unsigned char),
@@ -1019,6 +1042,10 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
     } else if (detect_possible_sensors(ctx, fd, detect_imagedesign_sensor,
                                        SENSOR_IMAGEDESIGN)) {
         strcpy(ctx->vendor, "ImageDesign");
+        detected = true;
+    } else if (detect_possible_sensors(ctx, fd, detect_visemi_sensor,
+                                       SENSOR_VISEMI)) {
+        strcpy(ctx->vendor, "ViSemi");
         detected = true;
     }
 exit:

@@ -61,6 +61,7 @@ enum SENSORS {
     SENSOR_SUPERPIX,
     SENSOR_TECHPOINT,
     SENSOR_IMAGEDESIGN,
+    SENSOR_VISEMI,
 };
 
 typedef struct {
