@@ -801,6 +801,7 @@ MUXCTRL(CV300_muxctrl_reg62, 0x120400F8, "GPIO0_1", "TEMPER_DQ")
 MUXCTRL(CV300_muxctrl_reg63, 0x120400FC, "GPIO8_0", "SAR_ADC_CH0")
 MUXCTRL(CV300_muxctrl_reg64, 0x12040100, "GPIO8_1", "SAR_ADC_CH1")
 MUXCTRL(CV300_muxctrl_reg65, 0x12040104, "GPIO8_2", "SAR_ADC_CH2")
+MUXCTRL(CV300_muxctrl_reg66, 0xdeadbeef, "GPIO0_2")
 
 static const muxctrl_reg_t *CV300regs[] = {
     &CV300_muxctrl_reg0,  &CV300_muxctrl_reg1,  &CV300_muxctrl_reg2,
@@ -824,7 +825,7 @@ static const muxctrl_reg_t *CV300regs[] = {
     &CV300_muxctrl_reg55, &CV300_muxctrl_reg56, &CV300_muxctrl_reg57,
     &CV300_muxctrl_reg58, &CV300_muxctrl_reg59, &CV300_muxctrl_reg60,
     &CV300_muxctrl_reg61, &CV300_muxctrl_reg62, &CV300_muxctrl_reg63,
-    &CV300_muxctrl_reg64, &CV300_muxctrl_reg65, 0,
+    &CV300_muxctrl_reg64, &CV300_muxctrl_reg65,  &CV300_muxctrl_reg66, 0,
 };
 
 MUXCTRL(CV500_iocfg_reg0, 0x10FF0000, "EMMC_CLK", "SFC_CLK", "SFC_BOOT_MODE")
