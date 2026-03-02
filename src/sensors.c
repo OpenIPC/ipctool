@@ -435,7 +435,7 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
     case 0xffffffff:
     case 0xffff:
         // no response
-        break;
+        return false;
     default:
         break;
     }
@@ -961,7 +961,7 @@ static int detect_visemi_sensor(sensor_ctx_t *ctx, int fd,
     case 0xffffffff:
     case 0xffff:
         // no response
-        break;
+        return false;
     default:
         SENSOR_ERR("ViSemi", res);
         return false;
