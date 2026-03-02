@@ -30,14 +30,15 @@ static unsigned char superpix_addrs[] = {0x79, 0};
 static unsigned char tp_addrs[] = {0x88, 0};
 static unsigned char imagedesign_addrs[] = {0x60, 0};
 static unsigned char visemi_addrs[] = {0x20, 0};
+static unsigned char cvsens_addrs[] = {0x6a, 0};
 
 static sensor_addr_t my_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},         {SENSOR_SOI, soi_addrs},
     {SENSOR_ONSEMI, onsemi_addrs},     {SENSOR_SMARTSENS, ssens_addrs},
     {SENSOR_OMNIVISION, omni_addrs},   {SENSOR_GALAXYCORE, gc_addrs},
     {SENSOR_SUPERPIX, superpix_addrs}, {SENSOR_TECHPOINT, tp_addrs},
-    {SENSOR_IMAGEDESIGN, imagedesign_addrs}, 
-    {SENSOR_VISEMI, visemi_addrs}, {0, NULL}};
+    {SENSOR_IMAGEDESIGN, imagedesign_addrs}, {SENSOR_VISEMI, visemi_addrs}, 
+    {SENSOR_CVSENS, cvsens_addrs}, {0, NULL}};
 
 static float hisi_get_temp();
 
@@ -740,6 +741,9 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
     case 0x3516C500:
         chip_generation = HISI_V4A;
         return "3516CV500";
+    case 0x3516C608:
+        chip_generation = HISI_OT;
+        return "3516CV608";
     case 0x3516C610:
         chip_generation = HISI_OT;
         return "3516CV610";
