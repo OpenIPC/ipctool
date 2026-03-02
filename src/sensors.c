@@ -838,6 +838,9 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     if (prod_lsb == -1)
         return false;
 
+    int prod_mod = i2c_read_register(fd, i2c_addr, 0x04, 1, 1);
+    int res2 = (prod_msb << 16) | (prod_lsb  << 8) | prod_mod;
+
     int res = prod_msb << 8 | prod_lsb;
     if (!res)
         return false;
@@ -858,6 +861,15 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     case 0x5602:
         sprintf(ctx->sensor_id, "OS02G10");
+        return true;
+    }
+
+    switch (res2) {
+    // It's very hard to tell if this is original OmniVision or SuperPix...
+    // Need to overwrite vendor somehow or move this to OV detect function
+    case 0x530444:
+        sprintf(ctx->sensor_id, "OS04D10");
+        // strcpy(ctx->vendor, "OmniVision");
         return true;
     }
 
@@ -941,7 +953,7 @@ static int detect_imagedesign_sensor(sensor_ctx_t *ctx, int fd,
         sprintf(ctx->sensor_id, "MIS4001");
         return true;
     default:
-        SENSOR_ERR("ImageDesign", res);
+        // SENSOR_ERR("ImageDesign", res);
         return false;
     }
     // MIS40C1 0xce4 @ 3107-3108 ?
@@ -969,6 +981,31 @@ static int detect_visemi_sensor(sensor_ctx_t *ctx, int fd,
     sprintf(ctx->sensor_id, "VS%04x", res);
 
     return true;
+}
+
+static int detect_cvsens_sensor(sensor_ctx_t *ctx, int fd,
+                                     unsigned char i2c_addr) {
+    if (i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    int msb = i2c_read_register(fd, i2c_addr, 0x3003, 2, 1);
+    if (msb == -1)
+        return false;
+
+    int lsb = i2c_read_register(fd, i2c_addr, 0x3002, 2, 1);
+    if (lsb == -1)
+        return false;
+
+    int res = msb << 8 | lsb;
+
+    switch (res) {
+    case 0x2004:
+        sprintf(ctx->sensor_id, "CV2003");
+        return true;
+    default:
+        SENSOR_ERR("CVSENS", res);
+        return false;
+    }
 }
 
 static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
@@ -1046,6 +1083,10 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
     } else if (detect_possible_sensors(ctx, fd, detect_visemi_sensor,
                                        SENSOR_VISEMI)) {
         strcpy(ctx->vendor, "ViSemi");
+        detected = true;
+    } else if (detect_possible_sensors(ctx, fd, detect_cvsens_sensor,
+                                       SENSOR_CVSENS)) {
+        strcpy(ctx->vendor, "CVSENS");
         detected = true;
     }
 exit:
