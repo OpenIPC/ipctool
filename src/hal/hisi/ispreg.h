@@ -29,6 +29,7 @@ struct CV610_PERI_CRG8464 {
 };
 
 #define CV610_PERI_CRG8464_ADDR 0x11018440
+#define CV610_PERI_CRG8472_ADDR 0x11018460
 
 const char *hisi_detect_fmc();
 void hisi_chip_properties(cJSON *j_inner);

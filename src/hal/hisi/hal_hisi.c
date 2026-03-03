@@ -420,27 +420,37 @@ static void v4_ensure_sensor_restored() {
 }
 
 static struct CV610_PERI_CRG8464 peri_crg8464;
+static struct CV610_PERI_CRG8464 peri_crg8472;
 static bool crg8464_changed;
-static void ot_ensure_sensor_enabled() {
-    // PERI_CRG8464 0x8440
-    // PERI_CRG8472 0x8460
-    struct CV610_PERI_CRG8464 crg8464;
-    if (mem_reg(CV610_PERI_CRG8464_ADDR, (uint32_t *)&crg8464, OP_READ)) {
-        if (!crg8464.sensor0_cken) {
-            peri_crg8464 = crg8464;
-            // 1: clock enabled
-            crg8464.sensor0_cken = true;
-            // 0: reset deasserted
-            crg8464.sensor0_srst_req = false;
-            mem_reg(CV610_PERI_CRG8464_ADDR, (uint32_t *)&crg8464, OP_WRITE);
-            crg8464_changed = true;
-        }
+static bool crg8472_changed;
+static inline void enable_sensor_crg(uint32_t addr,
+                                     struct CV610_PERI_CRG8464 *shadow,
+                                     bool *changed) {
+    struct CV610_PERI_CRG8464 reg;
+
+    if (!mem_reg(addr, (uint32_t *)&reg, OP_READ))
+        return;
+
+    if (!reg.sensor0_cken || reg.sensor0_srst_req) {
+        *shadow = reg;                // Cache original value
+        reg.sensor0_cken = true;      // Enable clock
+        reg.sensor0_srst_req = false; // Deassert reset
+        mem_reg(addr, (uint32_t *)&reg, OP_WRITE);
+        *changed = true;
     }
+}
+
+static void ot_ensure_sensor_enabled(void) {
+    enable_sensor_crg(CV610_PERI_CRG8464_ADDR, &peri_crg8464, &crg8464_changed);
+    enable_sensor_crg(CV610_PERI_CRG8472_ADDR, &peri_crg8472, &crg8472_changed);
 }
 
 static void ot_ensure_sensor_restored() {
     if (crg8464_changed) {
         mem_reg(CV610_PERI_CRG8464_ADDR, (uint32_t *)&peri_crg8464, OP_WRITE);
+    }
+    if (crg8472_changed) {
+        mem_reg(CV610_PERI_CRG8472_ADDR, (uint32_t *)&peri_crg8472, OP_WRITE);
     }
 }
 
