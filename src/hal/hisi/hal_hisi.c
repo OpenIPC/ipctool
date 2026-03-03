@@ -769,6 +769,9 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
     case 0x3516E200:
         chip_generation = HISI_V4;
         return "3516EV200";
+    case 0x3516D500:
+        chip_generation = HISI_OT;
+        return "3516DV500";
     case 0x3516E300:
         chip_generation = HISI_V4;
         return "3516EV300";
@@ -781,6 +784,9 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
     case 0x3518E300:
         chip_generation = HISI_V4;
         return "3518EV300";
+    case 0x3519D500:
+        chip_generation = HISI_OT;
+        return "3519DV500";
     case 0x3536C100:
         chip_generation = HISI_3536C;
         return "3536CV100";
