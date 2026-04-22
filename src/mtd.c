@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <netinet/in.h>
 #include <regex.h>
 #include <stdint.h>
@@ -120,6 +121,112 @@ char *open_mtdblock(int i, int *fd, uint32_t size, int flags) {
     return addr;
 }
 
+int find_ubi_for_mtd(int mtd_num) {
+    DIR *d = opendir("/sys/class/ubi");
+    if (!d)
+        return -1;
+    struct dirent *de;
+    while ((de = readdir(d))) {
+        if (strncmp(de->d_name, "ubi", 3) != 0)
+            continue;
+        if (strchr(de->d_name, '_'))
+            continue;
+        char path[128];
+        snprintf(path, sizeof(path), "/sys/class/ubi/%s/mtd_num", de->d_name);
+        FILE *f = fopen(path, "r");
+        if (f) {
+            int num;
+            if (fscanf(f, "%d", &num) == 1 && num == mtd_num) {
+                fclose(f);
+                closedir(d);
+                int ubi_num;
+                sscanf(de->d_name, "ubi%d", &ubi_num);
+                return ubi_num;
+            }
+            fclose(f);
+        }
+    }
+    closedir(d);
+    return -1;
+}
+
+int enum_ubi_volumes(int ubi_num, ubi_vol_info_t *vols, int max_vols) {
+    char base[128];
+    snprintf(base, sizeof(base), "/sys/class/ubi/ubi%d", ubi_num);
+
+    DIR *d = opendir(base);
+    if (!d)
+        return 0;
+
+    int count = 0;
+    char prefix[16];
+    snprintf(prefix, sizeof(prefix), "ubi%d_", ubi_num);
+    size_t plen = strlen(prefix);
+
+    struct dirent *de;
+    while ((de = readdir(d)) && count < max_vols) {
+        if (strncmp(de->d_name, prefix, plen) != 0)
+            continue;
+        int vol_id = atoi(de->d_name + plen);
+
+        char path[192];
+        snprintf(path, sizeof(path), "%s/%s/data_bytes", base, de->d_name);
+        FILE *f = fopen(path, "r");
+        if (!f)
+            continue;
+        long long data_bytes = 0;
+        fscanf(f, "%lld", &data_bytes);
+        fclose(f);
+
+        snprintf(path, sizeof(path), "%s/%s/name", base, de->d_name);
+        f = fopen(path, "r");
+        char name[64] = {0};
+        if (f) {
+            if (fgets(name, sizeof(name), f)) {
+                size_t len = strlen(name);
+                if (len > 0 && name[len - 1] == '\n')
+                    name[len - 1] = '\0';
+            }
+            fclose(f);
+        }
+
+        vols[count].vol_id = vol_id;
+        vols[count].data_bytes = data_bytes;
+        strncpy(vols[count].name, name, sizeof(vols[count].name) - 1);
+        count++;
+    }
+    closedir(d);
+    return count;
+}
+
+char *read_ubi_volume(int ubi_num, int vol_id, size_t data_bytes,
+                      size_t *out_len) {
+    char devpath[64];
+    snprintf(devpath, sizeof(devpath), "/dev/ubi%d_%d", ubi_num, vol_id);
+
+    int fd = open(devpath, O_RDONLY);
+    if (fd == -1)
+        return NULL;
+
+    char *buf = malloc(data_bytes);
+    if (!buf) {
+        close(fd);
+        return NULL;
+    }
+
+    size_t total = 0;
+    while (total < data_bytes) {
+        ssize_t n = read(fd, buf + total, data_bytes - total);
+        if (n <= 0)
+            break;
+        total += n;
+    }
+    close(fd);
+
+    *out_len = total;
+    return buf;
+}
+
 static bool uenv_detected;
 
 static bool examine_part(int part_num, size_t size, size_t erasesize,
@@ -218,7 +325,40 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     if (i < MAX_MPOINTS && *c->mpoints[i].path) {
         ADD_PARAM("path", c->mpoints[i].path);
     }
-    if (!c->mpoints[i].rw) {
+
+    int ubi_num = find_ubi_for_mtd(i);
+    if (ubi_num >= 0) {
+        ADD_PARAM("dump_type", "ubifs");
+        ADD_PARAM_FMT("ubi_device", "%d", ubi_num);
+
+        ubi_vol_info_t vols[MAX_UBI_VOLS];
+        int nvols = enum_ubi_volumes(ubi_num, vols, MAX_UBI_VOLS);
+        if (nvols > 0) {
+            cJSON *j_vols = cJSON_CreateArray();
+            for (int v = 0; v < nvols; v++) {
+                cJSON *j_vol = cJSON_CreateObject();
+                cJSON_AddItemToArray(j_vols, j_vol);
+                {
+                    cJSON *j_inner = j_vol;
+                    ADD_PARAM_FMT("vol_id", "%d", vols[v].vol_id);
+                    ADD_PARAM("vol_name", vols[v].name);
+                    ADD_PARAM_FMT("data_bytes", "0x%llx", vols[v].data_bytes);
+
+                    size_t out_len = 0;
+                    char *vdata = read_ubi_volume(ubi_num, vols[v].vol_id,
+                                                  vols[v].data_bytes, &out_len);
+                    if (vdata && out_len > 0) {
+                        char digest[21] = {0};
+                        SHA1(digest, vdata, out_len);
+                        uint32_t sha1v = ntohl(*(uint32_t *)&digest);
+                        ADD_PARAM_FMT("sha1", "%.8x", sha1v);
+                    }
+                    free(vdata);
+                }
+            }
+            cJSON_AddItemToObject(j_inner, "ubi_volumes", j_vols);
+        }
+    } else if (!c->mpoints[i].rw) {
         cJSON *contains = NULL;
         uint32_t sha1 = 0;
         if (examine_part(i, mtd->size, mtd->erasesize, &sha1, &contains)) {

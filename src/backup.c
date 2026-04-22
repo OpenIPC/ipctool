@@ -23,6 +23,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <mtd/ubi-user.h>
+
 #include "backup.h"
 #include "boards/common.h"
 #include "boards/xm.h"
@@ -49,6 +51,23 @@ typedef struct {
 static bool cb_mtd_backup(int i, const char *name, struct mtd_info_user *mtd,
                           void *ctx) {
     mtd_backup_ctx *c = (mtd_backup_ctx *)ctx;
+
+    int ubi_num = find_ubi_for_mtd(i);
+    if (ubi_num >= 0) {
+        ubi_vol_info_t vols[MAX_UBI_VOLS];
+        int nvols = enum_ubi_volumes(ubi_num, vols, MAX_UBI_VOLS);
+        for (int v = 0; v < nvols && c->count < c->cap; v++) {
+            size_t out_len = 0;
+            char *buf = read_ubi_volume(ubi_num, vols[v].vol_id,
+                                        vols[v].data_bytes, &out_len);
+            if (!buf)
+                continue;
+            c->blocks[c->count].data = buf;
+            c->blocks[c->count].len = out_len;
+            c->count++;
+        }
+        return true;
+    }
 
     int fd;
     char *addr = open_mtdblock(i, &fd, mtd->size, 0);
@@ -176,6 +195,10 @@ typedef struct {
     char sha1[9];
     char name[64];
     char *data;
+    bool is_ubi;
+    int ubi_device;
+    int vol_id;
+    char vol_name[64];
 } stored_mtd_t;
 
 static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
@@ -189,6 +212,12 @@ static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
     int i = -1;
     int rootlvl = -1;
     size_t offset = 0;
+    bool in_ubi_vols = false;
+    int ubi_vols_lvl = -1;
+    int cur_ubi_device = -1;
+    char cur_part_name[64] = {0};
+    size_t cur_part_size = 0;
+    int ubi_parent = -1;
 
     while (ptr < start + len) {
         if (linestart) {
@@ -201,9 +230,23 @@ static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
                     if (rootlvl == -1)
                         rootlvl = spaces;
                     if (rootlvl == spaces) {
+                        in_ubi_vols = false;
+                        ubi_vols_lvl = -1;
+                        cur_ubi_device = -1;
+                        memset(cur_part_name, 0, sizeof(cur_part_name));
+                        cur_part_size = 0;
+                        ubi_parent = -1;
                         i++;
                         if (i == MAX_MTDBLOCKS)
                             break;
+                    } else if (in_ubi_vols && spaces == ubi_vols_lvl) {
+                        i++;
+                        if (i == MAX_MTDBLOCKS)
+                            break;
+                        mi[i].is_ubi = true;
+                        mi[i].ubi_device = cur_ubi_device;
+                        strncpy(mi[i].name, cur_part_name,
+                                sizeof(mi[i].name) - 1);
                     }
                 }
                 linestart = false;
@@ -213,16 +256,46 @@ static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
             }
         }
         if (*ptr == '\n') {
-            if (param && spaces == rootlvl) {
+            if (param && in_ubi_vols && spaces == ubi_vols_lvl) {
+                if (!strncmp(param, "data_bytes: ", 12)) {
+                    mi[i].size = strtoul(param + 12, NULL, 16);
+                } else if (!strncmp(param, "vol_name: ", 10)) {
+                    size_t n =
+                        MIN(ptr - param - 10, (int)sizeof(mi[i].vol_name) - 1);
+                    memcpy(mi[i].vol_name, param + 10, n);
+                } else if (!strncmp(param, "vol_id: ", 8)) {
+                    mi[i].vol_id = atoi(param + 8);
+                } else if (!strncmp(param, "sha1: ", 6)) {
+                    memcpy(mi[i].sha1, param + 6, MIN(ptr - param - 6, 8));
+                }
+            } else if (param && spaces == rootlvl) {
                 if (!strncmp(param, "size: ", 6)) {
                     mi[i].off_flashb = offset;
                     mi[i].size = strtoul(param + 6, NULL, 16);
+                    cur_part_size = mi[i].size;
                     offset += mi[i].size;
                 } else if (!strncmp(param, "name: ", 6)) {
-                    memcpy(mi[i].name, param + 6,
-                           MIN(ptr - param - 6, (int)sizeof(mi[i]) - 1));
-                } else if (!strncmp(param, "sha1: ", 6))
+                    size_t n =
+                        MIN(ptr - param - 6, (int)sizeof(mi[i].name) - 1);
+                    memcpy(mi[i].name, param + 6, n);
+                    memcpy(cur_part_name, param + 6, n);
+                    cur_part_name[n] = '\0';
+                } else if (!strncmp(param, "sha1: ", 6)) {
                     memcpy(mi[i].sha1, param + 6, MIN(ptr - param - 6, 8));
+                } else if (!strncmp(param, "dump_type: ubifs", 16)) {
+                    mi[i].is_ubi = true;
+                    ubi_parent = i;
+                } else if (!strncmp(param, "ubi_device: ", 12)) {
+                    cur_ubi_device = atoi(param + 12);
+                    mi[i].ubi_device = cur_ubi_device;
+                } else if (!strncmp(param, "ubi_volumes:", 12)) {
+                    in_ubi_vols = true;
+                    ubi_vols_lvl = -1;
+                    // Remove the placeholder partition entry — volumes
+                    // will replace it. Rewind index so first volume
+                    // overwrites the parent entry.
+                    i--;
+                }
             }
             linestart = true;
             spaces = 0;
@@ -325,7 +398,9 @@ static bool umount_all() {
         if (sscanf(mount, "%s %s %s %s", dev, path, fs, attrs)) {
             if (!strncmp(dev, "/dev/mtdblock", 13) && strstr(attrs, "rw"))
                 umount_fs(path);
-            else if (!strcmp(fs, "squashfs") || (!strcmp(fs, "cramfs")))
+            else if (!strcmp(fs, "squashfs") || !strcmp(fs, "cramfs"))
+                umount_fs(path);
+            else if (!strcmp(fs, "ubifs"))
                 umount_fs(path);
         }
     }
@@ -370,11 +445,166 @@ static int map_old_new_mtd(int old_num, size_t old_offset, size_t *new_offset,
     return -1;
 }
 
+static bool ubi_restore_partition(int mtd_num, stored_mtd_t *vols, int nvols,
+                                  bool simulate) {
+    if (simulate)
+        return true;
+
+    char devpath[64];
+
+    // Detach existing UBI device if any
+    int ubi_num = find_ubi_for_mtd(mtd_num);
+    if (ubi_num >= 0) {
+        int ctrl_fd = open("/dev/ubi_ctrl", O_RDONLY);
+        if (ctrl_fd >= 0) {
+            int32_t dev = ubi_num;
+            ioctl(ctrl_fd, UBI_IOCDET, &dev);
+            close(ctrl_fd);
+        }
+    }
+
+    // Erase entire MTD partition
+    snprintf(devpath, sizeof(devpath), "/dev/mtd%d", mtd_num);
+    int mtd_fd = open(devpath, O_RDWR);
+    if (mtd_fd < 0) {
+        fprintf(stderr, "Cannot open %s\n", devpath);
+        return false;
+    }
+    struct mtd_info_user mtd_info;
+    if (ioctl(mtd_fd, MEMGETINFO, &mtd_info) == 0) {
+        for (uint32_t off = 0; off < mtd_info.size; off += mtd_info.erasesize) {
+            mtd_erase_block(mtd_fd, off, mtd_info.erasesize);
+        }
+    }
+    close(mtd_fd);
+
+    // Attach UBI
+    int ctrl_fd = open("/dev/ubi_ctrl", O_RDONLY);
+    if (ctrl_fd < 0) {
+        fprintf(stderr, "Cannot open /dev/ubi_ctrl\n");
+        return false;
+    }
+
+    struct ubi_attach_req att_req;
+    memset(&att_req, 0, sizeof(att_req));
+    att_req.ubi_num = UBI_DEV_NUM_AUTO;
+    att_req.mtd_num = mtd_num;
+    if (ioctl(ctrl_fd, UBI_IOCATT, &att_req) < 0) {
+        fprintf(stderr, "UBI attach failed for mtd%d: %s\n", mtd_num,
+                strerror(errno));
+        close(ctrl_fd);
+        return false;
+    }
+    close(ctrl_fd);
+
+    ubi_num = att_req.ubi_num;
+
+    // Create and write each volume
+    snprintf(devpath, sizeof(devpath), "/dev/ubi%d", ubi_num);
+    int ubi_fd = open(devpath, O_RDONLY);
+    if (ubi_fd < 0) {
+        fprintf(stderr, "Cannot open %s\n", devpath);
+        return false;
+    }
+
+    for (int v = 0; v < nvols; v++) {
+        struct ubi_mkvol_req mk_req;
+        memset(&mk_req, 0, sizeof(mk_req));
+        mk_req.vol_id = vols[v].vol_id;
+        mk_req.alignment = 1;
+        mk_req.bytes = vols[v].size;
+        mk_req.vol_type = UBI_DYNAMIC_VOLUME;
+        mk_req.name_len = strlen(vols[v].vol_name);
+        strncpy(mk_req.name, vols[v].vol_name, UBI_MAX_VOLUME_NAME);
+
+        if (ioctl(ubi_fd, UBI_IOCMKVOL, &mk_req) < 0) {
+            fprintf(stderr, "UBI mkvol failed for '%s': %s\n", vols[v].vol_name,
+                    strerror(errno));
+            close(ubi_fd);
+            return false;
+        }
+
+        // Write volume data
+        char vol_path[64];
+        snprintf(vol_path, sizeof(vol_path), "/dev/ubi%d_%d", ubi_num,
+                 vols[v].vol_id);
+        int vol_fd = open(vol_path, O_RDWR);
+        if (vol_fd < 0) {
+            fprintf(stderr, "Cannot open %s\n", vol_path);
+            close(ubi_fd);
+            return false;
+        }
+
+        int64_t bytes = vols[v].size;
+        if (ioctl(vol_fd, UBI_IOCVOLUP, &bytes) < 0) {
+            fprintf(stderr, "UBI volup failed for '%s': %s\n", vols[v].vol_name,
+                    strerror(errno));
+            close(vol_fd);
+            close(ubi_fd);
+            return false;
+        }
+
+        size_t written = 0;
+        while (written < vols[v].size) {
+            ssize_t n =
+                write(vol_fd, vols[v].data + written, vols[v].size - written);
+            if (n <= 0) {
+                fprintf(stderr, "UBI write failed for '%s': %s\n",
+                        vols[v].vol_name, strerror(errno));
+                close(vol_fd);
+                close(ubi_fd);
+                return false;
+            }
+            written += n;
+        }
+        close(vol_fd);
+        printf("  Wrote UBI volume '%s' (%zu bytes)\n", vols[v].vol_name,
+               vols[v].size);
+    }
+
+    close(ubi_fd);
+    return true;
+}
+
 static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
                      mtd_restore_ctx_t *mtd, bool skip_env, bool simulate) {
     for (int i = 0; i < MAX_MTDBLOCKS; i++) {
         if (!*mtdbackup[i].name)
             continue;
+
+        if (mtdbackup[i].is_ubi) {
+            // Collect consecutive UBI volume entries for the same partition
+            int first = i;
+            int nvols = 0;
+            while (i < MAX_MTDBLOCKS && mtdbackup[i].is_ubi &&
+                   !strcmp(mtdbackup[i].name, mtdbackup[first].name)) {
+                nvols++;
+                i++;
+            }
+            i--; // will be incremented by for loop
+
+            // Find which MTD device this partition maps to
+            int mtd_num = -1;
+            for (int m = 0; m < MAX_MTDBLOCKS; m++) {
+                if (!strcmp(mtd->part[m].name, mtdbackup[first].name)) {
+                    mtd_num = m;
+                    break;
+                }
+            }
+            if (mtd_num < 0) {
+                fprintf(stderr, "Cannot find MTD for UBI partition '%s'\n",
+                        mtdbackup[first].name);
+                return false;
+            }
+
+            printf("%s UBI partition %s (%d volumes)\n", phase,
+                   mtdbackup[first].name, nvols);
+
+            if (!ubi_restore_partition(mtd_num, &mtdbackup[first], nvols,
+                                       simulate))
+                return false;
+            continue;
+        }
 
         printf("%s %s\n", phase, mtdbackup[i].name);
         size_t chunk = mtd->erasesize;
