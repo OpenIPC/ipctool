@@ -1,0 +1,40 @@
+name: PR Build Check
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-arm:
+    name: Build ARM (musl static)
+    runs-on: ubuntu-latest
+    env:
+      ARCHIVE: toolchain.hisilicon-hi3516cv100
+      PLATFORM: arm-openipc-linux-musleabi_sdk-buildroot
+      TOOLCHAIN: arm-openipc-linux-musleabi
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download toolchain and build
+        run: |
+          wget -qO- https://github.com/OpenIPC/firmware/releases/download/toolchain/$ARCHIVE.tgz | \
+            tar xfz - -C /opt
+          export PATH=/opt/$PLATFORM/bin:$PATH
+          cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
+  build-mips:
+    name: Build MIPS (musl static)
+    runs-on: ubuntu-latest
+    env:
+      ARCHIVE: toolchain.ingenic-t31
+      PLATFORM: mipsel-openipc-linux-musl_sdk-buildroot
+      TOOLCHAIN: mipsel-openipc-linux-musl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download toolchain and build
+        run: |
+          wget -qO- https://github.com/OpenIPC/firmware/releases/download/toolchain/$ARCHIVE.tgz | \
+            tar xfz - -C /opt
+          export PATH=/opt/$PLATFORM/bin:$PATH
+          cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
