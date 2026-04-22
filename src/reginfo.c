@@ -8,6 +8,7 @@
 #include "tools.h"
 
 #include <assert.h>
+#include <dirent.h>
 #include <ctype.h>
 #include <getopt.h>
 #include <stdint.h>
@@ -2648,6 +2649,43 @@ static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
     }
 }
 
+static uint32_t find_streamer_gpio_groups(size_t GPIO_Base, size_t GPIO_Offset,
+                                          int GPIO_Groups) {
+    uint32_t mapped = 0;
+    DIR *proc = opendir("/proc");
+    if (!proc)
+        return 0;
+
+    size_t GPIO_End = GPIO_Base + GPIO_Groups * GPIO_Offset;
+    struct dirent *ent;
+    while ((ent = readdir(proc))) {
+        if (ent->d_name[0] < '2' || ent->d_name[0] > '9')
+            continue;
+
+        char path[64];
+        snprintf(path, sizeof(path), "/proc/%s/maps", ent->d_name);
+        FILE *f = fopen(path, "r");
+        if (!f)
+            continue;
+
+        char line[256];
+        while (fgets(line, sizeof(line), f)) {
+            if (!strstr(line, "/dev/mem"))
+                continue;
+            unsigned long offset;
+            if (sscanf(line, "%*x-%*x %*s %lx", &offset) != 1)
+                continue;
+            if (offset >= GPIO_Base && offset < GPIO_End) {
+                int group = (offset - GPIO_Base) / GPIO_Offset;
+                mapped |= (1u << group);
+            }
+        }
+        fclose(f);
+    }
+    closedir(proc);
+    return mapped;
+}
+
 char *gpio_possible_ircut(char *outbuf, size_t outlen) {
     int GPIO_Groups = 0;
     size_t GPIO_Base = 0;
@@ -2657,10 +2695,18 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
         return NULL;
 
+    uint32_t streamer_groups =
+        find_streamer_gpio_groups(GPIO_Base, GPIO_Offset, GPIO_Groups);
+
     size_t enabled[GPIO_Groups];
     fill_enabled_gpios(enabled, GPIO_Groups);
 
-    char *ptr = outbuf;
+    // Count output pins per group to filter out busy I/O groups
+    uint8_t output_count[GPIO_Groups];
+    uint8_t dir_cache[GPIO_Groups];
+    uint8_t val_cache[GPIO_Groups];
+    memset(output_count, 0, sizeof(output_count));
+
     for (int group = 0; group < GPIO_Groups; group++) {
         size_t mask = enabled[group] << 2;
         size_t address = GPIO_Base + (group * GPIO_Offset) + mask;
@@ -2675,15 +2721,37 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
             fprintf(stderr, "Error at %#zx\n", address);
             return NULL;
         }
+        dir_cache[group] = direct;
+        val_cache[group] = value;
 
+        for (int i = 0; i < 8; i++)
+            if ((enabled[group] >> i & 1) && (direct & (1 << i)))
+                output_count[group]++;
+    }
+
+    char *ptr = outbuf;
+    for (int group = 0; group < GPIO_Groups; group++) {
         for (int i = 0; i < 8; i++) {
             uint8_t bit_mask = 1 << i;
-            if (enabled[group] >> i & 1)
-                if ((direct & bit_mask) && ((value & bit_mask) == 0)) {
-                    int nlen = snprintf(ptr, outlen, ",%d", group * 8 + i);
-                    outlen -= nlen;
-                    ptr += nlen;
-                }
+            if (!(enabled[group] >> i & 1))
+                continue;
+            if (!(dir_cache[group] & bit_mask))
+                continue;
+
+            bool candidate;
+            if (streamer_groups)
+                // Only report from streamer-mapped groups with few outputs
+                // (dedicated IR cut groups typically have 1-2 output pins)
+                candidate = (streamer_groups & (1u << group)) &&
+                            output_count[group] <= 2;
+            else
+                candidate = (val_cache[group] & bit_mask) == 0;
+
+            if (candidate) {
+                int nlen = snprintf(ptr, outlen, ",%d", group * 8 + i);
+                outlen -= nlen;
+                ptr += nlen;
+            }
         }
     }
 
