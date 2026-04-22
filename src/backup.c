@@ -23,8 +23,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <mtd/ubi-user.h>
-
 #include "backup.h"
 #include "boards/common.h"
 #include "boards/xm.h"

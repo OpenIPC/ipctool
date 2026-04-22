@@ -15,6 +15,46 @@ bool mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
 int mtd_unlock_cmd();
 int mtd_erase_block(int fd, int offset, int erasesize);
 
+// UBI ioctl definitions — inlined to avoid broken <mtd/ubi-user.h> in old
+// musl toolchains where __packed is not defined as __attribute__((packed)).
+#include <sys/ioctl.h>
+
+#ifndef UBI_IOC_MAGIC
+#define UBI_IOC_MAGIC 'o'
+#define UBI_CTRL_IOC_MAGIC 'o'
+#define UBI_VOL_IOC_MAGIC 'O'
+
+#define UBI_DEV_NUM_AUTO (-1)
+#define UBI_MAX_VOLUME_NAME 127
+#define UBI_DYNAMIC_VOLUME 3
+
+struct ubi_attach_req {
+    int32_t ubi_num;
+    int32_t mtd_num;
+    int32_t vid_hdr_offset;
+    int16_t max_beb_per1024;
+    int8_t disable_fm;
+    int8_t need_resv_pool;
+    int8_t padding[8];
+};
+
+struct ubi_mkvol_req {
+    int32_t vol_id;
+    int32_t alignment;
+    int64_t bytes;
+    int8_t vol_type;
+    uint8_t flags;
+    int16_t name_len;
+    int8_t padding2[4];
+    char name[UBI_MAX_VOLUME_NAME + 1];
+} __attribute__((packed));
+
+#define UBI_IOCMKVOL _IOW(UBI_IOC_MAGIC, 0, struct ubi_mkvol_req)
+#define UBI_IOCATT _IOW(UBI_CTRL_IOC_MAGIC, 64, struct ubi_attach_req)
+#define UBI_IOCDET _IOW(UBI_CTRL_IOC_MAGIC, 65, int32_t)
+#define UBI_IOCVOLUP _IOW(UBI_VOL_IOC_MAGIC, 0, int64_t)
+#endif
+
 #define MAX_UBI_VOLS 8
 
 typedef struct {
