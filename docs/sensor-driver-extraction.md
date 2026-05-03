@@ -307,10 +307,29 @@ python3 tools/trace_segment.py tools/dumps/cap.log
 
 ### `trace_to_driver.py`
 
-Emits HiSilicon-SDK-shaped C from the segmented JSON. Two functions per
-sensor: `<sensor>_linear_init` and `<sensor>_post_init_exposure_prime`,
-plus a comment block summarising the most-frequently-written runtime
-registers (the AE/AGC hot list).
+Emits HiSilicon-SDK-shaped C from the segmented JSON. Three functions
+per sensor:
+
+- `<sensor>_linear_init` — the cold-init register table.
+- `<sensor>_post_init_exposure_prime` — the AE/exposure values applied
+  once when the AE loop first kicks in.
+- `<sensor>_ae_step` — a per-frame AE callback skeleton listing the
+  registers the AE loop hits in steady state, with their last-seen
+  values as placeholders. The math driving those values (gain LUTs,
+  exposure scaling, threshold branches) is not in the trace; the
+  skeleton points the reverse-engineer at the vendor's
+  `cmos_inttime_update` / `cmos_gains_update` equivalents to fill in.
+
+For SC2315E captured under steady ambient light, the `_ae_step` body
+matches the **else-branches** of the reference's `cmos_inttime_update`
+(`0x3314=0x14`) and `cmos_gains_update` (`0x5781=0x60`, `0x5785=0x30`)
+— exactly the registers and values the running AE loop wrote each
+frame. A capture under varying lighting would surface the if-branches
+too; the skeleton would then need a conditional that you'd derive by
+hand from the value distribution.
+
+For value-distribution data without a fresh trace, use `ipctool sensor
+monitor` (see "Live-reading the AE state" below).
 
 The output is **standalone-buildable** — it includes a small "SDK stubs"
 block (typedef for `VI_PIPE`, a no-op `sensor_write_register`) so that
@@ -337,9 +356,11 @@ The output is a scaffold, not a finished driver:
   vendor's `sensor_init` callback.
 - The `post_init_exposure_prime` function hints at what the SDK's
   `cmos_inittime_update` sets up.
-- The runtime hot-register comment block tells you which registers
-  belong inside the AE/AGC callback. The values driving them are
-  **not** in the trace — only the regs touched and how often.
+- The `_ae_step` function is the runtime AE/AGC callback skeleton:
+  the registers the AE loop touches every frame, with their last-seen
+  trace values as `/* TODO: derive */` placeholders. The math driving
+  those values is **not** in the trace — see "Live-reading the AE
+  state" below for how to capture value distributions.
 
 ### `trace_diff.py`
 
@@ -362,6 +383,69 @@ python3 tools/trace_diff.py \
     --gen-scope sc2315e_linear_init \
     --ref-scope sc2315e_linear_1080P30_init
 ```
+
+## Stage 4 — Live-reading the AE state with `ipctool sensor monitor`
+
+`ipctool sensor` is a built-in subcommand (separate from `trace`) that
+reads a fixed list of AE/exposure registers from the running sensor
+over I2C/SPI in a loop, decoded as labelled fields. Same idea as
+`_ae_step` but read-side: instead of inferring AE registers from a
+captured trace, you can poll the actual sensor while it's running.
+
+```console
+$ ipctool sensor monitor
+EXP   100  AGAIN  310  DGAIN  80  VMAX  546  R3301  f  R3314  14  R3632  8  HOLD  0  R5781  60  R5785  30
+EXP   100  AGAIN  310  DGAIN  80  VMAX  546  R3301  f  R3314  14  R3632  8  HOLD  0  R5781  60  R5785  30
+EXP   ff   AGAIN  330  DGAIN  80  VMAX  546  R3301  f  R3314  14  R3632  8  HOLD  0  R5781  60  R5785  30
+                                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^
+                                                            same hot regs trace_to_driver picked up
+```
+
+The reg list per supported sensor lives in `src/snstool.c` (a small
+table, ~10 entries). For SC2315E that table mirrors what `_ae_step`
+emits — both are the registers the running AE loop writes per frame.
+
+### Pairing `sensor monitor` with `_ae_step`
+
+The trace-and-extract workflow gives you the **register set** of the
+AE loop. `sensor monitor` gives you **value time-series** under
+whatever lighting conditions you can produce. Pair them:
+
+1. Extract `_ae_step` via `trace`. Note the placeholder values
+   (e.g., `0x5781=0x60`, `0x3314=0x14` on SC2315E).
+2. Cover/uncover the lens, point at varying scenes, switch the IR cut
+   etc. while running `ipctool sensor monitor` and recording the
+   output (`tee monitor.log`).
+3. Plot or grep the resulting log for value transitions on the
+   `_ae_step` registers.
+4. Derive the conditional / LUT that maps trace inputs (often gain
+   index, integration time) to those values. This is the manual step
+   that no register-trace tool can automate.
+
+For SC2315E, the reference's `cmos_gains_update` writes
+`0x5781=1, 0x5785=2` once gain ≥ a fixed threshold; the rest of the
+time it writes the `0x60, 0x30` we captured. A varying-light
+`monitor` session that pushes the AE into high-gain regime will show
+that transition directly.
+
+### Adding a new sensor to `monitor`
+
+Edit `src/snstool.c`:
+
+1. Add a `Reg[]` table for the sensor: name, address, byte length.
+   Cover the AE-modified registers (exposure, gain, vmax) plus any
+   tuning registers that change per-frame in `cmos_gains_update`.
+2. Add an entry to `sns_regs[]`: sensor ID (uppercase, matching
+   `ctx->sensor_id` from `src/sensors.c`), pointer to the reg
+   table, and `.be = 1` if the sensor is big-endian on multi-byte
+   registers.
+3. The dispatch in `monitor()` is automatic — no other glue needed.
+
+When `_ae_step` emits a register set you didn't have in `monitor`,
+that's a good cue to extend the `monitor` table to match. A nice
+property of the workflow: the trace tells you which registers the
+running streamer cares about, the monitor lets you watch them change
+in real time.
 
 ## Reading the diff
 

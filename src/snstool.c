@@ -18,6 +18,9 @@ typedef struct {
     uint8_t len;
 } Reg;
 
+/* Mirrors the runtime hot set ipctool trace's _ae_step skeleton picks up
+ * for SC2315E. Values readable while the streamer is paused; HOLD toggles
+ * 0x00 -> 0x30 around grouped writes by cmos_gains_update. */
 const Reg sc2315e_regs[] = {
     {"EXP", 0x3e00, 3},
     {"AGAIN", 0x3e08, 2},
@@ -26,7 +29,7 @@ const Reg sc2315e_regs[] = {
     {"R3301", 0x3301, 1},
     {"R3314", 0x3314, 1},
     {"R3632", 0x3632, 1},
-    {"R3812", 0x3812, 1},
+    {"HOLD", 0x3812, 1},
     {"R5781", 0x5781, 1},
     {"R5785", 0x5785, 1},
     {NULL},

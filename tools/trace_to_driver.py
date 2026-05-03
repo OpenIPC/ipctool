@@ -93,17 +93,70 @@ def emit_phase(events, indent="  "):
 
 
 def runtime_summary(events):
-    """Per-register write count and last value seen."""
+    """Per-register write count, last value, and first-seen index."""
     from collections import Counter
 
     counts = Counter()
     last_val = {}
-    for ev in events:
+    first_seen = {}  # trace-order, used to emit hot regs in original sequence
+    for i, ev in enumerate(events):
         if ev["kind"] == "write":
             counts[ev["reg"]] += 1
             last_val[ev["reg"]] = ev["val"]
+            first_seen.setdefault(ev["reg"], i)
     items = sorted(counts.items(), key=lambda kv: -kv[1])
-    return [(reg, n, last_val[reg]) for reg, n in items]
+    return [(reg, n, last_val[reg], first_seen[reg]) for reg, n in items]
+
+
+def runtime_ae_skeleton(events, sensor, top_k=8, hot_ratio=0.25):
+    """Emit a callback skeleton from the runtime phase.
+
+    Selects the most-frequently-written runtime registers (top_k by count,
+    each above hot_ratio * max_count) and emits a void function that
+    writes the last-seen value to each. Order matches the trace.
+
+    The values are placeholders; the math driving them - exposure scaling,
+    gain LUTs, threshold-branched tuning - is not in the register trace.
+    Reverse-engineer via the vendor's cmos_inttime_update /
+    cmos_gains_update equivalents.
+    """
+    summary = runtime_summary(events)
+    if not summary:
+        return ""
+
+    max_count = summary[0][1]
+    threshold = max(1, int(max_count * hot_ratio))
+    hot = [(r, n, v, idx) for r, n, v, idx in summary[:top_k] if n >= threshold]
+    if not hot:
+        return ""
+
+    # Emit in trace-order so the writes look plausible to the AE loop.
+    ordered = sorted(hot, key=lambda t: t[3])
+
+    lines = []
+    lines.append("/*")
+    lines.append(f" * AE/AGC steady-state callback skeleton ({sensor}).")
+    lines.append(" *")
+    lines.append(" * Per-frame writes captured during steady state. Values shown are the")
+    lines.append(" * last-seen values from the trace; the AE math driving them (gain LUTs,")
+    lines.append(" * exposure scaling, threshold branches) is NOT derivable from a register")
+    lines.append(" * trace alone. Cross-reference the vendor's cmos_inttime_update /")
+    lines.append(" * cmos_gains_update equivalents to fill in the math.")
+    lines.append(" *")
+    lines.append(" * Hot register frequency:")
+    lines.append(" *   reg      count    last value")
+    for reg, count, val, _ in hot:
+        lines.append(f" *   0x{reg:04X}   {count:5d}    0x{val:02X}")
+    lines.append(" */")
+    lines.append(f"void {sensor}_ae_step(VI_PIPE ViPipe)")
+    lines.append("{")
+    lines.append("    (void)ViPipe;")
+    for reg, _, val, _ in ordered:
+        lines.append(
+            f"    sensor_write_register(0x{reg:04X}, 0x{val:02X});  /* TODO: derive */"
+        )
+    lines.append("}")
+    return "\n".join(lines) + "\n"
 
 
 def main():
@@ -142,15 +195,10 @@ def main():
 
     runtime = phases.get("runtime", [])
     if runtime:
-        parts.append("\n/*\n")
-        parts.append(" * RUNTIME AE/AGC HOT REGISTERS\n")
-        parts.append(" * (per-frame writes during steady state - the math\n")
-        parts.append(" *  that drives these values is NOT in the trace)\n")
-        parts.append(" *\n")
-        parts.append(" *   reg     count    last value\n")
-        for reg, n, v in runtime_summary(runtime)[:32]:
-            parts.append(f" *   0x{reg:04X}    {n:5d}    0x{v:02X}\n")
-        parts.append(" */\n")
+        skeleton = runtime_ae_skeleton(runtime, args.sensor)
+        if skeleton:
+            parts.append("\n")
+            parts.append(skeleton)
 
     src = "".join(parts)
     out_path = args.out or args.segments + ".c"
