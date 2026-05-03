@@ -31,6 +31,10 @@ sensor_write_register(0x3039, 0xa6);
 sensor_write_register(0x320e, 0x4);
 sensor_write_register(0x100, 0x1);
 sensor_write_register(0x3e02, 0x80);
+sensor_write_register(0x100, 0x0);
+sensor_write_register(0x320e, 0x8);
+sensor_write_register(0x320c, 0x10);
+sensor_write_register(0x100, 0x1);
 sensor_write_register(0x5781, 0x60);
 sensor_write_register(0x5781, 0x60);
 sensor_write_register(0x5781, 0x60);
@@ -59,6 +63,8 @@ grep -q '^void testsensor_linear_init' "$tmp/driver.c" \
     || { echo "linear_init function not emitted"; exit 1; }
 grep -q '^void testsensor_ae_step' "$tmp/driver.c" \
     || { echo "ae_step skeleton not emitted"; exit 1; }
+grep -q '^void testsensor_set_mode_1' "$tmp/driver.c" \
+    || { echo "set_mode_1 (mode-switch) function not emitted"; exit 1; }
 grep -q '^combo_dev_attr_t SENSOR_ATTR' "$tmp/driver.c" \
     || { echo "MIPI struct not emitted at file scope"; exit 1; }
 grep -q '^#if 0' "$tmp/driver.c" \
