@@ -122,26 +122,43 @@ def collapse_struct(events):
     return out
 
 
-def find_init_bounds(events):
-    """Return (init_start_idx, init_end_idx).
+# Stream-control register conventions per sensor family. Each entry is
+# (family_name, reg, init_val, stream_val): writing init_val to reg starts
+# the init phase, writing stream_val to reg ends it (stream-on). Patterns
+# are tried in order; first one that matches both endpoints in a trace
+# wins. Add more entries here as new sensor families show up.
+INIT_PATTERNS = [
+    # SmartSens (SC2315E, SC2335, SC*) - reset register at 0x100
+    ("smartsens", 0x100, 0, 1),
+    # Sony IMX (IMX291, IMX385, IMX307, ...) - standby register at 0x3000
+    ("sony_imx", 0x3000, 1, 0),
+]
 
-    Heuristic:
-      - init_start = first 'write' whose reg == 0x100 and val == 0 (reset).
-      - init_end = first subsequent 'write' whose reg == 0x100 and val == 1
-                    (stream-on).
+
+def find_init_bounds(events, patterns=INIT_PATTERNS):
+    """Return (init_start_idx, init_end_idx, pattern).
+
+    Tries each pattern in order. For the first pattern where both the
+    init_val write AND a subsequent stream_val write exist on `reg`,
+    returns the indices of those two writes plus the matching pattern
+    tuple. If no pattern fully matches, returns (None, None, None).
     """
-    start = None
-    for i, (k, p) in enumerate(events):
-        if k == "write" and p["reg"] == 0x100 and p["val"] == 0:
-            start = i
-            break
-    if start is None:
-        return (None, None)
-    for j in range(start + 1, len(events)):
-        k, p = events[j]
-        if k == "write" and p["reg"] == 0x100 and p["val"] == 1:
-            return (start, j)
-    return (start, len(events) - 1)
+    for pattern in patterns:
+        _, reg, init_val, stream_val = pattern
+        start = None
+        for i, (k, p) in enumerate(events):
+            if k == "write" and p["reg"] == reg and p["val"] == init_val:
+                start = i
+                break
+        if start is None:
+            continue
+        for j in range(start + 1, len(events)):
+            k, p = events[j]
+            if k == "write" and p["reg"] == reg and p["val"] == stream_val:
+                return (start, j, pattern)
+        # Init started but no stream-on follows; treat trace tail as init body.
+        return (start, len(events) - 1, pattern)
+    return (None, None, None)
 
 
 def find_runtime_start(events, init_end):
@@ -169,12 +186,16 @@ def find_runtime_start(events, init_end):
     return None
 
 
-def find_mode_switches(events, init_end):
+def find_mode_switches(events, init_end, pattern):
     """Find mode-switch boundaries after init_end.
 
-    A mode switch on a HiSilicon-style sensor cycles 0x100 (stream control):
-    write 0x100=0 to halt, reconfigure mode-specific registers, write
-    0x100=1 to resume. Each such cycle is a `mode_switch_N` phase.
+    A mode switch cycles the same stream-control register that find_init_bounds
+    matched on - write init_val to halt, reconfigure mode-specific registers,
+    write stream_val to resume. Each such cycle is a `mode_switch_N` phase.
+
+    `pattern` is the (name, reg, init_val, stream_val) tuple returned by
+    find_init_bounds. Pass None and the function is a no-op (no init was
+    detected, so no mode-switch frame of reference exists).
 
     Sensors that hot-swap modes via group-hold (e.g. 0x3812 toggling
     0x00 -> writes -> 0x30) are not detected by this heuristic. Add a
@@ -183,18 +204,19 @@ def find_mode_switches(events, init_end):
 
     Returns a list of (start, end) tuples, both inclusive, in trace order.
     """
-    if init_end is None:
+    if init_end is None or pattern is None:
         return []
+    _, reg, init_val, stream_val = pattern
     switches = []
     i = init_end + 1
     while i < len(events):
         k, p = events[i]
-        if k == "write" and p["reg"] == 0x100 and p["val"] == 0:
+        if k == "write" and p["reg"] == reg and p["val"] == init_val:
             start = i
             end = None
             for j in range(start + 1, len(events)):
                 k2, p2 = events[j]
-                if k2 == "write" and p2["reg"] == 0x100 and p2["val"] == 1:
+                if k2 == "write" and p2["reg"] == reg and p2["val"] == stream_val:
                     end = j
                     break
             if end is None:
@@ -230,11 +252,13 @@ def main():
         events = [e for e in (parse(line) for line in f) if e is not None]
     events = collapse_struct(events)
 
-    # Phase boundaries.
-    init_s, init_e = find_init_bounds(events)
-    mode_switches = find_mode_switches(events, init_e)
+    # Phase boundaries. find_init_bounds also reports which sensor-family
+    # init pattern matched; pass it through so find_mode_switches uses the
+    # same stream-control register convention.
+    init_s, init_e, init_pattern = find_init_bounds(events)
+    mode_switches = find_mode_switches(events, init_e, init_pattern)
     # post_init and runtime live AFTER any mode switches, so anchor on the
-    # last 0x100=1 we saw (init_end if no switches, last switch end otherwise).
+    # last stream-on we saw (init_end if no switches, last switch end otherwise).
     last_streamon = mode_switches[-1][1] if mode_switches else init_e
     runtime_s = find_runtime_start(events, last_streamon)
 
@@ -258,11 +282,18 @@ def main():
             phases["post_init"] = serialize(events[post_init_start:])
 
     summary = {phase: len(events) for phase, events in phases.items()}
+    pattern_name = init_pattern[0] if init_pattern else None
     out_path = args.out or args.input + ".segments.json"
     with open(out_path, "w") as f:
-        json.dump({"summary": summary, "phases": phases}, f, indent=2)
+        json.dump(
+            {"summary": summary, "init_pattern": pattern_name, "phases": phases},
+            f,
+            indent=2,
+        )
 
     print(f"wrote {out_path}", file=sys.stderr)
+    if pattern_name:
+        print(f"  init_pattern: {pattern_name}", file=sys.stderr)
     for phase, count in summary.items():
         print(f"  {phase:12s} {count} events", file=sys.stderr)
 

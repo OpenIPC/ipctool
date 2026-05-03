@@ -286,7 +286,8 @@ Splits the raw log into phases:
 | Phase | What it contains |
 |---|---|
 | `pre_sensor` | Bus probe, MIPI/VI struct dumps, pre-init noise |
-| `init` | From `sensor_write_register(0x100, 0x0)` (reset) to `sensor_write_register(0x100, 0x1)` (stream-on) |
+| `init` | From the sensor's standby/reset write to its stream-on write (see "Sensor-family init patterns" below) |
+| `mode_switch_N` | Each subsequent stream-off → reconfigure → stream-on cycle |
 | `post_init` | A short burst of AE/exposure prime writes between stream-on and the steady-state loop |
 | `runtime` | Per-frame writes during steady-state (e.g. AE updating exposure registers) |
 
@@ -295,6 +296,72 @@ The init/post-init split exists for diff-friendliness: the AE loop in
 `0x320E/F`, …) that `init` had set to default values. Comparing
 `init`-only against the reference's init function avoids spurious
 mismatches.
+
+#### Sensor-family init patterns
+
+Different sensor vendors gate "stream on" through different registers.
+The segmenter has a small table of `(family, reg, init_val, stream_val)`
+patterns and tries each in order; the first that finds both endpoints
+in a trace wins. The matched family is recorded as `init_pattern` in
+the segments JSON.
+
+| Family | Register | Init value | Stream-on value | Sensors |
+|---|---|---|---|---|
+| `smartsens` | `0x0100` | `0x00` (reset) | `0x01` (stream-on) | SC2315E, SC2335, SC*, SmartSens generally |
+| `sony_imx`  | `0x3000` | `0x01` (standby) | `0x00` (release) | IMX291, IMX385, IMX307, Sony IMX line |
+
+Adding a family is one entry in `INIT_PATTERNS` at the top of
+`trace_segment.py`. If your trace is recognised but no init phase is
+detected, your sensor probably uses a third pattern — write the
+addresses and values in here and the segmenter will pick it up.
+
+If no pattern matches, the segmenter emits everything as `pre_sensor`
+and the generator skips the function-body emission. Most often that
+means your sensor uses a third stream-control register convention not
+yet in `INIT_PATTERNS`. Check the raw trace for the obvious bracket
+(a register written once near the start, then again near the end with
+the opposite value) and add an entry.
+
+### Decoder coverage across HiSilicon families
+
+Different HiSilicon families take different paths to the I2C bus.
+ipctool's ptrace decoder handles each:
+
+| Family | Sensor driver path | What ipctool decodes |
+|---|---|---|
+| HISI_V1 | `ioctl(/dev/hi_i2c, CMD_I2C_WRITE, &I2C_DATA_S)` | `xm_i2c_*` callbacks decode the structured payload |
+| HISI_V2 / V2A | `write(/dev/i2c-X, buf, reg+data)` little-endian, after `I2C_16BIT_REG/DATA` ioctls | `i2c_write_exit_cb` infers widths from `nbyte`, picks LE for V2/V2A; `hisi_gen2_ioctl_exit_cb` decodes `I2C_SLAVE_FORCE` |
+| HISI_V3 / V3A / V4 / V4A | `ioctl(/dev/i2c-X, I2C_RDWR, &i2c_msg)` big-endian | `hisi_i2c_read_*_cb` decodes the rdwr message |
+
+uClibc on some V1/V2 firmwares wraps the libc `write()` call as a
+single-iovec `writev()` rather than direct `__NR_write`. ipctool
+handles both — `syscall_writev_exit` decodes the iovec and forwards
+to the same fd callback as plain `write()`.
+
+When threads share an fd table (`CLONE_FILES`, the standard for
+multi-thread streamers), opening a fd in one thread makes it usable
+in all of them. ipctool maintains this invariant explicitly: on
+`open()` it broadcasts the new fd state to every tracked process; on
+`close()` it clears it everywhere. Without this, a thread peer's
+write on a fd opened by the parent silently drops to no callback.
+
+### When the trace is empty anyway
+
+A V1/V2 capture that shows `0` `sensor_write_register` lines despite
+the streamer reporting init success usually means one of:
+
+* **Sensor `.so` opens its own I2C handle in a path our trace
+  doesn't see.** Check `/proc/<streamer-pid>/fd` while it's running:
+  if the live `/dev/i2c-N` fd in the running process is different
+  from the one the trace caught (or arrived later than the kill),
+  capture for longer.
+* **Sensor `.so` uses a HiSilicon-specific `/dev/*` device that
+  isn't in our dispatch table** (e.g. `/dev/sys`, `/dev/sns_drv0`).
+  The signature is the trace ending shortly after `i2c-N` banner
+  with no writes; live `/proc/<pid>/fd` shows the unfamiliar device
+  open. Add it to `syscall_open`'s dispatch in `src/ptrace.c`.
+* **Sensor `.so` invokes a ptrace-incompatible code path** (some
+  vendor binaries detect ptrace and skip the writes; rare).
 
 ```bash
 python3 tools/trace_segment.py tools/dumps/cap.log
