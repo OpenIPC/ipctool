@@ -361,6 +361,15 @@ The output is a scaffold, not a finished driver:
   trace values as `/* TODO: derive */` placeholders. The math driving
   those values is **not** in the trace — see "Live-reading the AE
   state" below for how to capture value distributions.
+- File-scope MIPI/VI struct declarations (e.g.,
+  `combo_dev_attr_t SENSOR_ATTR = { … }`,
+  `pstViDevAttr VI_DEV_ATTR_S = { … }`) are emitted between the SDK
+  stubs and the init function, wrapped in `#if 0 / #endif`. Standalone
+  builds skip them (the references to vendor enums like
+  `INPUT_MODE_MIPI` aren't visible without `hi_mipi.h`); when
+  integrating into a HiSilicon SDK build, remove the `#if 0/#endif`
+  to drop the struct definitions in alongside the rest of the
+  scaffold.
 
 ### `trace_diff.py`
 
