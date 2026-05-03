@@ -84,4 +84,31 @@ python3 tools/trace_diff.py "$tmp/driver.c" "$tmp/driver.c" \
 grep -q '100.0%)' "$tmp/diff.out" \
     || { echo "self-diff not 100%"; exit 1; }
 
+# Diff against a reference that uses the older RE-port shape:
+# `int <fn>(VI_PIPE)` returning int (not void), with
+# `sensor_write_register_0(...)` (bus-numbered suffix). Validates that
+# extract_function_body and RE_ANY_WRITE handle both styles.
+echo "== trace_diff.py cross-style ref =="
+cat > "$tmp/ref_old_style.c" <<'REF'
+#include <unistd.h>
+typedef int VI_PIPE;
+static void sensor_write_register_0(unsigned int a, unsigned int v)
+{ (void)a; (void)v; }
+
+int oldstyle_init(VI_PIPE pipe) {
+    (void)pipe;
+    sensor_write_register_0(0x100, 0x0);
+    sensor_write_register_0(0x3034, 0x81);
+    sensor_write_register_0(0x3039, 0xa6);
+    sensor_write_register_0(0x320e, 0x4);
+    sensor_write_register_0(0x100, 0x1);
+    return 0;
+}
+REF
+python3 tools/trace_diff.py "$tmp/driver.c" "$tmp/ref_old_style.c" \
+    --gen-scope testsensor_linear_init \
+    --ref-scope oldstyle_init | tee "$tmp/cross.out"
+grep -q 'address match:  4 / 4' "$tmp/cross.out" \
+    || { echo "cross-style ref didn't match (relaxed regex broken?)"; exit 1; }
+
 echo "OK: pipeline test passed"

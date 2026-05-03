@@ -26,9 +26,11 @@ RE_WRITE = re.compile(
     r"((?:0[xX])?[0-9a-fA-F]+)\s*,\s*"
     r"((?:0[xX])?[0-9a-fA-F]+)\s*\)"
 )
-# Wider net for things like sc2315e_write_register(...).
+# Wider net for things like sc2315e_write_register(...) or
+# sensor_write_register_0(...) (the older RE port at widgetii/sc_sc2315e
+# uses the bus-numbered suffix).
 RE_ANY_WRITE = re.compile(
-    r"\b\w*write_register\s*\(\s*"
+    r"\b\w*write_register\w*\s*\(\s*"
     r"(?:[^,]+,\s*)?"
     r"((?:0[xX])?[0-9a-fA-F]+)\s*,\s*"
     r"((?:0[xX])?[0-9a-fA-F]+)\s*\)"
@@ -44,12 +46,18 @@ def parse_int(s):
 
 
 def extract_function_body(src, fn_name):
-    """Return text inside `void <fn_name>(...) { ... }`, brace-balanced.
+    """Return text inside `<rettype> <fn_name>(...) { ... }`, brace-balanced.
 
-    Strings/comments are not handled — fine for these driver files which
+    rettype is any whitespace-delimited token (int, void, HI_S32, HI_VOID,
+    static, etc.) - some references use C int returns instead of void.
+    Strings/comments are not handled - fine for these driver files which
     keep everything on one line per write.
     """
-    pat = re.compile(r"\bvoid\s+" + re.escape(fn_name) + r"\s*\([^)]*\)\s*\{")
+    # Match a function definition: identifier(s) before the name, then (args) {
+    # The qualifier+rettype block can include `static`, `inline`, multiple words.
+    pat = re.compile(
+        r"(?:\b\w+\s+)+" + re.escape(fn_name) + r"\s*\([^)]*\)\s*\{"
+    )
     m = pat.search(src)
     if not m:
         return None
