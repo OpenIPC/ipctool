@@ -22,15 +22,30 @@ HEADER = """\
  * Runtime AE/AGC writes are emitted as a comment block, not C code -
  * the surrounding logic (gain math, exposure scaling) is not derivable
  * from a register trace alone.
+ *
+ * To integrate into a HiSilicon SDK build:
+ *   - Replace the SDK-stubs block with #include "hi_comm_video.h" and
+ *     #include "hi_sns_ctrl.h"
+ *   - Replace the sensor_write_register stub with the vendor's bus-aware
+ *     implementation, typically declared in <sensor>_sensor_ctl.c
+ *
+ * As shipped, this file passes `gcc -fsyntax-only` standalone.
  */
-#include "hi_comm_video.h"
-#include "hi_sns_ctrl.h"
+#include <unistd.h>
 
-extern void {sensor}_write_register(VI_PIPE ViPipe, HI_U32 addr, HI_U32 data);
+/* --- SDK stubs (delete when integrating into a vendor SDK) --- */
+typedef int VI_PIPE;
+static inline void sensor_write_register(unsigned int addr, unsigned int val)
+{{
+    (void)addr;
+    (void)val;
+}}
+/* --- end SDK stubs --- */
 """
 
 FN_TEMPLATE = """
 void {sensor}_{suffix}(VI_PIPE ViPipe) {{
+  (void)ViPipe;  /* implicit pipe ID in the vendor SDK; void-cast for the standalone scaffold */
 {body}}}
 """
 

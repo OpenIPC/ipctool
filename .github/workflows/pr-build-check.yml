@@ -38,3 +38,11 @@ jobs:
           export PATH=/opt/$PLATFORM/bin:$PATH
           cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
           cmake --build build
+
+  test-extraction-pipeline:
+    name: Test sensor extraction pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run end-to-end pipeline smoke test
+        run: tools/test_pipeline.sh
