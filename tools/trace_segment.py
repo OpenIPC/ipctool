@@ -31,7 +31,11 @@ RE_READ_ERR = re.compile(r"^sensor_read_register\(0x([0-9a-fA-F]+)\);\s*/\*\s*\[
 RE_ADDR = re.compile(r"^sensor_i2c_change_addr\(0x([0-9a-fA-F]+)\);?")
 RE_USLEEP = re.compile(r"^usleep\((\d+)\)")
 RE_BANNER = re.compile(r"^=+\s*([a-zA-Z0-9_\-]+)\s*=+")
-RE_STRUCT_OPEN = re.compile(r"^[\w]+\s*=\s*\{$|^\.\w+\s*=\s*\{$")
+# Top-level C struct declaration opener: `type name = {` at column 0,
+# nothing after the `{`. Doesn't try to track nested `.field = {` blocks
+# - those are just text until the matching top-level `};` closes the
+# whole declaration.
+RE_STRUCT_OPEN = re.compile(r"^\w+\s+\w+\s*=\s*\{$")
 
 # Lines we drop on sight (noise, not register ops)
 RE_NOISE = re.compile(

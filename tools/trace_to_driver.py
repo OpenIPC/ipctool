@@ -9,6 +9,7 @@ Usage:
 """
 import argparse
 import json
+import re
 import sys
 
 
@@ -74,10 +75,9 @@ def emit_phase(events, indent="  "):
         elif ev["kind"] == "banner":
             out.append(f"{indent}/* === bus: {ev['dev']} === */\n")
         elif ev["kind"] == "struct":
-            out.append(f"{indent}/*\n")
-            for line in ev["text"].splitlines():
-                out.append(f"{indent} * {line}\n")
-            out.append(f"{indent} */\n")
+            # Structs are hoisted to file scope by emit_structs_block; skip
+            # them here so they don't appear inline as comments.
+            pass
         elif ev["kind"] in ("read", "read_err"):
             # Reads happen during probe and chip-id checks. Document but
             # do not emit as code (they don't belong in init).
@@ -90,6 +90,61 @@ def emit_phase(events, indent="  "):
             line += " */\n"
             out.append(line)
     return "".join(out)
+
+
+# Parses `combo_dev_attr_t SENSOR_ATTR = {` -> ("combo_dev_attr_t", "SENSOR_ATTR")
+RE_STRUCT_HEAD = re.compile(r"^(\w+)\s+(\w+)\s*=\s*\{$")
+
+
+def collect_structs(phases):
+    """Return list of (type_name, var_name, text) tuples, deduped by var_name.
+
+    A streamer that issues multiple HI_MPI_*_SetDevAttr calls during init
+    (e.g., per-pipe configuration) shows up as several struct events with
+    the same var_name; the last value wins, mirroring the final state the
+    sensor was configured into.
+    """
+    by_name = {}
+    for events in phases.values():
+        for ev in events:
+            if ev["kind"] != "struct":
+                continue
+            head = ev["text"].splitlines()[0]
+            m = RE_STRUCT_HEAD.match(head)
+            if not m:
+                continue
+            type_name, var_name = m.group(1), m.group(2)
+            by_name[var_name] = (type_name, var_name, ev["text"])
+    return list(by_name.values())
+
+
+def emit_structs_block(structs):
+    """Emit MIPI/VI struct declarations wrapped in `#if 0` so the standalone
+    build skips them (they reference vendor-only enum constants like
+    INPUT_MODE_MIPI). User removes the guard when integrating into a
+    HiSilicon SDK build, where the enums and types are in scope via
+    hi_comm_video.h / hi_mipi.h.
+    """
+    if not structs:
+        return ""
+    lines = []
+    lines.append("/*")
+    lines.append(" * MIPI/VI device attributes captured from the running streamer's")
+    lines.append(" * HI_MPI_*_SetDevAttr ioctls. Wrapped in #if 0 so the standalone")
+    lines.append(" * scaffold builds without vendor headers; remove the #if 0/#endif")
+    lines.append(" * when integrating into a HiSilicon SDK build (the enum constants")
+    lines.append(" * and struct typedefs come from hi_comm_video.h / hi_mipi.h).")
+    lines.append(" *")
+    lines.append(" * Note: ipctool's V4 VI-dev dumper emits the variable name in")
+    lines.append(" * `pstViDevAttr VI_DEV_ATTR_S` order; in real SDK code the type")
+    lines.append(" * is VI_DEV_ATTR_S and the variable name is yours to choose.")
+    lines.append(" */")
+    lines.append("#if 0")
+    for _, _, text in structs:
+        lines.append(text)
+        lines.append("")  # blank between declarations
+    lines.append("#endif")
+    return "\n".join(lines) + "\n"
 
 
 def runtime_summary(events):
@@ -171,6 +226,11 @@ def main():
     phases = data["phases"]
 
     parts = [HEADER.format(src=args.segments, sensor=args.sensor)]
+
+    structs = collect_structs(phases)
+    if structs:
+        parts.append("\n")
+        parts.append(emit_structs_block(structs))
 
     init = phases.get("init", [])
     post_init = phases.get("post_init", [])

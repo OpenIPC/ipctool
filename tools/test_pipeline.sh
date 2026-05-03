@@ -13,11 +13,16 @@ cd "$(dirname "$0")/.."
 tmp=$(mktemp -d)
 trap "rm -rf $tmp" EXIT
 
-# Minimal synthetic trace: probe + init (reset + a few writes + stream-on)
-# + runtime (one register written enough times to trigger the runtime
-# heuristic at threshold >= 3).
+# Minimal synthetic trace: a MIPI struct dump (pre_sensor) + init (reset
+# + a few writes + stream-on) + runtime (one register written enough
+# times to trigger the runtime heuristic at threshold >= 3).
 cat > "$tmp/sample.log" <<'TRACE'
 [100] child 101 created
+combo_dev_attr_t SENSOR_ATTR = {
+	.devno = 0,
+	.input_mode = INPUT_MODE_MIPI,
+	.lane_id = {0, 2, -1, -1},
+};
 sensor_i2c_change_addr(0x60);
 sensor_write_register(0x100, 0x0);
 usleep(10000)
@@ -54,6 +59,10 @@ grep -q '^void testsensor_linear_init' "$tmp/driver.c" \
     || { echo "linear_init function not emitted"; exit 1; }
 grep -q '^void testsensor_ae_step' "$tmp/driver.c" \
     || { echo "ae_step skeleton not emitted"; exit 1; }
+grep -q '^combo_dev_attr_t SENSOR_ATTR' "$tmp/driver.c" \
+    || { echo "MIPI struct not emitted at file scope"; exit 1; }
+grep -q '^#if 0' "$tmp/driver.c" \
+    || { echo "struct block not wrapped in #if 0"; exit 1; }
 
 echo "== gcc -fsyntax-only =="
 gcc -Wall -Wextra -fsyntax-only "$tmp/driver.c"
