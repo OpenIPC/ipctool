@@ -312,6 +312,19 @@ sensor: `<sensor>_linear_init` and `<sensor>_post_init_exposure_prime`,
 plus a comment block summarising the most-frequently-written runtime
 registers (the AE/AGC hot list).
 
+The output is **standalone-buildable** — it includes a small "SDK stubs"
+block (typedef for `VI_PIPE`, a no-op `sensor_write_register`) so that
+`gcc -fsyntax-only` and `gcc -c` succeed without the vendor headers.
+Delete that block and replace it with `#include "hi_comm_video.h"` /
+`#include "hi_sns_ctrl.h"` plus the vendor's bus-aware
+`sensor_write_register` to integrate into a HiSilicon SDK build.
+
+`tools/test_pipeline.sh` runs the full segment → generate → compile flow
+end-to-end on a synthetic trace and is wired into CI
+(`pr-build-check.yml::test-extraction-pipeline`), so a regression in
+any of the three Python scripts that breaks the generator output is
+caught at PR time.
+
 ```bash
 python3 tools/trace_to_driver.py tools/dumps/cap.log.segments.json \
                                  --sensor sc2315e \

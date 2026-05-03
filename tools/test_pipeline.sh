@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# End-to-end smoke test for the post-processing pipeline.
+#
+# Synthesises a minimal trace, runs:
+#   trace_segment.py -> trace_to_driver.py -> gcc -fsyntax-only
+# and verifies each step succeeds. Designed for CI: no hardware needed,
+# no external deps beyond python3 and gcc.
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+tmp=$(mktemp -d)
+trap "rm -rf $tmp" EXIT
+
+# Minimal synthetic trace: probe + init (reset + a few writes + stream-on)
+# + runtime (one register written enough times to trigger the runtime
+# heuristic at threshold >= 3).
+cat > "$tmp/sample.log" <<'TRACE'
+[100] child 101 created
+sensor_i2c_change_addr(0x60);
+sensor_write_register(0x100, 0x0);
+usleep(10000)
+sensor_write_register(0x3034, 0x81);
+sensor_write_register(0x3039, 0xa6);
+sensor_write_register(0x320e, 0x4);
+sensor_write_register(0x100, 0x1);
+sensor_write_register(0x3e02, 0x80);
+sensor_write_register(0x5781, 0x60);
+sensor_write_register(0x5781, 0x60);
+sensor_write_register(0x5781, 0x60);
+sensor_write_register(0x5781, 0x60);
+TRACE
+
+echo "== trace_segment.py =="
+python3 tools/trace_segment.py "$tmp/sample.log" --out "$tmp/segments.json"
+test -s "$tmp/segments.json" || { echo "segments.json empty"; exit 1; }
+python3 - "$tmp/segments.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+phases = d["phases"]
+assert phases.get("init"),    "init phase missing"
+assert phases.get("runtime"), "runtime phase missing"
+assert d["summary"]["init"]    >= 3, f"init too short: {d['summary']}"
+assert d["summary"]["runtime"] >= 3, f"runtime too short: {d['summary']}"
+print(f"  phases: {d['summary']}")
+PY
+
+echo "== trace_to_driver.py =="
+python3 tools/trace_to_driver.py "$tmp/segments.json" \
+    --sensor testsensor --out "$tmp/driver.c"
+test -s "$tmp/driver.c" || { echo "driver.c empty"; exit 1; }
+grep -q '^void testsensor_linear_init' "$tmp/driver.c" \
+    || { echo "linear_init function not emitted"; exit 1; }
+
+echo "== gcc -fsyntax-only =="
+gcc -Wall -Wextra -fsyntax-only "$tmp/driver.c"
+
+echo "== gcc -c (full compile) =="
+gcc -Wall -Wextra -c "$tmp/driver.c" -o "$tmp/driver.o"
+test -s "$tmp/driver.o" || { echo "object empty"; exit 1; }
+
+echo "== trace_diff.py self-diff (must be 100%) =="
+python3 tools/trace_diff.py "$tmp/driver.c" "$tmp/driver.c" \
+    --gen-scope testsensor_linear_init \
+    --ref-scope testsensor_linear_init | tee "$tmp/diff.out"
+grep -q '100.0%)' "$tmp/diff.out" \
+    || { echo "self-diff not 100%"; exit 1; }
+
+echo "OK: pipeline test passed"
