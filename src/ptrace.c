@@ -1200,18 +1200,28 @@ static void do_trace(pid_t tracee) {
         if (child_waited == -1)
             break;
 
+        // Signal to forward when we resume the tracee. Stays 0 for syscall
+        // stops and ptrace events; gets set to the actual signal number for
+        // genuine signal-delivery stops, so the streamer's signal-driven
+        // logic (HiSilicon SDK uses realtime signals heavily) still works
+        // under trace.
+        int sig_to_inject = 0;
+
         if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP) {
-            if (((status >> 16) & 0xffff) == PTRACE_EVENT_CLONE) {
+            int event = (status >> 16) & 0xffff;
+            // CLONE/FORK/VFORK all create a new tracee that needs the same
+            // bookkeeping: pull its pid from the kernel, look up the parent's
+            // process_t, copy its fd state, register the new tracee.
+            if (event == PTRACE_EVENT_CLONE || event == PTRACE_EVENT_FORK ||
+                event == PTRACE_EVENT_VFORK) {
                 pid_t new_child;
                 if (ptrace(PTRACE_GETEVENTMSG, child_waited, 0, &new_child) !=
                     -1) {
                     pid_t ppid = -1;
                     if (!ht_contains(&pids, &new_child)) {
                         ppid = get_process_parent_id(new_child);
-                        // TODO: review
                         if (ppid == tracer)
                             ppid = tracee;
-                        //
                         process_t *thread = &(process_t){.pid = new_child};
                         process_t *parent = ht_lookup(&pids, &ppid);
                         if (parent) {
@@ -1239,34 +1249,46 @@ static void do_trace(pid_t tracee) {
                 printf("\nchild %d killed by signal %d\n", child_waited,
                        WTERMSIG(status));
             process_t *proc = ht_lookup(&pids, &child_waited);
-            if (proc == NULL) {
-                fprintf(stderr, "Cannot lookup PID %d\n", child_waited);
-                break;
+            if (proc != NULL) {
+                free_fds(proc);
+                ht_erase(&pids, &child_waited);
             }
-            free_fds(proc);
-            ht_erase(&pids, &child_waited);
-
             if (ht_is_empty(&pids))
                 break;
+            continue; // don't try to restart a dead pid
         } else if (WIFSTOPPED(status)) {
             int stopCode = WSTOPSIG(status);
             if (stopCode == SIGTRAP) {
                 process_t *proc = ht_lookup(&pids, &child_waited);
-                if (proc == NULL) {
-                    printf("BAD lookup for %d\n", child_waited);
-                    break;
+                if (proc != NULL) {
+                    if (!proc->syscall_num) {
+                        enter_syscall(proc);
+                    } else {
+                        exit_syscall(proc);
+                        proc->syscall_num = 0;
+                    }
                 }
-
-                if (!proc->syscall_num) {
-                    enter_syscall(proc);
-                } else {
-                    exit_syscall(proc);
-                    proc->syscall_num = 0;
-                }
+                // If proc is NULL here it means a child was created with
+                // a fork-family event we didn't observe yet (TRACEFORK/
+                // TRACEVFORK race). Continue tracing rather than killing
+                // the whole loop - it will get added on its first observed
+                // event.
+            } else if (stopCode == SIGSTOP || stopCode == SIGTSTP ||
+                       stopCode == SIGTTIN || stopCode == SIGTTOU) {
+                // Group-stop / post-clone init-stop. The kernel SIGSTOPs a
+                // newly cloned tracee as part of TRACECLONE bookkeeping;
+                // forwarding it back would re-stop the child and we'd
+                // never see its syscalls (this exact bug surfaced as
+                // "empty trace" on hi3518ev200 + libsns_jxf22.so where
+                // sensor I/O happens in a clone'd thread). Suppress.
+            } else {
+                // Real signal delivery - forward to the tracee.
+                sig_to_inject = stopCode;
             }
         }
 
-        ptrace(PTRACE_SYSCALL, child_waited, 1, NULL);
+        ptrace(PTRACE_SYSCALL, child_waited, 0,
+               (void *)(intptr_t)sig_to_inject);
     }
 }
 
