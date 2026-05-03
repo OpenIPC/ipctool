@@ -469,6 +469,15 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         // aka fake Aptina AR0130
         res = 0x1035;
         break;
+    case 0x0031:
+        strcpy(ctx->sensor_id, "SC031GS");
+        return true;
+    case 0x0108:
+        strcpy(ctx->sensor_id, "SC035GS");
+        return true;
+    case 0x0132:
+        strcpy(ctx->sensor_id, "SC132GS");
+        return true;
     case 0x1045:
         break;
     case 0x1145:
@@ -505,6 +514,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2245:
         res = 0x1145;
         break;
+    case 0x17cb:
+        strcpy(ctx->sensor_id, "SC210IoT");
+        return true;
     case 0x2300:
         // XM530
         strcpy(ctx->sensor_id, "SC307P");
@@ -556,8 +568,14 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0xcb14:
         res = 0x2335;
         break;
+    case 0xcb34:
+        strcpy(ctx->sensor_id, "SC230AI");
+        return true;
     case 0xcb5c:
         strcpy(ctx->sensor_id, "SC2331");
+        return true;
+    case 0xcb6a:
+        strcpy(ctx->sensor_id, "SC231HAI");
         return true;
     case 0xcb17:
         if (strstr(getchipvendor(), VENDOR_INGENIC))
@@ -584,6 +602,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0xcc41:
         res = 0x3336;
         break;
+    case 0x9c41:
+        strcpy(ctx->sensor_id, "SC3336P");
+        return true;
     case 0xcd01:
         // XM
         strcpy(ctx->sensor_id, "SC4335P");
@@ -614,6 +635,12 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         // XM
         strcpy(ctx->sensor_id, "SC501AI");
         return true;
+    case 0xce50:
+        strcpy(ctx->sensor_id, "SC5336");
+        return true;
+    case 0x8e39:
+        strcpy(ctx->sensor_id, "SC530AI");
+        return true;
     case 0xda23:
         // XM 530
         res = 0x1345;
@@ -633,6 +660,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0xc143:
         strcpy(ctx->sensor_id, "SC830AI");
         return true;
+    case 0xc170:
+        strcpy(ctx->sensor_id, "SC831AI");
+        return true;
     case 0xbd1e:
         strcpy(ctx->sensor_id, "SC850SL");
         return true;
@@ -641,6 +671,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     case 0x9b3a:
         strcpy(ctx->sensor_id, "SC2336P");
+        return true;
+    case 0xeb2c:
+        strcpy(ctx->sensor_id, "SC2355");
         return true;
     case 0:
     case 0xffff:
