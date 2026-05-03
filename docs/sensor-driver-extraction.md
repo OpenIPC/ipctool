@@ -516,6 +516,46 @@ function carries the default. This is **expected**, not a bug; scope
 the diff to the `linear_init` function on both sides and the mismatches
 disappear.
 
+### Triangulating against multiple references
+
+When a sensor has more than one published source — e.g. an OpenIPC port
+**and** an older reverse-engineering effort — diffing against both lets
+you triangulate registers that appear in only one as either:
+
+- **In trace + only in ref-A**: ref-B is incomplete (the RE missed
+  this register, or the port pruned it).
+- **In trace + only in ref-B**: ref-A drifted from the binary
+  (vendor patched the closed driver, port didn't follow).
+- **In both refs but not in trace**: probably dead code in both refs,
+  or behind a build flag the trace didn't exercise.
+- **In trace and both refs**: high confidence, ship it.
+
+For SC2315E specifically, the four artifacts available — the trace
+from Majestic, the trace from Sofia, `widgetii/smart_sc2315e`
+(OpenIPC port from SC2231 SDK template), and `widgetii/sc_sc2315e`
+(older RE port from SC2235 SDK template) — agree byte-for-byte on
+init: 172 writes, 169 unique addresses, identical values, identical
+order, every pair-wise comparison at 100/100/100%.
+
+```bash
+# OpenIPC port
+python3 tools/trace_diff.py generated.c \
+    /tmp/smart_sc2315e/sc2315e_sensor_ctl.c \
+    --gen-scope sc2315e_linear_init \
+    --ref-scope sc2315e_linear_1080P30_init
+
+# Reverse-engineered port (note: int return, sensor_write_register_0)
+python3 tools/trace_diff.py generated.c \
+    /tmp/sc_sc2315e/sc2235_sensor_ctl.c \
+    --gen-scope sc2315e_linear_init \
+    --ref-scope sc2235_init
+```
+
+`trace_diff.py` accepts both `void <name>(...)` and `int <name>(...)`
+function definitions, and its register-write regex matches both
+`sensor_write_register(...)` and `sensor_write_register_0(...)`
+(the bus-numbered suffix used by the older RE port).
+
 Other expected sources of mismatch on a real capture:
 
 - **Registers in the reference source but not in the trace**: these are
