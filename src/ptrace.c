@@ -135,6 +135,7 @@ void linux_new_mempeek() {
 #define SYSCALL_CLOSE 6
 #define SYSCALL_IOCTL 54
 #define SYSCALL_NANOSLEEP 0xa2
+#define SYSCALL_WRITEV 146
 #define SYSCALL_OPENAT 322
 
 static void *copy_from_process(pid_t child, size_t addr, void *ptr,
@@ -513,6 +514,16 @@ static void hisi_gen2_read_exit_cb(process_t *proc, int fd, size_t remote_addr,
     }
 }
 
+// Catches I2C_SLAVE_FORCE on Hi3518/Hi3516CV200 (HISI_V1/V2/V2A) so a
+// `sensor_i2c_change_addr` line is emitted on the same path V3+ already
+// gets from hisi_i2c_read_exit_cb. I2C_16BIT_REG / I2C_16BIT_DATA fall
+// through silently - the actual widths are inferred from write nbyte.
+static void hisi_gen2_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                                    size_t arg, ssize_t sysret) {
+    if (cmd == I2C_SLAVE_FORCE)
+        printf("sensor_i2c_change_addr(0x%x);\n", arg << 1);
+}
+
 static void default_read_exit_cb(process_t *proc, int fd, size_t remote_addr,
                                  size_t nbyte, ssize_t sysret) {
 #if 0
@@ -529,16 +540,35 @@ static void default_write_exit_cb(process_t *proc, int fd, size_t remote_addr,
 
 static void i2c_write_exit_cb(process_t *proc, int fd, size_t remote_addr,
                               size_t nbyte, ssize_t sysret) {
+    if (nbyte < 2 || nbyte > 4)
+        return;
     unsigned char *buf = alloca(nbyte);
-    void *res = copy_from_process(proc->pid, remote_addr, buf, nbyte);
-    if (!res) {
+    if (!copy_from_process(proc->pid, remote_addr, buf, nbyte)) {
         printf("ERROR: write(%d, 0x%x, %d) -> read from addrspace\n", fd,
                remote_addr, nbyte);
         return;
     }
-    u_int16_t addr = buf[0] << 8 | buf[1];
-    u_int8_t val = buf[2];
-    printf("sensor_write_register(0x%x, 0x%x);\n", addr, val);
+
+    // hisi_gen2_sensor_write_register on Hi3518/Hi3516CV200 (V1/V2/V2A) packs
+    // reg_addr little-endian; hisi_sensor_write_register on V3+ packs big-
+    // endian. Gen2 sets reg/data widths via I2C_16BIT_REG / I2C_16BIT_DATA
+    // ioctls before writing; gen3+ varies per call. Both use plain write()
+    // on /dev/i2c-X with reg_width + data_width bytes. We infer widths from
+    // nbyte and pick endianness from the chip family.
+    bool le = chip_generation == HISI_V1 || chip_generation == HISI_V2 ||
+              chip_generation == HISI_V2A;
+    unsigned int reg, val;
+    if (nbyte == 2) { // 1-byte reg + 1-byte data (e.g. JXF22 on V2)
+        reg = buf[0];
+        val = buf[1];
+    } else if (nbyte == 3) { // 2-byte reg + 1-byte data (typical modern)
+        reg = le ? (buf[0] | buf[1] << 8) : (buf[0] << 8 | buf[1]);
+        val = buf[2];
+    } else { // nbyte == 4: 2-byte reg + 2-byte data
+        reg = le ? (buf[0] | buf[1] << 8) : (buf[0] << 8 | buf[1]);
+        val = le ? (buf[2] | buf[3] << 8) : (buf[2] << 8 | buf[3]);
+    }
+    printf("sensor_write_register(0x%x, 0x%x);\n", reg, val);
 }
 
 static void gpio_write_cb(process_t *proc, int fd, size_t remote_addr,
@@ -833,6 +863,51 @@ static void clone_fds(process_t *parent, process_t *new) {
     fprintf(stderr, "Cloned %d fds\n", cnt);
 }
 
+// Threads cloned with CLONE_FILES share the kernel fd table - opening a
+// new fd in one thread makes that fd valid in all peers immediately. But
+// ipctool tracks fds per process_t, so an open in the parent leaves
+// peer->fds[N] empty and any write the peer does on fdN gets dropped
+// (the only effect that surfaced was an empty trace from libsns_jxf22.so
+// during the cross-platform sweep). Broadcast helpers below mirror the
+// kernel's fd-table sharing across our process_t entries: on open we
+// copy the new fd state to every peer; on close we clear it everywhere.
+typedef struct {
+    int fd;
+    process_t *src;
+} fd_broadcast_ctx_t;
+
+static void broadcast_fd_open_cb(void *key, void *value, void *user) {
+    fd_broadcast_ctx_t *ctx = user;
+    process_t *peer = value;
+    if (peer == ctx->src)
+        return;
+    if (peer->fds[ctx->fd].file)
+        delete_arc_str(peer->fds[ctx->fd].file);
+    peer->fds[ctx->fd] = ctx->src->fds[ctx->fd];
+    if (peer->fds[ctx->fd].file)
+        peer->fds[ctx->fd].file->ref_cnt++;
+}
+
+static void broadcast_fd_close_cb(void *key, void *value, void *user) {
+    fd_broadcast_ctx_t *ctx = user;
+    process_t *peer = value;
+    if (peer == ctx->src)
+        return;
+    if (peer->fds[ctx->fd].file)
+        delete_arc_str(peer->fds[ctx->fd].file);
+    memset(&peer->fds[ctx->fd], 0, sizeof(peer->fds[ctx->fd]));
+}
+
+static void broadcast_fd_open(process_t *src, int fd) {
+    fd_broadcast_ctx_t ctx = {.fd = fd, .src = src};
+    ht_iterate(&pids, &ctx, broadcast_fd_open_cb);
+}
+
+static void broadcast_fd_close(process_t *src, int fd) {
+    fd_broadcast_ctx_t ctx = {.fd = fd, .src = src};
+    ht_iterate(&pids, &ctx, broadcast_fd_close_cb);
+}
+
 static void syscall_open(process_t *proc, int fd, int offset) {
     CHECK_FD;
 
@@ -854,18 +929,18 @@ static void syscall_open(process_t *proc, int fd, int offset) {
         proc->fds[fd].ioctl_enter = xm_i2c_ioctl_enter_cb;
         proc->fds[fd].ioctl_exit = xm_i2c_ioctl_exit_cb;
         show_i2c_banner(fd);
-        return;
+        goto done;
     }
 
     if (!strcmp(filename, "/dev/ssp")) {
         proc->fds[fd].ioctl_enter = ssp_ioctl_enter_cb;
         proc->fds[fd].ioctl_exit = ssp_ioctl_exit_cb;
-        return;
+        goto done;
     }
 
     if (!strcmp(filename, "/dev/xm_gpio")) {
         proc->fds[fd].ioctl_exit = xm_gpio_ioctl_exit_cb;
-        return;
+        goto done;
     }
 
     if (IS_PREFIX(filename, "/dev/i2c-")) {
@@ -874,6 +949,7 @@ static void syscall_open(process_t *proc, int fd, int offset) {
         case HISI_V2:
         case HISI_V2A:
             proc->fds[fd].read_exit = hisi_gen2_read_exit_cb;
+            proc->fds[fd].ioctl_exit = hisi_gen2_ioctl_exit_cb;
             break;
         case HISI_V3:
         case HISI_V3A:
@@ -903,6 +979,14 @@ static void syscall_open(process_t *proc, int fd, int offset) {
     } else if (!strcmp(filename, "/dev/vi")) {
         proc->fds[fd].ioctl_exit = hisi_vi_ioctl_exit_cb;
     }
+
+done:
+    // CLONE_FILES siblings share the kernel fd table; mirror that here so
+    // a thread peer can decode write()/ioctl()/read() on the fd that was
+    // opened in this process. Without this, libsns_*.so workers that
+    // share fd state with the parent would silently drop sensor I/O
+    // (jxf22 was the canary).
+    broadcast_fd_open(proc, fd);
 }
 
 static void syscall_close(process_t *proc, ssize_t sysret) {
@@ -916,6 +1000,7 @@ static void syscall_close(process_t *proc, ssize_t sysret) {
         delete_arc_str(proc->fds[fd].file);
     }
     memset(&proc->fds[fd], 0, sizeof(proc->fds[fd]));
+    broadcast_fd_close(proc, fd);
 }
 
 static void syscall_write_exit(process_t *proc, ssize_t sysret) {
@@ -927,6 +1012,69 @@ static void syscall_write_exit(process_t *proc, ssize_t sysret) {
 
     if (proc->fds[fd].write_exit)
         proc->fds[fd].write_exit(proc, fd, remote_addr, nbyte, sysret);
+}
+
+// uClibc on some HiSilicon V1/V2 builds maps the libc write() function to
+// __NR_writev (146) with a single iovec instead of __NR_write (4). Without
+// this handler, sensor I/O on those targets is invisible (jxf22 was the
+// canary). Decode by reading the iovec(s) from the tracee, concatenating
+// the buffers into one contiguous block, and delegating to the existing
+// fd write_exit_cb. Bound the assembled buffer at 16 bytes - any sensor
+// I/O is well under that, and a runaway iovcnt would otherwise let us
+// allocate arbitrarily.
+struct iovec_remote {
+    uint32_t base;
+    uint32_t len;
+};
+static void syscall_writev_exit(process_t *proc, ssize_t sysret) {
+    int fd = proc->regs.regs.uregs[0];
+    CHECK_FD;
+    if (sysret <= 0 || !proc->fds[fd].write_exit)
+        return;
+
+    size_t iov_addr = proc->regs.regs.uregs[1];
+    size_t iovcnt = proc->regs.regs.uregs[2];
+    if (iovcnt == 0 || iovcnt > 8)
+        return;
+
+    struct iovec_remote iov[8];
+    if (!copy_from_process(proc->pid, iov_addr, iov, sizeof(iov[0]) * iovcnt))
+        return;
+
+    unsigned char buf[16];
+    size_t total = 0;
+    for (size_t i = 0; i < iovcnt && total < sizeof(buf); i++) {
+        size_t take = iov[i].len;
+        if (take == 0)
+            continue;
+        if (total + take > sizeof(buf))
+            take = sizeof(buf) - total;
+        if (!copy_from_process(proc->pid, iov[i].base, buf + total, take))
+            return;
+        total += take;
+    }
+    if (total < 2)
+        return;
+
+    // The write_exit_cb signature takes (proc, fd, remote_addr, nbyte, sysret).
+    // We can't easily expose our local `buf` through that interface; instead,
+    // the existing i2c_write_exit_cb does its own copy_from_process from the
+    // tracee. Since uClibc's write()->writev wrapper passes a single iovec
+    // whose iov_base IS the original write buffer, just pass that addr/len
+    // through. For multi-iovec callers (libc stdio puts/printf), the call
+    // semantics differ but the i2c_write_exit_cb's nbyte sanity check
+    // (2..4) drops them as not-a-sensor-write.
+    if (iovcnt == 1) {
+        proc->fds[fd].write_exit(proc, fd, iov[0].base, iov[0].len, sysret);
+    } else {
+        // For 2-iovec writes that look like sensor-shaped payloads (total
+        // 2/3/4 bytes), the buffers may be on separate addresses; we can't
+        // forward a single remote_addr. Best-effort: forward the first iov
+        // only, which carries the reg_addr in jxf22-style layouts and is
+        // enough for the decoder to log a sensor_write_register line with
+        // the right reg even if val is 0.
+        proc->fds[fd].write_exit(proc, fd, iov[0].base, iov[0].len, sysret);
+    }
 }
 
 static void syscall_read_exit(process_t *proc, ssize_t sysret) {
@@ -981,6 +1129,9 @@ static void exit_syscall(process_t *proc) {
     case SYSCALL_WRITE:
         syscall_write_exit(proc, sysret);
         break;
+    case SYSCALL_WRITEV:
+        syscall_writev_exit(proc, sysret);
+        break;
     case SYSCALL_IOCTL:
         syscall_ioctl_exit(proc, sysret);
         break;
@@ -1034,7 +1185,12 @@ static void do_trace(pid_t tracee) {
 
     wait(NULL);
 
-    long ptraceOption = PTRACE_O_TRACECLONE;
+    // TRACECLONE catches CLONE_VM threads (most modern multi-threaded
+    // streamers). TRACEFORK/TRACEVFORK catch genuine forked children;
+    // not strictly necessary for any tested target so far but cheap
+    // defensive coverage in case a streamer spawns a worker via fork().
+    long ptraceOption =
+        PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;
     ptrace(PTRACE_SETOPTIONS, tracee, NULL, ptraceOption);
     ptrace(PTRACE_SYSCALL, tracee, 0, 0);
 

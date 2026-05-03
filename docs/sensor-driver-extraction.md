@@ -315,14 +315,53 @@ Adding a family is one entry in `INIT_PATTERNS` at the top of
 detected, your sensor probably uses a third pattern — write the
 addresses and values in here and the segmenter will pick it up.
 
-If no pattern matches at all, the segmenter falls back to emitting
-everything as `pre_sensor` and the generator skips the function-body
-emission. That happens, for example, with sensor drivers that bypass
-`/dev/i2c-X` entirely and write the SoC's I2C controller via mmap'd
-`/dev/mem` (some Hi3518EV200 / Hi3516CV200 DVP sensor `.so` files do
-this — `libsns_jxf22.so` is one). ipctool's ptrace currently can't
-decode that path; the trace will be visibly empty of
-`sensor_write_register` lines.
+If no pattern matches, the segmenter emits everything as `pre_sensor`
+and the generator skips the function-body emission. Most often that
+means your sensor uses a third stream-control register convention not
+yet in `INIT_PATTERNS`. Check the raw trace for the obvious bracket
+(a register written once near the start, then again near the end with
+the opposite value) and add an entry.
+
+### Decoder coverage across HiSilicon families
+
+Different HiSilicon families take different paths to the I2C bus.
+ipctool's ptrace decoder handles each:
+
+| Family | Sensor driver path | What ipctool decodes |
+|---|---|---|
+| HISI_V1 | `ioctl(/dev/hi_i2c, CMD_I2C_WRITE, &I2C_DATA_S)` | `xm_i2c_*` callbacks decode the structured payload |
+| HISI_V2 / V2A | `write(/dev/i2c-X, buf, reg+data)` little-endian, after `I2C_16BIT_REG/DATA` ioctls | `i2c_write_exit_cb` infers widths from `nbyte`, picks LE for V2/V2A; `hisi_gen2_ioctl_exit_cb` decodes `I2C_SLAVE_FORCE` |
+| HISI_V3 / V3A / V4 / V4A | `ioctl(/dev/i2c-X, I2C_RDWR, &i2c_msg)` big-endian | `hisi_i2c_read_*_cb` decodes the rdwr message |
+
+uClibc on some V1/V2 firmwares wraps the libc `write()` call as a
+single-iovec `writev()` rather than direct `__NR_write`. ipctool
+handles both — `syscall_writev_exit` decodes the iovec and forwards
+to the same fd callback as plain `write()`.
+
+When threads share an fd table (`CLONE_FILES`, the standard for
+multi-thread streamers), opening a fd in one thread makes it usable
+in all of them. ipctool maintains this invariant explicitly: on
+`open()` it broadcasts the new fd state to every tracked process; on
+`close()` it clears it everywhere. Without this, a thread peer's
+write on a fd opened by the parent silently drops to no callback.
+
+### When the trace is empty anyway
+
+A V1/V2 capture that shows `0` `sensor_write_register` lines despite
+the streamer reporting init success usually means one of:
+
+* **Sensor `.so` opens its own I2C handle in a path our trace
+  doesn't see.** Check `/proc/<streamer-pid>/fd` while it's running:
+  if the live `/dev/i2c-N` fd in the running process is different
+  from the one the trace caught (or arrived later than the kill),
+  capture for longer.
+* **Sensor `.so` uses a HiSilicon-specific `/dev/*` device that
+  isn't in our dispatch table** (e.g. `/dev/sys`, `/dev/sns_drv0`).
+  The signature is the trace ending shortly after `i2c-N` banner
+  with no writes; live `/proc/<pid>/fd` shows the unfamiliar device
+  open. Add it to `syscall_open`'s dispatch in `src/ptrace.c`.
+* **Sensor `.so` invokes a ptrace-incompatible code path** (some
+  vendor binaries detect ptrace and skip the writes; rare).
 
 ```bash
 python3 tools/trace_segment.py tools/dumps/cap.log
