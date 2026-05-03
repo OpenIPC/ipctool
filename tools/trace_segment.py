@@ -169,6 +169,43 @@ def find_runtime_start(events, init_end):
     return None
 
 
+def find_mode_switches(events, init_end):
+    """Find mode-switch boundaries after init_end.
+
+    A mode switch on a HiSilicon-style sensor cycles 0x100 (stream control):
+    write 0x100=0 to halt, reconfigure mode-specific registers, write
+    0x100=1 to resume. Each such cycle is a `mode_switch_N` phase.
+
+    Sensors that hot-swap modes via group-hold (e.g. 0x3812 toggling
+    0x00 -> writes -> 0x30) are not detected by this heuristic. Add a
+    parallel detector if the runtime hot-set on that sensor turns out
+    to mask a real mode change.
+
+    Returns a list of (start, end) tuples, both inclusive, in trace order.
+    """
+    if init_end is None:
+        return []
+    switches = []
+    i = init_end + 1
+    while i < len(events):
+        k, p = events[i]
+        if k == "write" and p["reg"] == 0x100 and p["val"] == 0:
+            start = i
+            end = None
+            for j in range(start + 1, len(events)):
+                k2, p2 = events[j]
+                if k2 == "write" and p2["reg"] == 0x100 and p2["val"] == 1:
+                    end = j
+                    break
+            if end is None:
+                break  # incomplete cycle at end of trace; ignore
+            switches.append((start, end))
+            i = end + 1
+        else:
+            i += 1
+    return switches
+
+
 def slice_events(events, start, end):
     return events[start : end + 1] if start is not None and end is not None else []
 
@@ -195,7 +232,11 @@ def main():
 
     # Phase boundaries.
     init_s, init_e = find_init_bounds(events)
-    runtime_s = find_runtime_start(events, init_e)
+    mode_switches = find_mode_switches(events, init_e)
+    # post_init and runtime live AFTER any mode switches, so anchor on the
+    # last 0x100=1 we saw (init_end if no switches, last switch end otherwise).
+    last_streamon = mode_switches[-1][1] if mode_switches else init_e
+    runtime_s = find_runtime_start(events, last_streamon)
 
     phases = {}
     if init_s is None:
@@ -203,11 +244,18 @@ def main():
     else:
         phases["pre_sensor"] = serialize(events[:init_s])
         phases["init"] = serialize(events[init_s : init_e + 1])
+        # Each mode switch becomes its own phase. The window between
+        # init_end and the first switch (and between switches) is steady
+        # state for the previous mode; merge it into the prior phase's
+        # tail so the mode_switch_N phase strictly contains the cycle.
+        for n, (s, e) in enumerate(mode_switches, 1):
+            phases[f"mode_switch_{n}"] = serialize(events[s : e + 1])
+        post_init_start = last_streamon + 1
         if runtime_s is not None:
-            phases["post_init"] = serialize(events[init_e + 1 : runtime_s])
+            phases["post_init"] = serialize(events[post_init_start:runtime_s])
             phases["runtime"] = serialize(events[runtime_s:])
         else:
-            phases["post_init"] = serialize(events[init_e + 1 :])
+            phases["post_init"] = serialize(events[post_init_start:])
 
     summary = {phase: len(events) for phase, events in phases.items()}
     out_path = args.out or args.input + ".segments.json"

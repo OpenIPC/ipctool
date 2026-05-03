@@ -393,6 +393,55 @@ python3 tools/trace_diff.py \
     --ref-scope sc2315e_linear_1080P30_init
 ```
 
+## Capturing mode switches
+
+A "mode switch" here is a runtime sensor reconfiguration — switching
+1080p25 to 720p, or linear to WDR — without a full streamer restart.
+
+The capture-side mechanism is streamer-specific. **OpenIPC Majestic
+does not support runtime mode switching**: configuration changes go
+through `/etc/sensors/*.ini` files and require a streamer restart, so
+each mode is a separate cold-init capture. **XiongMai Sofia does**
+support several runtime knobs via the DVR-IP TCP protocol on port
+34567; the [python-dvr](https://github.com/OpenIPC/python-dvr) client
+exposes them. Example, toggling Sofia's `BroadTrends.AutoGain` knob:
+
+```python
+from dvrip import DVRIPCam
+cam = DVRIPCam('10.216.128.106', user='admin', password='')
+cam.login()
+cam.set_info("Camera.ParamEx.[0]",
+             {"BroadTrends": {"AutoGain": 1, "Gain": 50}})
+```
+
+Whether a given knob actually causes a sensor-side reconfigure is
+**sensor-specific** — Sofia's BroadTrends path lands in software-side
+gain control on most sensors and only triggers a sensor-side WDR-mode
+change on sensors whose firmware has a separate WDR variant. As a
+data point, when toggling `AutoGain` 0→1→0 on the SC2315E camera at
+`10.216.128.106` while `ipctool trace` was watching, the trace shows
+**zero** additional `0x100` cycles after init — the sensor stays in
+linear mode regardless. Sofia's supported-sensor list confirms this:
+`SC2315_WDR` is a separate entry from `SC2315E`, so no WDR firmware
+exists for our test SoC. To exercise mode-switch capture end-to-end,
+use a sensor that Sofia knows in `_WDR` form (SC2315, IMX307, etc.).
+
+### Segmenter heuristic
+
+`trace_segment.py` detects mode switches by watching for a `0x100=0`
+write **after** init has completed (`init_end`), paired with the next
+`0x100=1` to form a `mode_switch_N` phase. Multiple cycles produce
+`mode_switch_1`, `mode_switch_2`, etc. The post-init AE prime and
+runtime steady state then anchor on the *last* `0x100=1`, so a trace
+with no mode switch is identical to before.
+
+`trace_to_driver.py` emits one `<sensor>_set_mode_N` function per
+mode-switch phase, in the same shape as `_linear_init`.
+
+If a sensor hot-swaps modes via a group-hold (e.g. `0x3812=0x00 ...
+0x3812=0x30` block) without toggling `0x100`, this heuristic misses
+the boundary — extend the segmenter when you hit such a sensor.
+
 ## Stage 4 — Live-reading the AE state with `ipctool sensor monitor`
 
 `ipctool sensor` is a built-in subcommand (separate from `trace`) that

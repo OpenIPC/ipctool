@@ -242,6 +242,21 @@ def main():
                 body=emit_phase(init, indent="  "),
             )
         )
+    # Each runtime mode switch (0x100=0 ... 0x100=1 cycle after init) gets
+    # its own function. Sensor that hot-swaps without toggling 0x100 (e.g.
+    # via group-hold) won't surface here; the segmenter doesn't detect that.
+    for key in sorted(phases):
+        if not key.startswith("mode_switch_"):
+            continue
+        n = key.split("_")[-1]
+        parts.append(
+            FN_TEMPLATE.format(
+                sensor=args.sensor,
+                suffix=f"set_mode_{n}",
+                body=emit_phase(phases[key], indent="  "),
+            )
+        )
+
     if post_init:
         # Kept separate from init: these are AE/exposure prime writes that
         # would otherwise overwrite init values when the diff merges them.
