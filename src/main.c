@@ -91,16 +91,19 @@ void print_usage() {
         "  i2cset <device address> <register> <new value>\n"
         "  spiset <register> <new value>\n"
         "                            write a value to I2C/SPI device\n"
-        "  i2cdump [--script] [-b, --bus] <device address> <from register> <to register>\n"
+        "  i2cdump [--script] [-b, --bus] <device address> <from register> <to "
+        "register>\n"
         "  spidump [--script] <from register> <to register>\n"
         "                            dump data from I2C/SPI device\n"
         "  i2cdetect [-b, --bus]     attempt to detect devices on I2C bus\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
         "  gpio (scan|mux)           GPIO utilities\n"
-        "  trace [--skip=usleep] <full/path/to/executable> [program "
-        "arguments]\n"
+        "  trace [--skip=usleep] [--output=PATH] <full/path/to/executable> "
+        "[program arguments]\n"
         "                            dump original firmware calls and data "
         "structures\n"
+        "                            (--output= keeps child's stdout/stderr "
+        "untouched)\n"
         "  -h, --help                this help\n");
 }
 
