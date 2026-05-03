@@ -1121,8 +1121,8 @@ static void do_child(const char *program, char *const argv[]) {
 }
 
 static int help() {
-    puts("Usage: ipctool trace [--skip=usleep] <full/path/to/executable> "
-         "[program arguments]");
+    puts("Usage: ipctool trace [--skip=usleep] [--output=PATH] "
+         "<full/path/to/executable> [program arguments]");
     return EXIT_FAILURE;
 }
 
@@ -1136,8 +1136,10 @@ int ptrace_cmd(int argc, char **argv) {
     if (argc < 2)
         return help();
 
+    const char *output_path = NULL;
     const struct option long_options[] = {
         {"skip", required_argument, NULL, 's'},
+        {"output", required_argument, NULL, 'o'},
         {NULL, 0, NULL, 0},
     };
     int res;
@@ -1148,6 +1150,9 @@ int ptrace_cmd(int argc, char **argv) {
         switch (res) {
         case 's':
             parse_skip(optarg);
+            break;
+        case 'o':
+            output_path = optarg;
             break;
         case '?':
             return help();
@@ -1160,10 +1165,23 @@ int ptrace_cmd(int argc, char **argv) {
     }
 
     pid_t pid = fork();
-    if (pid)
+    if (pid) {
+        // Parent only: redirect trace output to PATH so the traced child's
+        // stdout (e.g. streamer log lines) doesn't interleave with our
+        // pseudocode emissions on the shared fd 1. Child already has its
+        // own copy of fd 1 from fork() and is unaffected.
+        if (output_path) {
+            if (!freopen(output_path, "w", stdout)) {
+                fprintf(stderr, "freopen(%s) failed: %s\n", output_path,
+                        strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+            setvbuf(stdout, NULL, _IOLBF, 0);
+        }
         do_trace(pid);
-    else
+    } else {
         do_child(argv[optind], &argv[optind]);
+    }
     return EXIT_SUCCESS;
 }
 #endif

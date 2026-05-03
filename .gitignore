@@ -1,3 +1,5 @@
 .clangd
 build
+build-arm*
 compile_commands.json
+tools/dumps/

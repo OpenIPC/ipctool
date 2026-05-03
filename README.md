@@ -310,11 +310,17 @@ sensors:
     # ipctool --script reginfo
     ```
 
-* Advanced replacement of `strace`:
+* Advanced replacement of `strace`, with sensor-aware decoding of I2C/SPI
+  ioctls and HiSilicon MIPI/VI structs:
 
     ```console
-    # ipctool trace /usr/bin/Sofia
+    # ipctool trace --output=/tmp/sofia-trace.log /usr/bin/Sofia
     ```
+
+    For a complete recipe — building a portable binary, capturing on
+    OpenIPC/Majestic and XiongMai/Sofia firmwares, and converting the
+    trace into a buildable sensor driver scaffold — see
+    [docs/sensor-driver-extraction.md](docs/sensor-driver-extraction.md).
 
 ### To help the researcher
 
