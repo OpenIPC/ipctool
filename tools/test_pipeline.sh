@@ -52,6 +52,8 @@ python3 tools/trace_to_driver.py "$tmp/segments.json" \
 test -s "$tmp/driver.c" || { echo "driver.c empty"; exit 1; }
 grep -q '^void testsensor_linear_init' "$tmp/driver.c" \
     || { echo "linear_init function not emitted"; exit 1; }
+grep -q '^void testsensor_ae_step' "$tmp/driver.c" \
+    || { echo "ae_step skeleton not emitted"; exit 1; }
 
 echo "== gcc -fsyntax-only =="
 gcc -Wall -Wextra -fsyntax-only "$tmp/driver.c"
