@@ -111,4 +111,32 @@ python3 tools/trace_diff.py "$tmp/driver.c" "$tmp/ref_old_style.c" \
 grep -q 'address match:  4 / 4' "$tmp/cross.out" \
     || { echo "cross-style ref didn't match (relaxed regex broken?)"; exit 1; }
 
+# Sony-IMX init pattern: 0x3000=1 starts standby, 0x3000=0 releases.
+# Reverse polarity from SmartSens. Validates the per-family pattern table.
+echo "== sony_imx pattern detection =="
+cat > "$tmp/sony.log" <<'TRACE'
+[200] child 201 created
+sensor_i2c_change_addr(0x34);
+sensor_write_register(0x3000, 0x1);
+sensor_write_register(0x3005, 0x1);
+sensor_write_register(0x3007, 0x0);
+sensor_write_register(0x3009, 0x2);
+sensor_write_register(0x3000, 0x0);
+TRACE
+python3 tools/trace_segment.py "$tmp/sony.log" --out "$tmp/sony.json" 2>&1
+python3 - "$tmp/sony.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+assert d.get("init_pattern") == "sony_imx", \
+    f"expected sony_imx, got {d.get('init_pattern')!r}"
+assert d["summary"].get("init", 0) >= 3, \
+    f"sony init too short: {d['summary']}"
+print(f"  detected: {d['init_pattern']}, init={d['summary'].get('init')} events")
+PY
+python3 tools/trace_to_driver.py "$tmp/sony.json" \
+    --sensor sonyimx --out "$tmp/sony.c"
+gcc -Wall -Wextra -fsyntax-only "$tmp/sony.c"
+grep -q '^void sonyimx_linear_init' "$tmp/sony.c" \
+    || { echo "sony scaffold missing linear_init"; exit 1; }
+
 echo "OK: pipeline test passed"

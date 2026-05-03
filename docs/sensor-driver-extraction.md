@@ -286,7 +286,8 @@ Splits the raw log into phases:
 | Phase | What it contains |
 |---|---|
 | `pre_sensor` | Bus probe, MIPI/VI struct dumps, pre-init noise |
-| `init` | From `sensor_write_register(0x100, 0x0)` (reset) to `sensor_write_register(0x100, 0x1)` (stream-on) |
+| `init` | From the sensor's standby/reset write to its stream-on write (see "Sensor-family init patterns" below) |
+| `mode_switch_N` | Each subsequent stream-off → reconfigure → stream-on cycle |
 | `post_init` | A short burst of AE/exposure prime writes between stream-on and the steady-state loop |
 | `runtime` | Per-frame writes during steady-state (e.g. AE updating exposure registers) |
 
@@ -295,6 +296,33 @@ The init/post-init split exists for diff-friendliness: the AE loop in
 `0x320E/F`, …) that `init` had set to default values. Comparing
 `init`-only against the reference's init function avoids spurious
 mismatches.
+
+#### Sensor-family init patterns
+
+Different sensor vendors gate "stream on" through different registers.
+The segmenter has a small table of `(family, reg, init_val, stream_val)`
+patterns and tries each in order; the first that finds both endpoints
+in a trace wins. The matched family is recorded as `init_pattern` in
+the segments JSON.
+
+| Family | Register | Init value | Stream-on value | Sensors |
+|---|---|---|---|---|
+| `smartsens` | `0x0100` | `0x00` (reset) | `0x01` (stream-on) | SC2315E, SC2335, SC*, SmartSens generally |
+| `sony_imx`  | `0x3000` | `0x01` (standby) | `0x00` (release) | IMX291, IMX385, IMX307, Sony IMX line |
+
+Adding a family is one entry in `INIT_PATTERNS` at the top of
+`trace_segment.py`. If your trace is recognised but no init phase is
+detected, your sensor probably uses a third pattern — write the
+addresses and values in here and the segmenter will pick it up.
+
+If no pattern matches at all, the segmenter falls back to emitting
+everything as `pre_sensor` and the generator skips the function-body
+emission. That happens, for example, with sensor drivers that bypass
+`/dev/i2c-X` entirely and write the SoC's I2C controller via mmap'd
+`/dev/mem` (some Hi3518EV200 / Hi3516CV200 DVP sensor `.so` files do
+this — `libsns_jxf22.so` is one). ipctool's ptrace currently can't
+decode that path; the trace will be visibly empty of
+`sensor_write_register` lines.
 
 ```bash
 python3 tools/trace_segment.py tools/dumps/cap.log
