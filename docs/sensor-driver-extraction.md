@@ -505,32 +505,187 @@ cam.set_info("Camera.ParamEx.[0]",
 ```
 
 Whether a given knob actually causes a sensor-side reconfigure is
-**sensor-specific** — Sofia's BroadTrends path lands in software-side
-gain control on most sensors and only triggers a sensor-side WDR-mode
-change on sensors whose firmware has a separate WDR variant. As a
-data point, when toggling `AutoGain` 0→1→0 on the SC2315E camera at
-`10.216.128.106` while `ipctool trace` was watching, the trace shows
-**zero** additional `0x100` cycles after init — the sensor stays in
-linear mode regardless. Sofia's supported-sensor list confirms this:
-`SC2315_WDR` is a separate entry from `SC2315E`, so no WDR firmware
-exists for our test SoC. To exercise mode-switch capture end-to-end,
-use a sensor that Sofia knows in `_WDR` form (SC2315, IMX307, etc.).
+**sensor-specific** — Sofia's `BroadTrends.AutoGain` path lands in
+software-side gain control on most sensors and only triggers a
+sensor-side WDR-mode change on sensors whose firmware has a separate
+WDR-mode init function. As a data point, when toggling `AutoGain`
+0→1→0 on the SC2315E camera at `10.216.128.106` while
+`ipctool trace` was watching, the trace shows **zero** additional
+`0x100` cycles after init — the sensor stays in linear mode regardless.
+
+The runtime path lands in `Public_LinearWDR_Switch` →
+`LibXmCap_System_switchWdrMode` → `XmCap_IspVi_switchWdrMode`, which
+calls `HI_MPI_ISP_GetPubAttr`, possibly does a VI unbind/rebind dance,
+and persists the new mode to `/mnt/mtd/Config/wdrmode.dat` via
+`libdvr.so`'s `SetWdrMode` (a thin `fopen + fwrite` of a 4-byte LE
+int). It does **not** call `HI_MPI_ISP_SetWDRMode` and does not
+invoke any sensor-driver code — so toggling at runtime never
+reconfigures the sensor itself. The persisted `wdrmode.dat` is the
+*real* sensor-mode knob — read at the next Sofia startup. See
+[Boot-time WDR via wdrmode.dat](#boot-time-wdr-via-wdrmodedat) below.
+
+### Boot-time WDR via `wdrmode.dat`
+
+For Sofia builds that ship multi-mode sensor drivers (IMX290/IMX291
+have been verified, others likely too — see the binary-string check
+below), the actual sensor-mode dispatch happens inside the
+sensor-driver layer at startup:
+
+```
+Sofia main → load /mnt/mtd/Config/wdrmode.dat (4 bytes LE)
+           → cmos_set_image_mode(mode)
+           → puts("linear mode" | "2to1 line WDR ..." | "...")
+           → sensor_init() runs the register table for that mode
+```
+
+`cmos_set_image_mode` is a per-sensor function whose body is a switch
+on the requested mode that sets globals (`genSensorMode`,
+`gu8SensorImageMode`, `gu32FullLinesStd`, etc.) and prints a banner.
+Subsequent `sensor_init` consults those globals to pick which init
+register table to apply. For Sony IMX29x the typical case-set is:
+
+| `mode` | banner | sensor output |
+|---|---|---|
+| 0 | `linear mode` | 1080p ≤30 fps SDR |
+| 2 | `2to1 line WDR 1080p mode (60fps→30fps)` | 1080p HDR @ 30 fps via line-interleaved DOL |
+| 3 | `2to1 half frame WDR mode` | spatial half-frame HDR |
+| 4 | `2to1 full frame WDR mode` | sequential full-frame HDR |
+
+#### Procedure
+
+```bash
+# 1. Set up the bind-mount Sofia trace wrapper as in the Sofia recipe above.
+#    Backup the original mode setting:
+cp /mnt/mtd/Config/wdrmode.dat /utils/dumps/wdrmode.dat.orig
+
+# 2. Capture each mode of interest. Mode is a 4-byte LE int.
+#    Mode 0 = linear (baseline):
+printf '\x00\x00\x00\x00' > /mnt/mtd/Config/wdrmode.dat ; sync
+killall Sofia ; sleep 1
+WDR_TRACE=/utils/dumps/mode0.log /usr/bin/Sofia </dev/null \
+    > /utils/dumps/mode0-stdout.log 2>&1 &
+sleep 30 ; killall ipctool-upx Sofia
+
+#    Mode 2 = line-WDR:
+printf '\x02\x00\x00\x00' > /mnt/mtd/Config/wdrmode.dat ; sync
+killall Sofia ; sleep 1
+WDR_TRACE=/utils/dumps/mode2.log /usr/bin/Sofia </dev/null \
+    > /utils/dumps/mode2-stdout.log 2>&1 &
+sleep 30 ; killall ipctool-upx Sofia
+
+# 3. Restore the original mode and reboot.
+cp /utils/dumps/wdrmode.dat.orig /mnt/mtd/Config/wdrmode.dat ; sync
+reboot
+```
+
+The wrapper reads `WDR_TRACE` from its env so the same `/usr/bin/Sofia`
+bind-mount serves both runs:
+
+```sh
+#!/bin/sh
+exec /utils/ipctool-upx trace --output=$WDR_TRACE /utils/Sofia.real
+```
+
+#### Verifying the right mode fired
+
+Sofia's `cmos_set_image_mode` prints the banner string before the
+init-register table runs. Grep the captured stdout to confirm:
+
+```console
+$ grep -aE 'linear mode|WDR.*mode|LINE Init OK' mode0-stdout.log
+linear mode
+--------------------IMX290 1080P 30fps LINE Init OK!---
+
+$ grep -aE 'linear mode|WDR.*mode|LINE Init OK' mode2-stdout.log
+2to1 half frame WDR mode
+--IMX291 1080P 60fps LINE Init OK!-------------------
+```
+
+The post-cmos init banners (`30fps LINE Init OK`, `60fps LINE Init OK`)
+come from inside the per-mode init function and confirm the trace
+contains a different register sequence.
+
+#### Pipeline output for the WDR capture
+
+`trace_segment.py` recognises Sofia's two-pass init pattern (linear
+table baseline followed by mode-specific overrides) as `init` +
+`mode_switch_1` automatically — same `find_mode_switches` heuristic
+used for genuine runtime mode switches. The Sony IMX `0x3000=01 ... 00`
+pattern is the bracket. `trace_to_driver.py` emits the WDR-mode body
+as `<sensor>_set_mode_1` next to `<sensor>_linear_init`.
+
+#### Worked example: IMX291 line-WDR vs linear
+
+Captured on a Hi3516CV300 + IMX291 + Sofia camera (board model
+`50H20L`):
+
+| metric | mode 0 (linear) | mode 2 (line-WDR) |
+|---|---|---|
+| trace size | 20 KB | 51 KB |
+| total writes | 70 | 140 |
+| unique reg/val pairs | 61 | 69 |
+| init pattern detected | `sony_imx` | `sony_imx` |
+| segmenter phases | `init`(106) | `init`(106) + `mode_switch_1`(114) |
+| Sofia banner | `linear mode` | `2to1 half frame WDR mode` (case 3) and `60fps LINE Init OK` |
+
+WDR-only register writes (in mode 2, absent from mode 0):
+
+```
+0x3000 = 0x01     ← STANDBY assert before WDR reconfigure
+0x3007 = 0x00     ← WIN_MODE clear (linear had 0x60)
+0x3009 = 0x02     ← clock divider for 60 fps internal readout
+0x300A = 0xF0     ← BLKLEVEL black-level override
+0x3014 = 0x20     ← AGAIN initial value for WDR
+0x3018 = 0x6D     ← VMAX[7:0] DOL frame timing
+0x3046 = 0xE1     ← OPB_SIZE / DOL output config
+0x3020,0x3021     ← SHS1 short-exposure shutter (DOL-specific)
+```
+
+These match Sony's IMX29x datasheet for the linear ↔ DOL transition.
+
+#### Which sensors have WDR firmware in your Sofia binary?
+
+Search the binary's strings for `_init` markers and `LINE Init OK`
+banners — sensors with both have multi-mode drivers:
+
+```console
+$ strings /usr/bin/Sofia | grep -E '_init  |LINE Init OK' | sort -u
+~~~~~~~~~~AR0237_init  JJ ~~~~~~~~~          ← linear-only
+...
+--IMX291 1080P 60fps LINE Init OK!           ← has WDR
+--IMX290 1080P 30fps LINE Init OK!           ← has WDR
+~~~~~~~~~~IMX323_init  gjj ~~~~~~~~~         ← linear-only
+```
+
+A sensor with only a `~~~_init~~~` debug marker and no `LINE Init OK`
+banner won't reconfigure regardless of `wdrmode.dat` — it has only the
+linear path. The mode write still gets persisted to flash, but nothing
+on the sensor side responds to it.
 
 ### Segmenter heuristic
 
-`trace_segment.py` detects mode switches by watching for a `0x100=0`
-write **after** init has completed (`init_end`), paired with the next
-`0x100=1` to form a `mode_switch_N` phase. Multiple cycles produce
-`mode_switch_1`, `mode_switch_2`, etc. The post-init AE prime and
-runtime steady state then anchor on the *last* `0x100=1`, so a trace
+`trace_segment.py` detects mode switches by watching for the same
+stream-control register pair that the matched `init_pattern` used —
+e.g. `0x100=0 → 0x100=1` for SmartSens, `0x3000=01 → 0x3000=00` for
+Sony IMX, `0x12=0x40 → 0x12=0x00` for SOI/JX — appearing **after**
+init has completed (`init_end`). Each such cycle becomes a
+`mode_switch_N` phase, with N counting from 1. The post-init AE prime
+and runtime steady state anchor on the *last* such cycle, so a trace
 with no mode switch is identical to before.
+
+This is the same heuristic used for Sofia's two-pass boot-time WDR
+init (linear baseline → WDR overrides). It works because Sofia's
+`cmos_set_image_mode` per-mode init functions all wrap their register
+table between a standby-assert/release pair on the family's stream-
+control register.
 
 `trace_to_driver.py` emits one `<sensor>_set_mode_N` function per
 mode-switch phase, in the same shape as `_linear_init`.
 
 If a sensor hot-swaps modes via a group-hold (e.g. `0x3812=0x00 ...
-0x3812=0x30` block) without toggling `0x100`, this heuristic misses
-the boundary — extend the segmenter when you hit such a sensor.
+0x3812=0x30` block) without toggling its stream-control register,
+this heuristic misses the boundary — extend the segmenter when you
+hit such a sensor.
 
 ## Stage 4 — Live-reading the AE state with `ipctool sensor monitor`
 
