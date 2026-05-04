@@ -309,6 +309,7 @@ the segments JSON.
 |---|---|---|---|---|
 | `smartsens` | `0x0100` | `0x00` (reset) | `0x01` (stream-on) | SC2315E, SC2335, SC*, SmartSens generally |
 | `sony_imx`  | `0x3000` | `0x01` (standby) | `0x00` (release) | IMX291, IMX385, IMX307, Sony IMX line |
+| `soi_jx`    | `0x0012` | `0x40` (standby/reset) | `0x00` (stream-on) | JXF22, JXF23, JXH62, SOI / JX 8-bit register family |
 
 Adding a family is one entry in `INIT_PATTERNS` at the top of
 `trace_segment.py`. If your trace is recognised but no init phase is
@@ -350,6 +351,28 @@ write on a fd opened by the parent silently drops to no callback.
 A V1/V2 capture that shows `0` `sensor_write_register` lines despite
 the streamer reporting init success usually means one of:
 
+* **`ipctool` segfaulted mid-trace.** Symptom signature: trace ends
+  at exactly `i2c_read()` (or shortly after the `i2c-N` banner), no
+  further events, `wait $!` reports exit status 139 (SIGSEGV). The
+  streamer keeps running untraced, so its real register-write burst
+  goes unobserved and the captured log stays at ~10 lines. To confirm,
+  capture a core dump and inspect the backtrace:
+
+  ```bash
+  ssh root@<camera> "ulimit -c unlimited; cd /tmp; \
+    /tmp/ipctool trace --output=/tmp/dumps/trace.log /usr/bin/majestic"
+  scp root@<camera>:/tmp/core /tmp/core
+  arm-linux-gdb --batch -ex 'core /tmp/core' -ex 'bt full' \
+    build-arm-ci/ipctool
+  ```
+
+  If the backtrace lands inside a decoder callback, the bug is in
+  `src/ptrace.c`'s callback (most likely a NULL-deref on the
+  `copy_from_process` buffer or filename argument). The historical
+  example was `hisi_gen2_read_exit_cb` doing `memset(&buf, 0, …)`
+  instead of `memset(buf, 0, …)`, nullifying the pointer before
+  `copy_from_process` was called - this killed Hi3518EV200 +
+  libsns_jxf22.so traces immediately after the first sensor-ID read.
 * **Sensor `.so` opens its own I2C handle in a path our trace
   doesn't see.** Check `/proc/<streamer-pid>/fd` while it's running:
   if the live `/dev/i2c-N` fd in the running process is different
@@ -694,6 +717,21 @@ You're capturing a different SDK build than the reference was generated
 from. Some vendors reorder writes between releases without changing
 behaviour. The address+value match is what matters; sequence is a
 helpful proxy that breaks down across versions.
+
+### Narrowing "fd N is open live but not in trace" with `IPCTOOL_TRACE_DEBUG=1`
+
+Setting this in the tracee's environment makes `ipctool trace` log
+every `open()` and `write()` syscall to stderr (filename, fd, callback
+state). Off by default, zero overhead unless set. Useful when
+`/proc/<streamer-pid>/fd` shows `/dev/i2c-N` open but the trace
+contains no banner/writes for it - the dbg log will say whether
+`syscall_open` ever ran for that fd and what filename it resolved.
+
+```bash
+IPCTOOL_TRACE_DEBUG=1 ipctool trace --output=/tmp/trace.log \
+    /usr/bin/majestic 2>/tmp/trace.dbg
+grep -E "i2c|fd=26" /tmp/trace.dbg
+```
 
 ## File layout
 
