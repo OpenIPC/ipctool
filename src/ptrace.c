@@ -100,6 +100,7 @@ typedef struct process {
 } process_t;
 
 HashTable pids;
+static bool trace_debug = false;
 
 static void dump_regs(struct user const *regs, FILE *outfp) {
     fprintf(outfp, "r0   = 0x%08lx, r1 = 0x%08lx\n", regs->regs.uregs[0],
@@ -503,8 +504,16 @@ static void hisi_vi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
 
 static void hisi_gen2_read_exit_cb(process_t *proc, int fd, size_t remote_addr,
                                    size_t nbyte, ssize_t sysret) {
+    // The previous version did `memset(&buf, 0, sizeof(nbyte))` here,
+    // which zeroed the local POINTER (not the buffer it pointed at),
+    // turning buf into NULL. The next copy_from_process(..., buf, ..)
+    // then segfaulted the tracer. Hi3518EV200 + libsns_jxf22.so hit
+    // this immediately after the first I2C_SLAVE_FORCE: ipctool
+    // crashed silently and the trace stopped at 10 lines, which is
+    // exactly the empty-trace symptom of issue #154. The memset was
+    // redundant in any case - copy_from_process overwrites buf in
+    // full - so just drop it.
     unsigned char *buf = alloca(nbyte);
-    memset(&buf, 0, sizeof(nbyte));
     copy_from_process(proc->pid, remote_addr, buf, nbyte);
     // reg_width
     if (nbyte == 2) {
@@ -916,9 +925,19 @@ static void syscall_open(process_t *proc, int fd, int offset) {
 #endif
     size_t remote_addr = proc->regs.regs.uregs[0 + offset];
     char *filename = copy_from_process_str(proc, remote_addr);
+    if (trace_debug)
+        fprintf(stderr, "open_dbg pid=%d fd=%d offset=%d file='%s'\n",
+                proc->pid, fd, offset, filename ? filename : "(null)");
 #if 0
     printf("open('%s')\n", filename);
 #endif
+
+    // copy_from_process_str returns NULL when PEEKTEXT fails (tracee
+    // unmapped the page mid-syscall, or the open() argument is junk
+    // and the kernel is about to return EFAULT). Without this guard,
+    // the strcmp() / IS_PREFIX() calls below dereference NULL.
+    if (!filename)
+        goto done;
 
     proc->fds[fd].file = new_arc_str(filename);
     proc->fds[fd].ioctl_exit = null_ioctl_exit_cb; // dump_ioctl_exit_cb;
@@ -1009,6 +1028,15 @@ static void syscall_write_exit(process_t *proc, ssize_t sysret) {
 
     size_t remote_addr = proc->regs.regs.uregs[1];
     size_t nbyte = proc->regs.regs.uregs[2];
+
+    if (trace_debug)
+        fprintf(stderr,
+                "write_dbg pid=%d fd=%d nbyte=%zu sysret=%zd file='%s' "
+                "have_cb=%d\n",
+                proc->pid, fd, nbyte, sysret,
+                proc->fds[fd].file ? arc_cstr(proc->fds[fd].file) : "(none)",
+                proc->fds[fd].write_exit != NULL &&
+                    proc->fds[fd].write_exit != default_write_exit_cb);
 
     if (proc->fds[fd].write_exit)
         proc->fds[fd].write_exit(proc, fd, remote_addr, nbyte, sysret);
@@ -1173,10 +1201,12 @@ static void do_trace(pid_t tracee) {
 
     ht_setup(&pids, sizeof(pid_t), sizeof(process_t), 10);
     pid_t tracer = getpid();
+    trace_debug = getenv("IPCTOOL_TRACE_DEBUG") != NULL;
 
     printf("\n[%d] child %d created\n", tracer, tracee);
-    ptrace(PTRACE_ATTACH, tracee, NULL,
-           NULL); // child is the main thread
+    // The child has already PTRACE_TRACEME'd itself in do_child(); a
+    // PTRACE_ATTACH on top would only return EPERM. Just wait for its
+    // post-execv() SIGTRAP.
     process_t *mthread = &(process_t){.pid = tracee};
     mthread->fds[0].file = new_arc_str(strdup("stdin"));
     mthread->fds[1].file = new_arc_str(strdup("stdout"));
@@ -1189,8 +1219,21 @@ static void do_trace(pid_t tracee) {
     // streamers). TRACEFORK/TRACEVFORK catch genuine forked children;
     // not strictly necessary for any tested target so far but cheap
     // defensive coverage in case a streamer spawns a worker via fork().
-    long ptraceOption =
-        PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK;
+    // TRACESYSGOOD sets bit 7 of the syscall-stop signal so we can tell
+    // syscall stops apart from a real SIGTRAP delivered to the tracee.
+    // Without it, the wait loop conflates the two: a real SIGTRAP would
+    // be processed as a syscall enter, flipping the per-PID enter/exit
+    // parity, and subsequent write decodes would read garbage from
+    // proc->regs. Defensive against execve / dlopen / debug-trap paths.
+    // TRACEEXEC: without it, the kernel signals execve completion with
+    // a legacy plain SIGTRAP delivered to the tracee. Our wait loop
+    // would then fall to the "real signal delivery" else-branch and
+    // inject the SIGTRAP back, killing the tracee. With TRACEEXEC the
+    // kernel emits a PTRACE_EVENT_EXEC stop instead, which we recognise
+    // below and skip.
+    long ptraceOption = PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK |
+                        PTRACE_O_TRACEVFORK | PTRACE_O_TRACESYSGOOD |
+                        PTRACE_O_TRACEEXEC;
     ptrace(PTRACE_SETOPTIONS, tracee, NULL, ptraceOption);
     ptrace(PTRACE_SYSCALL, tracee, 0, 0);
 
@@ -1212,6 +1255,14 @@ static void do_trace(pid_t tracee) {
             // CLONE/FORK/VFORK all create a new tracee that needs the same
             // bookkeeping: pull its pid from the kernel, look up the parent's
             // process_t, copy its fd state, register the new tracee.
+            if (event == PTRACE_EVENT_EXEC) {
+                // execve completed in this tracee; just resume. The
+                // syscall-exit for execve is delivered separately as a
+                // TRACESYSGOOD-tagged stop, so no per-process_t fixup
+                // is required here.
+                ptrace(PTRACE_SYSCALL, child_waited, 0, 0);
+                continue;
+            }
             if (event == PTRACE_EVENT_CLONE || event == PTRACE_EVENT_FORK ||
                 event == PTRACE_EVENT_VFORK) {
                 pid_t new_child;
@@ -1231,7 +1282,15 @@ static void do_trace(pid_t tracee) {
                             fprintf(stderr, "Cannot find parent %d\n", ppid);
                         }
                     }
-                    ptrace(PTRACE_SYSCALL, new_child, 0, 0);
+                    // Do NOT PTRACE_SYSCALL new_child here. With
+                    // PTRACE_O_TRACECLONE the kernel auto-attaches the new
+                    // tracee and group-stops it with SIGSTOP; it expects
+                    // the tracer to first observe that stop via waitpid
+                    // before further ptrace ops are well-defined.
+                    // new_child's SIGSTOP arrives through the wait loop
+                    // on its own and the suppression branch below plus
+                    // the bottom-of-loop PTRACE_SYSCALL resume it
+                    // cleanly. (Matches strace's clone-handling pattern.)
 
                     printf("\nparent %d created child %d\n", ppid, new_child);
                 }
@@ -1258,7 +1317,11 @@ static void do_trace(pid_t tracee) {
             continue; // don't try to restart a dead pid
         } else if (WIFSTOPPED(status)) {
             int stopCode = WSTOPSIG(status);
-            if (stopCode == SIGTRAP) {
+            // PTRACE_O_TRACESYSGOOD makes syscall stops carry SIGTRAP|0x80,
+            // distinguishing them from real SIGTRAPs delivered to the tracee
+            // (which still come through as plain SIGTRAP and fall to the
+            // forward-signal else-branch below).
+            if (stopCode == (SIGTRAP | 0x80)) {
                 process_t *proc = ht_lookup(&pids, &child_waited);
                 if (proc != NULL) {
                     if (!proc->syscall_num) {

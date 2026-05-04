@@ -132,6 +132,9 @@ INIT_PATTERNS = [
     ("smartsens", 0x100, 0, 1),
     # Sony IMX (IMX291, IMX385, IMX307, ...) - standby register at 0x3000
     ("sony_imx", 0x3000, 1, 0),
+    # SOI / JX (JXF22, JXF23, JXH62, ...) - 8-bit reg+data, standby reg at
+    # 0x12 with bit 0x40 = standby/reset, 0x00 = stream on.
+    ("soi_jx", 0x12, 0x40, 0x00),
 ]
 
 
