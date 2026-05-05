@@ -689,8 +689,8 @@ hit such a sensor.
 
 ## Stage 4 — Live-reading the AE state with `ipctool sensor monitor`
 
-`ipctool sensor` is a built-in subcommand (separate from `trace`) that
-reads a fixed list of AE/exposure registers from the running sensor
+`ipctool sensor monitor` is a built-in subcommand (separate from `trace`)
+that reads a fixed list of AE/exposure registers from the running sensor
 over I2C/SPI in a loop, decoded as labelled fields. Same idea as
 `_ae_step` but read-side: instead of inferring AE registers from a
 captured trace, you can poll the actual sensor while it's running.
@@ -704,9 +704,40 @@ EXP   ff   AGAIN  330  DGAIN  80  VMAX  546  R3301  f  R3314  14  R3632  8  HOLD
                                                             same hot regs trace_to_driver picked up
 ```
 
+Currently supported sensors and what they expose:
+
+| Sensor   | Registers monitored                                                  |
+|----------|----------------------------------------------------------------------|
+| SC2315E  | `EXP`, `AGAIN`, `DGAIN`, `VMAX`, plus tuning regs `R3301/3314/3632/HOLD/R5781/R5785` |
+| IMX291   | `HCG_FRSEL` (0x3009), `GAIN` (0x3014), `VMAX` (0x3018), `HMAX` (0x301C), `SHS1` (0x3020), `OPORTSEL` (0x3046) |
+| IMX385   | `SHS1`, `GAIN`, `HCG`, `SHS2`, `VMAX`, `RHS1`, `YOUT`                 |
+
 The reg list per supported sensor lives in `src/snstool.c` (a small
 table, ~10 entries). For SC2315E that table mirrors what `_ae_step`
 emits — both are the registers the running AE loop writes per frame.
+
+The IMX291 set is geared at *DOL/WDR* debugging in particular — `HCG_FRSEL`
+catches the case where AE flips the High Conversion Gain bit and clobbers
+FRSEL on a packed-register write, dropping the sensor out of WDR for one
+frame. `SHS1` alone is the integration-time control on this part (Sony's
+multi-exposure WDR — there's no DOL on IMX291, despite the inherited IMX290
+silicon; SHS2 / RHS1 read as 0 and aren't in the table).
+
+Example output on a hi3516cv300 + IMX291 camera in WDR mode, sampled across
+a varying-light scene:
+
+```console
+$ ipctool sensor monitor
+HCG_FRSEL 2  GAIN 0   VMAX 550  HMAX 1130  SHS1 528  OPORTSEL e1
+HCG_FRSEL 2  GAIN 0   VMAX 550  HMAX 1130  SHS1 528  OPORTSEL e1
+HCG_FRSEL 2  GAIN 1c  VMAX 550  HMAX 1130  SHS1 4a3  OPORTSEL e1   # mid-light: SHS1 dropped, gain bumped
+HCG_FRSEL 12 GAIN 50  VMAX afd  HMAX 1130  SHS1 73   OPORTSEL e1   # low-light: HCG enabled, AE slowed VMAX, gain high
+```
+
+`HCG_FRSEL` going from `2` (HCG=0, FRSEL=2) to `12` (HCG=1, FRSEL=2) is
+exactly the pattern AE uses to enable high-conversion-gain mode. If you
+ever see the low nibble of `HCG_FRSEL` go to `1` instead of `2`, that's
+the bug fixed in `widgetii/sony_imx291@b51850c` — DOL FRSEL got clobbered.
 
 ### Pairing `sensor monitor` with `_ae_step`
 

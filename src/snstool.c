@@ -42,12 +42,29 @@ const Reg imx385_regs[] = {
     {"YOUT", 0x3357, 2}, {NULL},
 };
 
+/* Sony IMX291: 16-bit reg addr, 8-bit data, little-endian wide values.
+ * 0x3009 packs HCG (bit 4) and FRSEL (bits 3:0) -- watch this register
+ * to catch AE flipping HCG and clobbering DOL FRSEL on multi-byte writes.
+ * SHS1 is the only functional integration-time control on IMX291; SHS2
+ * (0x3024) and RHS1 (0x3030) are inherited from IMX290 silicon but
+ * non-functional, so they're not in this set. */
+const Reg imx291_regs[] = {
+    {"HCG_FRSEL", 0x3009, 1},
+    {"GAIN", 0x3014, 1},
+    {"VMAX", 0x3018, 3},
+    {"HMAX", 0x301C, 2},
+    {"SHS1", 0x3020, 3},
+    {"OPORTSEL", 0x3046, 1},
+    {NULL},
+};
+
 struct {
     const char *sns_name;
     const Reg *reg;
     uint8_t be;
 } sns_regs[] = {
     {"SC2315E", sc2315e_regs, .be = 1},
+    {"IMX291", imx291_regs, .be = 0},
     {"IMX385", imx385_regs, .be = 0},
 };
 
