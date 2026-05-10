@@ -889,6 +889,9 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     case 0x4308:
         sprintf(ctx->sensor_id, "OS04B10");
         return true;
+    case 0x5302:
+        sprintf(ctx->sensor_id, "SP2308"); // or OS02M10
+        return true;
     case 0x5303:
         sprintf(ctx->sensor_id, "OS03B10");
         return true;
