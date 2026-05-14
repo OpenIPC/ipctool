@@ -105,6 +105,8 @@ set(IPCTOOL_SRC
     src/i2cspi.c
     src/i2cspi.h
     src/main.c
+    src/membw.c
+    src/membw.h
     src/mtd.c
     src/mtd.h
     src/network.c

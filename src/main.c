@@ -23,6 +23,7 @@
 #include "hal/hisi/hal_hisi.h"
 #include "hwinfo.h"
 #include "i2cspi.h"
+#include "membw.h"
 #include "mtd.h"
 #include "network.h"
 #include "ptrace.h"
@@ -107,6 +108,10 @@ void print_usage() {
         "  cpubench [--json] [--loops N]\n"
         "                            triangulate CPU clock by running three\n"
         "                            tight inline-asm patterns (ARM only)\n"
+        "  membw [--size MB] [--iters N] [--ops set,...] [--json]\n"
+        "                            DDR bandwidth probe (memset / read scan "
+        "/\n"
+        "                            memcpy)\n"
         "  sensor monitor            poll AE/exposure registers from the\n"
         "                            running sensor every 2s. Supported:\n"
         "                            SC2315E, IMX291, IMX385.\n"
@@ -186,6 +191,8 @@ int main(int argc, char *argv[]) {
             return clocks_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "cpubench"))
             return cpubench_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "membw"))
+            return membw_cmd(argc - 1, argv + 1);
 #ifdef __arm__
         else if (!strcmp(argv[1], "trace"))
             return ptrace_cmd(argc - 1, argv + 1);
