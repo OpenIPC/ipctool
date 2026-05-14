@@ -15,11 +15,13 @@
 #include "tools.h"
 
 extern const struct clock_family clocks_family_v4;
+extern const struct clock_family clocks_family_v4a;
 
-/* TODO: add V1/V2/V3/V3A/V4A/OT/3536C/3536D tables — they share the
+/* TODO: add V1/V2/V3/V3A/OT/3536C/3536D tables — they share the
  * CRG-table approach but use different bases and bit layouts. */
 static const struct clock_family *const families[] = {
     &clocks_family_v4,
+    &clocks_family_v4a,
 };
 
 static const struct clock_family *family_for_chip(int chip_id) {
@@ -271,6 +273,12 @@ cJSON *clocks_build_json(bool brief) {
     cJSON *j_inner = cJSON_CreateObject();
 
     for (size_t i = 0; i < fam->n_plls; i++) {
+        /* Brief survey only shows the headline (CPU) PLL -- by convention
+         * the first entry in the family's pll table. Other PLLs (DDR /
+         * ETH / VIDEO) are detail and only emitted by the full `ipctool
+         * clocks` output. */
+        if (brief && i > 0)
+            continue;
         cJSON *p = decode_pll(&fam->plls[i], brief);
         cJSON_AddItemToObject(j_inner, fam->plls[i].name, p);
     }
