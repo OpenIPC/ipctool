@@ -143,7 +143,7 @@ static cJSON *build_yaml() {
     add_yaml_fragment(root, "ram", detect_ram());
     add_yaml_fragment(root, "firmware", detect_firmare());
     add_yaml_fragment(root, "sensors", detect_sensors());
-    add_yaml_fragment(root, "clocks", clocks_build_json());
+    add_yaml_fragment(root, "clocks", clocks_build_json(true));
 
     return root;
 }
