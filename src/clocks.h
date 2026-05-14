@@ -1,6 +1,7 @@
 #ifndef CLOCKS_H
 #define CLOCKS_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -32,6 +33,8 @@ struct pll_info {
     uint8_t refdiv_shift;
     uint8_t refdiv_width; /* 0 = refdiv fixed to 1 */
     uint32_t input_khz;   /* crystal frequency; 24000 on V4 */
+    uint32_t lock_reg;    /* 0 = no lock-bit check (e.g. PERI_CRG_PLL122) */
+    uint8_t lock_bit;     /* bit index in lock_reg */
 };
 
 struct mux_entry {
@@ -64,22 +67,6 @@ struct hpm_info {
     const char *aux_name;
 };
 
-/* Raw register dump entry. Two flavours:
- *   - single register: reg2 = 0
- *   - two-register PLL config pair (e.g. {APLL,DPLL,EPLL,VPLL}_CONFIG_0/1
- *     in the HiSilicon CRG): set both reg (CONFIG_0) and reg2 (CONFIG_1)
- *
- * The two-register form is for PLLs whose FBDIV/REFDIV bit layout we
- * haven't verified yet — we dump the raw words so users can correlate
- * with vendor docs without us shipping a wrong decode. */
-struct raw_reg_info {
-    const char *name;
-    const char *label;
-    uint32_t reg;
-    uint32_t reg2; /* 0 = single-register entry */
-    const char *note;
-};
-
 struct clock_family {
     int chip_id; /* matches chip_generation, e.g. HISI_V4 */
     const char *label;
@@ -89,14 +76,17 @@ struct clock_family {
     size_t n_muxes;
     const struct hpm_info *hpms;
     size_t n_hpms;
-    const struct raw_reg_info *raws;
-    size_t n_raws;
 };
 
 /* Builds the cJSON tree for the current chip. Returns NULL on unsupported
- * chip family. Used by both the `clocks`/`freq` subcommand and the default
- * `ipctool` YAML survey. */
-cJSON *clocks_build_json(void);
+ * chip family.
+ *
+ *   brief = true  : only the headline numbers (cpu_pll.freq_mhz,
+ *                   ddr.data_rate_mbps, hpm.bin) -- used by the default
+ *                   `ipctool` no-arg survey to keep its YAML compact.
+ *   brief = false : full detail (raw register values, all PLL fields,
+ *                   HPM aux register, etc.) -- used by `ipctool clocks`. */
+cJSON *clocks_build_json(bool brief);
 
 int clocks_cmd(int argc, char **argv);
 

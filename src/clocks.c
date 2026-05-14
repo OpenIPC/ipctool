@@ -41,7 +41,7 @@ static uint32_t extract_field(uint32_t raw, uint8_t shift, uint8_t width) {
     return (raw >> shift) & mask;
 }
 
-static cJSON *decode_pll(const struct pll_info *pll) {
+static cJSON *decode_pll(const struct pll_info *pll, bool brief) {
     cJSON *j_inner = cJSON_CreateObject();
 
     /* Read ctrl_reg1 (FRACDIV / POSTDIV1 / POSTDIV2) */
@@ -56,9 +56,6 @@ static cJSON *decode_pll(const struct pll_info *pll) {
 
     if (!ok1 || !ok2) {
         ADD_PARAM("error", "register read failed");
-        ADD_PARAM_FMT("ctrl_reg1", "0x%08x", pll->ctrl_reg1);
-        if (pll->ctrl_reg2)
-            ADD_PARAM_FMT("ctrl_reg2", "0x%08x", pll->ctrl_reg2);
         return j_inner;
     }
 
@@ -76,6 +73,23 @@ static cJSON *decode_pll(const struct pll_info *pll) {
     if (pll->refdiv_width == 0)
         refdiv = 1;
 
+    /* Compute frequency. f = input * (FBDIV + FRACDIV/2^frac_width) /
+     * (REFDIV * POSTDIV1 * POSTDIV2). */
+    double freq_mhz = 0.0;
+    uint32_t denom = refdiv * pdiv1 * pdiv2;
+    if (fbdiv != 0 && denom != 0) {
+        uint64_t numer_khz = (uint64_t)pll->input_khz * fbdiv;
+        if (pll->frac_width)
+            numer_khz +=
+                ((uint64_t)pll->input_khz * fracdiv) >> pll->frac_width;
+        freq_mhz = (double)numer_khz / (double)denom / 1000.0;
+    }
+
+    if (brief) {
+        ADD_PARAM_NUM("freq_mhz", freq_mhz);
+        return j_inner;
+    }
+
     ADD_PARAM_FMT("ctrl_reg1", "0x%08x", pll->ctrl_reg1);
     ADD_PARAM_FMT("ctrl_reg1_raw", "0x%08x", raw1);
     if (pll->ctrl_reg2 && pll->ctrl_reg2 != pll->ctrl_reg1) {
@@ -88,69 +102,27 @@ static cJSON *decode_pll(const struct pll_info *pll) {
     ADD_PARAM_NUM("postdiv2", pdiv2);
     if (pll->frac_width)
         ADD_PARAM_FMT("fracdiv", "0x%06x", fracdiv);
-
-    if (fbdiv == 0) {
-        ADD_PARAM("note", "PLL gated (FBDIV=0)");
-        ADD_PARAM_NUM("freq_mhz", 0);
-        return j_inner;
-    }
-    uint32_t denom = refdiv * pdiv1 * pdiv2;
-    if (denom == 0) {
-        ADD_PARAM("note", "invalid divisor (REFDIV*POSTDIV1*POSTDIV2 = 0)");
-        ADD_PARAM_NUM("freq_mhz", 0);
-        return j_inner;
-    }
-    /* f = input * (FBDIV + FRACDIV/2^24) / (REFDIV * POSTDIV1 * POSTDIV2)
-     * Compute in microhertz to keep the integer part exact. */
-    uint64_t numer_khz = (uint64_t)pll->input_khz * fbdiv;
-    if (pll->frac_width)
-        numer_khz += ((uint64_t)pll->input_khz * fracdiv) >> pll->frac_width;
-    double freq_mhz = (double)numer_khz / (double)denom / 1000.0;
     ADD_PARAM_NUM("freq_mhz", freq_mhz);
+
+    /* Optional lock-bit check (e.g. PERI_CRG_PLL122 bit 0 = APLL on V4). */
+    if (pll->lock_reg) {
+        uint32_t lock_raw;
+        if (mem_reg(pll->lock_reg, &lock_raw, OP_READ)) {
+            bool locked = (lock_raw >> pll->lock_bit) & 1u;
+            cJSON_AddItemToObject(j_inner, "locked", cJSON_CreateBool(locked));
+        }
+    }
     return j_inner;
 }
 
-static cJSON *decode_raw(const struct raw_reg_info *r) {
-    cJSON *j_inner = cJSON_CreateObject();
-    uint32_t raw1;
-    if (!mem_reg(r->reg, &raw1, OP_READ)) {
-        ADD_PARAM("error", "register read failed");
-        ADD_PARAM_FMT("reg", "0x%08x", r->reg);
-        return j_inner;
-    }
-    if (r->reg2) {
-        /* Two-register PLL config pair: report both raws. */
-        uint32_t raw2;
-        bool ok2 = mem_reg(r->reg2, &raw2, OP_READ);
-        ADD_PARAM_FMT("ctrl_reg1", "0x%08x", r->reg);
-        ADD_PARAM_FMT("ctrl_reg1_raw", "0x%08x", raw1);
-        ADD_PARAM_FMT("ctrl_reg2", "0x%08x", r->reg2);
-        if (ok2)
-            ADD_PARAM_FMT("ctrl_reg2_raw", "0x%08x", raw2);
-        else
-            ADD_PARAM("ctrl_reg2_raw", "<read failed>");
-    } else {
-        ADD_PARAM_FMT("reg", "0x%08x", r->reg);
-        ADD_PARAM_FMT("raw", "0x%08x", raw1);
-    }
-    if (r->note)
-        ADD_PARAM("note", r->note);
-    return j_inner;
-}
-
-static cJSON *decode_mux(const struct mux_info *mux) {
+static cJSON *decode_mux(const struct mux_info *mux, bool brief) {
     cJSON *j_inner = cJSON_CreateObject();
     uint32_t raw;
     if (!mem_reg(mux->reg, &raw, OP_READ)) {
         ADD_PARAM("error", "register read failed");
-        ADD_PARAM_FMT("reg", "0x%08x", mux->reg);
         return j_inner;
     }
     uint8_t sel = (raw >> mux->sel_shift) & mux->sel_mask;
-
-    ADD_PARAM_FMT("reg", "0x%08x", mux->reg);
-    ADD_PARAM_FMT("raw", "0x%08x", raw);
-    ADD_PARAM_NUM("cksel", sel);
 
     uint16_t mhz = 0;
     bool found = false;
@@ -161,12 +133,23 @@ static cJSON *decode_mux(const struct mux_info *mux) {
             break;
         }
     }
+
+    if (brief) {
+        if (mux->rate_mult)
+            ADD_PARAM_NUM("data_rate_mbps",
+                          (uint32_t)mhz * (found ? mux->rate_mult : 0));
+        else
+            ADD_PARAM_NUM("freq_mhz", mhz);
+        return j_inner;
+    }
+
+    ADD_PARAM_FMT("reg", "0x%08x", mux->reg);
+    ADD_PARAM_FMT("raw", "0x%08x", raw);
+    ADD_PARAM_NUM("cksel", sel);
     if (found) {
         ADD_PARAM_NUM("freq_mhz", mhz);
         if (mux->rate_mult)
             ADD_PARAM_NUM("data_rate_mbps", (uint32_t)mhz * mux->rate_mult);
-    } else {
-        ADD_PARAM("note", "cksel value not in known table");
     }
     return j_inner;
 }
@@ -188,18 +171,22 @@ static const char *hpm_bin(uint16_t v, const struct hpm_info *h) {
     return "high";
 }
 
-static cJSON *decode_hpm(const struct hpm_info *h) {
+static cJSON *decode_hpm(const struct hpm_info *h, bool brief) {
     cJSON *j_inner = cJSON_CreateObject();
     uint32_t raw;
     if (!mem_reg(h->reg, &raw, OP_READ) || raw == 0xFFFFFFFF) {
-        /* HPM register absent on this variant — caller should treat NULL-ish
-         * by simply omitting; we return an empty object and let the parent
-         * decide. */
+        /* HPM register absent on this variant — caller treats NULL by
+         * omitting the section entirely. */
         cJSON_Delete(j_inner);
         return NULL;
     }
     uint16_t value = (raw >> h->value_shift) & h->value_mask;
     const char *bin = hpm_bin(value, h);
+
+    if (brief) {
+        ADD_PARAM("bin", bin);
+        return j_inner;
+    }
 
     ADD_PARAM_FMT("reg", "0x%08x", h->reg);
     ADD_PARAM_FMT("raw", "0x%08x", raw);
@@ -210,12 +197,6 @@ static cJSON *decode_hpm(const struct hpm_info *h) {
     cJSON_AddItemToArray(window, cJSON_CreateNumber(h->bin_min));
     cJSON_AddItemToArray(window, cJSON_CreateNumber(h->bin_max));
     cJSON_AddItemToObject(j_inner, "binning_window", window);
-
-    if (!strcmp(bin, "low") || !strcmp(bin, "below_window")) {
-        ADD_PARAM("note",
-                  "low-bin silicon; mask ROM may have selected a reduced PLL "
-                  "multiplier at boot");
-    }
 
     if (h->aux_reg) {
         uint32_t aux;
@@ -278,36 +259,7 @@ static cJSON *build_cpu_running(void) {
     return j_inner;
 }
 
-static void add_plls(cJSON *parent, const struct clock_family *fam) {
-    for (size_t i = 0; i < fam->n_plls; i++) {
-        cJSON *p = decode_pll(&fam->plls[i]);
-        cJSON_AddItemToObject(parent, fam->plls[i].name, p);
-    }
-}
-
-static void add_muxes(cJSON *parent, const struct clock_family *fam) {
-    for (size_t i = 0; i < fam->n_muxes; i++) {
-        cJSON *m = decode_mux(&fam->muxes[i]);
-        cJSON_AddItemToObject(parent, fam->muxes[i].name, m);
-    }
-}
-
-static void add_hpms(cJSON *parent, const struct clock_family *fam) {
-    for (size_t i = 0; i < fam->n_hpms; i++) {
-        cJSON *h = decode_hpm(&fam->hpms[i]);
-        if (h)
-            cJSON_AddItemToObject(parent, fam->hpms[i].name, h);
-    }
-}
-
-static void add_raws(cJSON *parent, const struct clock_family *fam) {
-    for (size_t i = 0; i < fam->n_raws; i++) {
-        cJSON *r = decode_raw(&fam->raws[i]);
-        cJSON_AddItemToObject(parent, fam->raws[i].name, r);
-    }
-}
-
-cJSON *clocks_build_json(void) {
+cJSON *clocks_build_json(bool brief) {
     /* Make sure chip detection has run and chip_generation is populated. */
     if (!getchipname())
         return NULL;
@@ -317,17 +269,26 @@ cJSON *clocks_build_json(void) {
         return NULL;
 
     cJSON *j_inner = cJSON_CreateObject();
-    ADD_PARAM("family", fam->label);
 
-    add_plls(j_inner, fam);
-    add_muxes(j_inner, fam);
-    add_hpms(j_inner, fam);
-    add_raws(j_inner, fam);
+    for (size_t i = 0; i < fam->n_plls; i++) {
+        cJSON *p = decode_pll(&fam->plls[i], brief);
+        cJSON_AddItemToObject(j_inner, fam->plls[i].name, p);
+    }
+    for (size_t i = 0; i < fam->n_muxes; i++) {
+        cJSON *m = decode_mux(&fam->muxes[i], brief);
+        cJSON_AddItemToObject(j_inner, fam->muxes[i].name, m);
+    }
+    for (size_t i = 0; i < fam->n_hpms; i++) {
+        cJSON *h = decode_hpm(&fam->hpms[i], brief);
+        if (h)
+            cJSON_AddItemToObject(j_inner, fam->hpms[i].name, h);
+    }
 
-    cJSON *running = build_cpu_running();
-    if (running)
-        cJSON_AddItemToObject(j_inner, "cpu_running", running);
-
+    if (!brief) {
+        cJSON *running = build_cpu_running();
+        if (running)
+            cJSON_AddItemToObject(j_inner, "cpu_running", running);
+    }
     return j_inner;
 }
 
@@ -382,7 +343,7 @@ int clocks_cmd(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    cJSON *clocks = clocks_build_json();
+    cJSON *clocks = clocks_build_json(false);
     if (!clocks) {
         fprintf(stderr, "clocks: failed to build clock info\n");
         return EXIT_FAILURE;
