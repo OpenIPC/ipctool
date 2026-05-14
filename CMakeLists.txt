@@ -91,6 +91,7 @@ set(IPCTOOL_SRC
     src/firmware.c
     src/firmware.h
     src/hal/hisi/clocks_v4.c
+    src/hal/hisi/clocks_v4a.c
     src/hal/hisi/ethernet.c
     src/hal/hisi/ethernet.h
     src/hal/hisi/ispreg.c
