@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "backup.h"
+#include "bootrom.h"
 #include "chipid.h"
 #include "cjson/cJSON.h"
 #include "cjson/cYAML.h"
@@ -112,6 +113,9 @@ void print_usage() {
         "                            DDR bandwidth probe (memset / read scan "
         "/\n"
         "                            memcpy)\n"
+        "  bootrom [--dump] [--base ADDR] [--size N] [--json]\n"
+        "                            inspect or dump the SoC mask-ROM region\n"
+        "                            (V4 / V4A: default 0x04000000, 64 KB)\n"
         "  sensor monitor            poll AE/exposure registers from the\n"
         "                            running sensor every 2s. Supported:\n"
         "                            SC2315E, IMX291, IMX385.\n"
@@ -193,6 +197,8 @@ int main(int argc, char *argv[]) {
             return cpubench_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "membw"))
             return membw_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "bootrom"))
+            return bootrom_cmd(argc - 1, argv + 1);
 #ifdef __arm__
         else if (!strcmp(argv[1], "trace"))
             return ptrace_cmd(argc - 1, argv + 1);

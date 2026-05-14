@@ -79,6 +79,8 @@ set(COMMON_LIB_SRC
 set(IPCTOOL_SRC
     src/backup.c
     src/backup.h
+    src/bootrom.c
+    src/bootrom.h
     src/clocks.c
     src/clocks.h
     src/cpubench.c
