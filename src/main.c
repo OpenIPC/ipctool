@@ -16,6 +16,8 @@
 #include "chipid.h"
 #include "cjson/cJSON.h"
 #include "cjson/cYAML.h"
+#include "clocks.h"
+#include "cpubench.h"
 #include "ethernet.h"
 #include "firmware.h"
 #include "hal/hisi/hal_hisi.h"
@@ -98,6 +100,13 @@ void print_usage() {
         "  i2cdetect [-b, --bus]     attempt to detect devices on I2C bus\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
         "  gpio (scan|mux)           GPIO utilities\n"
+        "  clocks|freq [--json]      show CPU/peripheral PLL, DDR clock and\n"
+        "                            per-die HPM bin (Hisilicon V4 / Goke "
+        "V300\n"
+        "                            family only for now)\n"
+        "  cpubench [--json] [--loops N]\n"
+        "                            triangulate CPU clock by running three\n"
+        "                            tight inline-asm patterns (ARM only)\n"
         "  sensor monitor            poll AE/exposure registers from the\n"
         "                            running sensor every 2s. Supported:\n"
         "                            SC2315E, IMX291, IMX385.\n"
@@ -134,6 +143,7 @@ static cJSON *build_yaml() {
     add_yaml_fragment(root, "ram", detect_ram());
     add_yaml_fragment(root, "firmware", detect_firmare());
     add_yaml_fragment(root, "sensors", detect_sensors());
+    add_yaml_fragment(root, "clocks", clocks_build_json());
 
     return root;
 }
@@ -172,6 +182,10 @@ int main(int argc, char *argv[]) {
             return mtd_unlock_cmd();
         else if (!strcmp(argv[optind], "sensor"))
             return snstool_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "clocks") || !strcmp(argv[1], "freq"))
+            return clocks_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "cpubench"))
+            return cpubench_cmd(argc - 1, argv + 1);
 #ifdef __arm__
         else if (!strcmp(argv[1], "trace"))
             return ptrace_cmd(argc - 1, argv + 1);

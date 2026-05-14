@@ -79,6 +79,10 @@ set(COMMON_LIB_SRC
 set(IPCTOOL_SRC
     src/backup.c
     src/backup.h
+    src/clocks.c
+    src/clocks.h
+    src/cpubench.c
+    src/cpubench.h
     src/dns.c
     src/dns.h
     src/ethernet.c
@@ -86,6 +90,7 @@ set(IPCTOOL_SRC
     src/fake_symbols.c
     src/firmware.c
     src/firmware.h
+    src/hal/hisi/clocks_v4.c
     src/hal/hisi/ethernet.c
     src/hal/hisi/ethernet.h
     src/hal/hisi/ispreg.c
