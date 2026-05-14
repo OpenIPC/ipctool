@@ -112,14 +112,27 @@ static cJSON *decode_pll(const struct pll_info *pll) {
 
 static cJSON *decode_raw(const struct raw_reg_info *r) {
     cJSON *j_inner = cJSON_CreateObject();
-    uint32_t raw;
-    if (!mem_reg(r->reg, &raw, OP_READ)) {
+    uint32_t raw1;
+    if (!mem_reg(r->reg, &raw1, OP_READ)) {
         ADD_PARAM("error", "register read failed");
         ADD_PARAM_FMT("reg", "0x%08x", r->reg);
         return j_inner;
     }
-    ADD_PARAM_FMT("reg", "0x%08x", r->reg);
-    ADD_PARAM_FMT("raw", "0x%08x", raw);
+    if (r->reg2) {
+        /* Two-register PLL config pair: report both raws. */
+        uint32_t raw2;
+        bool ok2 = mem_reg(r->reg2, &raw2, OP_READ);
+        ADD_PARAM_FMT("ctrl_reg1", "0x%08x", r->reg);
+        ADD_PARAM_FMT("ctrl_reg1_raw", "0x%08x", raw1);
+        ADD_PARAM_FMT("ctrl_reg2", "0x%08x", r->reg2);
+        if (ok2)
+            ADD_PARAM_FMT("ctrl_reg2_raw", "0x%08x", raw2);
+        else
+            ADD_PARAM("ctrl_reg2_raw", "<read failed>");
+    } else {
+        ADD_PARAM_FMT("reg", "0x%08x", r->reg);
+        ADD_PARAM_FMT("raw", "0x%08x", raw1);
+    }
     if (r->note)
         ADD_PARAM("note", r->note);
     return j_inner;

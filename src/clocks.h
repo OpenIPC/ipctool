@@ -64,14 +64,19 @@ struct hpm_info {
     const char *aux_name;
 };
 
-/* Raw register dump entry. Used for mask-ROM-written diagnostic slots that
- * look PLL-shaped but don't drive any clock (e.g. V4 HPM-shadow registers at
- * 0x12010014 / 0x1201000c — values vary by per-die silicon binning but
- * empirically have zero effect on CPU/peripheral clock). */
+/* Raw register dump entry. Two flavours:
+ *   - single register: reg2 = 0
+ *   - two-register PLL config pair (e.g. {APLL,DPLL,EPLL,VPLL}_CONFIG_0/1
+ *     in the HiSilicon CRG): set both reg (CONFIG_0) and reg2 (CONFIG_1)
+ *
+ * The two-register form is for PLLs whose FBDIV/REFDIV bit layout we
+ * haven't verified yet — we dump the raw words so users can correlate
+ * with vendor docs without us shipping a wrong decode. */
 struct raw_reg_info {
     const char *name;
     const char *label;
     uint32_t reg;
+    uint32_t reg2; /* 0 = single-register entry */
     const char *note;
 };
 
