@@ -158,12 +158,19 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    // HINT: 0x3057 also can be used for IMX335 (chip_id == 0x07)
-    // OR 0x3415 == 0x20 && 0x3418 == 0x27
+    // 0x3057 is Y_OUT_SIZE MSB (host-writable), not a chip ID — Sony
+    // sensors have no dedicated chip ID register. IMX335 can read 0x06
+    // here after a WDR-cropping cycle (#157). Disambiguate via OB
+    // cropping defaults that survive majestic init:
+    //   IMX335: 0x3072=0x28, 0x3074=0xB0
+    //   IMX347: 0x3072=0x14, 0x3074=0x3C
     int chip_id = READ(0x57);
     if (chip_id == 0x06) {
-        sprintf(ctx->sensor_id, "IMX347");
-        return true;
+        if (!(READ(0x72) == 0x28 && READ(0x74) == 0xB0)) {
+            sprintf(ctx->sensor_id, "IMX347");
+            return true;
+        }
+        // IMX335 with reprogrammed Y_OUT_SIZE — fall through to 0x316A.
     }
 
     if (READ(0x41C) == 0x47) {
