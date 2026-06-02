@@ -35,7 +35,10 @@ jobs:
             # No OpenIPC aarch64 musl toolchain published yet, so use
             # musl.cc's well-known precompiled aarch64-linux-musl-cross.
             # Switch to an OpenIPC-hosted tarball once one is available.
+            # The more.musl.cc mirror serves the same tarball from a
+            # different CDN edge in case musl.cc truncates the download.
             toolchain_url: https://musl.cc/aarch64-linux-musl-cross.tgz
+            toolchain_url_fallback: https://more.musl.cc/x86_64-linux-musl/aarch64-linux-musl-cross.tgz
             toolchain_dir: aarch64-linux-musl-cross
             cc: aarch64-linux-musl-gcc
             asset_suffix: "-arm64"
@@ -70,13 +73,32 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE"     >> $GITHUB_ENV
 
+      - name: Fetch toolchain
+        run: |
+          # Download to file (with retries) before extracting — piping
+          # wget -> tar makes transient stream truncations look like
+          # corrupt archives; the wget retry only helps with discrete
+          # files.
+          for url in ${{ matrix.toolchain_url }} ${{ matrix.toolchain_url_fallback }}; do
+            [ -z "$url" ] && continue
+            echo "::group::Downloading $url"
+            if wget --tries=3 --timeout=60 -O /tmp/toolchain.tgz "$url"; then
+              echo "::endgroup::"
+              break
+            fi
+            echo "::endgroup::"
+            rm -f /tmp/toolchain.tgz
+          done
+          test -s /tmp/toolchain.tgz
+          tar xfz /tmp/toolchain.tgz -C /opt
+          rm /tmp/toolchain.tgz
+
       - name: Build sources
         id: build
         run: |
           wget -q https://github.com/upx/upx/releases/download/v$UPX_VERSION/upx-$UPX_VERSION-amd64_linux.tar.xz
           tar -xf upx-$UPX_VERSION-amd64_linux.tar.xz --strip-components 1
 
-          wget -qO- ${{ matrix.toolchain_url }} | tar xfz - -C /opt
           export PATH=/opt/${{ matrix.toolchain_dir }}/bin:$PATH
           sudo apt-get install -y cmake
 
