@@ -76,6 +76,10 @@ struct clock_family {
     size_t n_muxes;
     const struct hpm_info *hpms;
     size_t n_hpms;
+    /* Optional family-specific extras (e.g. composite DDR rate that
+     * depends on a CRG mux + a PHY register). Called after the standard
+     * pll/mux/hpm sections; cJSON children appended into the same root. */
+    void (*extra)(cJSON *root, bool brief);
 };
 
 /* Builds the cJSON tree for the current chip. Returns NULL on unsupported
