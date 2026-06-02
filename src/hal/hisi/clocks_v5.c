@@ -238,6 +238,54 @@ static void v5_extra(cJSON *root, bool brief) {
         cJSON_AddItemToObject(root, "ssmod", ss);
     }
 
+    /* HPM annotations layered onto the standard hpm decoder output:
+     *   source       -- where HPM_STORAGE_REG bits[9:0] came from.
+     *                   bit[30] (u_hpm_storage_reg.use_board_hpm) tells us
+     *                   whether the value reflects an in-die measurement
+     *                   averaged by boot software ("chip") or a board
+     *                   fixture's calibration override ("board"). The
+     *                   "chip" value is the real silicon process bin;
+     *                   the "board" value is whatever the manufacturing
+     *                   line decided to ship.
+     *   svb_version  -- SVB_VER_REG bits[5:2] (u_svb_version_reg.svb_type),
+     *                   per svb.h's enum product_type. The binning
+     *                   threshold for "this die is fast enough" depends
+     *                   on the SVB version (CORE_HPM_BOUND_10 / _20 /
+     *                   _10_ESMT in svb.h). When this is "none" the
+     *                   firmware isn't running SVB at all and the bin
+     *                   classification is informational only. */
+    cJSON *hpm = cJSON_GetObjectItemCaseSensitive(root, "hpm");
+    if (hpm) {
+        uint32_t hpm_storage = 0;
+        uint32_t svb_ver = 0;
+        bool use_board_hpm = false;
+        if (mem_reg(V5_SYSCTRL_BASE + 0x340, &hpm_storage, OP_READ))
+            use_board_hpm = (hpm_storage >> 30) & 0x1;
+        const char *svb_name = "none";
+        if (mem_reg(V5_SYSCTRL_BASE + 0x168, &svb_ver, OP_READ)) {
+            switch ((svb_ver >> 2) & 0xF) {
+            case 1:
+                svb_name = "10";
+                break;
+            case 2:
+                svb_name = "20";
+                break;
+            case 3:
+                svb_name = "00";
+                break;
+            case 4:
+                svb_name = "608";
+                break;
+            default:
+                svb_name = "none";
+                break;
+            }
+        }
+        cJSON *j_inner = hpm;
+        ADD_PARAM("source", use_board_hpm ? "board" : "chip");
+        ADD_PARAM("svb_version", svb_name);
+    }
+
     /* Per-site HPM live readings -- only in full output. The canonical
      * core_hpm_value at HPM_STORAGE_REG is already surfaced by the
      * generic hpm decoder via v5_hpms[]. */
