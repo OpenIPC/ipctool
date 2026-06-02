@@ -5,38 +5,32 @@ on:
     branches: [master]
 
 jobs:
-  build-arm:
-    name: Build ARM (musl static)
+  build:
+    name: Build ${{ matrix.target }} (musl static)
     runs-on: ubuntu-latest
-    env:
-      ARCHIVE: toolchain.hisilicon-hi3516cv100
-      PLATFORM: arm-openipc-linux-musleabi_sdk-buildroot
-      TOOLCHAIN: arm-openipc-linux-musleabi
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: arm32
+            toolchain_url: https://github.com/OpenIPC/firmware/releases/download/toolchain/toolchain.hisilicon-hi3516cv100.tgz
+            toolchain_dir: arm-openipc-linux-musleabi_sdk-buildroot
+            cc: arm-openipc-linux-musleabi-gcc
+          - target: mips32
+            toolchain_url: https://github.com/OpenIPC/firmware/releases/download/toolchain/toolchain.ingenic-t31.tgz
+            toolchain_dir: mipsel-openipc-linux-musl_sdk-buildroot
+            cc: mipsel-openipc-linux-musl-gcc
+          - target: arm64
+            toolchain_url: https://musl.cc/aarch64-linux-musl-cross.tgz
+            toolchain_dir: aarch64-linux-musl-cross
+            cc: aarch64-linux-musl-gcc
     steps:
       - uses: actions/checkout@v4
       - name: Download toolchain and build
         run: |
-          wget -qO- https://github.com/OpenIPC/firmware/releases/download/toolchain/$ARCHIVE.tgz | \
-            tar xfz - -C /opt
-          export PATH=/opt/$PLATFORM/bin:$PATH
-          cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
-          cmake --build build
-
-  build-mips:
-    name: Build MIPS (musl static)
-    runs-on: ubuntu-latest
-    env:
-      ARCHIVE: toolchain.ingenic-t31
-      PLATFORM: mipsel-openipc-linux-musl_sdk-buildroot
-      TOOLCHAIN: mipsel-openipc-linux-musl
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download toolchain and build
-        run: |
-          wget -qO- https://github.com/OpenIPC/firmware/releases/download/toolchain/$ARCHIVE.tgz | \
-            tar xfz - -C /opt
-          export PATH=/opt/$PLATFORM/bin:$PATH
-          cmake -H. -Bbuild -DCMAKE_C_COMPILER=${TOOLCHAIN}-gcc -DCMAKE_BUILD_TYPE=Release
+          wget -qO- ${{ matrix.toolchain_url }} | tar xfz - -C /opt
+          export PATH=/opt/${{ matrix.toolchain_dir }}/bin:$PATH
+          cmake -H. -Bbuild -DCMAKE_C_COMPILER=${{ matrix.cc }} -DCMAKE_BUILD_TYPE=Release
           cmake --build build
 
   test-extraction-pipeline:
