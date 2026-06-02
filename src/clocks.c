@@ -16,12 +16,14 @@
 
 extern const struct clock_family clocks_family_v4;
 extern const struct clock_family clocks_family_v4a;
+extern const struct clock_family clocks_family_v5;
 
-/* TODO: add V1/V2/V3/V3A/OT/3536C/3536D tables — they share the
+/* TODO: add V1/V2/V3/V3A/3536C/3536D tables — they share the
  * CRG-table approach but use different bases and bit layouts. */
 static const struct clock_family *const families[] = {
     &clocks_family_v4,
     &clocks_family_v4a,
+    &clocks_family_v5,
 };
 
 static const struct clock_family *family_for_chip(int chip_id) {
@@ -291,6 +293,9 @@ cJSON *clocks_build_json(bool brief) {
         if (h)
             cJSON_AddItemToObject(j_inner, fam->hpms[i].name, h);
     }
+
+    if (fam->extra)
+        fam->extra(j_inner, brief);
 
     if (!brief) {
         cJSON *running = build_cpu_running();

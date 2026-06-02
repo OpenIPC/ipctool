@@ -1002,7 +1002,7 @@ static int do_upgrade(const char *filename, bool force) {
         goff = strtol(offset->valuestring, 0, 16);
         printf("Using offset: %#X\n", goff);
     }
-    uint32_t payload;
+    size_t payload;
 
     const cJSON *parts = cJSON_GetObjectItemCaseSensitive(json, "partitions");
     ASSERT_JSON(parts);

@@ -108,16 +108,16 @@ static bool detect_and_set(const char *manufacturer,
 static bool hw_detect_system() {
     long uart_base = get_uart0_address();
     switch (uart_base) {
-#ifdef __arm__
-    // xm510
-    case 0x10030000:
-        return detect_and_set("Xiongmai", xm_detect_cpu, setup_hal_xm, 0);
-    // hi3516cv610
+    // hi3516cv610 (ARMv7) / hi3519dv500 (aarch64) — HiSilicon V5 family
     case 0x11040000: {
         int ret = detect_and_set(VENDOR_HISI, hisi_detect_cpu, setup_hal_hisi,
                                  0x11020000);
         return ret;
     }
+#ifdef __arm__
+    // xm510
+    case 0x10030000:
+        return detect_and_set("Xiongmai", xm_detect_cpu, setup_hal_xm, 0);
     // hi3516cv300
     case 0x12100000:
     // hi3516ev200

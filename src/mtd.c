@@ -227,6 +227,46 @@ char *read_ubi_volume(int ubi_num, int vol_id, size_t data_bytes,
     return buf;
 }
 
+bool sha1_ubi_volume(int ubi_num, int vol_id, size_t data_bytes,
+                     unsigned char digest[20], size_t *out_len) {
+    char devpath[64];
+    snprintf(devpath, sizeof(devpath), "/dev/ubi%d_%d", ubi_num, vol_id);
+
+    int fd = open(devpath, O_RDONLY);
+    if (fd == -1)
+        return false;
+
+    enum { CHUNK = 64 * 1024 };
+    unsigned char *buf = malloc(CHUNK);
+    if (!buf) {
+        close(fd);
+        return false;
+    }
+
+    SHA1_CTX ctx;
+    SHA1Init(&ctx);
+
+    size_t total = 0;
+    while (total < data_bytes) {
+        size_t want = data_bytes - total;
+        if (want > CHUNK)
+            want = CHUNK;
+        ssize_t n = read(fd, buf, want);
+        if (n <= 0)
+            break;
+        SHA1Update(&ctx, buf, (uint32_t)n);
+        total += (size_t)n;
+    }
+    SHA1Final(digest, &ctx);
+
+    free(buf);
+    close(fd);
+
+    if (out_len)
+        *out_len = total;
+    return total > 0;
+}
+
 static bool uenv_detected;
 
 static bool examine_part(int part_num, size_t size, size_t erasesize,
@@ -345,15 +385,13 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
                     ADD_PARAM_FMT("data_bytes", "0x%llx", vols[v].data_bytes);
 
                     size_t out_len = 0;
-                    char *vdata = read_ubi_volume(ubi_num, vols[v].vol_id,
-                                                  vols[v].data_bytes, &out_len);
-                    if (vdata && out_len > 0) {
-                        char digest[21] = {0};
-                        SHA1(digest, vdata, out_len);
-                        uint32_t sha1v = ntohl(*(uint32_t *)&digest);
+                    unsigned char digest[20] = {0};
+                    if (sha1_ubi_volume(ubi_num, vols[v].vol_id,
+                                        vols[v].data_bytes, digest, &out_len) &&
+                        out_len > 0) {
+                        uint32_t sha1v = ntohl(*(uint32_t *)digest);
                         ADD_PARAM_FMT("sha1", "%.8x", sha1v);
                     }
-                    free(vdata);
                 }
             }
             cJSON_AddItemToObject(j_inner, "ubi_volumes", j_vols);
