@@ -286,16 +286,16 @@ bool get_pid_cmdline(pid_t godpid, char *cmdname) {
 
     snprintf(sname, sizeof(sname), "/proc/%d/cmdline", godpid);
     FILE *fp = fopen(sname, "r");
-    if (fp && fgets(sname, sizeof(sname), fp)) {
+    if (!fp)
+        return false;
+    bool ok = false;
+    if (fgets(sname, sizeof(sname), fp)) {
         if (cmdname)
             strcpy(cmdname, sname);
-
-        fclose(fp);
-        return true;
+        ok = true;
     }
-
     fclose(fp);
-    return false;
+    return ok;
 }
 
 static unsigned long time_by_proc(const char *filename, char *shortname,
@@ -355,6 +355,7 @@ pid_t get_god_pid(char *shortname, size_t shortsz) {
     };
 
     closedir(dir);
-    strncpy(shortname, maxname, shortsz);
+    if (shortname && shortsz)
+        strncpy(shortname, maxname, shortsz);
     return godpid;
 }
