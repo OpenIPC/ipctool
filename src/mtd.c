@@ -125,6 +125,7 @@ int find_ubi_for_mtd(int mtd_num) {
     DIR *d = opendir("/sys/class/ubi");
     if (!d)
         return -1;
+    int ubi_num = -1;
     struct dirent *de;
     while ((de = readdir(d))) {
         if (strncmp(de->d_name, "ubi", 3) != 0)
@@ -134,20 +135,23 @@ int find_ubi_for_mtd(int mtd_num) {
         char path[128];
         snprintf(path, sizeof(path), "/sys/class/ubi/%s/mtd_num", de->d_name);
         FILE *f = fopen(path, "r");
-        if (f) {
-            int num;
-            if (fscanf(f, "%d", &num) == 1 && num == mtd_num) {
-                fclose(f);
-                closedir(d);
-                int ubi_num;
-                sscanf(de->d_name, "ubi%d", &ubi_num);
-                return ubi_num;
-            }
-            fclose(f);
+        if (!f)
+            continue;
+        int num;
+        bool match = fscanf(f, "%d", &num) == 1 && num == mtd_num;
+        fclose(f);
+        if (match) {
+            /* Parse the number BEFORE closedir(): POSIX leaves the
+             * dirent invalid after closedir, and musl actively
+             * invalidates it (where glibc happens to keep it alive),
+             * so reading de->d_name after closedir is a segfault on
+             * the aarch64 musl build. */
+            sscanf(de->d_name, "ubi%d", &ubi_num);
+            break;
         }
     }
     closedir(d);
-    return -1;
+    return ubi_num;
 }
 
 int enum_ubi_volumes(int ubi_num, ubi_vol_info_t *vols, int max_vols) {
