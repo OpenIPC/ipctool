@@ -67,5 +67,7 @@ int find_ubi_for_mtd(int mtd_num);
 int enum_ubi_volumes(int ubi_num, ubi_vol_info_t *vols, int max_vols);
 char *read_ubi_volume(int ubi_num, int vol_id, size_t data_bytes,
                       size_t *out_len);
+bool sha1_ubi_volume(int ubi_num, int vol_id, size_t data_bytes,
+                     unsigned char digest[20], size_t *out_len);
 
 #endif /* MTD_H */
