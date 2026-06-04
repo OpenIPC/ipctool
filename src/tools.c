@@ -41,18 +41,20 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
         return true;
     }
 
-    uint32_t offset = addr & 0xffff0000;
-    uint32_t size = 0xffff;
-    if (!addr || (loaded_area && offset != loaded_offset)) {
+    bool in_cache = loaded_area && addr >= loaded_offset &&
+                    addr - loaded_offset < loaded_size;
+    if (!addr || (loaded_area && !in_cache)) {
         int res = munmap(loaded_area, loaded_size);
         if (res) {
             fprintf(stderr, "read_mem_reg error: %s (%d)\n", strerror(errno),
                     errno);
         }
+        loaded_area = NULL;
     }
 
     if (!addr) {
         close(mem_fd);
+        mem_fd = 0;
         return true;
     }
 
@@ -65,16 +67,23 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
     }
 
     volatile char *mapped_area;
-    if (offset != loaded_offset) {
-        mapped_area =
-            mmap(NULL, // Any adddress in our space will do
-                 size, // Map length
-                 PROT_READ |
-                     PROT_WRITE, // Enable reading & writting to mapped memory
-                 MAP_SHARED,     // Shared with other processes
-                 mem_fd,         // File to map
-                 offset          // Offset to base address
-            );
+    if (!loaded_area) {
+        uint32_t offset = addr & 0xffff0000;
+        uint32_t size = 0xffff;
+        mapped_area = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                           mem_fd, offset);
+        if (mapped_area == MAP_FAILED && errno == EPERM) {
+            // CONFIG_IO_STRICT_DEVMEM blocks any /dev/mem mmap whose range
+            // overlaps a driver-claimed page. Retry with a single page so
+            // the read at least succeeds when our target page itself isn't
+            // claimed (the 64 KiB window may have caught an unrelated
+            // sibling). See OpenIPC firmware PR for the kernel-side fix.
+            uint32_t page = (uint32_t)sysconf(_SC_PAGESIZE);
+            offset = addr & ~(page - 1);
+            size = page;
+            mapped_area = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                               mem_fd, offset);
+        }
         if (mapped_area == MAP_FAILED) {
             fprintf(stderr, "read_mem_reg mmap error: %s (%d)\n",
                     strerror(errno), errno);
@@ -87,9 +96,9 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
         mapped_area = loaded_area;
 
     if (op == OP_READ)
-        *data = *(volatile uint32_t *)(mapped_area + (addr - offset));
+        *data = *(volatile uint32_t *)(mapped_area + (addr - loaded_offset));
     else if (op == OP_WRITE)
-        *(volatile uint32_t *)(mapped_area + (addr - offset)) = *data;
+        *(volatile uint32_t *)(mapped_area + (addr - loaded_offset)) = *data;
 
     return true;
 }
