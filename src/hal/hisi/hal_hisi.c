@@ -474,7 +474,12 @@ static void get_hisi_sdk(cJSON *j_inner) {
             return;
         *ptr++ = ' ';
         *ptr++ = '(';
-        strcpy(ptr, build + 1);
+        /* build+1 and ptr alias the same buffer (the bracketed build
+         * time sits after the ']' we just overwrote), so this is an
+         * overlapping copy: strcpy() is UB here (ASAN: strcpy-param-
+         * overlap), memmove() is well-defined and yields the same
+         * "<version> (<build time>)" string. */
+        memmove(ptr, build + 1, strlen(build + 1) + 1);
         strcat(ptr, ")");
         ADD_PARAM("sdk", buf);
     }
