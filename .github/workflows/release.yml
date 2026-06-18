@@ -155,6 +155,10 @@ jobs:
 
       - name: Send binary to Telegram
         if: steps.build.outcome == 'success'
+        # A notification timing out (curl exit 28 against api.telegram.org)
+        # must never fail a release whose build succeeded and whose assets
+        # already uploaded — keep it advisory.
+        continue-on-error: true
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
