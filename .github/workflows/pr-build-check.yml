@@ -27,7 +27,7 @@ jobs:
             toolchain_dir: aarch64--musl--stable-2025.08-1
             cc: aarch64-buildroot-linux-musl-gcc
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Fetch toolchain
         run: |
           # Download to file (with retries) before extracting — piping
@@ -49,6 +49,6 @@ jobs:
     name: Test sensor extraction pipeline
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run end-to-end pipeline smoke test
         run: tools/test_pipeline.sh
