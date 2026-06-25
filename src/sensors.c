@@ -1045,6 +1045,9 @@ static int detect_cvsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2004:
         sprintf(ctx->sensor_id, "CV2003");
         return true;
+    case 0x2005:
+        sprintf(ctx->sensor_id, "CV%04x", res);
+		return true;
     default:
         SENSOR_ERR("CVSENS", res);
         return false;
