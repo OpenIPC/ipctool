@@ -2151,6 +2151,7 @@ MUXCTRL(CV610_io0_cfg_reg5, 0x10260014, "GPIO2_6", "SFC_HOLD_IO3");
 MUXCTRL(CV610_io0_cfg_reg6, 0x10260018, "GPIO2_1", "SFC_CSN0");
 MUXCTRL(CV610_io0_cfg_reg7, 0x1026001C, "GPIO2_4", "SFC_MISO_IO1");
 MUXCTRL(CV610_io0_cfg_reg8, 0x10260020, "GPIO2_5", "SFC_WP_IO2");
+MUXCTRL(CV610_io0_cfg_reg9, 0x10260024, "reserved", "SFC_CSN1");
 MUXCTRL(CV610_io0_cfg_reg10, 0x10260028, "GPIO3_5", "SDIO0_CARD_DETECT", "EMMC_RST_N", "SFC_CSN1", "reserved", "PWM1_OUT0", "I2C2_SDA", "UART2_RXD");
 MUXCTRL(CV610_io0_cfg_reg11, 0x1026002C, "GPIO3_6", "SDIO0_CDATA1/EMMC_DATA1", "reserved", "reserved", "SPI0_CSN1", "PWM1_OUT1", "I2C2_SCL", "UART2_TXD");
 MUXCTRL(CV610_io0_cfg_reg12, 0x10260030, "GPIO3_7", "SDIO0_CDATA0/EMMC_DATA0", "reserved", "reserved", "SPI0_SCLK", "PWM1_OUT2", "reserved", "SENSOR1_RSTN");
@@ -2159,6 +2160,8 @@ MUXCTRL(CV610_io0_cfg_reg14, 0x10260038, "GPIO4_1", "SDIO0_CCMD/EMMC_CMD", "rese
 MUXCTRL(CV610_io0_cfg_reg15, 0x1026003C, "GPIO4_2", "SDIO0_CDATA3/EMMC_DATA3", "reserved", "reserved", "SPI0_CSN0", "PWM1_OUT5", "I2S_SD_TX", "UART1_TXD");
 MUXCTRL(CV610_io0_cfg_reg16, 0x10260040, "GPIO4_3", "SDIO0_CDATA2/EMMC_DATA2", "reserved", "reserved", "UART2_RXD", "PWM1_OUT6", "I2S_WS", "UART1_RTSN");
 MUXCTRL(CV610_io0_cfg_reg17, 0x10260044, "GPIO3_4", "SDIO0_CARD_POWER_EN_N", "reserved", "reserved", "UART2_TXD", "PWM1_OUT7", "I2S_SD_RX", "UART1_CTSN");
+MUXCTRL(CV610_io0_cfg_reg22, 0x10260058, "reserved", "USB_OVRCUR");
+MUXCTRL(CV610_io0_cfg_reg23, 0x1026005C, "reserved", "USB_PWREN");
 MUXCTRL(CV610_io2_cfg_reg0, 0x17940000, "MIPI_RX_CK1N", "GPIO5_6", "VI_BT1120_DATA8", "VI_DATA11", "I2C0_SDA", "reserved", "reserved", "PWM0_OUT1");
 MUXCTRL(CV610_io2_cfg_reg1, 0x17940004, "MIPI_RX_CK1P", "GPIO5_7", "VI_BT1120_DATA9", "VI_DATA10", "I2C0_SCL", "reserved", "reserved", "PWM0_OUT2");
 MUXCTRL(CV610_io2_cfg_reg2, 0x17940008, "MIPI_RX_D3N", "GPIO6_2", "VI_BT1120_DATA10", "VI_DATA9", "reserved", "reserved", "reserved", "SENSOR0_RSTN");
@@ -2171,6 +2174,23 @@ MUXCTRL(CV610_io2_cfg_reg8, 0x17940020, "MIPI_RX_D0N", "GPIO5_2", "VI_BT1120_DAT
 MUXCTRL(CV610_io2_cfg_reg9, 0x17940024, "MIPI_RX_D0P", "GPIO5_3", "VI_BT1120_DATA3", "VI_DATA3", "reserved", "reserved", "VI_DATA5", "PWM0_OUT1");
 MUXCTRL(CV610_io2_cfg_reg10, 0x17940028, "MIPI_RX_D2N", "GPIO5_4", "VI_BT1120_DATA4", "VI_DATA2", "reserved", "reserved", "VI_DATA6", "PWM0_OUT2");
 MUXCTRL(CV610_io2_cfg_reg11, 0x1794002C, "MIPI_RX_D2P", "GPIO5_5", "VI_BT1120_DATA5", "VI_DATA1", "reserved", "reserved", "VI_DATA3", "PWM0_OUT3");
+MUXCTRL(CV610_io2_cfg_reg12, 0x17940030, "reserved", "VI_DATA9");
+MUXCTRL(CV610_io2_cfg_reg13, 0x17940034, "reserved", "VI_DATA8");
+MUXCTRL(CV610_io2_cfg_reg14, 0x17940038, "reserved", "VI_DATA6");
+MUXCTRL(CV610_io2_cfg_reg15, 0x1794003C, "reserved", "VI_DATA7");
+MUXCTRL(CV610_io2_cfg_reg16, 0x17940040, "reserved", "VI_DATA2", "SENSOR0_CLK");
+MUXCTRL(CV610_io2_cfg_reg17, 0x17940044, "reserved", "VI_DATA4");
+MUXCTRL(CV610_io2_cfg_reg18, 0x17940048, "reserved", "VI_DATA3");
+MUXCTRL(CV610_io2_cfg_reg19, 0x1794004C, "reserved", "VI_DATA1", "SENSOR0_CLK");
+MUXCTRL(CV610_io2_cfg_reg20, 0x17940050, "reserved", "VI_DATA5", "reserved", "reserved", "reserved", "reserved", "reserved", "SENSOR0_RSTN");
+MUXCTRL(CV610_io2_cfg_reg21, 0x17940054, "reserved", "VI_DATA0", "reserved", "reserved", "reserved", "reserved", "reserved", "SENSOR0_RSTN");
+MUXCTRL(CV610_io2_cfg_reg22, 0x17940058, "reserved", "VI_CLK");
+MUXCTRL(CV610_io2_cfg_reg23, 0x1794005C, "reserved", "VI_DATA10");
+MUXCTRL(CV610_io2_cfg_reg25, 0x17940064, "reserved", "VI_DATA11");
+MUXCTRL(CV610_io2_cfg_reg26, 0x17940068, "reserved", "VI_DATA15");
+MUXCTRL(CV610_io2_cfg_reg27, 0x1794006C, "reserved", "VI_DATA14");
+MUXCTRL(CV610_io2_cfg_reg28, 0x17940070, "reserved", "VI_DATA12");
+MUXCTRL(CV610_io2_cfg_reg30, 0x17940078, "reserved", "VI_DATA13");
 MUXCTRL(CV610_io2_cfg_reg32, 0x17940080, "GPIO6_5", "SENSOR1_CLK", "reserved", "reserved", "reserved", "FAST_BOOT_MODE", "reserved", "SENSOR0_RSTN");
 MUXCTRL(CV610_io2_cfg_reg33, 0x17940084, "TEST_CLK", "SENSOR0_CLK", "reserved", "GPIO6_4", "reserved", "SFC_EMMC_BOOT_MODE");
 MUXCTRL(CV610_io2_cfg_reg34, 0x17940088, "GPIO7_3", "VI_BT1120_DATA6", "reserved", "reserved", "PWM0_OUT1", "SENSOR1_RSTN", "VI_DATA0");
@@ -2181,6 +2201,10 @@ MUXCTRL(CV610_io2_cfg_reg38, 0x17940098, "GPIO6_6", "VI_BT1120_DATA15", "ETH_LIN
 MUXCTRL(CV610_io2_cfg_reg39, 0x1794009C, "GPIO6_7", "reserved", "ETH_LINK_ACT_LED", "SPI0_SCLK", "reserved", "I2C0_SCL", "VI_DATA2", "SENSOR1_VS");
 MUXCTRL(CV610_io1_cfg_reg0, 0x11130000, "GPIO1_5", "I2C1_SDA", "PWM0_OUT2", "UART2_RXD", "LSADC_CH1");
 MUXCTRL(CV610_io1_cfg_reg1, 0x11130004, "GPIO1_4", "I2C1_SCL", "PWM0_OUT3", "UART2_TXD", "LSADC_CH0");
+MUXCTRL(CV610_io1_cfg_reg4, 0x11130010, "reserved", "reserved", "UART2_TXD");
+MUXCTRL(CV610_io1_cfg_reg5, 0x11130014, "reserved", "reserved", "UART2_RXD");
+MUXCTRL(CV610_io1_cfg_reg6, 0x11130018, "reserved", "reserved", "ETH_LINK_ACT_LED");
+MUXCTRL(CV610_io1_cfg_reg7, 0x1113001C, "reserved", "reserved", "ETH_LINK_STA_LED");
 MUXCTRL(CV610_io1_cfg_reg12, 0x11130030, "JTAG_TRSTN", "ETH_LINK_STA_LED", "GPIO0_6", "I2C0_SCL", "reserved", "UART1_RXD", "SPI0_CSN1", "PWM0_OUT1");
 MUXCTRL(CV610_io1_cfg_reg13, 0x11130034, "JTAG_TDI", "ETH_LINK_ACT_LED", "ETH_STA_ACT_LED", "I2C0_SDA", "USB2_PWREN", "UART1_TXD", "GPIO0_7", "PWM0_OUT2");
 MUXCTRL(CV610_io1_cfg_reg14, 0x11130038, "GPIO7_7", "SDIO1_CDATA2", "reserved", "I2S_MCLK", "reserved", "UART1_RTSN", "SPI1_SDO", "PWM1_OUT0");
@@ -2206,6 +2230,7 @@ static const muxctrl_reg_t *CV610regs[] = {
     &CV610_io0_cfg_reg6,
     &CV610_io0_cfg_reg7,
     &CV610_io0_cfg_reg8,
+    &CV610_io0_cfg_reg9,
     &CV610_io0_cfg_reg10,
     &CV610_io0_cfg_reg11,
     &CV610_io0_cfg_reg12,
@@ -2214,6 +2239,8 @@ static const muxctrl_reg_t *CV610regs[] = {
     &CV610_io0_cfg_reg15,
     &CV610_io0_cfg_reg16,
     &CV610_io0_cfg_reg17,
+    &CV610_io0_cfg_reg22,
+    &CV610_io0_cfg_reg23,
     &CV610_io2_cfg_reg0,
     &CV610_io2_cfg_reg1,
     &CV610_io2_cfg_reg2,
@@ -2226,6 +2253,23 @@ static const muxctrl_reg_t *CV610regs[] = {
     &CV610_io2_cfg_reg9,
     &CV610_io2_cfg_reg10,
     &CV610_io2_cfg_reg11,
+    &CV610_io2_cfg_reg12,
+    &CV610_io2_cfg_reg13,
+    &CV610_io2_cfg_reg14,
+    &CV610_io2_cfg_reg15,
+    &CV610_io2_cfg_reg16,
+    &CV610_io2_cfg_reg17,
+    &CV610_io2_cfg_reg18,
+    &CV610_io2_cfg_reg19,
+    &CV610_io2_cfg_reg20,
+    &CV610_io2_cfg_reg21,
+    &CV610_io2_cfg_reg22,
+    &CV610_io2_cfg_reg23,
+    &CV610_io2_cfg_reg25,
+    &CV610_io2_cfg_reg26,
+    &CV610_io2_cfg_reg27,
+    &CV610_io2_cfg_reg28,
+    &CV610_io2_cfg_reg30,
     &CV610_io2_cfg_reg32,
     &CV610_io2_cfg_reg33,
     &CV610_io2_cfg_reg34,
@@ -2236,6 +2280,10 @@ static const muxctrl_reg_t *CV610regs[] = {
     &CV610_io2_cfg_reg39,
     &CV610_io1_cfg_reg0,
     &CV610_io1_cfg_reg1,
+    &CV610_io1_cfg_reg4,
+    &CV610_io1_cfg_reg5,
+    &CV610_io1_cfg_reg6,
+    &CV610_io1_cfg_reg7,
     &CV610_io1_cfg_reg12,
     &CV610_io1_cfg_reg13,
     &CV610_io1_cfg_reg14,
@@ -2250,6 +2298,156 @@ static const muxctrl_reg_t *CV610regs[] = {
     &CV610_io1_cfg_reg23,
     &CV610_io1_cfg_reg26,
     0
+};
+
+/*
+ * Hi3519DV500 / Hi3516DV500 (V5, aarch64) pinmux. Three IOCFG controllers:
+ *   IOCFG0 0x10260000, IOCFG2 0x179F0000, IOCFG3 0x0EFF0000.
+ * Function lists are derived from the vendor SDK pin_mux.c (every function the
+ * SDK configures across its modes, indexed by the mux value); mux values the
+ * SDK never selects are left "reserved".
+ */
+MUXCTRL(DV500_io0_cfg_reg0, 0x10260000, "GPIO2_0", "reserved", "reserved", "SPI2_CSN", "I2S0_WS", "I2C1_SDA");
+MUXCTRL(DV500_io0_cfg_reg1, 0x10260004, "GPIO2_1", "reserved", "reserved", "SPI2_SCLK", "I2S0_MCLK", "I2C1_SCL");
+MUXCTRL(DV500_io0_cfg_reg2, 0x10260008, "GPIO2_2", "reserved", "reserved", "SPI2_SDI", "I2S0_SD_TX", "I2C2_SDA");
+MUXCTRL(DV500_io0_cfg_reg3, 0x1026000C, "GPIO2_3", "reserved", "reserved", "SPI2_SDO", "I2S0_BCLK", "I2C2_SCL");
+MUXCTRL(DV500_io0_cfg_reg4, 0x10260010, "reserved", "reserved", "reserved", "reserved", "RGB_DATA15");
+MUXCTRL(DV500_io0_cfg_reg5, 0x10260014, "reserved", "reserved", "reserved", "reserved", "RGB_DATA16");
+MUXCTRL(DV500_io0_cfg_reg7, 0x1026001C, "GPIO2_6", "MDCLK0", "reserved", "reserved", "RGB_DATA17");
+MUXCTRL(DV500_io0_cfg_reg8, 0x10260020, "GPIO2_7", "MDIO0", "reserved", "I2S0_SD_RX", "RGB_DATA18");
+MUXCTRL(DV500_io0_cfg_reg10, 0x10260028, "reserved", "reserved", "SPI3_SDO", "reserved", "RGB_DATA4");
+MUXCTRL(DV500_io0_cfg_reg11, 0x1026002C, "reserved", "reserved", "SPI3_SDI", "reserved", "RGB_DATA3");
+MUXCTRL(DV500_io0_cfg_reg12, 0x10260030, "reserved", "reserved", "reserved", "reserved", "RGB_DATA12");
+MUXCTRL(DV500_io0_cfg_reg13, 0x10260034, "reserved", "reserved", "reserved", "reserved", "RGB_DATA13");
+MUXCTRL(DV500_io0_cfg_reg14, 0x10260038, "reserved", "reserved", "reserved", "reserved", "RGB_DATA14");
+MUXCTRL(DV500_io0_cfg_reg15, 0x1026003C, "reserved", "reserved", "SPI3_SCLK", "reserved", "RGB_DATA6", "reserved", "SPI_TFT_CLK");
+MUXCTRL(DV500_io0_cfg_reg16, 0x10260040, "reserved", "reserved", "SPI3_CSN0", "reserved", "RGB_DATA5", "reserved", "SPI_TFT_CSN");
+MUXCTRL(DV500_io0_cfg_reg17, 0x10260044, "reserved", "reserved", "SPI3_CSN1", "reserved", "RGB_DATA7", "reserved", "SPI_TFT_DATA");
+MUXCTRL(DV500_io0_cfg_reg18, 0x10260048, "reserved", "reserved", "reserved", "reserved", "RGB_DATA8");
+MUXCTRL(DV500_io0_cfg_reg19, 0x1026004C, "reserved", "reserved", "reserved", "reserved", "RGB_DATA9");
+MUXCTRL(DV500_io0_cfg_reg20, 0x10260050, "reserved", "reserved", "reserved", "reserved", "RGB_DATA11");
+MUXCTRL(DV500_io0_cfg_reg21, 0x10260054, "reserved", "reserved", "reserved", "reserved", "RGB_DATA10");
+MUXCTRL(DV500_io0_cfg_reg22, 0x10260058, "reserved", "reserved", "I2S0_SD_RX", "SPI3_CSN0", "RGB_HS", "reserved", "SPI_TFT_CSN", "DMIC_SD0");
+MUXCTRL(DV500_io0_cfg_reg23, 0x1026005C, "reserved", "reserved", "I2S0_MCLK", "SPI3_SCLK", "RGB_CLK", "reserved", "SPI_TFT_CLK", "DMIC_MCLK");
+MUXCTRL(DV500_io0_cfg_reg24, 0x10260060, "reserved", "reserved", "I2S0_WS", "SPI3_SDI", "RGB_DATA0", "reserved", "SPI_TFT_DATA", "DMIC_SD1");
+MUXCTRL(DV500_io0_cfg_reg25, 0x10260064, "reserved", "reserved", "I2S0_SD_TX", "SPI3_SDO", "RGB_VS", "reserved", "reserved", "DMIC_SD2");
+MUXCTRL(DV500_io0_cfg_reg26, 0x10260068, "reserved", "reserved", "I2S0_BCLK", "SPI3_CSN1", "RGB_DATA1", "reserved", "reserved", "DMIC_SD3");
+MUXCTRL(DV500_io0_cfg_reg27, 0x1026006C, "GPIO5_1", "I2C0_SDA", "reserved", "reserved", "RGB_DE");
+MUXCTRL(DV500_io0_cfg_reg28, 0x10260070, "reserved", "I2C0_SCL", "VO_BT1120_DATA15", "reserved", "RGB_DATA2");
+MUXCTRL(DV500_io0_cfg_reg29, 0x10260074, "reserved", "PWM1");
+MUXCTRL(DV500_io0_cfg_reg30, 0x10260078, "DSI_D3N", "reserved", "VO_BT656_CLK", "SPI3_CSN0", "VO_BT1120_DATA13", "reserved", "SPI_TFT_CSN");
+MUXCTRL(DV500_io0_cfg_reg31, 0x1026007C, "DSI_D3P", "reserved", "VO_BT1120_DATA7", "SPI3_SDI", "reserved", "reserved", "SPI_TFT_DATA");
+MUXCTRL(DV500_io0_cfg_reg32, 0x10260080, "DSI_D1N", "reserved", "VO_BT1120_DATA3", "reserved", "RGB_DATA20");
+MUXCTRL(DV500_io0_cfg_reg33, 0x10260084, "DSI_D1P", "reserved", "VO_BT1120_DATA2", "reserved", "RGB_DATA21");
+MUXCTRL(DV500_io0_cfg_reg34, 0x10260088, "DSI_CKN", "reserved", "VO_BT1120_DATA5", "SPI3_SCLK", "reserved", "reserved", "SPI_TFT_CLK");
+MUXCTRL(DV500_io0_cfg_reg35, 0x1026008C, "DSI_CKP", "reserved", "VO_BT1120_DATA4", "reserved", "RGB_DATA19");
+MUXCTRL(DV500_io0_cfg_reg36, 0x10260090, "DSI_D0N", "reserved", "VO_BT1120_DATA1", "reserved", "RGB_DATA22");
+MUXCTRL(DV500_io0_cfg_reg37, 0x10260094, "DSI_D0P", "reserved", "VO_BT1120_DATA0", "reserved", "RGB_DATA23");
+MUXCTRL(DV500_io0_cfg_reg38, 0x10260098, "DSI_D2N", "reserved", "VO_BT1120_DATA6", "SPI3_SDO");
+MUXCTRL(DV500_io0_cfg_reg39, 0x1026009C, "DSI_D2P", "reserved", "VO_BT1120_DATA14", "SPI3_CSN1");
+MUXCTRL(DV500_io0_cfg_reg40, 0x102600A0, "reserved", "reserved", "VO_BT1120_DATA11");
+MUXCTRL(DV500_io0_cfg_reg41, 0x102600A4, "reserved", "reserved", "VO_BT1120_DATA10");
+MUXCTRL(DV500_io0_cfg_reg42, 0x102600A8, "reserved", "reserved", "VO_BT1120_DATA12");
+MUXCTRL(DV500_io0_cfg_reg43, 0x102600AC, "reserved", "reserved", "VO_BT1120_DATA9");
+MUXCTRL(DV500_io0_cfg_reg44, 0x102600B0, "reserved", "reserved", "VO_BT1120_CLK");
+MUXCTRL(DV500_io0_cfg_reg45, 0x102600B4, "reserved", "reserved", "VO_BT1120_DATA8");
+
+MUXCTRL(DV500_io2_cfg_reg0, 0x179F0000, "reserved", "reserved", "I2C7_SDA");
+MUXCTRL(DV500_io2_cfg_reg1, 0x179F0004, "reserved", "reserved", "I2C7_SCL");
+MUXCTRL(DV500_io2_cfg_reg2, 0x179F0008, "reserved", "reserved", "reserved", "VSYNC_TE_MIPITX");
+MUXCTRL(DV500_io2_cfg_reg4, 0x179F0010, "GPIO10_3", "USB_VBUS");
+MUXCTRL(DV500_io2_cfg_reg5, 0x179F0014, "reserved", "USB_PWREN");
+MUXCTRL(DV500_io2_cfg_reg7, 0x179F001C, "reserved", "reserved", "reserved", "reserved", "SENSOR2_CLK");
+MUXCTRL(DV500_io2_cfg_reg9, 0x179F0024, "reserved", "SPI0_CSN1", "SENSOR3_CLK", "reserved", "reserved", "reserved", "VI_DATA3", "THERMO_PS");
+MUXCTRL(DV500_io2_cfg_reg10, 0x179F0028, "reserved", "SPI0_CSN0", "I2C3_SDA", "reserved", "reserved", "reserved", "VI_DATA1", "THERMO_DO6");
+MUXCTRL(DV500_io2_cfg_reg11, 0x179F002C, "reserved", "SPI0_SDI", "I2C3_SCL", "reserved", "reserved", "reserved", "VI_DATA0", "THERMO_DO7");
+MUXCTRL(DV500_io2_cfg_reg12, 0x179F0030, "reserved", "SPI0_SDO", "I2C4_SDA", "reserved", "reserved", "reserved", "VI_DATA2", "THERMO_HS");
+MUXCTRL(DV500_io2_cfg_reg13, 0x179F0034, "reserved", "SPI0_SCLK", "I2C4_SCL", "reserved", "reserved", "reserved", "VI_CLK", "THERMO_CLK");
+MUXCTRL(DV500_io2_cfg_reg14, 0x179F0038, "reserved", "SENSOR0_HS", "reserved", "reserved", "reserved", "reserved", "VI_DATA7", "THERMO_VS");
+MUXCTRL(DV500_io2_cfg_reg15, 0x179F003C, "reserved", "SENSOR0_VS", "reserved", "reserved", "reserved", "reserved", "VI_DATA6", "THERMO_SD1");
+MUXCTRL(DV500_io2_cfg_reg16, 0x179F0040, "reserved", "SENSOR0_RSTN", "reserved", "reserved", "reserved", "VI_DATA8", "VI_DATA4", "THERMO_SD0");
+MUXCTRL(DV500_io2_cfg_reg17, 0x179F0044, "reserved", "SENSOR0_CLK", "reserved", "reserved", "reserved", "VI_DATA9", "VI_DATA5", "THERMO_MCK");
+MUXCTRL(DV500_io2_cfg_reg18, 0x179F0048, "MIPI_RX0_D0N", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA10");
+MUXCTRL(DV500_io2_cfg_reg19, 0x179F004C, "MIPI_RX0_D0P", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA11");
+MUXCTRL(DV500_io2_cfg_reg20, 0x179F0050, "MIPI_RX0_D2N", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA14");
+MUXCTRL(DV500_io2_cfg_reg21, 0x179F0054, "MIPI_RX0_D2P", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA15");
+MUXCTRL(DV500_io2_cfg_reg22, 0x179F0058, "MIPI_RX0_CK0N", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA12");
+MUXCTRL(DV500_io2_cfg_reg23, 0x179F005C, "MIPI_RX0_CK0P", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA13");
+MUXCTRL(DV500_io2_cfg_reg24, 0x179F0060, "MIPI_RX0_CK1N", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA4", "THERMO_DO3");
+MUXCTRL(DV500_io2_cfg_reg25, 0x179F0064, "MIPI_RX0_CK1P", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA5", "THERMO_DO0");
+MUXCTRL(DV500_io2_cfg_reg26, 0x179F0068, "MIPI_RX0_D1N", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA0", "THERMO_DO5");
+MUXCTRL(DV500_io2_cfg_reg27, 0x179F006C, "MIPI_RX0_D1P", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA1", "THERMO_DO4");
+MUXCTRL(DV500_io2_cfg_reg28, 0x179F0070, "MIPI_RX0_D3N", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA2", "THERMO_DO2");
+MUXCTRL(DV500_io2_cfg_reg29, 0x179F0074, "MIPI_RX0_D3P", "reserved", "reserved", "reserved", "reserved", "reserved", "VI_DATA3", "THERMO_DO1");
+MUXCTRL(DV500_io2_cfg_reg30, 0x179F0078, "MIPI_RX1_D0N", "GPIO13_5");
+MUXCTRL(DV500_io2_cfg_reg31, 0x179F007C, "MIPI_RX1_D0P", "GPIO13_6");
+MUXCTRL(DV500_io2_cfg_reg32, 0x179F0080, "MIPI_RX1_D2N", "GPIO13_7");
+MUXCTRL(DV500_io2_cfg_reg33, 0x179F0084, "MIPI_RX1_D2P", "GPIO14_0");
+MUXCTRL(DV500_io2_cfg_reg34, 0x179F0088, "MIPI_RX1_CK0N", "GPIO14_1");
+MUXCTRL(DV500_io2_cfg_reg35, 0x179F008C, "MIPI_RX1_CK0P", "GPIO14_2");
+MUXCTRL(DV500_io2_cfg_reg36, 0x179F0090, "MIPI_RX1_CK1N", "GPIO14_3");
+MUXCTRL(DV500_io2_cfg_reg37, 0x179F0094, "MIPI_RX1_CK1P", "GPIO14_4");
+MUXCTRL(DV500_io2_cfg_reg38, 0x179F0098, "MIPI_RX1_D1N", "GPIO14_5");
+MUXCTRL(DV500_io2_cfg_reg39, 0x179F009C, "MIPI_RX1_D1P", "GPIO14_6");
+MUXCTRL(DV500_io2_cfg_reg40, 0x179F00A0, "MIPI_RX1_D3N", "GPIO14_7");
+MUXCTRL(DV500_io2_cfg_reg41, 0x179F00A4, "MIPI_RX1_D3P", "GPIO1_7");
+
+MUXCTRL(DV500_io3_cfg_reg0, 0x0EFF0000, "reserved", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved", "THERMO_RSTN");
+MUXCTRL(DV500_io3_cfg_reg1, 0x0EFF0004, "reserved", "SENSOR1_CLK");
+MUXCTRL(DV500_io3_cfg_reg2, 0x0EFF0008, "reserved", "SENSOR1_RSTN");
+MUXCTRL(DV500_io3_cfg_reg3, 0x0EFF000C, "reserved", "SENSOR1_HS", "reserved", "reserved", "reserved", "reserved", "reserved", "THERMO_SD2");
+MUXCTRL(DV500_io3_cfg_reg4, 0x0EFF0010, "reserved", "SENSOR1_VS", "reserved", "reserved", "reserved", "reserved", "reserved", "THERMO_SD3");
+MUXCTRL(DV500_io3_cfg_reg5, 0x0EFF0014, "reserved", "PWM2");
+MUXCTRL(DV500_io3_cfg_reg6, 0x0EFF0018, "reserved", "USB_OVRCUR");
+MUXCTRL(DV500_io3_cfg_reg8, 0x0EFF0020, "reserved", "PWM0");
+MUXCTRL(DV500_io3_cfg_reg9, 0x0EFF0024, "reserved", "SPI1_SCLK", "I2C5_SCL", "reserved", "reserved", "SPI_3WIRE_CLK");
+MUXCTRL(DV500_io3_cfg_reg10, 0x0EFF0028, "reserved", "SPI1_SDO", "I2C5_SDA", "reserved", "reserved", "SPI_3WIRE_DATA");
+MUXCTRL(DV500_io3_cfg_reg11, 0x0EFF002C, "reserved", "SPI1_SDI", "I2C6_SCL");
+MUXCTRL(DV500_io3_cfg_reg12, 0x0EFF0030, "reserved", "SPI1_CSN", "I2C6_SDA", "reserved", "reserved", "SPI_3WIRE_CSN");
+
+/*
+ * AON pad-mux in the PMC (PMC_REG_BASE 0x11120000, pad block from +0x200).
+ * Only the GPIO9 pads the vendor U-Boot configures are known; the rest of the
+ * AON IOMUX is absent from the SDK sources, so index 0 is left "reserved".
+ */
+MUXCTRL(DV500_aon_cfg_reg129, 0x11120204, "reserved", "GPIO9_0");
+MUXCTRL(DV500_aon_cfg_reg130, 0x11120208, "reserved", "GPIO9_1");
+MUXCTRL(DV500_aon_cfg_reg131, 0x1112020C, "reserved", "GPIO9_2");
+MUXCTRL(DV500_aon_cfg_reg132, 0x11120210, "reserved", "GPIO9_3");
+MUXCTRL(DV500_aon_cfg_reg133, 0x11120214, "reserved", "GPIO9_4");
+MUXCTRL(DV500_aon_cfg_reg134, 0x11120218, "reserved", "GPIO9_5");
+MUXCTRL(DV500_aon_cfg_reg135, 0x1112021C, "reserved", "GPIO9_6");
+
+static const muxctrl_reg_t *DV500regs[] = {
+    &DV500_io0_cfg_reg0, &DV500_io0_cfg_reg1, &DV500_io0_cfg_reg2, &DV500_io0_cfg_reg3,
+    &DV500_io0_cfg_reg4, &DV500_io0_cfg_reg5, &DV500_io0_cfg_reg7, &DV500_io0_cfg_reg8,
+    &DV500_io0_cfg_reg10, &DV500_io0_cfg_reg11, &DV500_io0_cfg_reg12, &DV500_io0_cfg_reg13,
+    &DV500_io0_cfg_reg14, &DV500_io0_cfg_reg15, &DV500_io0_cfg_reg16, &DV500_io0_cfg_reg17,
+    &DV500_io0_cfg_reg18, &DV500_io0_cfg_reg19, &DV500_io0_cfg_reg20, &DV500_io0_cfg_reg21,
+    &DV500_io0_cfg_reg22, &DV500_io0_cfg_reg23, &DV500_io0_cfg_reg24, &DV500_io0_cfg_reg25,
+    &DV500_io0_cfg_reg26, &DV500_io0_cfg_reg27, &DV500_io0_cfg_reg28, &DV500_io0_cfg_reg29,
+    &DV500_io0_cfg_reg30,
+    &DV500_io0_cfg_reg31, &DV500_io0_cfg_reg32, &DV500_io0_cfg_reg33, &DV500_io0_cfg_reg34,
+    &DV500_io0_cfg_reg35, &DV500_io0_cfg_reg36, &DV500_io0_cfg_reg37, &DV500_io0_cfg_reg38,
+    &DV500_io0_cfg_reg39, &DV500_io0_cfg_reg40, &DV500_io0_cfg_reg41, &DV500_io0_cfg_reg42,
+    &DV500_io0_cfg_reg43, &DV500_io0_cfg_reg44, &DV500_io0_cfg_reg45, &DV500_io2_cfg_reg0,
+    &DV500_io2_cfg_reg1, &DV500_io2_cfg_reg2, &DV500_io2_cfg_reg4, &DV500_io2_cfg_reg5,
+    &DV500_io2_cfg_reg7,
+    &DV500_io2_cfg_reg9, &DV500_io2_cfg_reg10, &DV500_io2_cfg_reg11, &DV500_io2_cfg_reg12,
+    &DV500_io2_cfg_reg13, &DV500_io2_cfg_reg14, &DV500_io2_cfg_reg15, &DV500_io2_cfg_reg16,
+    &DV500_io2_cfg_reg17, &DV500_io2_cfg_reg18, &DV500_io2_cfg_reg19, &DV500_io2_cfg_reg20,
+    &DV500_io2_cfg_reg21, &DV500_io2_cfg_reg22, &DV500_io2_cfg_reg23, &DV500_io2_cfg_reg24,
+    &DV500_io2_cfg_reg25, &DV500_io2_cfg_reg26, &DV500_io2_cfg_reg27, &DV500_io2_cfg_reg28,
+    &DV500_io2_cfg_reg29, &DV500_io2_cfg_reg30, &DV500_io2_cfg_reg31, &DV500_io2_cfg_reg32,
+    &DV500_io2_cfg_reg33, &DV500_io2_cfg_reg34, &DV500_io2_cfg_reg35, &DV500_io2_cfg_reg36,
+    &DV500_io2_cfg_reg37, &DV500_io2_cfg_reg38, &DV500_io2_cfg_reg39, &DV500_io2_cfg_reg40,
+    &DV500_io2_cfg_reg41, &DV500_io3_cfg_reg0, &DV500_io3_cfg_reg1, &DV500_io3_cfg_reg2,
+    &DV500_io3_cfg_reg3, &DV500_io3_cfg_reg4, &DV500_io3_cfg_reg5, &DV500_io3_cfg_reg6,
+    &DV500_io3_cfg_reg8, &DV500_io3_cfg_reg9, &DV500_io3_cfg_reg10,
+    &DV500_io3_cfg_reg11, &DV500_io3_cfg_reg12,
+    &DV500_aon_cfg_reg129, &DV500_aon_cfg_reg130, &DV500_aon_cfg_reg131, &DV500_aon_cfg_reg132,
+    &DV500_aon_cfg_reg133, &DV500_aon_cfg_reg134, &DV500_aon_cfg_reg135,
+    0,
 };
 
 static int gpio_mux_by(const char *gpio_number, int func_num,
@@ -2307,6 +2505,8 @@ static const muxctrl_reg_t **regs_by_chip() {
             return EV200regs;
         break;
     case HISI_OT:
+        if (IS_CHIP("3519DV500") || IS_CHIP("3516DV500"))
+            return DV500regs;
         return CV610regs;
     case HISI_3536C:
         return RCV100regs;
