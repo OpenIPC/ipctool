@@ -40,24 +40,49 @@ typedef struct {
 
 static const manufacturers_t manufacturers[] = {
 #if defined(mips) || defined(__mips__) || defined(__mips)
+#ifdef IPCHW_VENDOR_INGENIC
     {"isvp", ingenic_detect_cpu, VENDOR_INGENIC, setup_hal_ingenic},
     {"ingenic", ingenic_detect_cpu, VENDOR_INGENIC, setup_hal_ingenic},
 #endif
+#endif
 #ifdef __arm__
+#ifdef IPCHW_VENDOR_SSTAR
     {"SStar", sstar_detect_cpu, VENDOR_SSTAR, sstar_setup_hal},
     {"MStar", mstar_detect_cpu, NULL, sstar_setup_hal},
+#endif
+#ifdef IPCHW_VENDOR_NOVATEK
     {"Novatek", novatek_detect_cpu, VENDOR_NOVATEK, novatek_setup_hal},
+#endif
+#ifdef IPCHW_VENDOR_GM
     {"Grain", gm_detect_cpu, VENDOR_GM, gm_setup_hal},
+#endif
+#ifdef IPCHW_VENDOR_FH
     {"FH", fh_detect_cpu, VENDOR_FH, fh_setup_hal},
+#endif
+#ifdef IPCHW_VENDOR_ROCKCHIP
     {NULL /* Generic */, rockchip_detect_cpu, VENDOR_ROCKCHIP, rockchip_setup_hal},
+#endif
+#ifdef IPCHW_VENDOR_XILINX
     {"Xilinx", xilinx_detect_cpu, NULL, xilinx_setup_hal},
+#endif
+#ifdef IPCHW_VENDOR_BCM
     {"BCM", bcm_detect_cpu, VENDOR_BCM, bcm_setup_hal},
-    {NULL, allwinner_detect_cpu, VENDOR_ALLWINNER, allwinner_setup_hal}
+#endif
+#ifdef IPCHW_VENDOR_ALLWINNER
+    {NULL, allwinner_detect_cpu, VENDOR_ALLWINNER, allwinner_setup_hal},
+#endif
 #endif
 #if defined(__aarch64__) || defined(_M_ARM64)
+#ifdef IPCHW_VENDOR_NOVATEK
     {NULL, novatek_detect_cpu, VENDOR_NOVATEK, novatek_setup_hal},
+#endif
+#ifdef IPCHW_VENDOR_TEGRA
     {NULL, tegra_detect_cpu, "Nvidia", tegra_setup_hal},
 #endif
+#endif
+    /* Sentinel, so the array stays well-formed when every optional vendor is
+     * compiled out; generic_detect_cpu() skips entries without a detect_fn. */
+    {NULL, NULL, NULL, NULL},
 };
 
 static bool generic_detect_cpu() {
@@ -77,6 +102,9 @@ static bool generic_detect_cpu() {
     strcpy(chip_manufacturer, buf);
 
     for (size_t i = 0; i < ARRCNT(manufacturers); i++) {
+        if (!manufacturers[i].detect_fn)
+            continue;
+
         if (manufacturers[i].pattern &&
             strncmp(manufacturers[i].pattern, chip_manufacturer,
                     strlen(manufacturers[i].pattern)))
@@ -115,9 +143,11 @@ static bool hw_detect_system() {
         return ret;
     }
 #ifdef __arm__
+#ifdef IPCHW_VENDOR_XM
     // xm510
     case 0x10030000:
         return detect_and_set("Xiongmai", xm_detect_cpu, setup_hal_xm, 0);
+#endif
     // hi3516cv300
     case 0x12100000:
     // hi3516ev200

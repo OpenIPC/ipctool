@@ -102,8 +102,10 @@ static void print_serial() {
     const char *vendor = getchipvendor();
     if (strstr(vendor, VENDOR_HISI) || strstr(vendor, VENDOR_GOKE))
         hisi_ev300_get_die_id(serial, sizeof serial);
+#ifdef IPCHW_VENDOR_SSTAR
     if (strstr(vendor, VENDOR_SSTAR))
         sstar_get_die_id(serial, sizeof serial);
+#endif
 
     if (!serial)
         exit(EXIT_FAILURE);
