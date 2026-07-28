@@ -35,38 +35,35 @@ endif()
 
 include_directories(./src/)
 
-set(COMMON_LIB_SRC
+# Vendor HALs are only reachable through the detection table in chipid.c, so a
+# consumer that already knows its SoC family can drop the ones it can never run
+# on. The HiSilicon HAL stays in unconditionally — chipid.c dispatches to it
+# directly rather than through the table. Affects libipchw only; the ipctool
+# executable is a diagnostic tool and always carries every vendor.
+set(IPCHW_OPTIONAL_VENDORS
+    allwinner bcm fh gm ingenic novatek rockchip sstar tegra xilinx xm)
+set(IPCHW_VENDORS "all" CACHE STRING
+    "Vendor HALs to compile into libipchw: 'all', 'none', or a ;-separated \
+subset of: ${IPCHW_OPTIONAL_VENDORS}")
+
+if(IPCHW_VENDORS STREQUAL "all")
+  set(_ipchw_selected ${IPCHW_OPTIONAL_VENDORS})
+elseif(IPCHW_VENDORS STREQUAL "none")
+  set(_ipchw_selected "")
+else()
+  set(_ipchw_selected ${IPCHW_VENDORS})
+endif()
+
+set(COMMON_LIB_SRC_BASE
     src/chipid.c
     src/chipid.h
     src/cjson/cJSON.c
     src/cjson/cJSON.h
-    src/hal/allwinner.c
-    src/hal/allwinner.h
-    src/hal/bcm.c
-    src/hal/bcm.h
     src/hal/common.c
     src/hal/common.h
-    src/hal/fh.c
-    src/hal/fh.h
-    src/hal/gm.c
-    src/hal/gm.h
     src/hal/hisi/hal_hisi.c
     src/hal/hisi/hal_hisi.h
     src/hal/hisi/ispreg.c
-    src/hal/ingenic.c
-    src/hal/ingenic.h
-    src/hal/novatek.c
-    src/hal/novatek.h
-    src/hal/rockchip.c
-    src/hal/rockchip.h
-    src/hal/sstar.c
-    src/hal/sstar.h
-    src/hal/tegra.c
-    src/hal/tegra.h
-    src/hal/xilinx.c
-    src/hal/xilinx.h
-    src/hal/xm.c
-    src/hal/xm.h
     src/hwinfo.c
     src/hwinfo.h
     src/mmap.h
@@ -75,6 +72,28 @@ set(COMMON_LIB_SRC
     src/tools.c
     src/tools.h
     src/version.h)
+
+# Full set, used by the ipctool executable
+set(COMMON_LIB_SRC_ALL ${COMMON_LIB_SRC_BASE})
+foreach(_v IN LISTS IPCHW_OPTIONAL_VENDORS)
+  list(APPEND COMMON_LIB_SRC_ALL src/hal/${_v}.c src/hal/${_v}.h)
+  string(TOUPPER ${_v} _V)
+  list(APPEND IPCHW_ALL_VENDOR_DEFS IPCHW_VENDOR_${_V})
+endforeach()
+
+# Selected subset, used by libipchw
+set(COMMON_LIB_SRC ${COMMON_LIB_SRC_BASE})
+foreach(_v IN LISTS _ipchw_selected)
+  if(NOT _v IN_LIST IPCHW_OPTIONAL_VENDORS)
+    message(FATAL_ERROR
+            "IPCHW_VENDORS: unknown vendor '${_v}'; "
+            "expected 'all', 'none', or a subset of ${IPCHW_OPTIONAL_VENDORS}")
+  endif()
+  list(APPEND COMMON_LIB_SRC src/hal/${_v}.c src/hal/${_v}.h)
+  string(TOUPPER ${_v} _V)
+  list(APPEND IPCHW_VENDOR_DEFS IPCHW_VENDOR_${_V})
+endforeach()
+message(STATUS "libipchw vendor HALs: hisi ${_ipchw_selected}")
 
 set(IPCTOOL_SRC
     src/backup.c
@@ -161,11 +180,12 @@ set(CYAML_TEST_SRC
     src/cjson/cYAML.h)
 
 add_library(ipchw STATIC ${COMMON_LIB_SRC})
-target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY)
+target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY ${IPCHW_VENDOR_DEFS})
 target_link_libraries(ipchw m)
 
 if(NOT ONLY_LIBRARY)
-  add_executable(ipctool ${IPCTOOL_SRC} ${COMMON_LIB_SRC})
+  add_executable(ipctool ${IPCTOOL_SRC} ${COMMON_LIB_SRC_ALL})
+  target_compile_definitions(ipctool PRIVATE ${IPCHW_ALL_VENDOR_DEFS})
 
   target_link_libraries(ipctool m)
   install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
