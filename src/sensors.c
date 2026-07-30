@@ -196,9 +196,16 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     // and 300Bh is a reset default that neither vendor init table touches
     // (IMX415: 0xA0, IMX335: 0x00).
     int r3B00 = READ(0xB00);
-    int is_imx415 = (r3B00 == 0x2E || r3B00 == 0x28) && READ(0xB) == 0xA0;
+    int r300B = READ(0xB);
+    int is_imx415 = (r3B00 == 0x2E || r3B00 == 0x28) && r300B == 0xA0;
 
     if (r316A > 0 && ((r316A & 0xFC) == 0x7C) && !is_imx415) {
+        // A failed read (-1) must not pass for "not IMX415": a latched
+        // IMX415 would slip back into IMX335 here and re-arm the loop.
+        // Only this decision needs the guard — the checks below re-test
+        // 0x3B00 on their own.
+        if (r3B00 == -1 || r300B == -1)
+            return false;
         sprintf(ctx->sensor_id, "IMX335");
         return true;
     }
