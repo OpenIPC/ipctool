@@ -158,10 +158,9 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    // 0x3057 is Y_OUT_SIZE MSB (host-writable), not a chip ID — Sony
-    // sensors have no dedicated chip ID register. IMX335 can read 0x06
+    // 0x3057 is Y_OUT_SIZE MSB and is host-writable: IMX335 reads 0x06
     // here after a WDR-cropping cycle (#157). Disambiguate via OB
-    // cropping defaults that survive majestic init:
+    // cropping defaults that survive sensor re-initialisation:
     //   IMX335: 0x3072=0x28, 0x3074=0xB0
     //   IMX347: 0x3072=0x14, 0x3074=0x3C
     int chip_id = READ(0x57);
@@ -189,8 +188,17 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
     if (r316A == -1)
         return false;
 
-    // HINT: possible check 0x316A == 0x7C && 0x3078 == 0x1
-    if (r316A > 0 && ((r316A & 0xFC) == 0x7C)) {
+    // 0x316A is INCKSEL4: IMX415 reads 0x7E here just like IMX335, and
+    // libsns_imx335.so *writes* 0x316A=0x7E in both its linear and WDR init
+    // tables. Once an IMX415 has been brought up with the IMX335 driver the
+    // misdetection latches until the sensor loses power. Rule IMX415 out
+    // first: 3B00h is "set to 2Eh, reset default 28h" (IMX415 datasheet p.46)
+    // and 300Bh is a reset default that neither vendor init table touches
+    // (IMX415: 0xA0, IMX335: 0x00).
+    int r3B00 = READ(0xB00);
+    int is_imx415 = (r3B00 == 0x2E || r3B00 == 0x28) && READ(0xB) == 0xA0;
+
+    if (r316A > 0 && ((r316A & 0xFC) == 0x7C) && !is_imx415) {
         sprintf(ctx->sensor_id, "IMX335");
         return true;
     }
@@ -208,8 +216,8 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
 
     // from IMX415 datasheet, p.46
     // 3B00h, Set to "2Eh", default value after reset is 28h
-    // HINT: possible check 0x300B == 0xA0 && 0x30C0 == 0x20
-    int r3B00 = READ(0xB00);
+    // Looser than the is_imx415 test above on purpose: catches an IMX415
+    // whose 0x300B differs, once 0x316A has ruled IMX335 out.
     if (r3B00 == 0x2E || r3B00 == 0x28) {
         sprintf(ctx->sensor_id, "IMX415");
         return true;
