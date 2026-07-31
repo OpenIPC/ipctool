@@ -906,7 +906,7 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     // Omnivision-SuperPix OV2735
     case 0x2735:
-        sprintf(ctx->sensor_id, "OV%04x", res);
+        strcpy(ctx->sensor_id, "SP2305");
         return true;
     case 0x4308:
         sprintf(ctx->sensor_id, "OS04B10");
