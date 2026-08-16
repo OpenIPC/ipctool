@@ -4,6 +4,11 @@ project(ipctool C)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_FLAGS "-std=gnu99")
 
+# sensors.c serialises sensor detection with a pthread mutex. On musl and
+# glibc >= 2.34 the pthread symbols live in libc, but older glibc and uClibc
+# need the explicit link flag, so ask for it rather than rely on the toolchain.
+find_package(Threads REQUIRED)
+
 cmake_policy(SET CMP0069 NEW)
 
 if(NOT BUILD_SHARED_LIBS)
@@ -181,13 +186,15 @@ set(CYAML_TEST_SRC
 
 add_library(ipchw STATIC ${COMMON_LIB_SRC})
 target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY ${IPCHW_VENDOR_DEFS})
-target_link_libraries(ipchw m)
+# Threads is carried on the interface so anything linking this static library
+# (ipcinfo here, and external consumers of libipchw) pulls pthread in too.
+target_link_libraries(ipchw m Threads::Threads)
 
 if(NOT ONLY_LIBRARY)
   add_executable(ipctool ${IPCTOOL_SRC} ${COMMON_LIB_SRC_ALL})
   target_compile_definitions(ipctool PRIVATE ${IPCHW_ALL_VENDOR_DEFS})
 
-  target_link_libraries(ipctool m)
+  target_link_libraries(ipctool m Threads::Threads)
   install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
 
   add_executable(ipcinfo example/ipcinfo.c src/tools.c ${VERSION_SRC})

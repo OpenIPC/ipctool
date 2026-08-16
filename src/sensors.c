@@ -1245,10 +1245,13 @@ if (!open_i2c_sensor_fd(i2c_adapter_nr))
     }
 
 
-   
+
 }
 
-
+    /* All buses probed, nothing answered. Without this the function fell off
+     * the end (UB): the bool came back indeterminate — often true — and the
+     * caller then formatted an uninitialised ctx into a garbage name. */
+    return false;
 }
 
 #ifndef STANDALONE_LIBRARY
@@ -1287,20 +1290,36 @@ cJSON *detect_sensors() {
 
 #endif
 
+/* getsensorid() drives i2c detection through the process-global i2c_adapter_nr
+ * and both entry points below format into one shared sensor_indentity buffer,
+ * none of it locked. Two threads calling these at once stomp the adapter number
+ * mid-probe (wrong bus -> detection fails -> garbage) and tear the buffer write.
+ * Serialise the whole detect-and-format so every returned value is one complete,
+ * valid string. */
+static pthread_mutex_t sensor_indentity_mtx = PTHREAD_MUTEX_INITIALIZER;
 static char sensor_indentity[16];
 const char *getsensoridentity() {
+    pthread_mutex_lock(&sensor_indentity_mtx);
     sensor_ctx_t ctx;
-    if (!getsensorid(&ctx))
-        return NULL;
-    lsnprintf(sensor_indentity, sizeof(sensor_indentity), "%s_%s",
-              ctx.sensor_id, ctx.control);
-    return sensor_indentity;
+    const char *ret = NULL;
+    if (getsensorid(&ctx)) {
+        lsnprintf(sensor_indentity, sizeof(sensor_indentity), "%s_%s",
+                  ctx.sensor_id, ctx.control);
+        ret = sensor_indentity;
+    }
+    pthread_mutex_unlock(&sensor_indentity_mtx);
+    return ret;
 }
 
 const char *getsensorshort() {
+    pthread_mutex_lock(&sensor_indentity_mtx);
     sensor_ctx_t ctx;
-    if (!getsensorid(&ctx))
-        return NULL;
-    lsnprintf(sensor_indentity, sizeof(sensor_indentity), "%s", ctx.sensor_id);
-    return sensor_indentity;
+    const char *ret = NULL;
+    if (getsensorid(&ctx)) {
+        lsnprintf(sensor_indentity, sizeof(sensor_indentity), "%s",
+                  ctx.sensor_id);
+        ret = sensor_indentity;
+    }
+    pthread_mutex_unlock(&sensor_indentity_mtx);
+    return ret;
 }
