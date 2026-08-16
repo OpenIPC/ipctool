@@ -880,18 +880,16 @@ static int do_upgrade(const char *filename, bool force) {
 
     cJSON *binfo = detect_board();
     char board[1024] = {0}, board_id[1024] = {0};
-    cJSON *c_vendor = cJSON_GetObjectItem(binfo, "vendor");
-    if (c_vendor) {
-        char *bstr = cJSON_GetStringValue(binfo);
-        if (bstr)
-            strcpy(board, bstr);
-    }
-    cJSON *c_model = cJSON_GetObjectItem(binfo, "model");
-    if (c_model) {
-        char *bstr = cJSON_GetStringValue(binfo);
-        strcpy(board_id, bstr);
-        strcat(board, " ");
-        strcat(board, bstr);
+    const char *bstr =
+        cJSON_GetStringValue(cJSON_GetObjectItem(binfo, "vendor"));
+    if (bstr)
+        snprintf(board, sizeof(board), "%s", bstr);
+
+    bstr = cJSON_GetStringValue(cJSON_GetObjectItem(binfo, "model"));
+    if (bstr) {
+        snprintf(board_id, sizeof(board_id), "%s", bstr);
+        size_t used = strlen(board);
+        snprintf(board + used, sizeof(board) - used, " %s", bstr);
     }
     if (binfo)
         cJSON_Delete(binfo);
