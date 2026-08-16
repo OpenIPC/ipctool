@@ -900,34 +900,44 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     if (!res)
         return false;
 
+    // This probe matches a register family (0xFD-paged, id at 0x02/0x03) that
+    // the WillSemi group ships under both SuperPix (SP) and OmniVision (OV/OS)
+    // part numbers, so the vendor follows the id we matched, not the probe that
+    // found it. Every branch sets it; get_sensor_id_i2c() does not override.
     switch (res) {
     case 0x140a:
+        strcpy(ctx->vendor, "SuperPix");
         sprintf(ctx->sensor_id, "SP%04x", res);
         return true;
-    // Omnivision-SuperPix OV2735
+    // OmniVision OV2735. SuperPix ships the same die as SP2305 — identical
+    // paged register map and the same 0x2735 id, so the two labels cannot be
+    // told apart by detection alone
     case 0x2735:
+        strcpy(ctx->vendor, "OmniVision");
         sprintf(ctx->sensor_id, "OV%04x", res);
         return true;
     case 0x4308:
+        strcpy(ctx->vendor, "OmniVision");
         sprintf(ctx->sensor_id, "OS04B10");
         return true;
     case 0x5302:
-        sprintf(ctx->sensor_id, "SP2308"); // or OS02M10
+        strcpy(ctx->vendor, "SuperPix");
+        sprintf(ctx->sensor_id, "SP2308"); // or OmniVision OS02M10
         return true;
     case 0x5303:
+        strcpy(ctx->vendor, "OmniVision");
         sprintf(ctx->sensor_id, "OS03B10");
         return true;
     case 0x5602:
+        strcpy(ctx->vendor, "OmniVision");
         sprintf(ctx->sensor_id, "OS02G10");
         return true;
     }
 
     switch (res2) {
-    // It's very hard to tell if this is original OmniVision or SuperPix...
-    // Need to overwrite vendor somehow or move this to OV detect function
     case 0x530444:
+        strcpy(ctx->vendor, "OmniVision");
         sprintf(ctx->sensor_id, "OS04D10");
-        // strcpy(ctx->vendor, "OmniVision");
         return true;
     }
 
@@ -959,6 +969,7 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
     }
 
     if (res) {
+        strcpy(ctx->vendor, "SuperPix");
         sprintf(ctx->sensor_id, "SP%04x", res);
     }
 
@@ -1130,7 +1141,8 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_superpix_sensor,
                                        SENSOR_SUPERPIX)) {
-        strcpy(ctx->vendor, "SuperPix");
+        // vendor is set by the probe itself: this register family carries both
+        // SuperPix and OmniVision part numbers
         ctx->reg_width = 1;
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_techpoint_adc,
