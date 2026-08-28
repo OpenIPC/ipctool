@@ -91,6 +91,12 @@ extern write_register_t spi_write_register;
 extern float (*hal_temperature)();
 extern void (*hal_cleanup)();
 
+/* Put the sensor in a state where it can answer a probe, where that takes
+ * doing. Ingenic gates the sensor's clock, and whoever had the pipeline up
+ * last may well have gated it off again on the way down — so this has to run
+ * before every probe, not once per process. NULL where nothing is needed. */
+extern void (*hal_enable_sensor_clock)();
+
 #ifndef STANDALONE_LIBRARY
 extern void (*hal_detect_ethernet)(cJSON *handle);
 extern unsigned long (*hal_totalmem)(unsigned long *media_mem);

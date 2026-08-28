@@ -22,6 +22,7 @@ write_register_t spi_write_register;
 int (*i2c_change_addr)(int fd, unsigned char addr);
 float (*hal_temperature)();
 void (*hal_cleanup)();
+void (*hal_enable_sensor_clock)();
 
 #ifndef STANDALONE_LIBRARY
 void (*hal_detect_ethernet)(cJSON *root);
@@ -223,6 +224,9 @@ void setup_hal_fallback() {
     i2c_write_register = universal_i2c_write_register;
     spi_write_register = universal_spi_write_register;
     hal_cleanup = universal_hal_cleanup;
+    /* Cleared, not defaulted: most SoCs need nothing done to make the sensor
+     * answer, and this runs before detection picks the one that does. */
+    hal_enable_sensor_clock = NULL;
 #ifndef STANDALONE_LIBRARY
     hal_totalmem = default_totalmem;
 #endif

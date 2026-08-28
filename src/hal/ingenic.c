@@ -368,6 +368,12 @@ void setup_hal_ingenic() {
     ingenic_enable_sensor_clock();
     possible_i2c_addrs = ingenic_possible_i2c_addrs;
     open_i2c_sensor_fd = ingenic_open_i2c_fd;
+    /* Also as a hook, because the call above only ever runs once: getchipname()
+     * caches the chip id and returns before ever reaching here again. Anything
+     * that gates the clock off afterwards — the vendor SDK does, on the way
+     * down — would otherwise leave every later probe reading an unclocked
+     * sensor and reporting that there is none. */
+    hal_enable_sensor_clock = ingenic_enable_sensor_clock;
 #ifndef STANDALONE_LIBRARY
     hal_totalmem = ingenic_totalmem;
 #endif
