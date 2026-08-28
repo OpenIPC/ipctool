@@ -1194,6 +1194,17 @@ bool getsensorid(sensor_ctx_t *ctx) {
 int current_i2c_adapter_nr;
     if (!getchipname())
         return NULL;
+
+    /* Every probe, not just the first. getchipname() sets the HAL up once and
+     * then returns its cached answer forever, so anything the setup did to
+     * make the sensor answerable was done once too. On Ingenic that is the
+     * sensor's clock, and the vendor SDK gates it off when it tears a pipeline
+     * down: a second probe in the same process then found an unclocked sensor
+     * and reported that the board has none. A fresh process got it right,
+     * which is what made it look like the hardware rather than us. */
+    if (hal_enable_sensor_clock)
+        hal_enable_sensor_clock();
+
     // there is no platform specific i2c/spi access layer
     if (!open_i2c_sensor_fd(i2c_adapter_nr))
         return NULL;
