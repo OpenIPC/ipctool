@@ -1189,6 +1189,30 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
     return res;
 }
 
+/* Is the bus there at all? A liveness check and nothing more: the probes below
+ * (get_sensor_id_i2c) open the adapter again and close what they opened, so the
+ * descriptor taken here has no further use.
+ *
+ * It used to be taken and dropped on the floor. getsensorid() runs afresh on
+ * every pipeline reload, so a long-lived caller leaked one /dev/i2c-N
+ * descriptor per reload — and up to six, once the fall-through loop below
+ * started sweeping the other adapters. Enough of them and open()/accept() start
+ * failing process-wide, which for a daemon looks like a camera that is still
+ * running and has stopped answering rather than like a descriptor leak.
+ * Measured on a lab ssc30kq: exactly one per SIGHUP before, none after.
+ *
+ * The test is `fd < 0`, not the `!fd` it replaces: open() reports failure as
+ * -1, so the old form read a failed open as success and only the impossible
+ * descriptor 0 as failure. */
+static bool i2c_bus_openable(int adapter_nr) {
+    int fd = open_i2c_sensor_fd(adapter_nr);
+    if (fd < 0)
+        return false;
+
+    close_sensor_fd(fd);
+    return true;
+}
+
 bool getsensorid(sensor_ctx_t *ctx) {
 
 int current_i2c_adapter_nr;
@@ -1206,8 +1230,8 @@ int current_i2c_adapter_nr;
         hal_enable_sensor_clock();
 
     // there is no platform specific i2c/spi access layer
-    if (!open_i2c_sensor_fd(i2c_adapter_nr))
-        return NULL;
+    if (!i2c_bus_openable(i2c_adapter_nr))
+        return false;
 
     // Use common settings as default
     ctx->data_width = 1;
@@ -1236,8 +1260,8 @@ for (int i = 0; i <= 5; i++) {
 i2c_adapter_nr = i;
 					
    
-if (!open_i2c_sensor_fd(i2c_adapter_nr))
-        return NULL;
+if (!i2c_bus_openable(i2c_adapter_nr))
+        return false;
 
     // Use common settings as default
     ctx->data_width = 1;
