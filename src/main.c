@@ -19,6 +19,7 @@
 #include "cjson/cYAML.h"
 #include "clocks.h"
 #include "cpubench.h"
+#include "cryptobench.h"
 #include "ethernet.h"
 #include "firmware.h"
 #include "hal/hisi/hal_hisi.h"
@@ -109,6 +110,9 @@ void print_usage() {
         "  cpubench [--json] [--loops N]\n"
         "                            triangulate CPU clock by running three\n"
         "                            tight inline-asm patterns (ARM only)\n"
+        "  cryptobench [--json] [--bytes N] [--iters N] [--no-hw]\n"
+        "                            AEAD seal rate at packet size, in\n"
+        "                            software and on the SoC cipher engine\n"
         "  membw [--size MB] [--iters N] [--ops set,...] [--json]\n"
         "                            DDR bandwidth probe (memset / read scan "
         "/\n"
@@ -195,6 +199,8 @@ int main(int argc, char *argv[]) {
             return clocks_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "cpubench"))
             return cpubench_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "cryptobench"))
+            return cryptobench_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "membw"))
             return membw_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "bootrom"))
