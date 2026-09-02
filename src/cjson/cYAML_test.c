@@ -34,7 +34,9 @@ bail1:
 }
 
 int main(int argc, char *argv[]) {
-    run_test("top-level object",
+    bool ok = true;
+
+    ok &= run_test("top-level object",
 
              "{ "
              "  \"rom\": {"
@@ -85,7 +87,7 @@ int main(int argc, char *argv[]) {
              "- item4\n"
              );
 
-    run_test("top-level list",
+    ok &= run_test("top-level list",
 
              "["
              " \"item1\","
@@ -119,7 +121,7 @@ int main(int argc, char *argv[]) {
              "- item4\n"
              );
 
-    run_test("empty objects",
+    ok &= run_test("empty objects",
 
              "{ "
              "  \"object\": {},"
@@ -133,5 +135,28 @@ int main(int argc, char *argv[]) {
              "string: \"\"\n"
              );
 
-    return 0;
+    /* Non-ASCII used to take down the whole print, not just one string:
+     * `char` is signed, so every UTF-8 byte tested as < 32, fell into the
+     * \u expansion and overran its scratch buffer, and cYAML_Print returned
+     * NULL. ipctool then emitted nothing at all in its default output mode.
+     * Sensor names and U-Boot environments do carry non-ASCII, so this was
+     * reachable in ordinary use. UTF-8 is valid YAML and passes through. */
+    ok &= run_test("utf-8 passes through",
+
+             "{ \"note\": \"em dash \\u2014 here\" }",
+
+             "---\n"
+             "note: em dash \xe2\x80\x94 here\n"
+             );
+
+    /* Control characters still get expanded. */
+    ok &= run_test("control characters are escaped",
+
+             "{ \"note\": \"bell \\u0007 here\" }",
+
+             "---\n"
+             "note: \"bell \\u0007 here\"\n"
+             );
+
+    return ok ? 0 : 1;
 }

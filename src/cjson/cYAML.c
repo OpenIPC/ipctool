@@ -81,9 +81,15 @@ static bool print_string(string_buffer *buf, const char *s) {
     static const char *ESCAPES = "\"\\\b\f\n\r\t";
     static const char *REPLACEMENTS = "\"\\bfnrt";
 
+    /* Compared as unsigned: `char` is signed on x86 and ARM alike, so a plain
+     * `*c < 32` also catches every byte of a UTF-8 sequence. Those then fell
+     * into the \u expansion below, overran its 10-byte scratch, and failed the
+     * whole print — cYAML_Print returned NULL and ipctool printed nothing at
+     * all rather than one mangled string. Sensor names and U-Boot environments
+     * do carry non-ASCII, so this was reachable from ordinary output. */
     bool needs_escaping = false;
     for (const char *c = s; *c; c++) {
-        if (*c < 32 || *c == ':' || index(ESCAPES, *c) != NULL) {
+        if ((unsigned char)*c < 32 || *c == ':' || index(ESCAPES, *c) != NULL) {
             needs_escaping = true;
             break;
         }
@@ -104,10 +110,12 @@ static bool print_string(string_buffer *buf, const char *s) {
             continue;
         }
 
-        if (*c < 32) {
-            /* Expand non-printable characters. */
+        if ((unsigned char)*c < 32) {
+            /* Expand non-printable characters. Bytes >= 128 are left alone:
+             * they are UTF-8, which YAML takes as-is. */
             char repl[10];
-            TRY(snprintf(repl, sizeof(repl), "\\u%04x", *c) < (int)sizeof(repl));
+            TRY(snprintf(repl, sizeof(repl), "\\u%04x", (unsigned char)*c) <
+                (int)sizeof(repl));
             TRY(strbuf_push(buf, repl));
             continue;
         }
