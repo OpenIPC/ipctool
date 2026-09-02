@@ -37,7 +37,9 @@
  * the second one read twice as slow.
  */
 
+#include <errno.h>
 #include <getopt.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -45,8 +47,10 @@
 #include <string.h>
 #include <time.h>
 
+#include "chipid.h"
 #include "cjson/cJSON.h"
 #include "cjson/cYAML.h"
+#include "crypto/aes.h"
 #include "crypto/chachapoly.h"
 #include "crypto/gcm.h"
 #include "crypto/hisi_cipher.h"
@@ -142,15 +146,18 @@ static bool verify_chachapoly(void) {
     return memcmp(tag, want_tag, 16) == 0;
 }
 
+/* The AES-128 key SP 800-38A uses, shared by the engine's vectors and its
+ * benchmark rows. */
+static const uint8_t g_hw_key[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae,
+                                     0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88,
+                                     0x09, 0xcf, 0x4f, 0x3c};
+
 /* The engine, against NIST SP 800-38A F.5.1 and then across a 32-bit counter
  * wrap. The second one is not optional: a block that carries only the low 32
  * bits of the counter agrees with software for every IV that is not near a
  * wrap, which is nearly all of them, so it would pass the first vector, ship,
  * and then disagree on one packet in millions with nothing to say so. */
 static bool verify_hw_ctr(hisi_cipher *hw) {
-    static const uint8_t key[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae,
-                                    0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88,
-                                    0x09, 0xcf, 0x4f, 0x3c};
     static const uint8_t iv[16] = {0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5,
                                    0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb,
                                    0xfc, 0xfd, 0xfe, 0xff};
@@ -162,7 +169,7 @@ static bool verify_hw_ctr(hisi_cipher *hw) {
                                      0x99, 0x0d, 0xb6, 0xce};
     uint8_t buf[16];
     memcpy(buf, plain, sizeof(buf));
-    if (!hisi_cipher_ctr(hw, key, iv, buf, sizeof(buf)))
+    if (!hisi_cipher_ctr(hw, g_hw_key, iv, buf, sizeof(buf)))
         return false;
     if (memcmp(buf, want, sizeof(want)) != 0)
         return false;
@@ -176,9 +183,65 @@ static bool verify_hw_ctr(hisi_cipher *hw) {
         0x50, 0xc2, 0xfa, 0x5c, 0x65, 0x9a, 0x07, 0x96, 0x30, 0x22};
     uint8_t wrap[32];
     memset(wrap, 0, sizeof(wrap));
-    if (!hisi_cipher_ctr(hw, key, wrap_iv, wrap, sizeof(wrap)))
+    if (!hisi_cipher_ctr(hw, g_hw_key, wrap_iv, wrap, sizeof(wrap)))
         return false;
     return memcmp(wrap, wrap_want, sizeof(wrap_want)) == 0;
+}
+
+/* The batched command needs a known answer of its own, and specifically one
+ * with a DIFFERENT IV PER PACKAGE. A driver that accepted the burst but
+ * applied the channel's single IV to every package would return correct
+ * ciphertext for package 0 and silent nonsense for the other fourteen — which
+ * is exactly the shape of the batch benchmark's real jobs, and would have been
+ * reported as a fast verified row. Each package is checked against the
+ * software AES-CTR in this same binary, which the F.5.1 vector above has
+ * already pinned to the standard.
+ *
+ * `len` is the length the benchmark will actually use, and is deliberately not
+ * required to be a multiple of the block: the single-packet path pads a short
+ * tail itself while this one hands the length straight to the driver, so any
+ * disagreement between them about a partial final block surfaces here as a
+ * failed vector rather than as a wrong number in the table. */
+static bool verify_hw_ctr_batch(hisi_cipher *hw, size_t len) {
+    if (hw->batch_max == 0 || len == 0 || len > MAX_PACKET)
+        return false;
+
+    static uint8_t bufs[HISI_CIPHER_BATCH_MAX][MAX_PACKET];
+    static uint8_t want[HISI_CIPHER_BATCH_MAX][MAX_PACKET];
+    static uint8_t ivs[HISI_CIPHER_BATCH_MAX][16];
+    hisi_cipher_job jobs[HISI_CIPHER_BATCH_MAX];
+
+    aes_ctx aes;
+    if (aes_setkey_enc(&aes, g_hw_key, 128) != 0)
+        return false;
+
+    const unsigned depth = hw->batch_max;
+    for (unsigned i = 0; i < depth; i++) {
+        /* Distinct plaintext as well as distinct IV, so a driver that
+         * processed the same package fifteen times cannot pass either. */
+        for (size_t j = 0; j < len; j++)
+            bufs[i][j] = (uint8_t)(j + i * 31u);
+        memcpy(want[i], bufs[i], len);
+
+        memset(ivs[i], 0, sizeof(ivs[i]));
+        ivs[i][0] = (uint8_t)(0xa0 + i);
+        ivs[i][15] = (uint8_t)(i * 7u + 1u);
+
+        uint8_t counter[16];
+        memcpy(counter, ivs[i], sizeof(counter));
+        aes_ctr_xcrypt(&aes, counter, want[i], len);
+
+        jobs[i].iv = ivs[i];
+        jobs[i].buf = bufs[i];
+        jobs[i].len = len;
+    }
+
+    if (!hisi_cipher_ctr_batch(hw, g_hw_key, jobs, depth))
+        return false;
+    for (unsigned i = 0; i < depth; i++)
+        if (memcmp(bufs[i], want[i], len) != 0)
+            return false;
+    return true;
 }
 
 /* ---- rows -------------------------------------------------------------- */
@@ -286,15 +349,12 @@ static void bench_chachapoly(struct row *r, uint8_t *buf, size_t bytes,
 
 static void bench_hw_single(struct row *r, hisi_cipher *hw, uint8_t *buf,
                             size_t bytes, unsigned iters) {
-    static const uint8_t key[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae,
-                                    0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88,
-                                    0x09, 0xcf, 0x4f, 0x3c};
     uint8_t iv[16];
     memset(iv, 0x11, sizeof(iv));
 
     const double w0 = now_wall(), c0 = now_cpu();
     for (unsigned i = 0; i < iters; i++) {
-        if (!hisi_cipher_ctr(hw, key, iv, buf, bytes)) {
+        if (!hisi_cipher_ctr(hw, g_hw_key, iv, buf, bytes)) {
             r->ran = false;
             return;
         }
@@ -306,9 +366,6 @@ static void bench_hw_single(struct row *r, hisi_cipher *hw, uint8_t *buf,
 
 static void bench_hw_batch(struct row *r, hisi_cipher *hw, size_t bytes,
                            unsigned iters, unsigned depth) {
-    static const uint8_t key[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae,
-                                    0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88,
-                                    0x09, 0xcf, 0x4f, 0x3c};
     static uint8_t bufs[HISI_CIPHER_BATCH_MAX][MAX_PACKET];
     static uint8_t ivs[HISI_CIPHER_BATCH_MAX][16];
     hisi_cipher_job jobs[HISI_CIPHER_BATCH_MAX];
@@ -324,7 +381,7 @@ static void bench_hw_batch(struct row *r, hisi_cipher *hw, size_t bytes,
     const unsigned rounds = iters / depth ? iters / depth : 1;
     const double w0 = now_wall(), c0 = now_cpu();
     for (unsigned i = 0; i < rounds; i++) {
-        if (!hisi_cipher_ctr_batch(hw, key, jobs, depth)) {
+        if (!hisi_cipher_ctr_batch(hw, g_hw_key, jobs, depth)) {
             r->ran = false;
             return;
         }
@@ -350,11 +407,15 @@ static cJSON *build_hw_json(size_t bytes, unsigned iters) {
 
     cJSON *j_inner = cJSON_CreateObject();
     ADD_PARAM("device", HISI_CIPHER_DEV);
-    ADD_PARAM("aead", aead ? "supported" : "unsupported");
-    if (!aead)
-        ADD_PARAM("aead_note",
-                  "block refuses AES-GCM, so there is no hardware sealing on "
-                  "this part and only the AES-CTR half could be offloaded");
+    ADD_PARAM("aead", aead ? "supported, not measured" : "unsupported");
+    ADD_PARAM("aead_note",
+              aead ? "this part accepts AES-GCM, which no part available when "
+                     "this was written did; the sealing benchmark is not "
+                     "implemented, because an unverifiable number is worse "
+                     "than a missing one. Please open an issue"
+                   : "block refuses AES-GCM, so there is no hardware sealing "
+                     "on this part and only the AES-CTR half could be "
+                     "offloaded");
 
     struct row single = {false, false, 0, 0, 0};
     struct row floor = {false, false, 0, 0, 0};
@@ -362,7 +423,10 @@ static cJSON *build_hw_json(size_t bytes, unsigned iters) {
 
     single.verified = verify_hw_ctr(&hw);
     floor.verified = single.verified;
-    batch.verified = single.verified;
+    /* Not inherited: the batched path is a different command with different
+     * per-package state, and passing the single-packet vector says nothing
+     * about it. */
+    batch.verified = single.verified && verify_hw_ctr_batch(&hw, bytes);
 
     if (single.verified) {
         static uint8_t buf[MAX_PACKET];
@@ -373,7 +437,7 @@ static cJSON *build_hw_json(size_t bytes, unsigned iters) {
          * and the number to reason with before writing any code against
          * this engine. */
         bench_hw_single(&floor, &hw, buf, 16, iters);
-        if (hw.batch_max > 0)
+        if (batch.verified)
             bench_hw_batch(&batch, &hw, bytes, iters, hw.batch_max);
     }
 
@@ -430,6 +494,28 @@ static cJSON *build_cryptobench_json(size_t bytes, unsigned iters,
     return j_inner;
 }
 
+/* strtoul() alone would take "-1" as ULONG_MAX and "100junk" as 100, and the
+ * narrowing to unsigned then hides the first of those: --iters -1 becomes
+ * UINT_MAX and the tool sits there for a week. Require the whole argument to
+ * be a number and range-check before narrowing. */
+static bool parse_bounded(const char *arg, unsigned long lo, unsigned long hi,
+                          unsigned long *out) {
+    if (!arg || !*arg)
+        return false;
+    errno = 0;
+    char *end = NULL;
+    const unsigned long v = strtoul(arg, &end, 10);
+    if (errno != 0 || end == arg || *end != '\0')
+        return false;
+    /* strtoul() accepts a leading '-' and wraps it; reject the sign itself. */
+    if (strchr(arg, '-'))
+        return false;
+    if (v < lo || v > hi)
+        return false;
+    *out = v;
+    return true;
+}
+
 static void print_cryptobench_usage(void) {
     printf(
         "Usage: ipctool cryptobench [--json] [--bytes N] [--iters N] "
@@ -478,23 +564,29 @@ int cryptobench_cmd(int argc, char **argv) {
         case 'j':
             want_json = true;
             break;
-        case 'b':
-            bytes = (size_t)strtoul(optarg, NULL, 10);
-            if (bytes < 16 || bytes > MAX_PACKET) {
+        case 'b': {
+            unsigned long v;
+            if (!parse_bounded(optarg, 16, MAX_PACKET, &v)) {
                 fprintf(stderr,
-                        "cryptobench: --bytes must be 16..%d (the engine's "
-                        "own limit)\n",
+                        "cryptobench: --bytes must be a number 16..%d (the "
+                        "engine's own limit)\n",
                         MAX_PACKET);
                 return EXIT_FAILURE;
             }
+            bytes = (size_t)v;
             break;
-        case 'i':
-            iters = (unsigned)strtoul(optarg, NULL, 10);
-            if (iters < 100) {
-                fprintf(stderr, "cryptobench: --iters must be >= 100\n");
+        }
+        case 'i': {
+            unsigned long v;
+            if (!parse_bounded(optarg, 100, 100000000UL, &v)) {
+                fprintf(stderr,
+                        "cryptobench: --iters must be a number 100..%lu\n",
+                        100000000UL);
                 return EXIT_FAILURE;
             }
+            iters = (unsigned)v;
             break;
+        }
         case 'n':
             want_hw = false;
             break;
@@ -508,6 +600,14 @@ int cryptobench_cmd(int argc, char **argv) {
     }
 
     cJSON *bench = build_cryptobench_json(bytes, iters, want_hw);
+
+    /* A row of numbers is only useful in the per-SoC table #186 asks for if it
+     * says which SoC. Same tagging membw does; absent on a host build, where
+     * chip detection never ran. */
+    const char *chip = getchipname();
+    if (chip)
+        cJSON_AddItemToObject(bench, "chip", cJSON_CreateString(chip));
+
     cJSON *root = cJSON_CreateObject();
     cJSON_AddItemToObject(root, "cryptobench", bench);
 

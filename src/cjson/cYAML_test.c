@@ -149,6 +149,17 @@ int main(int argc, char *argv[]) {
              "note: em dash \xe2\x80\x94 here\n"
              );
 
+    /* Bytes that are not valid UTF-8 reach cYAML from raw flash -- U-Boot
+     * environments are passed through untranscoded -- and must not be emitted
+     * raw, or one bad byte in one value stops the whole document parsing. */
+    ok &= run_test("invalid utf-8 is escaped, not passed through",
+
+             "{ \"note\": \"latin1 \xe9 here\" }",
+
+             "---\n"
+             "note: \"latin1 \\u00e9 here\"\n"
+             );
+
     /* Control characters still get expanded. */
     ok &= run_test("control characters are escaped",
 

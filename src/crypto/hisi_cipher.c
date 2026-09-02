@@ -146,6 +146,14 @@ bool hisi_cipher_ctr(hisi_cipher *c, const uint8_t key[16],
     return true;
 }
 
+/* Lengths go to the driver unrounded, unlike the single-packet path above,
+ * which pads into its own scratch. That asymmetry is deliberate and measured,
+ * not an oversight: the batched command encrypts in place at the caller's
+ * buffers, so padding here would mean a bounce buffer per package and would
+ * make the benchmark measure that copy instead of the engine. The batched
+ * driver rounds the descriptor itself, which the caller's known-answer test
+ * confirms at a length that is not a multiple of the block -- verified on a
+ * gk7205v200 at 1100 bytes, where all fifteen packages match software CTR. */
 bool hisi_cipher_ctr_batch(hisi_cipher *c, const uint8_t key[16],
                            const hisi_cipher_job *jobs, size_t count) {
     if (c->fd < 0 || count == 0 || count > HISI_CIPHER_BATCH_MAX)
@@ -219,9 +227,14 @@ bool hisi_cipher_open(hisi_cipher *c) {
     c->chan = cr.id;
 
     /* Probe the batched command by trying it. A driver without it answers
-     * EINVAL, which is the common case in the field and not a fault. Two
-     * packets rather than one, because one would also succeed on a driver
-     * that ignored the per-package IV entirely. */
+     * EINVAL, which is the common case in the field and not a fault.
+     *
+     * This asks only whether the command EXISTS. It deliberately does not
+     * check the ciphertext, because a probe that submitted one IV and one
+     * plaintext could not tell a correct driver from one that ignored the
+     * per-package IV, and a probe that looked like it had checked would be
+     * worse than one that plainly has not. Correctness is established by the
+     * caller's known-answer test, which uses a distinct IV per package. */
     uint8_t key[16] = {0}, iv[16] = {0}, a[16] = {0}, b[16] = {0};
     hisi_cipher_job probe[2] = {
         {iv, a, sizeof(a)},
