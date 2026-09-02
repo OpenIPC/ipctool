@@ -109,6 +109,16 @@ set(IPCTOOL_SRC
     src/clocks.h
     src/cpubench.c
     src/cpubench.h
+    src/crypto/aes.c
+    src/crypto/aes.h
+    src/crypto/chachapoly.c
+    src/crypto/chachapoly.h
+    src/crypto/gcm.c
+    src/crypto/gcm.h
+    src/crypto/hisi_cipher.c
+    src/crypto/hisi_cipher.h
+    src/cryptobench.c
+    src/cryptobench.h
     src/dns.c
     src/dns.h
     src/ethernet.c

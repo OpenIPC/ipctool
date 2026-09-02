@@ -2,6 +2,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -72,6 +73,50 @@ static bool strbuf_push(string_buffer *buf, const char *s) {
     return true;
 }
 
+/* Length of the well-formed UTF-8 sequence starting at `c`, or 0 if what is
+ * there is not one.
+ *
+ * ipctool does not get to assume its input is UTF-8: U-Boot environments,
+ * sensor names and vendor strings are read as raw bytes off flash and passed
+ * through untranscoded, so a high byte may be latin-1, a truncated sequence,
+ * or nothing in particular. Valid sequences must survive unescaped (that is
+ * the point of a UTF-8 document format); invalid ones must not reach the
+ * output, or the whole stream stops parsing because of one bad byte in one
+ * value. Rejecting overlong forms, surrogates and out-of-range code points
+ * matters for the same reason -- a parser is entitled to refuse them. */
+static int utf8_seq_len(const unsigned char *c) {
+    if (c[0] < 0x80)
+        return 1;
+
+    unsigned len;
+    uint32_t cp;
+    if ((c[0] & 0xe0) == 0xc0) {
+        len = 2;
+        cp = c[0] & 0x1fu;
+    } else if ((c[0] & 0xf0) == 0xe0) {
+        len = 3;
+        cp = c[0] & 0x0fu;
+    } else if ((c[0] & 0xf8) == 0xf0) {
+        len = 4;
+        cp = c[0] & 0x07u;
+    } else {
+        return 0; /* continuation byte or 0xfe/0xff, never a lead */
+    }
+
+    for (unsigned i = 1; i < len; i++) {
+        if ((c[i] & 0xc0) != 0x80)
+            return 0; /* also catches the terminator: 0 is not a continuation */
+        cp = (cp << 6) | (c[i] & 0x3fu);
+    }
+
+    static const uint32_t min_cp[5] = {0, 0, 0x80, 0x800, 0x10000};
+    if (cp < min_cp[len] || cp > 0x10ffff)
+        return 0; /* overlong, or past the last code point */
+    if (cp >= 0xd800 && cp <= 0xdfff)
+        return 0; /* surrogate half, not a scalar value */
+    return (int)len;
+}
+
 static bool print_string(string_buffer *buf, const char *s) {
     if (!s || !*s) {
         TRY(strbuf_push(buf, "\"\""));
@@ -81,12 +126,20 @@ static bool print_string(string_buffer *buf, const char *s) {
     static const char *ESCAPES = "\"\\\b\f\n\r\t";
     static const char *REPLACEMENTS = "\"\\bfnrt";
 
+    /* Every test here compares as `unsigned char`. `char` is signed on x86 and
+     * ARM alike, so a plain `*c < 32` was also true for every byte of a UTF-8
+     * sequence; those fell into the \u expansion below, overran its 10-byte
+     * scratch, and failed the whole print -- cYAML_Print returned NULL and
+     * ipctool printed nothing at all rather than one mangled string. */
     bool needs_escaping = false;
-    for (const char *c = s; *c; c++) {
-        if (*c < 32 || *c == ':' || index(ESCAPES, *c) != NULL) {
+    for (const unsigned char *c = (const unsigned char *)s; *c;) {
+        const int seq = utf8_seq_len(c);
+        if (seq == 0 || *c < 32 || *c == ':' ||
+            index(ESCAPES, (char)*c) != NULL) {
             needs_escaping = true;
             break;
         }
+        c += seq;
     }
 
     if (!needs_escaping) {
@@ -95,26 +148,44 @@ static bool print_string(string_buffer *buf, const char *s) {
     }
 
     TRY(strbuf_push(buf, "\""));
-    for (const char *c = s; *c; c++) {
-        char *found = index(ESCAPES, *c);
+    for (const unsigned char *c = (const unsigned char *)s; *c;) {
+        char *found = *c < 0x80 ? index(ESCAPES, (char)*c) : NULL;
         if (found != NULL) {
             char repl[] = "\\_";
             repl[1] = REPLACEMENTS[found - ESCAPES];
             TRY(strbuf_push(buf, repl));
+            c++;
             continue;
         }
 
-        if (*c < 32) {
-            /* Expand non-printable characters. */
+        const int seq = utf8_seq_len(c);
+        if (seq > 1) {
+            /* A valid multi-byte sequence goes out as it came in. */
+            for (int i = 0; i < seq; i++) {
+                char raw[] = "_";
+                raw[0] = (char)c[i];
+                TRY(strbuf_push(buf, raw));
+            }
+            c += seq;
+            continue;
+        }
+
+        if (seq == 0 || *c < 32) {
+            /* Control characters, and bytes that are not UTF-8 at all. \u00XX
+             * is a lossless spelling of the byte: it round-trips through a
+             * parser as U+0000..U+00FF and keeps the document readable. */
             char repl[10];
-            TRY(snprintf(repl, sizeof(repl), "\\u%04x", *c) < (int)sizeof(repl));
+            TRY(snprintf(repl, sizeof(repl), "\\u%04x", (unsigned)*c) <
+                (int)sizeof(repl));
             TRY(strbuf_push(buf, repl));
+            c++;
             continue;
         }
 
         char repl[] = "_";
-        repl[0] = *c;
+        repl[0] = (char)*c;
         TRY(strbuf_push(buf, repl));
+        c++;
     }
     TRY(strbuf_push(buf, "\""));
 
