@@ -714,6 +714,69 @@ bool hisi_ev300_get_die_id(char *buf, ssize_t len) {
     return true;
 }
 
+/* Per-die identity on V5 (HISI_OT).
+ *
+ * V5 has no counterpart to the V4 die-ID block at 0x12020400. The vendor keeps
+ * the die ID in OTP and reaches it through a bootrom call (otp_get_die_id() in
+ * gsl/drivers/share_drivers/share_drivers.c), but every OTP row is also
+ * shadowed into a register window at the same offset it occupies in OTP, so
+ * the 16 bytes of OTP_DIE_ID appear at OTP_SHADOW_BASE + 0xF0. Offsets from
+ * Hi3516CV610_SDK_V1.0.2.0:
+ *   .../bsp/components/gsl/drivers/otp/otp.h   OTP_DIE_ID 0xF0, 16 bytes
+ *   .../bsp/components/gsl/include/platform.h  OTP_SHADOW_BASE = 0x101E0000
+ *
+ * The window is readable from the non-secure side: the OEM's own hwconf.ko
+ * ioremaps OTP_SHADOW_BASE + 0x10C (OTP_VERSION_ID_REG, the ATE chip version)
+ * from an ordinary kernel module.
+ *
+ * Bytes are emitted in OTP order. The shadow words are little-endian, so byte
+ * i of what otp_get_die_id() would hand back is word[i / 4] >> (8 * (i % 4)).
+ */
+#define V5_OTP_SHADOW_BASE 0x101E0000u
+#define V5_OTP_DIE_ID 0xF0
+#define V5_DIE_ID_WORDS 4
+
+static bool hisi_ot_get_die_id(char *buf, ssize_t len) {
+    if (len < V5_DIE_ID_WORDS * 8 + 1)
+        return false;
+
+    uint32_t id[V5_DIE_ID_WORDS];
+    uint32_t any_bit_set = 0;
+    uint32_t all_bits_set = 0xFFFFFFFF;
+    for (int i = 0; i < V5_DIE_ID_WORDS; i++) {
+        if (!mem_reg(V5_OTP_SHADOW_BASE + V5_OTP_DIE_ID + i * 4, &id[i],
+                     OP_READ))
+            return false;
+        any_bit_set |= id[i];
+        all_bits_set &= id[i];
+    }
+
+    // An unfused or unreadable row reads all-zeroes or all-ones. Neither is an
+    // identity, and callers turn this string into a MAC address -- handing one
+    // out would give every board in a fleet the same address, so fail instead.
+    if (!any_bit_set || all_bits_set == 0xFFFFFFFF)
+        return false;
+
+    char *ptr = buf;
+    for (int i = 0; i < V5_DIE_ID_WORDS; i++)
+        for (int b = 0; b < 4; b++)
+            ptr += snprintf(ptr, buf + len - ptr, "%02x",
+                            (id[i] >> (8 * b)) & 0xFF);
+
+    return true;
+}
+
+bool hisi_get_die_id(char *buf, ssize_t len) {
+    switch (chip_generation) {
+    case HISI_V4:
+        return hisi_ev300_get_die_id(buf, len);
+    case HISI_OT:
+        return hisi_ot_get_die_id(buf, len);
+    default:
+        return false;
+    }
+}
+
 #define CV300_ISP_AF_CFG_ADDR 0x12200
 struct CV300_ISP_AF_CFG {
     bool en : 1;
@@ -927,7 +990,7 @@ struct PT_OFFSET {
 
 void hisi_chip_properties(cJSON *j_inner) {
     char buf[1024];
-    if (hisi_ev300_get_die_id(buf, sizeof buf)) {
+    if (hisi_get_die_id(buf, sizeof buf)) {
         ADD_PARAM("id", buf);
     }
 }

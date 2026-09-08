@@ -30,6 +30,7 @@
 
 
 bool hisi_ev300_get_die_id(char *buf, ssize_t len);
+bool hisi_get_die_id(char *buf, ssize_t len);
 void hisi_vi_information(sensor_ctx_t *ctx);
 unsigned long hisi_totalmem(unsigned long *media_mem);
 bool hisi_detect_cpu(char *chip_name, uint32_t SC_CTRL_base);

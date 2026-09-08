@@ -97,17 +97,22 @@ static void print_chip_temperature() {
 }
 
 static void print_serial() {
-    char serial[512];
+    char serial[512] = {0};
+    bool found = false;
 
     const char *vendor = getchipvendor();
     if (strstr(vendor, VENDOR_HISI) || strstr(vendor, VENDOR_GOKE))
-        hisi_ev300_get_die_id(serial, sizeof serial);
+        found = hisi_get_die_id(serial, sizeof serial);
 #ifdef IPCHW_VENDOR_SSTAR
     if (strstr(vendor, VENDOR_SSTAR))
-        sstar_get_die_id(serial, sizeof serial);
+        found = sstar_get_die_id(serial, sizeof serial);
 #endif
 
-    if (!serial)
+    // The test used to be `if (!serial)`, the address of a stack array, which
+    // is never null -- a chip with no reader printed whatever the stack held.
+    // Provisioning scripts derive a MAC from this, so a miss has to be silent
+    // on stdout and non-zero on exit.
+    if (!found || !*serial)
         exit(EXIT_FAILURE);
     puts(serial);
 }
