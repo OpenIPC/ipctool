@@ -685,15 +685,16 @@ static void hisi_ev300_sensor_clock(cJSON *j_inner) {
     }
 }
 
-bool hisi_ev300_get_die_id(char *buf, ssize_t len) {
-    if (chip_generation != HISI_V4) {
-        return false;
-    }
+static bool hisi_ev300_get_die_id(char *buf, size_t len) {
+    const uint32_t base_id_addr = 0x12020400;
+    const int words = 6;
 
-    uint32_t base_id_addr = 0x12020400;
+    if (len < (size_t)words * 8 + 1)
+        return false;
+
     char *ptr = buf;
-    for (uint32_t id_addr = base_id_addr + 5 * 4; id_addr >= base_id_addr;
-         id_addr -= 4) {
+    for (uint32_t id_addr = base_id_addr + (words - 1) * 4;
+         id_addr >= base_id_addr; id_addr -= 4) {
         uint32_t val;
         if (!mem_reg(id_addr, &val, OP_READ))
             return false;
@@ -720,61 +721,84 @@ bool hisi_ev300_get_die_id(char *buf, ssize_t len) {
  * the die ID in OTP and reaches it through a bootrom call (otp_get_die_id() in
  * gsl/drivers/share_drivers/share_drivers.c), but every OTP row is also
  * shadowed into a register window at the same offset it occupies in OTP, so
- * the 16 bytes of OTP_DIE_ID appear at OTP_SHADOW_BASE + 0xF0. Offsets from
- * Hi3516CV610_SDK_V1.0.2.0:
- *   .../bsp/components/gsl/drivers/otp/otp.h   OTP_DIE_ID 0xF0, 16 bytes
- *   .../bsp/components/gsl/include/platform.h  OTP_SHADOW_BASE = 0x101E0000
+ * the 16 bytes of OTP_DIE_ID appear at OTP_SHADOW_BASE + 0xF0.
+ *
+ * Both vendor SDKs that cover the five HISI_OT parts agree on the window:
+ *   Hi3516CV610_SDK_V1.0.2.0, covering 3516CV608/CV610/CV613:
+ *     gsl/include/platform.h   OTP_SHADOW_BASE = SCPU_OTPC_BASE_ADDR
+ *                                              = 0x101E0000
+ *     gsl/drivers/otp/otp.h    OTP_DIE_ID 0xF0, 16 bytes
+ *   Hi3519DV500 SDK R11, covering both DV500 parts in one bsp tree (see
+ *   bsp/pub/hi3516dv500_image_glibc and svb.h's OTP_16D/OTP_19D ids):
+ *     gsl/include/platform.h   OTP_SHADOW_BASE = SCPU_OTPC_BASE_ADDR
+ *                                              = 0x101E0000
+ *     gsl/drivers/otp/otp.h    OTP_DIE_ID 0xF0, 16 bytes
  *
  * The window is readable from the non-secure side: the OEM's own hwconf.ko
- * ioremaps OTP_SHADOW_BASE + 0x10C (OTP_VERSION_ID_REG, the ATE chip version)
- * from an ordinary kernel module.
- *
- * Bytes are emitted in OTP order. The shadow words are little-endian, so byte
- * i of what otp_get_die_id() would hand back is word[i / 4] >> (8 * (i % 4)).
+ * ioremaps the ATE chip version register in it from an ordinary kernel module
+ * (OTP_VERSION_ID_REG, +0x10C on the CV6xx parts and +0x120 on the DV500s).
  */
 #define V5_OTP_SHADOW_BASE 0x101E0000u
 #define V5_OTP_DIE_ID 0xF0
 #define V5_DIE_ID_WORDS 4
 
-static bool hisi_ot_get_die_id(char *buf, ssize_t len) {
-    if (len < V5_DIE_ID_WORDS * 8 + 1)
+static bool hisi_ot_get_die_id(char *buf, size_t len) {
+    uint32_t id[V5_DIE_ID_WORDS];
+    uint8_t bytes[sizeof id];
+
+    if (len < 2 * sizeof bytes + 1)
         return false;
 
-    uint32_t id[V5_DIE_ID_WORDS];
-    uint32_t any_bit_set = 0;
-    uint32_t all_bits_set = 0xFFFFFFFF;
-    for (int i = 0; i < V5_DIE_ID_WORDS; i++) {
+    for (size_t i = 0; i < V5_DIE_ID_WORDS; i++) {
         if (!mem_reg(V5_OTP_SHADOW_BASE + V5_OTP_DIE_ID + i * 4, &id[i],
                      OP_READ))
             return false;
-        any_bit_set |= id[i];
-        all_bits_set &= id[i];
+        // Bytes are emitted in OTP order. The shadow words are little-endian,
+        // so byte i of what otp_get_die_id() would hand back is
+        // word[i / 4] >> (8 * (i % 4)).
+        for (size_t b = 0; b < 4; b++)
+            bytes[i * 4 + b] = (id[i] >> (8 * b)) & 0xFF;
     }
 
-    // An unfused or unreadable row reads all-zeroes or all-ones. Neither is an
-    // identity, and callers turn this string into a MAC address -- handing one
-    // out would give every board in a fleet the same address, so fail instead.
-    if (!any_bit_set || all_bits_set == 0xFFFFFFFF)
-        return false;
-
-    char *ptr = buf;
-    for (int i = 0; i < V5_DIE_ID_WORDS; i++)
-        for (int b = 0; b < 4; b++)
-            ptr += snprintf(ptr, buf + len - ptr, "%02x",
-                            (id[i] >> (8 * b)) & 0xFF);
+    for (size_t i = 0; i < sizeof bytes; i++)
+        snprintf(buf + 2 * i, len - 2 * i, "%02x", bytes[i]);
 
     return true;
 }
 
-bool hisi_get_die_id(char *buf, ssize_t len) {
+/* An OTP row that is unfused, locked or unbacked reads all-zeroes or all-ones,
+ * and a partially fused one reads a mixture of the two -- as does a V4 die-ID
+ * block on a part that never had one fused, which the trailing-zero strip above
+ * leaves as a string of zeroes rather than rejecting.
+ *
+ * None of those is an identity, and callers turn this string into a MAC
+ * address: handing one out would give every board in a fleet the same address.
+ * Rejecting on the digits rather than on whole words keeps the partially fused
+ * mixture out too, while still accepting a legitimate id that contains a zero
+ * word.
+ */
+static bool die_id_is_usable(const char *buf) {
+    for (const char *p = buf; *p; p++)
+        if (*p != '0' && *p != 'f')
+            return true;
+    return false;
+}
+
+bool hisi_get_die_id(char *buf, size_t len) {
+    bool ok;
+
     switch (chip_generation) {
     case HISI_V4:
-        return hisi_ev300_get_die_id(buf, len);
+        ok = hisi_ev300_get_die_id(buf, len);
+        break;
     case HISI_OT:
-        return hisi_ot_get_die_id(buf, len);
+        ok = hisi_ot_get_die_id(buf, len);
+        break;
     default:
         return false;
     }
+
+    return ok && die_id_is_usable(buf);
 }
 
 #define CV300_ISP_AF_CFG_ADDR 0x12200
