@@ -209,6 +209,18 @@ static void print_xm_mac() {
     exit(EXIT_FAILURE);
 }
 
+/* Every reporter here goes through getchipname(), which runs setup_hal_*():
+ * printk is silenced and, on HISI_OT, the sensor clock is force-enabled.
+ * ipcinfo exits straight out of the reporters, so without this the console
+ * stays quiet and the CRG stays modified for the rest of boot -- which
+ * ethaddr_provision() in rcS would do on every V5 boot. hal_cleanup is only
+ * set once a HAL has been selected, and both restore paths are idempotent.
+ */
+static void cleanup_hal(void) {
+    if (hal_cleanup)
+        hal_cleanup();
+}
+
 int main(int argc, char **argv) {
     const char *short_options = "cfvhlstiFSxV";
     const struct option long_options[] = {
@@ -228,6 +240,7 @@ int main(int argc, char **argv) {
 
     int opt;
     int long_index = 0;
+    atexit(cleanup_hal);
     while ((opt = getopt_long_only(argc, argv, short_options, long_options,
                                    &long_index)) != -1) {
         switch (opt) {
