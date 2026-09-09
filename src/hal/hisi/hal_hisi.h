@@ -29,7 +29,7 @@
 #define IS_7205V500 IS_CHIP("7205V500") || IS_CHIP("7205V510") || IS_CHIP("7205V530")
 
 
-bool hisi_ev300_get_die_id(char *buf, ssize_t len);
+bool hisi_get_die_id(char *buf, size_t len);
 void hisi_vi_information(sensor_ctx_t *ctx);
 unsigned long hisi_totalmem(unsigned long *media_mem);
 bool hisi_detect_cpu(char *chip_name, uint32_t SC_CTRL_base);
