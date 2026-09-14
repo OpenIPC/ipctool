@@ -195,6 +195,10 @@ set(CYAML_TEST_SRC
     src/cjson/cYAML.h)
 
 add_library(ipchw STATIC ${COMMON_LIB_SRC})
+# include/ipchw.h is the published header; carry it on the target so a
+# consumer that links this library can find it without naming the path.
+target_include_directories(ipchw PUBLIC
+                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY ${IPCHW_VENDOR_DEFS})
 # Threads is carried on the interface so anything linking this static library
 # (ipcinfo here, and external consumers of libipchw) pulls pthread in too.
@@ -202,6 +206,7 @@ target_link_libraries(ipchw m Threads::Threads)
 
 if(NOT ONLY_LIBRARY)
   add_executable(ipctool ${IPCTOOL_SRC} ${COMMON_LIB_SRC_ALL})
+  target_include_directories(ipctool PRIVATE include)
   target_compile_definitions(ipctool PRIVATE ${IPCHW_ALL_VENDOR_DEFS})
 
   target_link_libraries(ipctool m Threads::Threads)
@@ -213,4 +218,11 @@ if(NOT ONLY_LIBRARY)
   install(TARGETS ipcinfo RUNTIME DESTINATION /usr/bin/)
 
   add_executable(cYAML_test ${CYAML_TEST_SRC})
+
+  # Linking the real libipchw rather than recompiling reginfo.c is the point:
+  # it proves the lookups are actually exported from the library, not just
+  # present in the executable.
+  add_executable(reginfo_test src/reginfo_test.c)
+  target_include_directories(reginfo_test PRIVATE include src)
+  target_link_libraries(reginfo_test ipchw)
 endif()

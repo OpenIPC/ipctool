@@ -7,6 +7,8 @@
 #include "hal/sstar_reginfo.h"
 #include "tools.h"
 
+#include "ipchw.h"
+
 #include <assert.h>
 #include <dirent.h>
 #include <ctype.h>
@@ -2558,6 +2560,146 @@ static const muxctrl_reg_t **regs_by_chip() {
      * than exit(): this is reached from a library that a long-lived daemon
      * links, where a missing table is a question to answer, not an outage. */
     return NULL;
+}
+
+/* ------------------------------------------------------------------------
+ * The public pad-mux lookups. Contract and caveats are on the prototypes in
+ * include/ipchw.h; this half is just the walk.
+ * ---------------------------------------------------------------------- */
+
+/* "GPIO5_2" -> 42, the running-integer form every consumer of this speaks:
+ * eight pads to a bank. -1 for anything that is not a GPIO name. Every GPIO
+ * name in every table here is GPIO<bank>_<0..7>; a malformed one would be a
+ * data bug, and is reported as "not a GPIO" rather than guessed at. */
+static int gpio_name_to_pad(const char *name) {
+    if (strncmp(name, "GPIO", 4) != 0)
+        return -1;
+
+    int bank, pin;
+    if (sscanf(name + 4, "%d_%d", &bank, &pin) != 2)
+        return -1;
+    if (bank < 0 || pin < 0 || pin > 7)
+        return -1;
+
+    return bank * 8 + pin;
+}
+
+/* The GPIO alternative of one row, if it has one. Filled in on every result
+ * so a caller holding a PWM row already knows the pad it is taking away and
+ * the selector value that hands it back. */
+static void row_gpio(const muxctrl_reg_t *reg, const char **name, int *pad,
+                     int *func) {
+    *name = NULL;
+    *pad = -1;
+    *func = -1;
+
+    for (int i = 0; reg->funcs[i]; i++) {
+        int p = gpio_name_to_pad(reg->funcs[i]);
+        if (p >= 0) {
+            *name = reg->funcs[i];
+            *pad = p;
+            *func = i;
+            return;
+        }
+    }
+}
+
+/* One walk behind all three entry points. `match` decides which functions of
+ * a row are wanted (NULL means every one of them) and `pad` optionally
+ * narrows to the rows that carry that GPIO (-1 means every row).
+ *
+ * Both filters live here rather than in a post-pass over the results because
+ * a whole table is far more rows than any caller wants to hold: the EV300
+ * family alone has some three hundred functions across ninety-three pads.
+ *
+ * Counting continues past `max` on purpose: the return value is the number of
+ * matches, not the number written, so a caller that guessed its array too
+ * small learns the right size instead of silently losing rows. */
+typedef bool (*padmux_match_fn)(const char *func_name, const void *arg);
+
+static int padmux_walk(padmux_match_fn match, const void *arg, int pad,
+                       ipchw_padmux_t *out, int max) {
+    if (max < 0 || (max > 0 && out == NULL))
+        return IPCHW_PADMUX_BAD_ARG;
+
+    if (!chip_generation && getchipname() == NULL)
+        return IPCHW_PADMUX_NO_CHIP;
+    if (!chip_generation)
+        return IPCHW_PADMUX_NO_CHIP;
+
+    const muxctrl_reg_t **regs = regs_by_chip();
+    if (regs == NULL)
+        return IPCHW_PADMUX_NO_TABLE;
+
+    const uint32_t mask = padmux_func_mask();
+    int found = 0;
+
+    for (int reg_num = 0; regs[reg_num]; reg_num++) {
+        const muxctrl_reg_t *reg = regs[reg_num];
+        const char *gpio_name;
+        int gpio_pad, gpio_func;
+
+        row_gpio(reg, &gpio_name, &gpio_pad, &gpio_func);
+        if (pad >= 0 && gpio_pad != pad)
+            continue;
+
+        for (int i = 0; reg->funcs[i]; i++) {
+            /* A pad with no function wired to that selector value. Never a
+             * thing to mux to, so never a match. */
+            if (!strcmp(reg->funcs[i], "reserved"))
+                continue;
+            if (match != NULL && !match(reg->funcs[i], arg))
+                continue;
+
+            if (found < max) {
+                out[found] = (ipchw_padmux_t){
+                    .address = reg->address,
+                    .func_mask = mask,
+                    .func = i,
+                    .func_name = reg->funcs[i],
+                    .gpio_name = gpio_name,
+                    .gpio_pad = gpio_pad,
+                    .gpio_func = gpio_func,
+                };
+            }
+            found++;
+        }
+    }
+
+    return found;
+}
+
+static bool match_exact(const char *func_name, const void *arg) {
+    return !strcmp(func_name, (const char *)arg);
+}
+
+static bool match_prefix(const char *func_name, const void *arg) {
+    const char *prefix = arg;
+
+    return !strncmp(func_name, prefix, strlen(prefix));
+}
+
+int ipchw_padmux_by_func(const char *func_name, ipchw_padmux_t *out, int max) {
+    if (func_name == NULL || !*func_name)
+        return IPCHW_PADMUX_BAD_ARG;
+
+    return padmux_walk(match_exact, func_name, -1, out, max);
+}
+
+int ipchw_padmux_by_prefix(const char *prefix, ipchw_padmux_t *out, int max) {
+    if (prefix == NULL)
+        return IPCHW_PADMUX_BAD_ARG;
+
+    /* An empty prefix is every function, which is how a caller walks the
+     * whole table -- an integrity sweep, or a "what can this pad do" report. */
+    return padmux_walk(match_prefix, prefix, -1, out, max);
+}
+
+int ipchw_padmux_by_pad(int pad, ipchw_padmux_t *out, int max) {
+    if (pad < 0)
+        return IPCHW_PADMUX_BAD_ARG;
+
+    return padmux_walk(NULL, NULL, pad, out, max);
 }
 
 /* Everything below is the command-line half of ipctool: it prints, it parses
