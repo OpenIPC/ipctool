@@ -2472,6 +2472,39 @@ static void show_function(const char *const *func, unsigned val) {
     puts("");
 }
 
+/* Which bits of a pad register are the function selector.
+ *
+ * HiSilicon (and Goke, which is the same silicon) put it in the low nibble;
+ * SigmaStar uses the low half-word. The rest of the register carries drive
+ * strength, pull and slew that the boot chose, so every write here is a
+ * read-modify-write against this mask rather than a whole-register store.
+ *
+ * Keyed on chip_generation rather than on the vendor string because a caller
+ * may set the generation directly -- that is what makes the lookups below
+ * exercisable on a host with no camera under it. */
+static uint32_t padmux_func_mask(void) {
+    switch (chip_generation) {
+    case HISI_V1:
+    case HISI_V2:
+    case HISI_V2A:
+    case HISI_V3:
+    case HISI_V3A:
+    case HISI_V4:
+    case HISI_V4A:
+    case HISI_OT:
+    case HISI_3536C:
+    case HISI_3536D:
+        return 0xf;
+    case INFINITY6:
+    case INFINITY6B:
+    case INFINITY6C:
+    case INFINITY6E:
+        return 0xffff;
+    default:
+        return 0xffffffff;
+    }
+}
+
 static const muxctrl_reg_t **regs_by_chip() {
     switch (chip_generation) {
     case HISI_V1:
@@ -2527,7 +2560,6 @@ static const muxctrl_reg_t **regs_by_chip() {
 }
 
 static int dump_regs(bool script_mode) {
-    const char *vendor = getchipvendor();
     const muxctrl_reg_t **regs = regs_by_chip();
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
@@ -2542,11 +2574,7 @@ static int dump_regs(bool script_mode) {
             continue;
         }
 
-        if (strstr(vendor, VENDOR_HISI) || strstr(vendor, VENDOR_GOKE)) {
-            val &= 0xf;
-        } else if (strstr(vendor, VENDOR_SSTAR)) {
-            val &= 0xffff;
-        }
+        val &= padmux_func_mask();
 
         printf("muxctrl_reg%d %#x %#x", reg_num, regs[reg_num]->address, val);
         show_function(regs[reg_num]->funcs, val);
@@ -2788,7 +2816,12 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
 
                 if (new_func == -1)
                     new_func = i;
-                val = val & 0xfff0 | new_func;
+                /* Only the selector field moves. The old mask was 0xfff0,
+                 * which zeroed every bit above 15 -- on these 32-bit pad
+                 * registers that quietly dropped whatever the boot had put
+                 * there. */
+                uint32_t mask = padmux_func_mask();
+                val = (val & ~mask) | ((uint32_t)new_func & mask);
                 if (!mem_reg(regs[reg_num]->address, &val, OP_WRITE)) {
                     printf("write reg %#x error\n", regs[reg_num]->address);
                     return EXIT_FAILURE;
@@ -2836,7 +2869,7 @@ static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
                     continue;
                 }
 
-                if ((val & 0xf) == i) {
+                if ((val & padmux_func_mask()) == (uint32_t)i) {
                     int group, num;
                     if (sscanf(func[i] + 4, "%d_%d", &group, &num) != 2)
                         assert("Parsing error");
