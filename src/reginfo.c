@@ -2450,26 +2450,24 @@ static const muxctrl_reg_t *DV500regs[] = {
     0,
 };
 
-static int gpio_mux_by(const char *gpio_number, int func_num,
-                       const char *set_func);
+static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
+    if (strchr(gpio_name, '_') != NULL)
+        return gpio_name;
 
-static const char *get_function(const char *const *func, unsigned val) {
-    for (size_t i = 0; func[i]; i++) {
-        if (i == val)
-            return func[i] ? func[i] : "reserved";
-    }
-
-    return "reserved";
+    unsigned long plain_num = strtoul(gpio_name, NULL, 10);
+    int group = plain_num / 8;
+    int num = plain_num % 8;
+    snprintf(cgpio, 64, "%d_%d", group, num);
+    return cgpio;
 }
 
-static void show_function(const char *const *func, unsigned val) {
-    for (size_t i = 0; func[i]; i++) {
-        if (i == val)
-            printf(" [%s]", func[i] ? func[i] : "reserved");
-        else
-            printf(" %s", func[i] ? func[i] : "reserved");
+static int find_pinfunc(const char *const *func, const char *name) {
+    for (int i = 0; func[i]; i++) {
+        if (!strcmp(func[i], name))
+            return i;
     }
-    puts("");
+
+    return -1;
 }
 
 /* Which bits of a pad register are the function selector.
@@ -2555,12 +2553,45 @@ static const muxctrl_reg_t **regs_by_chip() {
     case T31:
         return T31_regs;
     }
-    fprintf(stderr, "Platform is not supported\n");
-    exit(EXIT_FAILURE);
+
+    /* No table for this SoC, or none compiled into this build. NULL rather
+     * than exit(): this is reached from a library that a long-lived daemon
+     * links, where a missing table is a question to answer, not an outage. */
+    return NULL;
+}
+
+/* Everything below is the command-line half of ipctool: it prints, it parses
+ * argv, and it calls print_usage() out of main.c. STANDALONE_LIBRARY builds
+ * (libipchw) take the tables and the lookups above and stop here. */
+#ifndef STANDALONE_LIBRARY
+
+static int gpio_mux_by(const char *gpio_number, int func_num,
+                       const char *set_func);
+
+/* regs_by_chip() answers NULL for an SoC it has no table for. The CLI has
+ * always treated that as fatal and still does; only the library needs the
+ * softer answer. */
+static const muxctrl_reg_t **regs_by_chip_or_die(void) {
+    const muxctrl_reg_t **regs = regs_by_chip();
+    if (regs == NULL) {
+        fprintf(stderr, "Platform is not supported\n");
+        exit(EXIT_FAILURE);
+    }
+    return regs;
+}
+
+static void show_function(const char *const *func, unsigned val) {
+    for (size_t i = 0; func[i]; i++) {
+        if (i == val)
+            printf(" [%s]", func[i] ? func[i] : "reserved");
+        else
+            printf(" %s", func[i] ? func[i] : "reserved");
+    }
+    puts("");
 }
 
 static int dump_regs(bool script_mode) {
-    const muxctrl_reg_t **regs = regs_by_chip();
+    const muxctrl_reg_t **regs = regs_by_chip_or_die();
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         uint32_t val;
@@ -2769,26 +2800,6 @@ static int gpio_set_cmd(int argc, char **argv) {
     return gpio_manipulate(argv, true);
 }
 
-static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
-    if (strchr(gpio_name, '_') != NULL)
-        return gpio_name;
-
-    unsigned long plain_num = strtoul(gpio_name, NULL, 10);
-    int group = plain_num / 8;
-    int num = plain_num % 8;
-    snprintf(cgpio, 64, "%d_%d", group, num);
-    return cgpio;
-}
-
-static int find_pinfunc(const char *const *func, const char *name) {
-    for (int i = 0; func[i]; i++) {
-        if (!strcmp(func[i], name))
-            return i;
-    }
-
-    return -1;
-}
-
 static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func) {
     const char *gpio_grnum = num2gpio_groupnum(gpio_number, (char[64]){0});
@@ -2796,7 +2807,7 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
         return EXIT_FAILURE;
 
     getchipname();
-    const muxctrl_reg_t **regs = regs_by_chip();
+    const muxctrl_reg_t **regs = regs_by_chip_or_die();
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         const char *const *func = regs[reg_num]->funcs;
@@ -2855,8 +2866,12 @@ static int gpio_mux_cmd(int argc, char **argv) {
     return gpio_mux_by(argv[1], func_num, set_func);
 }
 
-static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
+/* False when this SoC has no pad table, so a caller can drop the part of its
+ * report that needs one instead of taking the whole process down with it. */
+static bool fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
     const muxctrl_reg_t **regs = regs_by_chip();
+    if (regs == NULL)
+        return false;
 
     memset(enabled, 0, sizeof(size_t) * GPIO_Groups);
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
@@ -2932,7 +2947,8 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
         find_streamer_gpio_groups(GPIO_Base, GPIO_Offset, GPIO_Groups);
 
     size_t enabled[GPIO_Groups];
-    fill_enabled_gpios(enabled, GPIO_Groups);
+    if (!fill_enabled_gpios(enabled, GPIO_Groups))
+        return NULL;
 
     // Count output pins per group to filter out busy I/O groups
     uint8_t output_count[GPIO_Groups];
@@ -3005,7 +3021,10 @@ static int gpio_scan_cmd() {
 
     size_t state[GPIO_Groups];
     size_t enabled[GPIO_Groups];
-    fill_enabled_gpios(enabled, GPIO_Groups);
+    if (!fill_enabled_gpios(enabled, GPIO_Groups)) {
+        fprintf(stderr, "Platform is not supported\n");
+        return EXIT_FAILURE;
+    }
 
     for (int group = 0; group < GPIO_Groups; group++) {
         size_t mask = enabled[group] << 2;
@@ -3097,3 +3116,5 @@ int gpio_cmd(int argc, char **argv) {
     printf("Usage: ipctool gpio <command>\n");
     return EXIT_FAILURE;
 }
+
+#endif /* !STANDALONE_LIBRARY */

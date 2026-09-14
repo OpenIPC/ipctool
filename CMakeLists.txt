@@ -72,6 +72,8 @@ set(COMMON_LIB_SRC_BASE
     src/hwinfo.c
     src/hwinfo.h
     src/mmap.h
+    src/reginfo.c
+    src/reginfo.h
     src/sensors.c
     src/sensors.h
     src/tools.c
@@ -152,8 +154,6 @@ set(IPCTOOL_SRC
     src/ptrace.h
     src/ram.c
     src/ram.h
-    src/reginfo.c
-    src/reginfo.h
     src/sha1.c
     src/sha1.h
     src/snstool.c
