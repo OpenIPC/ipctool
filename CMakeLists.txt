@@ -2,7 +2,12 @@ cmake_minimum_required(VERSION 3.10)
 project(ipctool C)
 
 set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_FLAGS "-std=gnu99")
+# -Werror=return-type in every configuration: a function that falls off its
+# end returns whatever is in the register, and the callers of a bool helper
+# then branch on it. That is not a warning anyone would notice in a build log
+# and the default flags below carry -Wextra but not -Wall, which is where
+# -Wreturn-type lives.
+set(CMAKE_C_FLAGS "-std=gnu99 -Werror=return-type")
 
 # sensors.c serialises sensor detection with a pthread mutex. On musl and
 # glibc >= 2.34 the pthread symbols live in libc, but older glibc and uClibc

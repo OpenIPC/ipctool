@@ -44,6 +44,12 @@ static char *cv100_sensor_clksel(unsigned int sensor_clksel) {
     case 7:
         return "74.25MHz";
     }
+
+    /* The caller reads a three-bit field, so every value above is covered and
+     * this is unreachable -- but the compiler is looking at an unsigned int,
+     * and a function that falls off its end returns whatever is in the
+     * register. */
+    return "unknown";
 }
 
 #define CV100_PERI_CRG12_ADDR 0x20030030

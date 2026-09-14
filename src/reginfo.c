@@ -3085,6 +3085,8 @@ static bool fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
             }
         }
     }
+
+    return true;
 }
 
 static uint32_t find_streamer_gpio_groups(size_t GPIO_Base, size_t GPIO_Offset,
