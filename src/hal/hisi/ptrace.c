@@ -45,6 +45,10 @@ const char *raw_data_type_str(raw_data_type_e val) {
     case RAW_DATA_16BIT:
         return "RAW_DATA_16BIT";
     }
+
+    /* The value comes off the wire from a traced ioctl, so it is not bound to
+     * the enum and this is reachable. */
+    return "unknown";
 }
 
 typedef enum {

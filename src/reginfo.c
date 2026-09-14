@@ -2,10 +2,16 @@
 #include "chipid.h"
 #include "hal/hisi/hal_hisi.h"
 #include "hal/ingenic.h"
+#ifdef IPCHW_VENDOR_INGENIC
 #include "hal/ingenic_reginfo.h"
+#endif
 #include "hal/sstar.h"
+#ifdef IPCHW_VENDOR_SSTAR
 #include "hal/sstar_reginfo.h"
+#endif
 #include "tools.h"
+
+#include "ipchw.h"
 
 #include <assert.h>
 #include <dirent.h>
@@ -17,6 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#if defined(IPCHW_PADMUX_V1) /* hi3516cv100 / hi3518ev100 */
 MUXCTRL(CV100_0, 0x200f0000, "GPIO1_0", "SHUTTER_TRIG")
 MUXCTRL(CV100_1, 0x200f0004, "GPIO1_1", "SDIO_CCLK_OUT")
 MUXCTRL(CV100_2, 0x200f0008, "GPIO1_2", "SENSOR_CLK")
@@ -123,7 +130,9 @@ static const muxctrl_reg_t *CV100regs[] = {
     &CV100_85, &CV100_86, &CV100_87, &CV100_88, &CV100_89, &CV100_90, &CV100_91,
     &CV100_92, &CV100_93, &CV100_94, 0,
 };
+#endif /* IPCHW_PADMUX_V1 */
 
+#if defined(IPCHW_PADMUX_V2A) /* hi3516av100 */
 MUXCTRL(AV100_0, 0x200f0000, "GPIO0_5", "SENSOR_CLK")
 MUXCTRL(AV100_1, 0x200f0004, "GPIO0_6", "FLASH_TRIG", "SPI1_CSN1")
 MUXCTRL(AV100_2, 0x200f0008, "GPIO0_7", "SHUTTER_TRIG", "SPI1_CSN2")
@@ -275,7 +284,9 @@ static const muxctrl_reg_t *AV100regs[] = {
     &AV100_114, &AV100_115, &AV100_116, &AV100_117, &AV100_118, &AV100_119,
     &AV100_120, &AV100_121, &AV100_122, 0,
 };
+#endif /* IPCHW_PADMUX_V2A */
 
+#if defined(IPCHW_PADMUX_V2) /* hi3516cv200 / hi3518ev200 */
 MUXCTRL(CV200_0, 0x200f0000, "GPIO0_4", "SENSOR_CLK")
 MUXCTRL(CV200_1, 0x200f0004, "SENSOR_RSTN", "GPIO0_5")
 MUXCTRL(CV200_2, 0x200f0008, "GPIO0_6", "FLASH_TRIG", "SFC_EMMC_BOOT_MODE",
@@ -457,7 +468,9 @@ static const muxctrl_reg_t *EV20Xregs[] = {
     &EV20X_56, &EV20X_57, &EV20X_58, &EV20X_59, &EV20X_60, &EV20X_61, &EV20X_62,
     &EV20X_63, &EV20X_64, &EV20X_65, 0,
 };
+#endif /* IPCHW_PADMUX_V2 */
 
+#if defined(IPCHW_PADMUX_V3A) /* hi3519v101 / hi3516av200 */
 MUXCTRL(AV200_muxctrl_reg0, 0x12040000, "GPIO1_0", "FLASH_TRIG", "SPI2_CSN1",
         "PWM4")
 MUXCTRL(AV200_muxctrl_reg1, 0x12040004, "GPIO1_1", "SHUTTER_TRIG", "reserved",
@@ -707,7 +720,9 @@ static const muxctrl_reg_t *AV200regs[] = {
     &AV200_muxctrl_reg120,
     0,
 };
+#endif /* IPCHW_PADMUX_V3A */
 
+#if defined(IPCHW_PADMUX_V3) /* hi3516cv300 */
 MUXCTRL(CV300_muxctrl_reg0, 0x12040000, "GPIO1_7", "PWM3", "SVB_PWM")
 MUXCTRL(CV300_muxctrl_reg1, 0x12040004, "GPIO6_5", "PWM0")
 MUXCTRL(CV300_muxctrl_reg2, 0x12040008, "GPIO6_6", "PWM1")
@@ -828,7 +843,9 @@ static const muxctrl_reg_t *CV300regs[] = {
     &CV300_muxctrl_reg61, &CV300_muxctrl_reg62, &CV300_muxctrl_reg63,
     &CV300_muxctrl_reg64, &CV300_muxctrl_reg65,  &CV300_muxctrl_reg66, 0,
 };
+#endif /* IPCHW_PADMUX_V3 */
 
+#if defined(IPCHW_PADMUX_V4A) /* hi3516cv500 / av300 / dv300 */
 MUXCTRL(CV500_iocfg_reg0, 0x10FF0000, "EMMC_CLK", "SFC_CLK", "SFC_BOOT_MODE")
 MUXCTRL(CV500_iocfg_reg1, 0x10FF0004, "EMMC_CMD", "SFC_HOLD_IO3")
 MUXCTRL(CV500_iocfg_reg2, 0x10FF0008, "EMMC_DATA0", "SFC_WP_IO2")
@@ -1222,7 +1239,9 @@ static const muxctrl_reg_t *DV300regs[] = {
     &DV300_iocfg_reg108, &DV300_iocfg_reg109, &DV300_iocfg_reg110,
     &DV300_iocfg_reg111, &DV300_iocfg_reg112, 0,
 };
+#endif /* IPCHW_PADMUX_V4A */
 
+#if defined(IPCHW_PADMUX_V4) /* hi3516ev200 / ev300 / gk7205 / dv200 */
 MUXCTRL(EV200_iocfg_reg0, 0x100C0000, "GPIO0_1", "UART0_RXD")
 MUXCTRL(EV200_iocfg_reg1, 0x100C0004, "GPIO0_2", "UART0_TXD")
 MUXCTRL(EV200_iocfg_reg2, 0x100C0008, "GPIO0_0", "UPDATE_MODE")
@@ -1940,7 +1959,9 @@ static const muxctrl_reg_t *DV200regs[] = {
     &DV200_iocfg_reg96, &DV200_iocfg_reg97,
     &DV200_iocfg_reg98, 0,
 };
+#endif /* IPCHW_PADMUX_V4 */
 
+#if defined(IPCHW_PADMUX_3536D) /* hi3536dv100 */
 MUXCTRL(DV100_muxctrl_reg0, 0x120F0000, "GPIO2_4", "VGA_HS")
 MUXCTRL(DV100_muxctrl_reg1, 0x120F0004, "GPIO2_5", "VGA_VS")
 MUXCTRL(DV100_muxctrl_reg2, 0x120F0008, "PWM_SVB_CORE", "GPIO2_6")
@@ -2012,7 +2033,9 @@ static const muxctrl_reg_t *DV100regs[] = {
     &DV100_muxctrl_reg42, &DV100_muxctrl_reg43, &DV100_muxctrl_reg44,
     &DV100_muxctrl_reg45, &DV100_muxctrl_reg46, 0,
 };
+#endif /* IPCHW_PADMUX_3536D */
 
+#if defined(IPCHW_PADMUX_3536C) /* hi3536cv100 */
 MUXCTRL(RCV100_muxctrl_reg0, 0x120F0000, "GPIO5_7", "reserved", "reserved",
         "RGMII1_TXER")
 MUXCTRL(RCV100_muxctrl_reg1, 0x120F0004, "GPIO1_0", "reserved", "reserved",
@@ -2141,7 +2164,9 @@ static const muxctrl_reg_t *RCV100regs[] = {
     &RCV100_muxctrl_reg93, &RCV100_muxctrl_reg95, &RCV100_muxctrl_reg96,
     &RCV100_muxctrl_reg97, &RCV100_muxctrl_reg98, 0,
 };
+#endif /* IPCHW_PADMUX_3536C */
 
+#if defined(IPCHW_PADMUX_V5) /* hi3516cv610 / 3519dv500 */
 MUXCTRL(CV610_io0_cfg_reg0, 0x10260000, "GPIO0_0");
 MUXCTRL(CV610_io0_cfg_reg1, 0x10260004, "GPIO0_1", "PWM0_OUT3", "BOOT_SEL1");
 MUXCTRL(CV610_io0_cfg_reg2, 0x10260008, "WDG_RSTN");
@@ -2449,49 +2474,74 @@ static const muxctrl_reg_t *DV500regs[] = {
     &DV500_aon_cfg_reg133, &DV500_aon_cfg_reg134, &DV500_aon_cfg_reg135,
     0,
 };
+#endif /* IPCHW_PADMUX_V5 */
 
-static int gpio_mux_by(const char *gpio_number, int func_num,
-                       const char *set_func);
-
-static const char *get_function(const char *const *func, unsigned val) {
-    for (size_t i = 0; func[i]; i++) {
-        if (i == val)
-            return func[i] ? func[i] : "reserved";
+/* Which bits of a pad register are the function selector.
+ *
+ * HiSilicon (and Goke, which is the same silicon) put it in the low nibble;
+ * SigmaStar uses the low half-word. The rest of the register carries drive
+ * strength, pull and slew that the boot chose, so every write here is a
+ * read-modify-write against this mask rather than a whole-register store.
+ *
+ * Keyed on chip_generation rather than on the vendor string because a caller
+ * may set the generation directly -- that is what makes the lookups below
+ * exercisable on a host with no camera under it. */
+static uint32_t padmux_func_mask(void) {
+    switch (chip_generation) {
+    case HISI_V1:
+    case HISI_V2:
+    case HISI_V2A:
+    case HISI_V3:
+    case HISI_V3A:
+    case HISI_V4:
+    case HISI_V4A:
+    case HISI_OT:
+    case HISI_3536C:
+    case HISI_3536D:
+        return 0xf;
+    case INFINITY6:
+    case INFINITY6B:
+    case INFINITY6C:
+    case INFINITY6E:
+        return 0xffff;
+    default:
+        return 0xffffffff;
     }
-
-    return "reserved";
-}
-
-static void show_function(const char *const *func, unsigned val) {
-    for (size_t i = 0; func[i]; i++) {
-        if (i == val)
-            printf(" [%s]", func[i] ? func[i] : "reserved");
-        else
-            printf(" %s", func[i] ? func[i] : "reserved");
-    }
-    puts("");
 }
 
 static const muxctrl_reg_t **regs_by_chip() {
     switch (chip_generation) {
+#ifdef IPCHW_PADMUX_V1
     case HISI_V1:
         return CV100regs;
+#endif
+#ifdef IPCHW_PADMUX_V2A
     case HISI_V2A:
         return AV100regs;
+#endif
+#ifdef IPCHW_PADMUX_V2
     case HISI_V2:
         if (IS_CHIP("3516CV200"))
             return CV200regs;
         else
             return EV20Xregs;
+#endif
+#ifdef IPCHW_PADMUX_V3A
     case HISI_V3A:
         return AV200regs;
+#endif
+#ifdef IPCHW_PADMUX_V3
     case HISI_V3:
         return CV300regs;
+#endif
+#ifdef IPCHW_PADMUX_V4A
     case HISI_V4A:
         if (IS_CHIP("3516CV500"))
             return CV500regs;
         else
             return DV300regs;
+#endif
+#ifdef IPCHW_PADMUX_V4
     case HISI_V4:
         if (IS_16EV200)
             return EV200regs;
@@ -2504,14 +2554,22 @@ static const muxctrl_reg_t **regs_by_chip() {
         else if (IS_7205V500)
             return EV200regs;
         break;
+#endif
+#ifdef IPCHW_PADMUX_V5
     case HISI_OT:
         if (IS_CHIP("3519DV500") || IS_CHIP("3516DV500"))
             return DV500regs;
         return CV610regs;
+#endif
+#ifdef IPCHW_PADMUX_3536C
     case HISI_3536C:
         return RCV100regs;
+#endif
+#ifdef IPCHW_PADMUX_3536D
     case HISI_3536D:
         return DV100regs;
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
     case INFINITY6:
     case INFINITY6B:
         return I6B_regs;
@@ -2519,16 +2577,211 @@ static const muxctrl_reg_t **regs_by_chip() {
         return I6C_regs;
     case INFINITY6E:
         return I6E_regs;
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
     case T31:
         return T31_regs;
+#endif
     }
-    fprintf(stderr, "Platform is not supported\n");
-    exit(EXIT_FAILURE);
+
+    /* No table for this SoC, or none compiled into this build. NULL rather
+     * than exit(): this is reached from a library that a long-lived daemon
+     * links, where a missing table is a question to answer, not an outage. */
+    return NULL;
+}
+
+/* ------------------------------------------------------------------------
+ * The public pad-mux lookups. Contract and caveats are on the prototypes in
+ * include/ipchw.h; this half is just the walk.
+ * ---------------------------------------------------------------------- */
+
+/* "GPIO5_2" -> 42, the running-integer form every consumer of this speaks:
+ * eight pads to a bank. -1 for anything that is not a GPIO name. Every GPIO
+ * name in every table here is GPIO<bank>_<0..7>; a malformed one would be a
+ * data bug, and is reported as "not a GPIO" rather than guessed at. */
+static int gpio_name_to_pad(const char *name) {
+    if (strncmp(name, "GPIO", 4) != 0)
+        return -1;
+
+    int bank, pin;
+    if (sscanf(name + 4, "%d_%d", &bank, &pin) != 2)
+        return -1;
+    if (bank < 0 || pin < 0 || pin > 7)
+        return -1;
+
+    return bank * 8 + pin;
+}
+
+/* The GPIO alternative of one row, if it has one. Filled in on every result
+ * so a caller holding a PWM row already knows the pad it is taking away and
+ * the selector value that hands it back. */
+static void row_gpio(const muxctrl_reg_t *reg, const char **name, int *pad,
+                     int *func) {
+    *name = NULL;
+    *pad = -1;
+    *func = -1;
+
+    for (int i = 0; reg->funcs[i]; i++) {
+        int p = gpio_name_to_pad(reg->funcs[i]);
+        if (p >= 0) {
+            *name = reg->funcs[i];
+            *pad = p;
+            *func = i;
+            return;
+        }
+    }
+}
+
+/* One walk behind all three entry points. `match` decides which functions of
+ * a row are wanted (NULL means every one of them) and `pad` optionally
+ * narrows to the rows that carry that GPIO (-1 means every row).
+ *
+ * Both filters live here rather than in a post-pass over the results because
+ * a whole table is far more rows than any caller wants to hold: the EV300
+ * family alone has some three hundred functions across ninety-three pads.
+ *
+ * Counting continues past `max` on purpose: the return value is the number of
+ * matches, not the number written, so a caller that guessed its array too
+ * small learns the right size instead of silently losing rows. */
+typedef bool (*padmux_match_fn)(const char *func_name, const void *arg);
+
+static int padmux_walk(padmux_match_fn match, const void *arg, int pad,
+                       ipchw_padmux_t *out, int max) {
+    if (max < 0 || (max > 0 && out == NULL))
+        return IPCHW_PADMUX_BAD_ARG;
+
+    if (!chip_generation && getchipname() == NULL)
+        return IPCHW_PADMUX_NO_CHIP;
+    if (!chip_generation)
+        return IPCHW_PADMUX_NO_CHIP;
+
+    const muxctrl_reg_t **regs = regs_by_chip();
+    if (regs == NULL)
+        return IPCHW_PADMUX_NO_TABLE;
+
+    const uint32_t mask = padmux_func_mask();
+    int found = 0;
+
+    for (int reg_num = 0; regs[reg_num]; reg_num++) {
+        const muxctrl_reg_t *reg = regs[reg_num];
+        const char *gpio_name;
+        int gpio_pad, gpio_func;
+
+        row_gpio(reg, &gpio_name, &gpio_pad, &gpio_func);
+        if (pad >= 0 && gpio_pad != pad)
+            continue;
+
+        for (int i = 0; reg->funcs[i]; i++) {
+            /* A pad with no function wired to that selector value. Never a
+             * thing to mux to, so never a match. */
+            if (!strcmp(reg->funcs[i], "reserved"))
+                continue;
+            if (match != NULL && !match(reg->funcs[i], arg))
+                continue;
+
+            if (found < max) {
+                out[found] = (ipchw_padmux_t){
+                    .address = reg->address,
+                    .func_mask = mask,
+                    .func = i,
+                    .func_name = reg->funcs[i],
+                    .gpio_name = gpio_name,
+                    .gpio_pad = gpio_pad,
+                    .gpio_func = gpio_func,
+                };
+            }
+            found++;
+        }
+    }
+
+    return found;
+}
+
+static bool match_exact(const char *func_name, const void *arg) {
+    return !strcmp(func_name, (const char *)arg);
+}
+
+static bool match_prefix(const char *func_name, const void *arg) {
+    const char *prefix = arg;
+
+    return !strncmp(func_name, prefix, strlen(prefix));
+}
+
+int ipchw_padmux_by_func(const char *func_name, ipchw_padmux_t *out, int max) {
+    if (func_name == NULL || !*func_name)
+        return IPCHW_PADMUX_BAD_ARG;
+
+    return padmux_walk(match_exact, func_name, -1, out, max);
+}
+
+int ipchw_padmux_by_prefix(const char *prefix, ipchw_padmux_t *out, int max) {
+    if (prefix == NULL)
+        return IPCHW_PADMUX_BAD_ARG;
+
+    /* An empty prefix is every function, which is how a caller walks the
+     * whole table -- an integrity sweep, or a "what can this pad do" report. */
+    return padmux_walk(match_prefix, prefix, -1, out, max);
+}
+
+int ipchw_padmux_by_pad(int pad, ipchw_padmux_t *out, int max) {
+    if (pad < 0)
+        return IPCHW_PADMUX_BAD_ARG;
+
+    return padmux_walk(NULL, NULL, pad, out, max);
+}
+
+/* Everything below is the command-line half of ipctool: it prints, it parses
+ * argv, and it calls print_usage() out of main.c. STANDALONE_LIBRARY builds
+ * (libipchw) take the tables and the lookups above and stop here. */
+#ifndef STANDALONE_LIBRARY
+
+static int gpio_mux_by(const char *gpio_number, int func_num,
+                       const char *set_func);
+
+static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
+    if (strchr(gpio_name, '_') != NULL)
+        return gpio_name;
+
+    unsigned long plain_num = strtoul(gpio_name, NULL, 10);
+    int group = plain_num / 8;
+    int num = plain_num % 8;
+    snprintf(cgpio, 64, "%d_%d", group, num);
+    return cgpio;
+}
+
+static int find_pinfunc(const char *const *func, const char *name) {
+    for (int i = 0; func[i]; i++) {
+        if (!strcmp(func[i], name))
+            return i;
+    }
+
+    return -1;
+}
+
+/* regs_by_chip() answers NULL for an SoC it has no table for. The CLI has
+ * always treated that as fatal and still does; only the library needs the
+ * softer answer. */
+static const muxctrl_reg_t **regs_by_chip_or_die(void) {
+    const muxctrl_reg_t **regs = regs_by_chip();
+    if (regs == NULL) {
+        fprintf(stderr, "Platform is not supported\n");
+        exit(EXIT_FAILURE);
+    }
+    return regs;
+}
+
+static void show_function(const char *const *func, unsigned val) {
+    for (size_t i = 0; func[i]; i++) {
+        if (i == val)
+            printf(" [%s]", func[i] ? func[i] : "reserved");
+        else
+            printf(" %s", func[i] ? func[i] : "reserved");
+    }
+    puts("");
 }
 
 static int dump_regs(bool script_mode) {
-    const char *vendor = getchipvendor();
-    const muxctrl_reg_t **regs = regs_by_chip();
+    const muxctrl_reg_t **regs = regs_by_chip_or_die();
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         uint32_t val;
@@ -2542,11 +2795,7 @@ static int dump_regs(bool script_mode) {
             continue;
         }
 
-        if (strstr(vendor, VENDOR_HISI) || strstr(vendor, VENDOR_GOKE)) {
-            val &= 0xf;
-        } else if (strstr(vendor, VENDOR_SSTAR)) {
-            val &= 0xffff;
-        }
+        val &= padmux_func_mask();
 
         printf("muxctrl_reg%d %#x %#x", reg_num, regs[reg_num]->address, val);
         show_function(regs[reg_num]->funcs, val);
@@ -2741,26 +2990,6 @@ static int gpio_set_cmd(int argc, char **argv) {
     return gpio_manipulate(argv, true);
 }
 
-static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
-    if (strchr(gpio_name, '_') != NULL)
-        return gpio_name;
-
-    unsigned long plain_num = strtoul(gpio_name, NULL, 10);
-    int group = plain_num / 8;
-    int num = plain_num % 8;
-    snprintf(cgpio, 64, "%d_%d", group, num);
-    return cgpio;
-}
-
-static int find_pinfunc(const char *const *func, const char *name) {
-    for (int i = 0; func[i]; i++) {
-        if (!strcmp(func[i], name))
-            return i;
-    }
-
-    return -1;
-}
-
 static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func) {
     const char *gpio_grnum = num2gpio_groupnum(gpio_number, (char[64]){0});
@@ -2768,7 +2997,7 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
         return EXIT_FAILURE;
 
     getchipname();
-    const muxctrl_reg_t **regs = regs_by_chip();
+    const muxctrl_reg_t **regs = regs_by_chip_or_die();
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         const char *const *func = regs[reg_num]->funcs;
@@ -2788,7 +3017,12 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
 
                 if (new_func == -1)
                     new_func = i;
-                val = val & 0xfff0 | new_func;
+                /* Only the selector field moves. The old mask was 0xfff0,
+                 * which zeroed every bit above 15 -- on these 32-bit pad
+                 * registers that quietly dropped whatever the boot had put
+                 * there. */
+                uint32_t mask = padmux_func_mask();
+                val = (val & ~mask) | ((uint32_t)new_func & mask);
                 if (!mem_reg(regs[reg_num]->address, &val, OP_WRITE)) {
                     printf("write reg %#x error\n", regs[reg_num]->address);
                     return EXIT_FAILURE;
@@ -2822,8 +3056,12 @@ static int gpio_mux_cmd(int argc, char **argv) {
     return gpio_mux_by(argv[1], func_num, set_func);
 }
 
-static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
+/* False when this SoC has no pad table, so a caller can drop the part of its
+ * report that needs one instead of taking the whole process down with it. */
+static bool fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
     const muxctrl_reg_t **regs = regs_by_chip();
+    if (regs == NULL)
+        return false;
 
     memset(enabled, 0, sizeof(size_t) * GPIO_Groups);
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
@@ -2836,7 +3074,7 @@ static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
                     continue;
                 }
 
-                if ((val & 0xf) == i) {
+                if ((val & padmux_func_mask()) == (uint32_t)i) {
                     int group, num;
                     if (sscanf(func[i] + 4, "%d_%d", &group, &num) != 2)
                         assert("Parsing error");
@@ -2847,6 +3085,8 @@ static void fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
             }
         }
     }
+
+    return true;
 }
 
 static uint32_t find_streamer_gpio_groups(size_t GPIO_Base, size_t GPIO_Offset,
@@ -2899,7 +3139,8 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
         find_streamer_gpio_groups(GPIO_Base, GPIO_Offset, GPIO_Groups);
 
     size_t enabled[GPIO_Groups];
-    fill_enabled_gpios(enabled, GPIO_Groups);
+    if (!fill_enabled_gpios(enabled, GPIO_Groups))
+        return NULL;
 
     // Count output pins per group to filter out busy I/O groups
     uint8_t output_count[GPIO_Groups];
@@ -2972,7 +3213,10 @@ static int gpio_scan_cmd() {
 
     size_t state[GPIO_Groups];
     size_t enabled[GPIO_Groups];
-    fill_enabled_gpios(enabled, GPIO_Groups);
+    if (!fill_enabled_gpios(enabled, GPIO_Groups)) {
+        fprintf(stderr, "Platform is not supported\n");
+        return EXIT_FAILURE;
+    }
 
     for (int group = 0; group < GPIO_Groups; group++) {
         size_t mask = enabled[group] << 2;
@@ -3064,3 +3308,5 @@ int gpio_cmd(int argc, char **argv) {
     printf("Usage: ipctool gpio <command>\n");
     return EXIT_FAILURE;
 }
+
+#endif /* !STANDALONE_LIBRARY */

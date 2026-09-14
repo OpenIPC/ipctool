@@ -1168,7 +1168,15 @@ exit:
     return detected;
 }
 
-static int dummy_change_addr(int fd, unsigned char addr) {}
+/* The do-nothing stand-in for chips whose bus needs no address change. It has
+ * always been empty; returning explicitly is the difference between "no change
+ * needed, fine" and whatever happened to be in the return register. */
+static int dummy_change_addr(int fd, unsigned char addr) {
+    (void)fd;
+    (void)addr;
+
+    return 0;
+}
 
 static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
     if (open_spi_sensor_fd == NULL || spi_read_register == NULL)

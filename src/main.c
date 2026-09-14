@@ -167,9 +167,13 @@ static int backup_with_yaml(const char *backup_file) {
     char *string = cYAML_Print(yaml);
 
     int ret = do_backup(string, strlen(string), backup_file);
-    
+
     free(string);
     cJSON_Delete(yaml);
+    /* do_backup()'s verdict is this command's exit status. It was computed and
+     * then dropped, so `ipctool backup <file>` has been exiting on whatever
+     * was in the return register. */
+    return ret;
 }
 
 int main(int argc, char *argv[]) {

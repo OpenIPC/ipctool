@@ -40,6 +40,17 @@
 enum REG_OPS { OP_READ, OP_WRITE };
 
 int regex_compile(regex_t *r, const char *regex_text);
+/* Read or write one 32-bit register through /dev/mem.
+ *
+ * NOT thread-safe and not reentrant: the mapping, its offset, its size and the
+ * file descriptor are four function-local statics with no lock around them, and
+ * any address outside the cached window unmaps it and maps another. Two threads
+ * on different windows will unmap the mapping the other is about to dereference.
+ * Every caller must come from one thread.
+ *
+ * Returns false only when /dev/mem cannot be opened or mmapped -- a bad address
+ * on live silicon raises SIGBUS rather than returning. Call with addr == 0 to
+ * release the window and close the descriptor. */
 bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op);
 void lsnprintf(char *buf, size_t n, char *fmt, ...);
 bool dts_items_by_regex(const char *filename, const char *re, char *outbuf,
