@@ -2476,26 +2476,6 @@ static const muxctrl_reg_t *DV500regs[] = {
 };
 #endif /* IPCHW_PADMUX_V5 */
 
-static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
-    if (strchr(gpio_name, '_') != NULL)
-        return gpio_name;
-
-    unsigned long plain_num = strtoul(gpio_name, NULL, 10);
-    int group = plain_num / 8;
-    int num = plain_num % 8;
-    snprintf(cgpio, 64, "%d_%d", group, num);
-    return cgpio;
-}
-
-static int find_pinfunc(const char *const *func, const char *name) {
-    for (int i = 0; func[i]; i++) {
-        if (!strcmp(func[i], name))
-            return i;
-    }
-
-    return -1;
-}
-
 /* Which bits of a pad register are the function selector.
  *
  * HiSilicon (and Goke, which is the same silicon) put it in the low nibble;
@@ -2757,6 +2737,26 @@ int ipchw_padmux_by_pad(int pad, ipchw_padmux_t *out, int max) {
 
 static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func);
+
+static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
+    if (strchr(gpio_name, '_') != NULL)
+        return gpio_name;
+
+    unsigned long plain_num = strtoul(gpio_name, NULL, 10);
+    int group = plain_num / 8;
+    int num = plain_num % 8;
+    snprintf(cgpio, 64, "%d_%d", group, num);
+    return cgpio;
+}
+
+static int find_pinfunc(const char *const *func, const char *name) {
+    for (int i = 0; func[i]; i++) {
+        if (!strcmp(func[i], name))
+            return i;
+    }
+
+    return -1;
+}
 
 /* regs_by_chip() answers NULL for an SoC it has no table for. The CLI has
  * always treated that as fatal and still does; only the library needs the
