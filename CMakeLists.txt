@@ -59,6 +59,41 @@ else()
   set(_ipchw_selected ${IPCHW_VENDORS})
 endif()
 
+# Which SoC families' pad-mux tables go into libipchw. They are 57 KB of
+# hand-entered data all told, and regs_by_chip() names every one of them from a
+# single switch, so --gc-sections cannot drop any: a consumer has to say what it
+# targets or pay for the lot. The ipctool executable always carries every table.
+#
+# Same shape as IPCHW_VENDORS above, and for the same reason -- set(... CACHE)
+# here means a parent project has to FORCE it.
+set(IPCHW_PADMUX_FAMILIES v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d)
+set(IPCHW_PADMUX "all" CACHE STRING
+    "Pad-mux tables compiled into libipchw: 'all', 'none', or a subset of ${IPCHW_PADMUX_FAMILIES}")
+
+if(IPCHW_PADMUX STREQUAL "all")
+  set(_padmux_selected ${IPCHW_PADMUX_FAMILIES})
+elseif(IPCHW_PADMUX STREQUAL "none")
+  set(_padmux_selected "")
+else()
+  set(_padmux_selected ${IPCHW_PADMUX})
+endif()
+
+foreach(_f IN LISTS IPCHW_PADMUX_FAMILIES)
+  string(TOUPPER ${_f} _F)
+  list(APPEND IPCHW_PADMUX_ALL_DEFS IPCHW_PADMUX_${_F})
+endforeach()
+
+foreach(_f IN LISTS _padmux_selected)
+  if(NOT _f IN_LIST IPCHW_PADMUX_FAMILIES)
+    message(FATAL_ERROR
+            "IPCHW_PADMUX: unknown family '${_f}'; "
+            "expected 'all', 'none', or a subset of ${IPCHW_PADMUX_FAMILIES}")
+  endif()
+  string(TOUPPER ${_f} _F)
+  list(APPEND IPCHW_PADMUX_DEFS IPCHW_PADMUX_${_F})
+endforeach()
+message(STATUS "libipchw pad-mux tables: ${_padmux_selected}")
+
 set(COMMON_LIB_SRC_BASE
     src/chipid.c
     src/chipid.h
@@ -199,7 +234,11 @@ add_library(ipchw STATIC ${COMMON_LIB_SRC})
 # consumer that links this library can find it without naming the path.
 target_include_directories(ipchw PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY ${IPCHW_VENDOR_DEFS})
+# PUBLIC on purpose: a consumer that trimmed a family out can #error on the
+# missing macro at compile time rather than meet IPCHW_PADMUX_NO_TABLE on a
+# camera.
+target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY ${IPCHW_VENDOR_DEFS}
+                           ${IPCHW_PADMUX_DEFS})
 # Threads is carried on the interface so anything linking this static library
 # (ipcinfo here, and external consumers of libipchw) pulls pthread in too.
 target_link_libraries(ipchw m Threads::Threads)
@@ -207,7 +246,8 @@ target_link_libraries(ipchw m Threads::Threads)
 if(NOT ONLY_LIBRARY)
   add_executable(ipctool ${IPCTOOL_SRC} ${COMMON_LIB_SRC_ALL})
   target_include_directories(ipctool PRIVATE include)
-  target_compile_definitions(ipctool PRIVATE ${IPCHW_ALL_VENDOR_DEFS})
+  target_compile_definitions(ipctool PRIVATE ${IPCHW_ALL_VENDOR_DEFS}
+                             ${IPCHW_PADMUX_ALL_DEFS})
 
   target_link_libraries(ipctool m Threads::Threads)
   install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)

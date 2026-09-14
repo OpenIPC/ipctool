@@ -38,6 +38,11 @@ static bool one(const char *func, ipchw_padmux_t *row) {
     return true;
 }
 
+/* Each family test only runs where that family's tables were compiled in.
+ * IPCHW_PADMUX_* is PUBLIC on the ipchw target precisely so a consumer can ask
+ * this question at compile time; asking it here keeps a trimmed build honest
+ * instead of red. */
+#ifdef IPCHW_PADMUX_V1
 static void test_v1_pwm(void) {
     puts("V1 (hi3516cv100): PWM_OUT0 and PWM_OUT1");
     as_chip(HISI_V1, "3518EV100");
@@ -61,7 +66,9 @@ static void test_v1_pwm(void) {
      * back to a plain GPIO lamp. */
     CHECK(ipchw_padmux_by_func("PWM0", &r, 1) == 0);
 }
+#endif
 
+#ifdef IPCHW_PADMUX_V2
 static void test_v2_pwm(void) {
     puts("V2 (hi3518ev200): PWM0 on two pads");
     as_chip(HISI_V2, "3518EV200");
@@ -83,7 +90,9 @@ static void test_v2_pwm(void) {
         CHECK(r.gpio_pad == 61);
     }
 }
+#endif
 
+#ifdef IPCHW_PADMUX_V4
 static void test_v4_pwm(void) {
     puts("V4 (hi3516ev200/ev300): the pads the field already uses");
     as_chip(HISI_V4, "3516EV200");
@@ -131,7 +140,9 @@ static void test_v4_pwm(void) {
     for (int i = 0; i < n && i < 8; i++)
         CHECK(strcmp(rows[i].func_name, "PWM2") != 0);
 }
+#endif
 
+#ifdef IPCHW_PADMUX_V1
 static void test_prefix_is_not_substring(void) {
     puts("a PWM prefix must not catch SVB_PWM");
     as_chip(HISI_V1, "3518EV100");
@@ -163,7 +174,9 @@ static void test_by_pad(void) {
     /* A pad the SoC does not have. Not an error -- just nothing. */
     CHECK(ipchw_padmux_by_pad(200, rows, 8) == 0);
 }
+#endif
 
+#ifdef IPCHW_PADMUX_V4
 static void test_counts_past_max(void) {
     puts("the count is matches, not rows written");
     as_chip(HISI_V4, "3516EV300");
@@ -175,6 +188,7 @@ static void test_counts_past_max(void) {
 
     CHECK(ipchw_padmux_by_func("PWM3", NULL, 0) == 3);
 }
+#endif
 
 static void test_refusals_do_not_exit(void) {
     puts("an unknown SoC is a refusal, not an exit");
@@ -186,6 +200,14 @@ static void test_refusals_do_not_exit(void) {
 
     as_chip(0x3521, "3521V100"); /* detected by ipctool, but no pad table */
     CHECK(ipchw_padmux_by_func("PWM0", rows, 4) == IPCHW_PADMUX_NO_TABLE);
+
+    /* A family this build trimmed out answers the same way. That is the
+     * distinction the caller needs: "you did not compile this in" rather than
+     * "this chip has no such pad". */
+#ifndef IPCHW_PADMUX_V3
+    as_chip(HISI_V3, "3516CV300");
+    CHECK(ipchw_padmux_by_func("PWM0", rows, 4) == IPCHW_PADMUX_NO_TABLE);
+#endif
 
     as_chip(HISI_V1, "3518EV100");
     CHECK(ipchw_padmux_by_func(NULL, rows, 4) == IPCHW_PADMUX_BAD_ARG);
@@ -251,12 +273,18 @@ static void test_table_integrity(void) {
 }
 
 int main(void) {
+#ifdef IPCHW_PADMUX_V1
     test_v1_pwm();
-    test_v2_pwm();
-    test_v4_pwm();
     test_prefix_is_not_substring();
     test_by_pad();
+#endif
+#ifdef IPCHW_PADMUX_V2
+    test_v2_pwm();
+#endif
+#ifdef IPCHW_PADMUX_V4
+    test_v4_pwm();
     test_counts_past_max();
+#endif
     test_refusals_do_not_exit();
     test_table_integrity();
 

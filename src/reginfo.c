@@ -2,9 +2,13 @@
 #include "chipid.h"
 #include "hal/hisi/hal_hisi.h"
 #include "hal/ingenic.h"
+#ifdef IPCHW_VENDOR_INGENIC
 #include "hal/ingenic_reginfo.h"
+#endif
 #include "hal/sstar.h"
+#ifdef IPCHW_VENDOR_SSTAR
 #include "hal/sstar_reginfo.h"
+#endif
 #include "tools.h"
 
 #include "ipchw.h"
@@ -19,6 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#if defined(IPCHW_PADMUX_V1) /* hi3516cv100 / hi3518ev100 */
 MUXCTRL(CV100_0, 0x200f0000, "GPIO1_0", "SHUTTER_TRIG")
 MUXCTRL(CV100_1, 0x200f0004, "GPIO1_1", "SDIO_CCLK_OUT")
 MUXCTRL(CV100_2, 0x200f0008, "GPIO1_2", "SENSOR_CLK")
@@ -125,7 +130,9 @@ static const muxctrl_reg_t *CV100regs[] = {
     &CV100_85, &CV100_86, &CV100_87, &CV100_88, &CV100_89, &CV100_90, &CV100_91,
     &CV100_92, &CV100_93, &CV100_94, 0,
 };
+#endif /* IPCHW_PADMUX_V1 */
 
+#if defined(IPCHW_PADMUX_V2A) /* hi3516av100 */
 MUXCTRL(AV100_0, 0x200f0000, "GPIO0_5", "SENSOR_CLK")
 MUXCTRL(AV100_1, 0x200f0004, "GPIO0_6", "FLASH_TRIG", "SPI1_CSN1")
 MUXCTRL(AV100_2, 0x200f0008, "GPIO0_7", "SHUTTER_TRIG", "SPI1_CSN2")
@@ -277,7 +284,9 @@ static const muxctrl_reg_t *AV100regs[] = {
     &AV100_114, &AV100_115, &AV100_116, &AV100_117, &AV100_118, &AV100_119,
     &AV100_120, &AV100_121, &AV100_122, 0,
 };
+#endif /* IPCHW_PADMUX_V2A */
 
+#if defined(IPCHW_PADMUX_V2) /* hi3516cv200 / hi3518ev200 */
 MUXCTRL(CV200_0, 0x200f0000, "GPIO0_4", "SENSOR_CLK")
 MUXCTRL(CV200_1, 0x200f0004, "SENSOR_RSTN", "GPIO0_5")
 MUXCTRL(CV200_2, 0x200f0008, "GPIO0_6", "FLASH_TRIG", "SFC_EMMC_BOOT_MODE",
@@ -459,7 +468,9 @@ static const muxctrl_reg_t *EV20Xregs[] = {
     &EV20X_56, &EV20X_57, &EV20X_58, &EV20X_59, &EV20X_60, &EV20X_61, &EV20X_62,
     &EV20X_63, &EV20X_64, &EV20X_65, 0,
 };
+#endif /* IPCHW_PADMUX_V2 */
 
+#if defined(IPCHW_PADMUX_V3A) /* hi3519v101 / hi3516av200 */
 MUXCTRL(AV200_muxctrl_reg0, 0x12040000, "GPIO1_0", "FLASH_TRIG", "SPI2_CSN1",
         "PWM4")
 MUXCTRL(AV200_muxctrl_reg1, 0x12040004, "GPIO1_1", "SHUTTER_TRIG", "reserved",
@@ -709,7 +720,9 @@ static const muxctrl_reg_t *AV200regs[] = {
     &AV200_muxctrl_reg120,
     0,
 };
+#endif /* IPCHW_PADMUX_V3A */
 
+#if defined(IPCHW_PADMUX_V3) /* hi3516cv300 */
 MUXCTRL(CV300_muxctrl_reg0, 0x12040000, "GPIO1_7", "PWM3", "SVB_PWM")
 MUXCTRL(CV300_muxctrl_reg1, 0x12040004, "GPIO6_5", "PWM0")
 MUXCTRL(CV300_muxctrl_reg2, 0x12040008, "GPIO6_6", "PWM1")
@@ -830,7 +843,9 @@ static const muxctrl_reg_t *CV300regs[] = {
     &CV300_muxctrl_reg61, &CV300_muxctrl_reg62, &CV300_muxctrl_reg63,
     &CV300_muxctrl_reg64, &CV300_muxctrl_reg65,  &CV300_muxctrl_reg66, 0,
 };
+#endif /* IPCHW_PADMUX_V3 */
 
+#if defined(IPCHW_PADMUX_V4A) /* hi3516cv500 / av300 / dv300 */
 MUXCTRL(CV500_iocfg_reg0, 0x10FF0000, "EMMC_CLK", "SFC_CLK", "SFC_BOOT_MODE")
 MUXCTRL(CV500_iocfg_reg1, 0x10FF0004, "EMMC_CMD", "SFC_HOLD_IO3")
 MUXCTRL(CV500_iocfg_reg2, 0x10FF0008, "EMMC_DATA0", "SFC_WP_IO2")
@@ -1224,7 +1239,9 @@ static const muxctrl_reg_t *DV300regs[] = {
     &DV300_iocfg_reg108, &DV300_iocfg_reg109, &DV300_iocfg_reg110,
     &DV300_iocfg_reg111, &DV300_iocfg_reg112, 0,
 };
+#endif /* IPCHW_PADMUX_V4A */
 
+#if defined(IPCHW_PADMUX_V4) /* hi3516ev200 / ev300 / gk7205 / dv200 */
 MUXCTRL(EV200_iocfg_reg0, 0x100C0000, "GPIO0_1", "UART0_RXD")
 MUXCTRL(EV200_iocfg_reg1, 0x100C0004, "GPIO0_2", "UART0_TXD")
 MUXCTRL(EV200_iocfg_reg2, 0x100C0008, "GPIO0_0", "UPDATE_MODE")
@@ -1942,7 +1959,9 @@ static const muxctrl_reg_t *DV200regs[] = {
     &DV200_iocfg_reg96, &DV200_iocfg_reg97,
     &DV200_iocfg_reg98, 0,
 };
+#endif /* IPCHW_PADMUX_V4 */
 
+#if defined(IPCHW_PADMUX_3536D) /* hi3536dv100 */
 MUXCTRL(DV100_muxctrl_reg0, 0x120F0000, "GPIO2_4", "VGA_HS")
 MUXCTRL(DV100_muxctrl_reg1, 0x120F0004, "GPIO2_5", "VGA_VS")
 MUXCTRL(DV100_muxctrl_reg2, 0x120F0008, "PWM_SVB_CORE", "GPIO2_6")
@@ -2014,7 +2033,9 @@ static const muxctrl_reg_t *DV100regs[] = {
     &DV100_muxctrl_reg42, &DV100_muxctrl_reg43, &DV100_muxctrl_reg44,
     &DV100_muxctrl_reg45, &DV100_muxctrl_reg46, 0,
 };
+#endif /* IPCHW_PADMUX_3536D */
 
+#if defined(IPCHW_PADMUX_3536C) /* hi3536cv100 */
 MUXCTRL(RCV100_muxctrl_reg0, 0x120F0000, "GPIO5_7", "reserved", "reserved",
         "RGMII1_TXER")
 MUXCTRL(RCV100_muxctrl_reg1, 0x120F0004, "GPIO1_0", "reserved", "reserved",
@@ -2143,7 +2164,9 @@ static const muxctrl_reg_t *RCV100regs[] = {
     &RCV100_muxctrl_reg93, &RCV100_muxctrl_reg95, &RCV100_muxctrl_reg96,
     &RCV100_muxctrl_reg97, &RCV100_muxctrl_reg98, 0,
 };
+#endif /* IPCHW_PADMUX_3536C */
 
+#if defined(IPCHW_PADMUX_V5) /* hi3516cv610 / 3519dv500 */
 MUXCTRL(CV610_io0_cfg_reg0, 0x10260000, "GPIO0_0");
 MUXCTRL(CV610_io0_cfg_reg1, 0x10260004, "GPIO0_1", "PWM0_OUT3", "BOOT_SEL1");
 MUXCTRL(CV610_io0_cfg_reg2, 0x10260008, "WDG_RSTN");
@@ -2451,6 +2474,7 @@ static const muxctrl_reg_t *DV500regs[] = {
     &DV500_aon_cfg_reg133, &DV500_aon_cfg_reg134, &DV500_aon_cfg_reg135,
     0,
 };
+#endif /* IPCHW_PADMUX_V5 */
 
 static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
     if (strchr(gpio_name, '_') != NULL)
@@ -2507,24 +2531,37 @@ static uint32_t padmux_func_mask(void) {
 
 static const muxctrl_reg_t **regs_by_chip() {
     switch (chip_generation) {
+#ifdef IPCHW_PADMUX_V1
     case HISI_V1:
         return CV100regs;
+#endif
+#ifdef IPCHW_PADMUX_V2A
     case HISI_V2A:
         return AV100regs;
+#endif
+#ifdef IPCHW_PADMUX_V2
     case HISI_V2:
         if (IS_CHIP("3516CV200"))
             return CV200regs;
         else
             return EV20Xregs;
+#endif
+#ifdef IPCHW_PADMUX_V3A
     case HISI_V3A:
         return AV200regs;
+#endif
+#ifdef IPCHW_PADMUX_V3
     case HISI_V3:
         return CV300regs;
+#endif
+#ifdef IPCHW_PADMUX_V4A
     case HISI_V4A:
         if (IS_CHIP("3516CV500"))
             return CV500regs;
         else
             return DV300regs;
+#endif
+#ifdef IPCHW_PADMUX_V4
     case HISI_V4:
         if (IS_16EV200)
             return EV200regs;
@@ -2537,14 +2574,22 @@ static const muxctrl_reg_t **regs_by_chip() {
         else if (IS_7205V500)
             return EV200regs;
         break;
+#endif
+#ifdef IPCHW_PADMUX_V5
     case HISI_OT:
         if (IS_CHIP("3519DV500") || IS_CHIP("3516DV500"))
             return DV500regs;
         return CV610regs;
+#endif
+#ifdef IPCHW_PADMUX_3536C
     case HISI_3536C:
         return RCV100regs;
+#endif
+#ifdef IPCHW_PADMUX_3536D
     case HISI_3536D:
         return DV100regs;
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
     case INFINITY6:
     case INFINITY6B:
         return I6B_regs;
@@ -2552,8 +2597,11 @@ static const muxctrl_reg_t **regs_by_chip() {
         return I6C_regs;
     case INFINITY6E:
         return I6E_regs;
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
     case T31:
         return T31_regs;
+#endif
     }
 
     /* No table for this SoC, or none compiled into this build. NULL rather
