@@ -165,12 +165,19 @@ static int sstar_get(int pad, ipchw_padmux_t *out, const padmux_io_t *io) {
         }
     }
 
-    /* Nothing this build knows about claims the pad. Where the part has an
-     * explicit "this pad is GPIO" field, believe that rather than the
-     * absence: a pad whose only other mode is one the generator could not
-     * represent -- the multi-bank ETH modes on infinity6c -- would otherwise
-     * read as a free wire while it is carrying Ethernet. */
-    for (int g = 0; g < pd->ngpio; g++) {
+    /* Nothing this build knows about claims the pad.
+     *
+     * For a pad whose alternatives are all in the table, that settles it: no
+     * peripheral is on it, so it is the GPIO the part falls back to.
+     *
+     * For a pad with NO modes at all it settles nothing, because the reason
+     * it has none is that the generator could not represent the one it had --
+     * the multi-bank ETH and USB modes on infinity6c. Asking that pad's own
+     * "this pad is GPIO" field is the only honest check left, and a pad that
+     * fails it is carrying something this build cannot name rather than
+     * lying idle. Measured on an SSC377D: this keeps the four Ethernet pads
+     * and PAD_USB_CID unresolved and answers for the other 81. */
+    for (int g = 0; pd->nmodes == 0 && g < pd->ngpio; g++) {
         const sstar_field_t *f = &fam->gpio_fields[pd->gpio_first + g];
         uint32_t val;
         if (!io->read(f->address, &val, SSTAR_PORT_BITS))

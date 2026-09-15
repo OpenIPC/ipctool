@@ -512,6 +512,16 @@ static void test_sstar(void) {
     fake_write(0x1F2A35C4, 0x0000, 32);
     CHECK(ipchw_padmux_get(82, &r) == 0);
 
+    /* But that check is only for pads with nothing else to go on. A pad whose
+     * alternatives ARE all in the table says GPIO when none of them is
+     * asserted, whatever its GPIO-mode bit reads -- an idle pad is assignable,
+     * and treating it as unknowable hid 34 of an SSC377D's 86 pads. */
+    regs_reset();
+    CHECK(ipchw_padmux_get(7, &r) ==
+          1); /* PAD_UART1_RX, five modes, none set */
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
+    CHECK(r.gpio_name && !strcmp(r.gpio_name, "PAD_UART1_RX"));
+
     as_chip(INFINITY6B, "SSC33X");
 }
 #endif
