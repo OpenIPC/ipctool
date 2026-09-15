@@ -271,7 +271,10 @@ def parse_family(kernel, family):
         "modes": modes,
         "rows": len(rows),
         "dropped": dropped,
-        "sources": [(p, sha256(p)) for p in paths.values()],
+        # relative to the kernel tree, not to this machine: the banner has to
+        # mean the same thing to whoever regenerates it next
+        "sources": [(os.path.relpath(p, kernel), sha256(p))
+                    for p in paths.values()],
     }
 
 
@@ -294,9 +297,9 @@ def emit(families, argv):
     w(" * it does not look like the HiSilicon tables in src/reginfo.c.")
     w(" *")
     w(" * Regenerate with:")
-    w(" *   %s" % " ".join(argv))
+    w(" *   %s" % argv)
     w(" *")
-    w(" * Sources:")
+    w(" * From, in a vendor kernel tree:")
     for fam in families:
         for path, digest in fam["sources"]:
             w(" *   %s  %s" % (digest, path))
@@ -397,13 +400,14 @@ def main():
             print("gen_sstar_padmux: %s" % last, file=sys.stderr)
             return 1
 
-    text = emit(families, ["tools/gen_sstar_padmux.py"] +
-                sum([["--kernel", k] for k in args.kernel], []) +
-                sum([["--family", f] for f in args.family], []))
+    text = emit(families, "tools/gen_sstar_padmux.py --kernel <tree> " +
+                " ".join("--family %s" % f for f in args.family))
 
     if args.verify:
         have = read(args.verify)
-        if have == text:
+        # the banner names the tree it was run against; the data is what has
+        # to match, and is what a reviewer can check
+        if have.split(" */\n", 1)[-1] == text.split(" */\n", 1)[-1]:
             print("gen_sstar_padmux: %s matches the SDK" % args.verify)
             return 0
         print("gen_sstar_padmux: %s does NOT match the SDK" % args.verify,

@@ -9,9 +9,8 @@
  * Regenerate with:
  *   tools/gen_ingenic_padmux.py --spec T31_H.3_gpio_spec.pdf --soc T31
  *
- * Sources:
- *   bb1d41a16f9809da
- * /mnt/data/OpenIPC_SDK/OpenIPC_SDK/Ingenic/T31/docs/T31_H.3_gpio_spec.pdf
+ * From:
+ *   bb1d41a16f9809da  T31_H.3_gpio_spec.pdf
  */
 
 #ifndef HAL_INGENIC_PADMUX_H

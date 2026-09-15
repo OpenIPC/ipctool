@@ -151,7 +151,7 @@ def emit(soc, pads, sources, argv):
     w(" * Regenerate with:")
     w(" *   %s" % " ".join(argv))
     w(" *")
-    w(" * Sources:")
+    w(" * From:")
     for path, digest in sources:
         w(" *   %s  %s" % (digest, path))
     w(" */")
@@ -189,7 +189,8 @@ def main():
     args = ap.parse_args()
 
     pads = parse(spec_text(args.spec), args.soc)
-    text = emit(args.soc, pads, [(args.spec, sha256(args.spec))],
+    text = emit(args.soc, pads,
+                [(os.path.basename(args.spec), sha256(args.spec))],
                 ["tools/gen_ingenic_padmux.py", "--spec",
                  os.path.basename(args.spec), "--soc", args.soc])
 
