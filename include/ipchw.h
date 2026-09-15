@@ -54,7 +54,9 @@ typedef struct {
                             * on HiSilicon, the pad id on SigmaStar, port*32+
                             * pin on Ingenic -- or -1 */
     int gpio_func;         /* selector value that restores the GPIO, or -1
-                            * where restoring it is not one write */
+                            * where restoring it is not one write. See
+                            * ipchw_padmux_get(), which can fill this in on a
+                            * family where the lookups cannot. */
     uint32_t flags;        /* IPCHW_PADMUX_F_* */
 } ipchw_padmux_t;
 
@@ -133,6 +135,16 @@ int ipchw_padmux_by_pad(int pad, ipchw_padmux_t *out, int max);
  *
  * A pad carrying no peripheral answers with its plain-GPIO row, flagged
  * IPCHW_PADMUX_F_GPIO.
+ *
+ * This is also the call that can answer "and how do I put it back". Where
+ * plain GPIO is the absence of every claim rather than a selector value, the
+ * lookups above have to leave gpio_func at -1, because which value restores
+ * it depends on what the pad is carrying and the table does not know. This
+ * one has just read the registers: when a single field is claiming the pad
+ * and clearing it is the whole job, the row comes back with gpio_func set, so
+ * (address, func_mask, gpio_func) is one write like anywhere else. When it
+ * takes more than one write gpio_func stays -1 and ipchw_padmux_set(pad,
+ * IPCHW_PADMUX_GPIO) is the way.
  *
  * READS /dev/mem; see the threading note above. */
 int ipchw_padmux_get(int pad, ipchw_padmux_t *out);

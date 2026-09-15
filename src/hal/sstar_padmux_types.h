@@ -36,6 +36,8 @@ typedef const struct {
     uint16_t nmodes;
     uint16_t gpio_first; /* first of its entries in the GPIO-field pool */
     uint16_t ngpio;
+    uint16_t unnamed_first; /* first of its entries in the unnamed-field pool */
+    uint16_t nunnamed;
 } sstar_pad_t;
 
 typedef const struct {
@@ -45,6 +47,10 @@ typedef const struct {
     uint16_t npads;
     const uint16_t *pool;             /* mode indices, per pad */
     const sstar_field_t *gpio_fields; /* GPIO claims, per pad */
+    /* Fields that would mean a mode the generator had to drop is live on the
+     * pad. Not functions this build can name, just reasons not to call a pad
+     * free -- see the comment on them in sstar_padmux.h. */
+    const sstar_field_t *unnamed_fields;
 } sstar_family_t;
 
 /* The idle value of a field: what the vendor writes to take a claim off a

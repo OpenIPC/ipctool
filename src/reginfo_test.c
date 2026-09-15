@@ -492,6 +492,37 @@ static void test_sstar(void) {
     CHECK(ipchw_padmux_get(82, &r) == 0);
     CHECK(ipchw_padmux_set(82, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_NO_FUNC);
 
+    puts("SigmaStar: get() knows the way back even though the table cannot");
+    /* PAD_GPIO0's nine alternatives are fields in five different registers,
+     * so no table row can say which value means GPIO. With PWM0_MODE_4 the
+     * only thing claiming the pad, clearing that one field is the whole job
+     * -- and infinity6b0 has no separate "this pad is GPIO" bit needing a
+     * second write -- so the row get() returns carries it. */
+    regs_reset();
+    CHECK(ipchw_padmux_set(0, "PWM0_MODE_4") == 0);
+    CHECK(ipchw_padmux_get(0, &r) == 1);
+    CHECK(!strcmp(r.func_name, "PWM0_MODE_4"));
+    CHECK(r.address == 0x1F203C1C && r.func_mask == 0x7 && r.func == 4);
+    CHECK(r.gpio_func == 0);
+    CHECK((r.flags & IPCHW_PADMUX_F_RMW) != 0);
+
+    /* And it is a real write: composing it by hand puts the pad back. */
+    fake_write(r.address, (reg_of(r.address) & ~r.func_mask) | r.gpio_func, 16);
+    CHECK(ipchw_padmux_get(0, &r) == 1);
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
+
+    /* The lookups still cannot say -- they have not read anything. */
+    CHECK(ipchw_padmux_by_func("PWM0_MODE_4", rows, 16) == 1);
+    CHECK(rows[0].gpio_func == -1);
+
+    /* Two claims at once and clearing one settles nothing, so neither does
+     * the row. PAD_GPIO0 answers to TTL_MODE_1 as well as PWM0_MODE_4. */
+    regs_reset();
+    CHECK(ipchw_padmux_set(0, "PWM0_MODE_4") == 0);
+    fake_write(0x1F203C3C, 0x0040, 16); /* TTL_MODE_1, behind PWM0's back */
+    CHECK(ipchw_padmux_get(0, &r) == 1);
+    CHECK(r.gpio_func == -1);
+
     puts("SigmaStar: an unasserted GPIO field is not an idle pad");
     /* infinity6c DOES have rows for its Ethernet pads -- six fields across
      * three banks saying "this pad is GPIO" -- but its ETH_MODE names a
@@ -511,6 +542,29 @@ static void test_sstar(void) {
      * not "free". */
     fake_write(0x1F2A35C4, 0x0000, 32);
     CHECK(ipchw_padmux_get(82, &r) == 0);
+
+    /* A pad that kept some of its modes but lost one is not complete either.
+     * PAD_I2C1_SCL keeps five and lost TEST_IN_MODE_2, whose field the pad
+     * still carries as an unnamed claim: asserted, it means something is on
+     * the wire that this build can no longer put a name to, and "cannot say"
+     * beats offering it as free. */
+    regs_reset();
+    CHECK(ipchw_padmux_get(58, &r) == 1); /* idle: nothing claims it */
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
+    fake_write(0x1F203C48, 0x0002, 16); /* TEST_IN_MODE_2, which we dropped */
+    CHECK(ipchw_padmux_get(58, &r) == 0);
+    fake_write(0x1F203C48, 0x0000, 16);
+    CHECK(ipchw_padmux_get(58, &r) == 1);
+
+    /* But that check is only for pads with nothing else to go on. A pad whose
+     * alternatives ARE all in the table says GPIO when none of them is
+     * asserted, whatever its GPIO-mode bit reads -- an idle pad is assignable,
+     * and treating it as unknowable hid 34 of an SSC377D's 86 pads. */
+    regs_reset();
+    CHECK(ipchw_padmux_get(7, &r) ==
+          1); /* PAD_UART1_RX, five modes, none set */
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
+    CHECK(r.gpio_name && !strcmp(r.gpio_name, "PAD_UART1_RX"));
 
     as_chip(INFINITY6B, "SSC33X");
 }

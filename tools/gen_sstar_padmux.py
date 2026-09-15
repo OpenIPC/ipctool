@@ -242,12 +242,34 @@ def parse_family(kernel, family):
     # rather than folded into a tuple that would be wrong for someone: nothing
     # can select them with one write, so there is nothing honest to publish.
     dropped = []
+    unnamed = {}
     for mid in sorted(tuples):
         if len(tuples[mid]) == 1:
             continue
         name = mode_name.get(mid) or mode_name_from_macro(mode_id, mid)
         pads_hit = sorted({p for v in tuples[mid].values() for p in v})
         dropped.append((name, [pads[p] for p in pads_hit]))
+
+        # The mode goes, but what it would look like on each pad does not.
+        # A claim selected by a NON-ZERO value can be tested on its own: if
+        # that field ever reads back its value, something is on the pad that
+        # this build can no longer name, and saying so beats reporting the pad
+        # as free. A claim selected by ZERO cannot -- an idle register reads
+        # the same -- so those are left to the pad's GPIO fields instead.
+        for tup, tup_pads in tuples[mid].items():
+            if tup[2] == 0:
+                continue
+            for pad_id in tup_pads:
+                # A field that already means "this pad is GPIO" cannot also
+                # mean "something unnameable is on it". The SAR pads are like
+                # that: the vendor lists one field and value under both
+                # GPIO_MODE and OTP_TEST_1, so keeping it here would make
+                # setting the pad to GPIO read back as unnameable.
+                if tup in gpio_tuple.get(pad_id, []):
+                    continue
+                if tup not in unnamed.setdefault(pad_id, []):
+                    unnamed[pad_id].append(tup)
+
         del tuples[mid]
         for pad_id in pads_hit:
             if mid in per_pad.get(pad_id, []):
@@ -271,6 +293,7 @@ def parse_family(kernel, family):
         "modes": modes,
         "rows": len(rows),
         "dropped": dropped,
+        "unnamed": unnamed,
         # relative to the kernel tree, not to this machine: the banner has to
         # mean the same thing to whoever regenerates it next
         "sources": [(os.path.relpath(p, kernel), sha256(p))
@@ -331,7 +354,7 @@ def emit(families, argv):
         w("};")
         w("")
 
-        pool, gpio_fields, pads = [], [], []
+        pool, gpio_fields, unnamed_fields, pads = [], [], [], []
         for pad_id in range(fam["gpio_nr"]):
             mids = fam["per_pad"].get(pad_id, [])
             first = len(pool)
@@ -339,8 +362,11 @@ def emit(families, argv):
             claims = fam["gpio_tuple"].get(pad_id, [])
             gfirst = len(gpio_fields)
             gpio_fields.extend(claims)
+            unn = fam["unnamed"].get(pad_id, [])
+            ufirst = len(unnamed_fields)
+            unnamed_fields.extend(unn)
             pads.append((pad_id, fam["pads"][pad_id], first, len(mids),
-                         gfirst, len(claims)))
+                         gfirst, len(claims), ufirst, len(unn)))
 
         w("/* Which modes can claim each pad, as indices into %s_modes. */" % tag)
         w("static const uint16_t %s_pool[] = {" % tag)
@@ -358,15 +384,25 @@ def emit(families, argv):
             w("    {0x%08X, 0x%04X, 0x%04X}," % (addr, mask, val))
         w("};")
         w("")
+        w("/* Fields that would mean a mode this build had to drop is live on")
+        w(" * the pad. Not a function it can name -- just a reason not to call")
+        w(" * the pad free. */")
+        w("static const sstar_field_t %s_unnamed_fields[] = {" % tag)
+        if not unnamed_fields:
+            w("    {IPCHW_PADMUX_ADDR_NONE, 0, 0}, /* nothing dropped here */")
+        for addr, mask, val in unnamed_fields:
+            w("    {0x%08X, 0x%04X, 0x%04X}," % (addr, mask, val))
+        w("};")
+        w("")
         w("static const sstar_pad_t %s_pads[] = {" % tag)
-        for pad_id, name, first, count, gfirst, gcount in pads:
-            w('    {"%s", %d, %d, %d, %d}, /* %d */'
-              % (name, first, count, gfirst, gcount, pad_id))
+        for pad_id, name, first, count, gfirst, gcount, ufirst, ucount in pads:
+            w('    {"%s", %d, %d, %d, %d, %d, %d}, /* %d */'
+              % (name, first, count, gfirst, gcount, ufirst, ucount, pad_id))
         w("};")
         w("")
         w("static const sstar_family_t %s_padmux = {" % tag)
         w("    %s_modes, %d, %s_pads, %d," % (tag, len(fam["modes"]), tag, len(pads)))
-        w("    %s_pool, %s_gpio_fields," % (tag, tag))
+        w("    %s_pool, %s_gpio_fields, %s_unnamed_fields," % (tag, tag, tag))
         w("};")
         w("")
 
