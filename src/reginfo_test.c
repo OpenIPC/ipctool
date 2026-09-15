@@ -453,6 +453,14 @@ static void test_sstar(void) {
 
     CHECK(ipchw_padmux_set(23, "PWM0_MODE_4") == IPCHW_PADMUX_NO_FUNC);
     CHECK(ipchw_padmux_get(4000, &r) == IPCHW_PADMUX_NO_PAD);
+
+    /* PAD_ETH_RN is one of the pads the vendor programs from a hand-written
+     * switch rather than from the table, so this build has no claim for it.
+     * It must not come back as a free GPIO: a pin page offering the Ethernet
+     * pair as wires to drive is worse than one missing four pads. */
+    CHECK(ipchw_padmux_by_pad(82, rows, 16) == 0);
+    CHECK(ipchw_padmux_get(82, &r) == 0);
+    CHECK(ipchw_padmux_set(82, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_NO_FUNC);
 }
 #endif
 

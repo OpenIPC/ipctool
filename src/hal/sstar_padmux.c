@@ -44,6 +44,17 @@ static const sstar_family_t *sstar_family(void) {
     }
 }
 
+/* A pad this build has nothing at all to say about.
+ *
+ * The vendor's own driver does not program these from its table either: the
+ * SAR, ETH and USB pads, and PM_GPIO4, are a hand-written switch wanting
+ * several banks and a 0xBABE unlock. Reporting one as plain GPIO because no
+ * claim we know of is asserted would be a lie with consequences -- a pin page
+ * would offer PAD_ETH_RN as a free wire to drive. They answer nothing. */
+static bool pad_is_dark(const sstar_pad_t *pd) {
+    return pd->nmodes == 0 && pd->ngpio == 0;
+}
+
 static const sstar_mode_t *pad_mode(const sstar_family_t *fam,
                                     const sstar_pad_t *pd, int k) {
     return &fam->modes[fam->pool[pd->first + k]];
@@ -98,6 +109,8 @@ static int sstar_walk(padmux_match_fn match, const void *arg, int pad,
             continue;
 
         const sstar_pad_t *pd = &fam->pads[p];
+        if (pad_is_dark(pd))
+            continue;
 
         if (match == NULL || match(IPCHW_PADMUX_GPIO, arg)) {
             if (found < max)
@@ -133,6 +146,8 @@ static int sstar_get(int pad, ipchw_padmux_t *out, const padmux_io_t *io) {
         return IPCHW_PADMUX_NO_PAD;
 
     const sstar_pad_t *pd = &fam->pads[pad];
+    if (pad_is_dark(pd))
+        return 0;
 
     for (int pass = 0; pass < 2; pass++) {
         for (int k = 0; k < pd->nmodes; k++) {
@@ -194,6 +209,9 @@ static int sstar_set(int pad, const char *func_name, const padmux_io_t *io) {
         return IPCHW_PADMUX_NO_PAD;
 
     const sstar_pad_t *pd = &fam->pads[pad];
+    if (pad_is_dark(pd))
+        return IPCHW_PADMUX_NO_FUNC;
+
     bool to_gpio =
         !strcmp(func_name, IPCHW_PADMUX_GPIO) || !strcmp(func_name, pd->name);
 
