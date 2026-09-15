@@ -52,7 +52,7 @@ static const sstar_family_t *sstar_family(void) {
  * claim we know of is asserted would be a lie with consequences -- a pin page
  * would offer PAD_ETH_RN as a free wire to drive. They answer nothing. */
 static bool pad_is_dark(const sstar_pad_t *pd) {
-    return pd->nmodes == 0 && pd->ngpio == 0;
+    return pd->nmodes == 0 && pd->ngpio == 0 && pd->nunnamed == 0;
 }
 
 static const sstar_mode_t *pad_mode(const sstar_family_t *fam,
@@ -197,18 +197,31 @@ static int sstar_get(int pad, ipchw_padmux_t *out, const padmux_io_t *io) {
         return 1;
     }
 
-    /* Nothing this build knows about claims the pad.
+    /* Nothing this build can NAME claims the pad. Two things still might.
      *
-     * For a pad whose alternatives are all in the table, that settles it: no
-     * peripheral is on it, so it is the GPIO the part falls back to.
-     *
-     * For a pad with NO modes at all it settles nothing, because the reason
-     * it has none is that the generator could not represent the one it had --
-     * the multi-bank ETH and USB modes on infinity6c. Asking that pad's own
-     * "this pad is GPIO" field is the only honest check left, and a pad that
-     * fails it is carrying something this build cannot name rather than
-     * lying idle. Measured on an SSC377D: this keeps the four Ethernet pads
-     * and PAD_USB_CID unresolved and answers for the other 81. */
+     * First, a mode the generator had to drop because the same mode id
+     * selects a different register on different pads. Losing the name does
+     * not have to mean losing the question: the pad keeps the field that
+     * would mean that mode is live, and one of them reading back its value
+     * says the pad is carrying something unnameable rather than lying idle.
+     * Only claims selected by a NON-ZERO value are here -- one selected by
+     * zero cannot be told from an idle register, and the pads that have those
+     * fall to the check below instead. */
+    for (int u = 0; u < pd->nunnamed; u++) {
+        const sstar_field_t *f = &fam->unnamed_fields[pd->unnamed_first + u];
+        uint32_t val;
+        if (!io->read(f->address, &val, SSTAR_PORT_BITS))
+            return IPCHW_PADMUX_IO;
+        if ((val & f->mask) == f->val)
+            return 0;
+    }
+
+    /* Second, for a pad with no named modes at all, its own "this pad is
+     * GPIO" field -- the only check left when everything it could be was
+     * dropped, which is the infinity6c Ethernet and USB pads. A pad whose
+     * alternatives ARE all in the table needs no such check: no mode asserted
+     * means no peripheral, so it is the GPIO the part falls back to, and
+     * asking anyway hid 34 of an SSC377D's 86 pads. */
     for (int g = 0; pd->nmodes == 0 && g < pd->ngpio; g++) {
         const sstar_field_t *f = &fam->gpio_fields[pd->gpio_first + g];
         uint32_t val;

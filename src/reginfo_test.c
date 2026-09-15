@@ -543,6 +543,19 @@ static void test_sstar(void) {
     fake_write(0x1F2A35C4, 0x0000, 32);
     CHECK(ipchw_padmux_get(82, &r) == 0);
 
+    /* A pad that kept some of its modes but lost one is not complete either.
+     * PAD_I2C1_SCL keeps five and lost TEST_IN_MODE_2, whose field the pad
+     * still carries as an unnamed claim: asserted, it means something is on
+     * the wire that this build can no longer put a name to, and "cannot say"
+     * beats offering it as free. */
+    regs_reset();
+    CHECK(ipchw_padmux_get(58, &r) == 1); /* idle: nothing claims it */
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
+    fake_write(0x1F203C48, 0x0002, 16); /* TEST_IN_MODE_2, which we dropped */
+    CHECK(ipchw_padmux_get(58, &r) == 0);
+    fake_write(0x1F203C48, 0x0000, 16);
+    CHECK(ipchw_padmux_get(58, &r) == 1);
+
     /* But that check is only for pads with nothing else to go on. A pad whose
      * alternatives ARE all in the table says GPIO when none of them is
      * asserted, whatever its GPIO-mode bit reads -- an idle pad is assignable,
