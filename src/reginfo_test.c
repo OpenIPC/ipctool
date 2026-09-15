@@ -220,7 +220,113 @@ static void test_refusals_do_not_exit(void) {
 }
 
 /* 1333 rows entered by hand from datasheets. These are the invariants the
- * lookups rely on, swept over every table this build carries. */
+ * lookups rely on, swept over every table this build carries.
+ *
+ * They are cheap and they are the only guard the generated tables of the
+ * non-HiSilicon families will ever get on a host: nothing here needs a camera,
+ * a datasheet or a vendor SDK, only the rows themselves agreeing with each
+ * other. Every one of them was verified to hold over all sixteen HiSilicon
+ * tables before it was written down, so a failure here is a new bug. */
+static void check_rows(const char *chip, const ipchw_padmux_t *rows, int n) {
+    for (int i = 0; i < n; i++) {
+        const ipchw_padmux_t *r = &rows[i];
+
+        /* A selector the field cannot hold is a transcription error. The
+         * field is described in place, so this is a bit test rather than a
+         * magnitude one: on the families whose selector does not start at bit
+         * 0, `func > func_mask` would pass a value sitting in the wrong bits.
+         */
+        if (r->func >= 0 && r->func_mask != 0 &&
+            ((uint32_t)r->func & ~r->func_mask) != 0) {
+            fprintf(stderr, "  FAIL %s: %s at %#x needs selector %#x of %#x\n",
+                    chip, r->func_name, r->address, (unsigned)r->func,
+                    r->func_mask);
+            failures++;
+        }
+
+        /* A GPIO name that did not parse would silently disable the pad guard
+         * in every consumer. */
+        if (r->gpio_name != NULL && r->gpio_pad < 0) {
+            fprintf(stderr, "  FAIL %s: unparsed GPIO %s at %#x\n", chip,
+                    r->gpio_name, r->address);
+            failures++;
+        }
+
+        if (r->func_name == NULL || !*r->func_name) {
+            fprintf(stderr, "  FAIL %s: nameless row at %#x\n", chip,
+                    r->address);
+            failures++;
+        }
+    }
+
+    /* Everything below is about one pad at a time. The walk emits a pad's rows
+     * consecutively, so a linear pass finds the groups. */
+    for (int i = 0; i < n;) {
+        int pad = rows[i].gpio_pad;
+        int j = i;
+        while (j < n && rows[j].gpio_pad == pad)
+            j++;
+        if (pad < 0) {
+            i = j;
+            continue;
+        }
+
+        for (int a = i; a < j; a++) {
+            /* One pad, one spelling of its GPIO. */
+            if (rows[a].gpio_name == NULL ||
+                strcmp(rows[a].gpio_name, rows[i].gpio_name) != 0) {
+                fprintf(stderr, "  FAIL %s: pad %d is both %s and %s\n", chip,
+                        pad, rows[i].gpio_name,
+                        rows[a].gpio_name ? rows[a].gpio_name : "(null)");
+                failures++;
+            }
+            for (int b = a + 1; b < j; b++) {
+                /* Two rows of one pad with the same name make set() ambiguous
+                 * and row_for() arbitrary in every consumer. */
+                if (!strcmp(rows[a].func_name, rows[b].func_name)) {
+                    fprintf(stderr, "  FAIL %s: pad %d offers %s twice\n", chip,
+                            pad, rows[a].func_name);
+                    failures++;
+                }
+                /* Two functions of one pad selected by the same value of the
+                 * same field cannot both be reached. */
+                if (rows[a].address == rows[b].address &&
+                    rows[a].func_mask == rows[b].func_mask &&
+                    rows[a].func == rows[b].func) {
+                    fprintf(stderr,
+                            "  FAIL %s: pad %d selects %s and %s alike\n", chip,
+                            pad, rows[a].func_name, rows[b].func_name);
+                    failures++;
+                }
+            }
+        }
+        i = j;
+    }
+}
+
+/* Two pads must never answer to one number: ipchw_padmux_by_pad() would hand
+ * back the alternatives of a wire the caller did not ask about. */
+static void check_pads_unique(const char *chip, const ipchw_padmux_t *rows,
+                              int n) {
+    for (int i = 0; i < n;) {
+        int pad = rows[i].gpio_pad;
+        int j = i;
+        while (j < n && rows[j].gpio_pad == pad)
+            j++;
+        if (pad >= 0) {
+            for (int k = j; k < n; k++) {
+                if (rows[k].gpio_pad == pad) {
+                    fprintf(stderr, "  FAIL %s: pad %d is in two places\n",
+                            chip, pad);
+                    failures++;
+                    break;
+                }
+            }
+        }
+        i = j;
+    }
+}
+
 static void test_table_integrity(void) {
     puts("table sweep: every compiled-in family");
 
@@ -241,8 +347,8 @@ static void test_table_integrity(void) {
     for (size_t c = 0; c < sizeof(chips) / sizeof(*chips); c++) {
         as_chip(chips[c].generation, chips[c].name);
 
-        ipchw_padmux_t rows[2048];
-        int n = ipchw_padmux_by_prefix("", rows, 2048);
+        static ipchw_padmux_t rows[4096];
+        int n = ipchw_padmux_by_prefix("", rows, 4096);
         if (n == IPCHW_PADMUX_NO_TABLE)
             continue; /* trimmed out of this build */
         if (n <= 0) {
@@ -250,25 +356,15 @@ static void test_table_integrity(void) {
             failures++;
             continue;
         }
-        if (n > 2048)
-            n = 2048;
-
-        for (int i = 0; i < n; i++) {
-            /* A selector the field cannot hold is a transcription error. */
-            if ((uint32_t)rows[i].func > rows[i].func_mask) {
-                fprintf(stderr, "  FAIL %s: %s at %#x needs selector %d\n",
-                        chips[c].name, rows[i].func_name, rows[i].address,
-                        rows[i].func);
-                failures++;
-            }
-            /* A GPIO name that did not parse would silently disable the pad
-             * guard in every consumer. */
-            if (rows[i].gpio_name != NULL && rows[i].gpio_pad < 0) {
-                fprintf(stderr, "  FAIL %s: unparsed GPIO %s at %#x\n",
-                        chips[c].name, rows[i].gpio_name, rows[i].address);
-                failures++;
-            }
+        if (n > 4096) {
+            fprintf(stderr, "  FAIL %s: %d rows, buffer holds 4096\n",
+                    chips[c].name, n);
+            failures++;
+            n = 4096;
         }
+
+        check_rows(chips[c].name, rows, n);
+        check_pads_unique(chips[c].name, rows, n);
     }
 }
 
