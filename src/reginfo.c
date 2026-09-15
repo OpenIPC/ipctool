@@ -2,13 +2,7 @@
 #include "chipid.h"
 #include "hal/hisi/hal_hisi.h"
 #include "hal/ingenic.h"
-#ifdef IPCHW_VENDOR_INGENIC
-#include "hal/ingenic_reginfo.h"
-#endif
 #include "hal/sstar.h"
-#ifdef IPCHW_VENDOR_SSTAR
-#include "hal/sstar_reginfo.h"
-#endif
 #include "padmux.h"
 #include "tools.h"
 
@@ -2477,38 +2471,11 @@ static const muxctrl_reg_t *DV500regs[] = {
 };
 #endif /* IPCHW_PADMUX_V5 */
 
-/* Which bits of a pad register are the function selector.
- *
- * HiSilicon (and Goke, which is the same silicon) put it in the low nibble;
- * SigmaStar uses the low half-word. The rest of the register carries drive
- * strength, pull and slew that the boot chose, so every write here is a
- * read-modify-write against this mask rather than a whole-register store.
- *
- * Keyed on chip_generation rather than on the vendor string because a caller
- * may set the generation directly -- that is what makes the lookups below
- * exercisable on a host with no camera under it. */
-static uint32_t padmux_func_mask(void) {
-    switch (chip_generation) {
-    case HISI_V1:
-    case HISI_V2:
-    case HISI_V2A:
-    case HISI_V3:
-    case HISI_V3A:
-    case HISI_V4:
-    case HISI_V4A:
-    case HISI_OT:
-    case HISI_3536C:
-    case HISI_3536D:
-        return 0xf;
-    case INFINITY6:
-    case INFINITY6B:
-    case INFINITY6C:
-    case INFINITY6E:
-        return 0xffff;
-    default:
-        return 0xffffffff;
-    }
-}
+/* Which bits of a pad register are the function selector: the low nibble, on
+ * every HiSilicon and Goke part. Named and placed here rather than inlined
+ * because three callers used to disagree about it -- one matched vendor
+ * strings, one open-coded 0xf and one zeroed the top half of the register. */
+static uint32_t padmux_func_mask(void) { return 0xf; }
 
 static const muxctrl_reg_t **regs_by_chip() {
     switch (chip_generation) {
@@ -2569,19 +2536,6 @@ static const muxctrl_reg_t **regs_by_chip() {
 #ifdef IPCHW_PADMUX_3536D
     case HISI_3536D:
         return DV100regs;
-#endif
-#ifdef IPCHW_VENDOR_SSTAR
-    case INFINITY6:
-    case INFINITY6B:
-        return I6B_regs;
-    case INFINITY6C:
-        return I6C_regs;
-    case INFINITY6E:
-        return I6E_regs;
-#endif
-#ifdef IPCHW_VENDOR_INGENIC
-    case T31:
-        return T31_regs;
 #endif
     }
 
@@ -2813,21 +2767,16 @@ const padmux_ops_t PADMUX_OPS_HISI = {
  * (libipchw) take the tables and the lookups above and stop here. */
 #ifndef STANDALONE_LIBRARY
 
+#ifdef IPCHW_VENDOR_INGENIC
+#include "hal/ingenic_reginfo.h"
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
+#include "hal/sstar_reginfo.h"
+#endif
+
 static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func);
 static int padmux_refuse(int code, const char *pad_spec, const char *func);
-
-/* regs_by_chip() answers NULL for an SoC it has no table for. The CLI has
- * always treated that as fatal and still does; only the library needs the
- * softer answer. */
-static const muxctrl_reg_t **regs_by_chip_or_die(void) {
-    const muxctrl_reg_t **regs = regs_by_chip();
-    if (regs == NULL) {
-        fprintf(stderr, "Platform is not supported\n");
-        exit(EXIT_FAILURE);
-    }
-    return regs;
-}
 
 static void show_function(const char *const *func, unsigned val) {
     for (size_t i = 0; func[i]; i++) {
@@ -2839,8 +2788,56 @@ static void show_function(const char *const *func, unsigned val) {
     puts("");
 }
 
+/* What `reginfo` dumps. On HiSilicon and Goke it is the pad-mux table itself.
+ * On SigmaStar and Ingenic it is the GPIO controller's own registers, which is
+ * what those two lists have always been -- per-pad direction and level on one,
+ * the port INT/MSK/PAT/pull/drive registers on the other. Useful, and not
+ * pin-mux: `reginfo --pads` is the pin-mux view on every family. */
+static const muxctrl_reg_t **dump_regs_by_chip(void) {
+    switch (chip_generation) {
+#ifdef IPCHW_VENDOR_SSTAR
+    case INFINITY6:
+    case INFINITY6B:
+        return I6B_regs;
+    case INFINITY6C:
+        return I6C_regs;
+    case INFINITY6E:
+        return I6E_regs;
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
+    case T31:
+        return T31_regs;
+#endif
+    default:
+        break;
+    }
+
+    const muxctrl_reg_t **regs = regs_by_chip();
+    if (regs == NULL) {
+        fprintf(stderr, "Platform is not supported\n");
+        exit(EXIT_FAILURE);
+    }
+    return regs;
+}
+
+/* The field of a dumped register worth bracketing a name against. Only the
+ * HiSilicon dump is a selector at all; the other two print the whole port. */
+static uint32_t dump_mask(void) {
+    switch (chip_generation) {
+    case INFINITY6:
+    case INFINITY6B:
+    case INFINITY6C:
+    case INFINITY6E:
+        return 0xffff;
+    case T31:
+        return 0xffffffff;
+    default:
+        return padmux_func_mask();
+    }
+}
+
 static int dump_regs(bool script_mode) {
-    const muxctrl_reg_t **regs = regs_by_chip_or_die();
+    const muxctrl_reg_t **regs = dump_regs_by_chip();
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         uint32_t val;
@@ -2854,7 +2851,7 @@ static int dump_regs(bool script_mode) {
             continue;
         }
 
-        val &= padmux_func_mask();
+        val &= dump_mask();
 
         printf("muxctrl_reg%d %#x %#x", reg_num, regs[reg_num]->address, val);
         show_function(regs[reg_num]->funcs, val);

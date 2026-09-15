@@ -71,7 +71,7 @@ endif()
 #
 # Same shape as IPCHW_VENDORS above, and for the same reason -- set(... CACHE)
 # here means a parent project has to FORCE it.
-set(IPCHW_PADMUX_FAMILIES v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d)
+set(IPCHW_PADMUX_FAMILIES v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d sstar)
 set(IPCHW_PADMUX "all" CACHE STRING
     "Pad-mux tables compiled into libipchw: 'all', 'none', or a subset of ${IPCHW_PADMUX_FAMILIES}")
 
@@ -99,6 +99,20 @@ foreach(_f IN LISTS _padmux_selected)
 endforeach()
 message(STATUS "libipchw pad-mux tables: ${_padmux_selected}")
 
+# The two vendors whose pad-mux is its own backend rather than a table in
+# reginfo.c. Selecting the family is what compiles the backend in; selecting
+# the vendor HAL is what makes chip_generation reach it. They are separate
+# questions, which is why they are separate knobs -- a consumer can carry the
+# SigmaStar tables in a build that detects nothing else, which is exactly what
+# reginfo_test does.
+set(IPCHW_PADMUX_BACKENDS "")
+foreach(_f sstar)
+  if(_f IN_LIST _padmux_selected)
+    list(APPEND IPCHW_PADMUX_BACKENDS src/hal/${_f}_padmux.c)
+  endif()
+endforeach()
+set(IPCHW_PADMUX_BACKENDS_ALL src/hal/sstar_padmux.c)
+
 set(COMMON_LIB_SRC_BASE
     src/chipid.c
     src/chipid.h
@@ -123,7 +137,7 @@ set(COMMON_LIB_SRC_BASE
     src/version.h)
 
 # Full set, used by the ipctool executable
-set(COMMON_LIB_SRC_ALL ${COMMON_LIB_SRC_BASE})
+set(COMMON_LIB_SRC_ALL ${COMMON_LIB_SRC_BASE} ${IPCHW_PADMUX_BACKENDS_ALL})
 foreach(_v IN LISTS IPCHW_OPTIONAL_VENDORS)
   list(APPEND COMMON_LIB_SRC_ALL src/hal/${_v}.c src/hal/${_v}.h)
   string(TOUPPER ${_v} _V)
@@ -131,7 +145,7 @@ foreach(_v IN LISTS IPCHW_OPTIONAL_VENDORS)
 endforeach()
 
 # Selected subset, used by libipchw
-set(COMMON_LIB_SRC ${COMMON_LIB_SRC_BASE})
+set(COMMON_LIB_SRC ${COMMON_LIB_SRC_BASE} ${IPCHW_PADMUX_BACKENDS})
 foreach(_v IN LISTS _ipchw_selected)
   if(NOT _v IN_LIST IPCHW_OPTIONAL_VENDORS)
     message(FATAL_ERROR

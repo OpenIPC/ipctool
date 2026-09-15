@@ -11,6 +11,7 @@
 
 #include "chipid.h"
 #include "hal/hisi/hal_hisi.h"
+#include "hal/sstar.h"
 #include "ipchw.h"
 #include "padmux.h"
 
@@ -349,6 +350,67 @@ static void test_get_set(void) {
 }
 #endif
 
+#ifdef IPCHW_PADMUX_SSTAR
+static void test_sstar(void) {
+    puts("SigmaStar: a mode claims a group of pads, not one");
+    as_chip(INFINITY6B, "SSC33X");
+
+    /* reg_fuart_mode is CHIPTOP 0x03[2:0] and its value picks which pads the
+     * fast UART lands on. 2 means PAD_GPIO0..3 -- all four of them, one
+     * write. This is the shape muxctrl_reg_t cannot hold. */
+    ipchw_padmux_t rows[16];
+    int n = ipchw_padmux_by_func("FUART_MODE_2", rows, 16);
+    CHECK(n == 4);
+    for (int i = 0; i < n && i < 4; i++) {
+        CHECK(rows[i].address == 0x1F203C0C);
+        CHECK(rows[i].func_mask == 0x7);
+        CHECK(rows[i].func == 2);
+        CHECK(rows[i].gpio_pad == i);
+        CHECK((rows[i].flags & IPCHW_PADMUX_F_RMW) != 0);
+        /* The pad's other alternatives are in other registers. */
+        CHECK((rows[i].flags & IPCHW_PADMUX_F_SHARED_REG) == 0);
+        /* And no single value hands the pad back. */
+        CHECK(rows[i].gpio_func == -1);
+    }
+
+    /* PAD_GPIO0 answers to nine peripherals across five registers, plus the
+     * GPIO it has when none of them claims it. */
+    n = ipchw_padmux_by_pad(0, rows, 16);
+    CHECK(n == 10);
+    CHECK((rows[0].flags & IPCHW_PADMUX_F_GPIO) != 0);
+    CHECK(rows[0].address == IPCHW_PADMUX_ADDR_NONE);
+    CHECK(rows[0].func_mask == 0);
+    CHECK(rows[0].gpio_name && !strcmp(rows[0].gpio_name, "PAD_GPIO0"));
+    CHECK(rows[0].gpio_pad == 0);
+
+    puts("SigmaStar: dropping a claim leaves the register's other field alone");
+    /* PAD_SR_IO01 can be I2C0_MODE_3 at 0x1f203c24[2:0] = 3 or I2C1_MODE_3 at
+     * [5:4] = 3 -- the same register, two fields, neither based at bit 0. The
+     * 1 in the low field is I2C0 routed to some other pad entirely, and a
+     * mask applied at the wrong offset would take it away. */
+    seed(0x1F203C24, 0x0031);
+
+    ipchw_padmux_t r;
+    CHECK(ipchw_padmux_get(23, &r) == 1);
+    CHECK(!strcmp(r.func_name, "I2C1_MODE_3"));
+    CHECK(r.func_mask == 0x30 && r.func == 0x30);
+
+    CHECK(ipchw_padmux_set(23, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0x1F203C24) == 0x0001);
+    CHECK(ipchw_padmux_get(23, &r) == 1);
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
+
+    /* And putting a peripheral back is the one field, not the register. */
+    CHECK(ipchw_padmux_set(23, "I2C0_MODE_3") == 0);
+    CHECK(reg_of(0x1F203C24) == 0x0003);
+    CHECK(ipchw_padmux_get(23, &r) == 1);
+    CHECK(!strcmp(r.func_name, "I2C0_MODE_3"));
+
+    CHECK(ipchw_padmux_set(23, "PWM0_MODE_4") == IPCHW_PADMUX_NO_FUNC);
+    CHECK(ipchw_padmux_get(4000, &r) == IPCHW_PADMUX_NO_PAD);
+}
+#endif
+
 /* Everything the table says a pad can be, put on it and read back.
  *
  * This is the whole self-consistency proof, and the only one the families
@@ -560,6 +622,9 @@ int main(void) {
     test_v4_pwm();
     test_counts_past_max();
     test_get_set();
+#endif
+#ifdef IPCHW_PADMUX_SSTAR
+    test_sstar();
 #endif
     test_refusals_do_not_exit();
     test_table_integrity();
