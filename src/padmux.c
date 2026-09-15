@@ -14,8 +14,33 @@
 #include "chipid.h"
 #include "hal/ingenic.h"
 #include "hal/sstar.h"
+#include "tools.h"
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+/* ------------------------------------------------------------------------
+ * Register access
+ * ---------------------------------------------------------------------- */
+
+static bool io_mem_read(uint32_t addr, uint32_t *val, int width) {
+    return mem_reg(addr, val, width == 16 ? OP_READ_16 : OP_READ);
+}
+
+static bool io_mem_write(uint32_t addr, uint32_t val, int width) {
+    return mem_reg(addr, &val, width == 16 ? OP_WRITE_16 : OP_WRITE);
+}
+
+static const padmux_io_t MEM_IO = {io_mem_read, io_mem_write};
+static const padmux_io_t *IO = &MEM_IO;
+
+const padmux_io_t *padmux_set_io(const padmux_io_t *io) {
+    const padmux_io_t *was = IO;
+
+    IO = io ? io : &MEM_IO;
+    return was;
+}
 
 /* ------------------------------------------------------------------------
  * Which backend
@@ -110,4 +135,61 @@ int ipchw_padmux_by_pad(int pad, ipchw_padmux_t *out, int max) {
         return IPCHW_PADMUX_BAD_ARG;
 
     return lookup(NULL, NULL, pad, out, max);
+}
+
+/* ------------------------------------------------------------------------
+ * The accessors
+ * ---------------------------------------------------------------------- */
+
+int ipchw_padmux_get(int pad, ipchw_padmux_t *out) {
+    if (pad < 0 || out == NULL)
+        return IPCHW_PADMUX_BAD_ARG;
+
+    const padmux_ops_t *ops;
+    int res = resolve(&ops);
+    if (res < 0)
+        return res;
+
+    return ops->get(pad, out, IO);
+}
+
+int ipchw_padmux_set(int pad, const char *func_name) {
+    if (pad < 0 || func_name == NULL || !*func_name)
+        return IPCHW_PADMUX_BAD_ARG;
+
+    const padmux_ops_t *ops;
+    int res = resolve(&ops);
+    if (res < 0)
+        return res;
+
+    return ops->set(pad, func_name, IO);
+}
+
+bool padmux_pad_is_gpio(int pad) {
+    ipchw_padmux_t row;
+
+    return ipchw_padmux_get(pad, &row) == 1 &&
+           (row.flags & IPCHW_PADMUX_F_GPIO) != 0;
+}
+
+/* Both spellings every gpio subcommand has ever taken. "5_2" is the one the
+ * HiSilicon tables use; the plain running number is what the rest of the
+ * world, and every other vendor here, speaks. */
+int padmux_parse_pad(const char *spec) {
+    if (spec == NULL || !*spec)
+        return -1;
+
+    int bank, pin;
+    if (sscanf(spec, "%d_%d", &bank, &pin) == 2) {
+        if (bank < 0 || pin < 0 || pin > 7)
+            return -1;
+        return bank * 8 + pin;
+    }
+
+    char *end;
+    long n = strtol(spec, &end, 10);
+    if (end == spec || *end != '\0' || n < 0 || n > 0xffff)
+        return -1;
+
+    return (int)n;
 }

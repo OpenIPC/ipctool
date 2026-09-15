@@ -26,9 +26,11 @@ float gethwtemp();
  * not. Call getchipname() once from a single thread at startup (or set
  * chip_generation yourself) before using these from more than one.
  *
- * They never exit, never print and never touch /dev/mem. Acting on what they
- * return does: mem_reg() keeps one unsynchronised mmap window, so every
- * register write must come from a single thread.
+ * The lookups never exit, never print and never touch /dev/mem.
+ * ipchw_padmux_get() and ipchw_padmux_set() do: they reach physical registers
+ * through one process-wide mmap window that is not locked, is not thread safe
+ * and is shared with every other register access in this library. Call them
+ * from one thread, and serialise with them if you reach registers yourself.
  *
  * Three vendors select a pad's function three different ways. HiSilicon and
  * Goke put a selector field in the pad's own register. SigmaStar puts a field
@@ -60,6 +62,9 @@ enum {
     IPCHW_PADMUX_NO_CHIP = -1,  /* SoC detection failed */
     IPCHW_PADMUX_NO_TABLE = -2, /* no table for this SoC in this build */
     IPCHW_PADMUX_BAD_ARG = -3,
+    IPCHW_PADMUX_NO_PAD = -4,  /* this SoC has no pad with that number */
+    IPCHW_PADMUX_NO_FUNC = -5, /* that pad cannot carry that function */
+    IPCHW_PADMUX_IO = -6,      /* a register could not be reached */
 };
 
 enum {
@@ -83,6 +88,10 @@ enum {
 /* `address` of a row whose function is not one register write. Reads of it
  * yield zero and writes to it do nothing, by design. */
 #define IPCHW_PADMUX_ADDR_NONE 0xdeadbeefu
+
+/* The function name that means "no peripheral", accepted by
+ * ipchw_padmux_set() on every family. */
+#define IPCHW_PADMUX_GPIO "GPIO"
 
 /* Every pad that can carry pin-mux function `func_name`, exactly spelled.
  *
@@ -115,5 +124,32 @@ int ipchw_padmux_by_prefix(const char *prefix, ipchw_padmux_t *out, int max);
  * row flagged IPCHW_PADMUX_F_GPIO is the plain-GPIO one and is included. The
  * order is the table's own and is not a promise; test the flag. */
 int ipchw_padmux_by_pad(int pad, ipchw_padmux_t *out, int max);
+
+/* What pad `pad` is carrying right now.
+ *
+ * 1 and *out filled. 0 when the pad exists but its selector holds a value
+ * this build has no name for -- a hole in the table, or a mode newer than it;
+ * *out is untouched. Negative values are IPCHW_PADMUX_*.
+ *
+ * A pad carrying no peripheral answers with its plain-GPIO row, flagged
+ * IPCHW_PADMUX_F_GPIO.
+ *
+ * READS /dev/mem; see the threading note above. */
+int ipchw_padmux_get(int pad, ipchw_padmux_t *out);
+
+/* Put `func_name` on `pad`, spelled exactly as the lookups return it.
+ *
+ * IPCHW_PADMUX_GPIO means "no peripheral" and is accepted on every family: it
+ * writes the GPIO selector where there is one and clears every claim on the
+ * pad where there is not. It muxes the pad; it does not drive it, and it does
+ * not change the direction the pad already had.
+ *
+ * 0 on success. IPCHW_PADMUX_NO_FUNC when this pad cannot carry that
+ * function, and nothing was written. IPCHW_PADMUX_IO when a register could
+ * not be reached, in which case a pad that needs more than one write may be
+ * left half set -- the operation is idempotent, so call it again.
+ *
+ * WRITES /dev/mem; see the threading note above. */
+int ipchw_padmux_set(int pad, const char *func_name);
 
 #endif /* IPCHW_H */

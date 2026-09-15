@@ -10,6 +10,7 @@
 #include <sys/klog.h>
 #include <unistd.h>
 
+#include "ipchw.h"
 #include "mmap.h"
 #include "tools.h"
 
@@ -34,10 +35,13 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
     static uint32_t loaded_offset;
     static uint32_t loaded_size;
 
-    // do nothing if no pinmux for this GPIO
-    if (addr == 0xdeadbeef) {
-        if (op == OP_READ)
-            *data = 0;  //
+    // do nothing if no pinmux for this GPIO. Published as
+    // IPCHW_PADMUX_ADDR_NONE, so a consumer that composes a register write
+    // from a row whose function is not one register write lands here and is
+    // inert -- rather than on address 0, which is the teardown call below.
+    if (addr == IPCHW_PADMUX_ADDR_NONE) {
+        if (op == OP_READ || op == OP_READ_16)
+            *data = 0;
         return true;
     }
 
@@ -95,10 +99,21 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
     } else
         mapped_area = loaded_area;
 
-    if (op == OP_READ)
-        *data = *(volatile uint32_t *)(mapped_area + (addr - loaded_offset));
-    else if (op == OP_WRITE)
-        *(volatile uint32_t *)(mapped_area + (addr - loaded_offset)) = *data;
+    volatile char *at = mapped_area + (addr - loaded_offset);
+    switch (op) {
+    case OP_READ:
+        *data = *(volatile uint32_t *)at;
+        break;
+    case OP_WRITE:
+        *(volatile uint32_t *)at = *data;
+        break;
+    case OP_READ_16:
+        *data = *(volatile uint16_t *)at;
+        break;
+    case OP_WRITE_16:
+        *(volatile uint16_t *)at = (uint16_t)*data;
+        break;
+    }
 
     return true;
 }

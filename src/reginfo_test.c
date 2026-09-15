@@ -12,6 +12,7 @@
 #include "chipid.h"
 #include "hal/hisi/hal_hisi.h"
 #include "ipchw.h"
+#include "padmux.h"
 
 static int failures;
 
@@ -219,6 +220,180 @@ static void test_refusals_do_not_exit(void) {
     puts("  (process survived every refusal)");
 }
 
+/* ------------------------------------------------------------------------
+ * A register file made of nothing.
+ *
+ * ipchw_padmux_get() and ipchw_padmux_set() are the only part of this library
+ * that writes to hardware, and a host has no hardware to write to. The io
+ * seam in padmux.h exists so the write paths are exercised anyway: seed a few
+ * addresses, run the operation, assert on what landed.
+ * ---------------------------------------------------------------------- */
+
+static struct {
+    uint32_t addr, val;
+} REGS[256];
+static int NREGS;
+static bool IO_FAILS;
+
+static int reg_slot(uint32_t addr) {
+    for (int i = 0; i < NREGS; i++)
+        if (REGS[i].addr == addr)
+            return i;
+    return -1;
+}
+
+static bool fake_read(uint32_t addr, uint32_t *val, int width) {
+    (void)width;
+    if (IO_FAILS)
+        return false;
+
+    int i = reg_slot(addr);
+    *val = i < 0 ? 0 : REGS[i].val;
+    return true;
+}
+
+static bool fake_write(uint32_t addr, uint32_t val, int width) {
+    if (IO_FAILS)
+        return false;
+
+    int i = reg_slot(addr);
+    if (i < 0) {
+        if (NREGS == (int)(sizeof(REGS) / sizeof(*REGS))) {
+            fprintf(stderr, "  (fake register file full)\n");
+            return false;
+        }
+        i = NREGS++;
+        REGS[i].addr = addr;
+    }
+    REGS[i].val =
+        width == 16 ? (REGS[i].val & 0xffff0000u) | (val & 0xffffu) : val;
+    return true;
+}
+
+static const padmux_io_t FAKE_IO = {fake_read, fake_write};
+
+static void regs_reset(void) {
+    NREGS = 0;
+    IO_FAILS = false;
+}
+
+static void seed(uint32_t addr, uint32_t val) {
+    regs_reset();
+    fake_write(addr, val, 32);
+}
+
+static uint32_t reg_of(uint32_t addr) {
+    int i = reg_slot(addr);
+    return i < 0 ? 0 : REGS[i].val;
+}
+
+#ifdef IPCHW_PADMUX_V4
+static void test_get_set(void) {
+    puts("get/set: the selector moves and nothing else does");
+    as_chip(HISI_V4, "3516EV200");
+
+    /* Pad 16 is GPIO2_0 on 0x120C0020, where JTAG_TDI is selector 0, the GPIO
+     * is 2 and PWM3 is 4. 0xA30 in the high bits is the drive strength, pull
+     * and slew the boot chose: every write here has to leave them alone, and
+     * the bug that made this worth a test was a mask of 0xfff0. */
+    seed(0x120C0020, 0x00000A30);
+
+    ipchw_padmux_t r;
+    CHECK(ipchw_padmux_get(16, &r) == 1);
+    CHECK(!strcmp(r.func_name, "JTAG_TDI"));
+    CHECK(r.func == 0);
+    CHECK(r.gpio_pad == 16);
+    CHECK((r.flags & IPCHW_PADMUX_F_RMW) != 0);
+    CHECK((r.flags & IPCHW_PADMUX_F_SHARED_REG) != 0);
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) == 0);
+
+    CHECK(ipchw_padmux_set(16, "PWM3") == 0);
+    CHECK(reg_of(0x120C0020) == 0x00000A34);
+    CHECK(ipchw_padmux_get(16, &r) == 1);
+    CHECK(!strcmp(r.func_name, "PWM3"));
+
+    CHECK(ipchw_padmux_set(16, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0x120C0020) == 0x00000A32);
+    CHECK(ipchw_padmux_get(16, &r) == 1);
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
+    CHECK(!strcmp(r.func_name, "GPIO2_0"));
+
+    /* The pad's own GPIO name means the same thing as IPCHW_PADMUX_GPIO. */
+    CHECK(ipchw_padmux_set(16, "PWM3") == 0);
+    CHECK(ipchw_padmux_set(16, "GPIO2_0") == 0);
+    CHECK(reg_of(0x120C0020) == 0x00000A32);
+
+    /* A selector the table has no name for is not a fabricated row. */
+    seed(0x120C0020, 0x0000000F);
+    CHECK(ipchw_padmux_get(16, &r) == 0);
+
+    puts("get/set: a refusal writes nothing");
+    seed(0x120C0020, 0x00000A30);
+    CHECK(ipchw_padmux_set(16, "I2C9_SDA") == IPCHW_PADMUX_NO_FUNC);
+    CHECK(reg_of(0x120C0020) == 0x00000A30);
+    CHECK(ipchw_padmux_get(4000, &r) == IPCHW_PADMUX_NO_PAD);
+    CHECK(ipchw_padmux_set(4000, "PWM3") == IPCHW_PADMUX_NO_PAD);
+    CHECK(ipchw_padmux_get(-1, &r) == IPCHW_PADMUX_BAD_ARG);
+    CHECK(ipchw_padmux_get(16, NULL) == IPCHW_PADMUX_BAD_ARG);
+    CHECK(ipchw_padmux_set(16, NULL) == IPCHW_PADMUX_BAD_ARG);
+
+    puts("get/set: an unreachable register is said so, not guessed at");
+    seed(0x120C0020, 0x00000A30);
+    int before = NREGS;
+    IO_FAILS = true;
+    CHECK(ipchw_padmux_get(16, &r) == IPCHW_PADMUX_IO);
+    CHECK(ipchw_padmux_set(16, "PWM3") == IPCHW_PADMUX_IO);
+    IO_FAILS = false;
+    CHECK(NREGS == before);
+    CHECK(reg_of(0x120C0020) == 0x00000A30);
+}
+#endif
+
+/* Everything the table says a pad can be, put on it and read back.
+ *
+ * This is the whole self-consistency proof, and the only one the families
+ * whose tables are generated from a vendor SDK will ever get on a host: it
+ * needs no camera, no datasheet and no SDK, only set() and get() agreeing
+ * with the walk over every row of every table this build carries. */
+static void test_round_trip(const char *chip, const ipchw_padmux_t *rows,
+                            int n) {
+    for (int i = 0; i < n; i++) {
+        const ipchw_padmux_t *want = &rows[i];
+        if (want->gpio_pad < 0)
+            continue;
+
+        regs_reset();
+        int res = ipchw_padmux_set(want->gpio_pad, want->func_name);
+        if (res != 0) {
+            fprintf(stderr, "  FAIL %s: set(%d, %s) = %d\n", chip,
+                    want->gpio_pad, want->func_name, res);
+            failures++;
+            continue;
+        }
+
+        ipchw_padmux_t got;
+        res = ipchw_padmux_get(want->gpio_pad, &got);
+        if (res != 1 || strcmp(got.func_name, want->func_name) != 0) {
+            fprintf(stderr, "  FAIL %s: pad %d set to %s reads back as %s\n",
+                    chip, want->gpio_pad, want->func_name,
+                    res == 1 ? got.func_name : "(nothing)");
+            failures++;
+            continue;
+        }
+
+        if (want->gpio_name != NULL) {
+            regs_reset();
+            if (ipchw_padmux_set(want->gpio_pad, IPCHW_PADMUX_GPIO) != 0 ||
+                ipchw_padmux_get(want->gpio_pad, &got) != 1 ||
+                !(got.flags & IPCHW_PADMUX_F_GPIO)) {
+                fprintf(stderr, "  FAIL %s: pad %d will not go back to GPIO\n",
+                        chip, want->gpio_pad);
+                failures++;
+            }
+        }
+    }
+}
+
 /* 1333 rows entered by hand from datasheets. These are the invariants the
  * lookups rely on, swept over every table this build carries.
  *
@@ -365,10 +540,14 @@ static void test_table_integrity(void) {
 
         check_rows(chips[c].name, rows, n);
         check_pads_unique(chips[c].name, rows, n);
+        test_round_trip(chips[c].name, rows, n);
     }
 }
 
 int main(void) {
+    /* Every register the tests below touch is one of these, not a camera's. */
+    padmux_set_io(&FAKE_IO);
+
 #ifdef IPCHW_PADMUX_V1
     test_v1_pwm();
     test_prefix_is_not_substring();
@@ -380,6 +559,7 @@ int main(void) {
 #ifdef IPCHW_PADMUX_V4
     test_v4_pwm();
     test_counts_past_max();
+    test_get_set();
 #endif
     test_refusals_do_not_exit();
     test_table_integrity();
