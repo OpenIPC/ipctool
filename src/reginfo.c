@@ -2731,11 +2731,18 @@ static int hisi_set(int pad, const char *func_name, const padmux_io_t *io) {
     if (!strcmp(func_name, IPCHW_PADMUX_GPIO)) {
         want = gpio_func;
     } else {
-        for (int i = 0; reg->funcs[i]; i++)
+        for (int i = 0; reg->funcs[i]; i++) {
+            /* "reserved" is a hole in the selector, not a function. The walk
+             * and the read both treat it as unnamed; resolving it here would
+             * let ipchw_padmux_set(pad, "reserved") put a pad into a state
+             * the part does not define. */
+            if (!strcmp(reg->funcs[i], "reserved"))
+                continue;
             if (!strcmp(reg->funcs[i], func_name)) {
                 want = i;
                 break;
             }
+        }
     }
     if (want < 0)
         return IPCHW_PADMUX_NO_FUNC;
@@ -3155,14 +3162,35 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
         int n = ipchw_padmux_by_pad(pad, rows, ARRCNT(rows));
         if (n < 0)
             return padmux_refuse(n, gpio_number, set_func);
+        if (n > (int)ARRCNT(rows))
+            n = (int)ARRCNT(rows);
 
+        /* A selector value is not a name, and outside HiSilicon it is not
+         * even unique to a function: a SigmaStar `func` is a value in place,
+         * so two peripherals whose fields sit at different offsets of
+         * different registers can both select on 0x40 -- SPI1_MODE_4 and
+         * TTL_MODE_1 do, on PAD_GPIO0. Take the number only when one
+         * function answers to it, and say so when several do rather than
+         * muxing the first one found.
+         *
+         * IPCHW_PADMUX_F_RMW is deliberately NOT required here: an Ingenic
+         * row never carries it, because putting a function on the pad is four
+         * staged writes rather than one -- but the selector is still a
+         * perfectly good name for which function is meant, and
+         * ipchw_padmux_set() knows how to write it. */
         want = NULL;
-        for (int i = 0; i < n && i < (int)ARRCNT(rows); i++)
-            if (rows[i].func == func_num &&
-                (rows[i].flags & IPCHW_PADMUX_F_RMW)) {
-                want = rows[i].func_name;
-                break;
+        for (int i = 0; i < n; i++) {
+            if (rows[i].func != func_num)
+                continue;
+            if (want != NULL && strcmp(want, rows[i].func_name) != 0) {
+                fprintf(stderr,
+                        "GPIO %s: selector %d selects both %s and %s here; "
+                        "name the one you mean\n",
+                        gpio_number, func_num, want, rows[i].func_name);
+                return EXIT_FAILURE;
             }
+            want = rows[i].func_name;
+        }
         if (want == NULL) {
             fprintf(stderr, "GPIO %s has no function %d\n", gpio_number,
                     func_num);

@@ -165,6 +165,20 @@ static int sstar_get(int pad, ipchw_padmux_t *out, const padmux_io_t *io) {
         }
     }
 
+    /* Nothing this build knows about claims the pad. Where the part has an
+     * explicit "this pad is GPIO" field, believe that rather than the
+     * absence: a pad whose only other mode is one the generator could not
+     * represent -- the multi-bank ETH modes on infinity6c -- would otherwise
+     * read as a free wire while it is carrying Ethernet. */
+    for (int g = 0; g < pd->ngpio; g++) {
+        const sstar_field_t *f = &fam->gpio_fields[pd->gpio_first + g];
+        uint32_t val;
+        if (!io->read(f->address, &val, SSTAR_PORT_BITS))
+            return IPCHW_PADMUX_IO;
+        if ((val & f->mask) != f->val)
+            return 0; /* not GPIO, and not anything this build can name */
+    }
+
     *out = gpio_row(pd, pad);
     return 1;
 }

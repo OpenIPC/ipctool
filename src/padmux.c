@@ -179,16 +179,21 @@ int padmux_parse_pad(const char *spec) {
     if (spec == NULL || !*spec)
         return -1;
 
-    int bank, pin;
-    if (sscanf(spec, "%d_%d", &bank, &pin) == 2) {
+    int bank, pin, end = 0;
+    if (sscanf(spec, "%d_%d%n", &bank, &pin, &end) == 2) {
+        /* %n has to land on the terminator. Without it "5_2junk" and "1_2_3"
+         * both parse as a valid pad, and the caller writes a register on the
+         * strength of a typo. */
+        if (spec[end] != '\0')
+            return -1;
         if (bank < 0 || pin < 0 || pin > 7)
             return -1;
         return bank * 8 + pin;
     }
 
-    char *end;
-    long n = strtol(spec, &end, 10);
-    if (end == spec || *end != '\0' || n < 0 || n > 0xffff)
+    char *tail;
+    long n = strtol(spec, &tail, 10);
+    if (tail == spec || *tail != '\0' || n < 0 || n > 0xffff)
         return -1;
 
     return (int)n;

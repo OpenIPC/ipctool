@@ -193,6 +193,28 @@ static void test_counts_past_max(void) {
 }
 #endif
 
+/* The two spellings every gpio subcommand takes, and the near-misses that
+ * must not resolve: a mistyped pad is one keystroke away from a register
+ * write on a pad somebody else is using. */
+static void test_parse_pad(void) {
+    puts("a pad number is the whole argument or it is not a pad number");
+
+    CHECK(padmux_parse_pad("42") == 42);
+    CHECK(padmux_parse_pad("5_2") == 42);
+    CHECK(padmux_parse_pad("0") == 0);
+    CHECK(padmux_parse_pad("0_0") == 0);
+
+    CHECK(padmux_parse_pad("5_2junk") == -1);
+    CHECK(padmux_parse_pad("1_2_3") == -1);
+    CHECK(padmux_parse_pad("42junk") == -1);
+    CHECK(padmux_parse_pad("5_8") == -1); /* eight pads to a bank, 0..7 */
+    CHECK(padmux_parse_pad("-1") == -1);
+    CHECK(padmux_parse_pad("5_-1") == -1);
+    CHECK(padmux_parse_pad("") == -1);
+    CHECK(padmux_parse_pad(NULL) == -1);
+    CHECK(padmux_parse_pad("junk") == -1);
+}
+
 static void test_refusals_do_not_exit(void) {
     puts("an unknown SoC is a refusal, not an exit");
 
@@ -383,6 +405,14 @@ static void test_get_set(void) {
     CHECK(ipchw_padmux_get(16, NULL) == IPCHW_PADMUX_BAD_ARG);
     CHECK(ipchw_padmux_set(16, NULL) == IPCHW_PADMUX_BAD_ARG);
 
+    /* "reserved" is a hole in the selector, not a function. The walk skips
+     * it, so the setter must not resolve it either -- otherwise a caller can
+     * put a pad into a state the part does not define. EV200 reg12 has one at
+     * selector 5. */
+    seed(0x100C0040, 0x00000000);
+    CHECK(ipchw_padmux_set(32, "reserved") == IPCHW_PADMUX_NO_FUNC);
+    CHECK(reg_of(0x100C0040) == 0x00000000);
+
     puts("get/set: an unreachable register is said so, not guessed at");
     seed(0x120C0020, 0x00000A30);
     int before = NREGS;
@@ -461,6 +491,28 @@ static void test_sstar(void) {
     CHECK(ipchw_padmux_by_pad(82, rows, 16) == 0);
     CHECK(ipchw_padmux_get(82, &r) == 0);
     CHECK(ipchw_padmux_set(82, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_NO_FUNC);
+
+    puts("SigmaStar: an unasserted GPIO field is not an idle pad");
+    /* infinity6c DOES have rows for its Ethernet pads -- six fields across
+     * three banks saying "this pad is GPIO" -- but its ETH_MODE names a
+     * different register on each of them, so the generator could not
+     * represent it and dropped it. The pad therefore has no mode this build
+     * can match, and concluding GPIO from that would report the Ethernet
+     * pair as free wire while it is carrying Ethernet. */
+    as_chip(INFINITY6C, "SSC37X");
+
+    regs_reset();
+    CHECK(ipchw_padmux_set(82, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(ipchw_padmux_get(82, &r) == 1);
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
+    CHECK(r.gpio_name && !strcmp(r.gpio_name, "PAD_ETH_RN"));
+
+    /* One of the six no longer says GPIO: the honest answer is "cannot say",
+     * not "free". */
+    fake_write(0x1F2A35C4, 0x0000, 32);
+    CHECK(ipchw_padmux_get(82, &r) == 0);
+
+    as_chip(INFINITY6B, "SSC33X");
 }
 #endif
 
@@ -768,6 +820,7 @@ int main(void) {
     test_counts_past_max();
     test_get_set();
 #endif
+    test_parse_pad();
 #ifdef IPCHW_PADMUX_SSTAR
     test_sstar();
 #endif
