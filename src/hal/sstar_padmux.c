@@ -149,6 +149,9 @@ static int sstar_get(int pad, ipchw_padmux_t *out, const padmux_io_t *io) {
     if (pad_is_dark(pd))
         return 0;
 
+    const sstar_mode_t *live = NULL; /* what the pad is carrying */
+    int positive = 0;                /* how many non-zero claims are asserted */
+
     for (int pass = 0; pass < 2; pass++) {
         for (int k = 0; k < pd->nmodes; k++) {
             const sstar_mode_t *m = pad_mode(fam, pd, k);
@@ -158,11 +161,40 @@ static int sstar_get(int pad, ipchw_padmux_t *out, const padmux_io_t *io) {
             uint32_t val;
             if (!io->read(m->address, &val, SSTAR_PORT_BITS))
                 return IPCHW_PADMUX_IO;
-            if ((val & m->mask) == m->val) {
-                *out = mode_row(m, pd, pad);
-                return 1;
-            }
+            if ((val & m->mask) != m->val)
+                continue;
+
+            if (m->val != 0)
+                positive++;
+            if (live == NULL)
+                live = m;
         }
+        if (live != NULL && pass == 0)
+            break; /* a positive claim settles it; zero-valued ones are the
+                    * idle reading of a field as much as a claim on it */
+    }
+
+    if (live != NULL) {
+        *out = mode_row(live, pd, pad);
+
+        /* The table cannot say which value restores GPIO on this family,
+         * because GPIO is the absence of every claim rather than a value --
+         * which is why the lookups leave gpio_func at -1. Reading the
+         * registers can, though, and this function just did: if exactly one
+         * field is claiming the pad, clearing THAT field is the whole job,
+         * and (address, func_mask, gpio_func) is a single write a caller can
+         * compose the way it does on HiSilicon.
+         *
+         * Two conditions have to hold. Only one positive claim, or clearing
+         * this one leaves the pad on the other. And no separate "this pad is
+         * GPIO" field to assert as well -- infinity6/6b0 has none at all, so
+         * every pad there qualifies, while nearly every infinity6c and
+         * infinity6e pad has one and needs the second write that
+         * ipchw_padmux_set() does. */
+        if (pd->ngpio == 0 && positive == 1 && live->val != 0)
+            out->gpio_func = (int)sstar_idle(live->mask, live->val);
+
+        return 1;
     }
 
     /* Nothing this build knows about claims the pad.

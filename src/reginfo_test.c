@@ -492,6 +492,37 @@ static void test_sstar(void) {
     CHECK(ipchw_padmux_get(82, &r) == 0);
     CHECK(ipchw_padmux_set(82, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_NO_FUNC);
 
+    puts("SigmaStar: get() knows the way back even though the table cannot");
+    /* PAD_GPIO0's nine alternatives are fields in five different registers,
+     * so no table row can say which value means GPIO. With PWM0_MODE_4 the
+     * only thing claiming the pad, clearing that one field is the whole job
+     * -- and infinity6b0 has no separate "this pad is GPIO" bit needing a
+     * second write -- so the row get() returns carries it. */
+    regs_reset();
+    CHECK(ipchw_padmux_set(0, "PWM0_MODE_4") == 0);
+    CHECK(ipchw_padmux_get(0, &r) == 1);
+    CHECK(!strcmp(r.func_name, "PWM0_MODE_4"));
+    CHECK(r.address == 0x1F203C1C && r.func_mask == 0x7 && r.func == 4);
+    CHECK(r.gpio_func == 0);
+    CHECK((r.flags & IPCHW_PADMUX_F_RMW) != 0);
+
+    /* And it is a real write: composing it by hand puts the pad back. */
+    fake_write(r.address, (reg_of(r.address) & ~r.func_mask) | r.gpio_func, 16);
+    CHECK(ipchw_padmux_get(0, &r) == 1);
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
+
+    /* The lookups still cannot say -- they have not read anything. */
+    CHECK(ipchw_padmux_by_func("PWM0_MODE_4", rows, 16) == 1);
+    CHECK(rows[0].gpio_func == -1);
+
+    /* Two claims at once and clearing one settles nothing, so neither does
+     * the row. PAD_GPIO0 answers to TTL_MODE_1 as well as PWM0_MODE_4. */
+    regs_reset();
+    CHECK(ipchw_padmux_set(0, "PWM0_MODE_4") == 0);
+    fake_write(0x1F203C3C, 0x0040, 16); /* TTL_MODE_1, behind PWM0's back */
+    CHECK(ipchw_padmux_get(0, &r) == 1);
+    CHECK(r.gpio_func == -1);
+
     puts("SigmaStar: an unasserted GPIO field is not an idle pad");
     /* infinity6c DOES have rows for its Ethernet pads -- six fields across
      * three banks saying "this pad is GPIO" -- but its ETH_MODE names a
