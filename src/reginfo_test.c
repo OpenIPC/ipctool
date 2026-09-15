@@ -578,7 +578,7 @@ static void test_ingenic(void) {
     /* PB25 is pad 32 + 25. The spec gives it smb1_sda on FUNCTION0 and
      * ssi1_ce0_o on FUNCTION1 -- SMB is what Ingenic calls I2C and SSI is
      * what it calls SPI, which is exactly why func_name is not portable. */
-    ipchw_padmux_t rows[8];
+    ipchw_padmux_t rows[16];
     int n = ipchw_padmux_by_pad(57, rows, 8);
     CHECK(n == 3); /* GPIO, SMB1_SDA, SSI1_CE0 -- FUNCTION2 and 3 are unused */
     CHECK((rows[0].flags & IPCHW_PADMUX_F_GPIO) != 0);
@@ -642,6 +642,49 @@ static void test_ingenic(void) {
 
     CHECK(ipchw_padmux_set(57, "PWM0") == IPCHW_PADMUX_NO_FUNC);
     CHECK(ipchw_padmux_set(57, "reserved") == IPCHW_PADMUX_NO_FUNC);
+
+    puts("Ingenic: T21 has six ports, and its names come from a board file");
+    as_chip(T21, "T21N");
+
+    /* T21 is the one part here with ports past C -- six of them, which its
+     * own kernel confirms by registering six gpiochips -- so a pad number
+     * reaches 175 and the port arithmetic has to keep up. PF15 is
+     * 5 * 32 + 15. */
+    n = ipchw_padmux_by_pad(175, rows, 8);
+    CHECK(n >= 2);
+    if (n >= 2) {
+        CHECK(rows[0].gpio_name && !strcmp(rows[0].gpio_name, "PF15"));
+        CHECK(rows[0].gpio_pad == 175);
+        CHECK((rows[0].flags & IPCHW_PADMUX_F_GPIO) != 0);
+        CHECK(!strcmp(rows[1].func_name, "MII_PORTBDF"));
+    }
+
+    /* Its names come from the vendor's board file, which spells a device
+     * group rather than a wire: the whole DVP bus is one name across fifteen
+     * pads. Not the per-wire spelling T31 gets from its GPIO spec, and the
+     * only thing that exists for this part. */
+    CHECK(ipchw_padmux_by_func("DVP_PORTA", rows, 16) == 15);
+
+    puts("Ingenic: T23 has three, and its board file claims two it has not");
+    as_chip(T23, "T23N");
+
+    /* PORT_D and PORT_F appear in T23's board file, left over from a larger
+     * part. The port count comes from the SoC's own enum, so nothing on them
+     * may reach the table. */
+    ipchw_padmux_t r23;
+    CHECK(ipchw_padmux_get(96, &r23) == IPCHW_PADMUX_NO_PAD);
+    CHECK(ipchw_padmux_get(160, &r23) == IPCHW_PADMUX_NO_PAD);
+    CHECK(ipchw_padmux_by_func("DPU_PORTD_SLCD_8BIT", rows, 8) == 0);
+
+    /* The three a live T23 corroborates by itself: the sensor
+     * bus, the boot flash and the Ethernet. */
+    CHECK(ipchw_padmux_by_func("I2C0_PORTA", rows, 8) == 2);
+    if (ipchw_padmux_by_func("I2C0_PORTA", rows, 8) == 2)
+        CHECK(rows[0].gpio_pad == 12 && rows[1].gpio_pad == 13);
+    CHECK(ipchw_padmux_by_func("SFC_PORTA", rows, 8) == 4);
+    CHECK(ipchw_padmux_by_func("GMAC_PORTB", rows, 16) == 10);
+
+    as_chip(T31, "T31");
 }
 #endif
 
@@ -828,6 +871,8 @@ static void test_table_integrity(void) {
         {INFINITY6C, "SSC37X"},
 #endif
 #ifdef IPCHW_PADMUX_INGENIC
+        {T21, "T21N"},
+        {T23, "T23N"},
         {T31, "T31"},
 #endif
     };

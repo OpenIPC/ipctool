@@ -12,16 +12,27 @@
  *
  * So no read-modify-write selects a function, which is why these rows do not
  * carry IPCHW_PADMUX_F_RMW and why the whole operation has to be behind
- * ipchw_padmux_set(). Nor is it four ordinary stores: each register has a set
- * and a clear alias at +4 and +8 so one pin can be changed without reading
- * the other thirty-one, and the writes are staged until the port's group
- * number is written to PZGID2LD at +0xF0, which commits them together.
- * Without that commit a pad would pass through every intermediate nibble, and
- * half of those nibbles are other device functions -- on a console pad that
- * is a garbage character on somebody's terminal.
+ * ipchw_padmux_set(). What it is instead is four single-bit writes through
+ * the set and clear aliases at +4 and +8 of each register, which is how one
+ * pin changes without reading the other thirty-one, followed by the port's
+ * group number to PZGID2LD at +0xF0. That is gpio_set_func() in the vendor's
+ * arch/mips/xburst/soc-<x>/common/gpio.c, sets then clears then the group.
  *
- * This is gpio_set_func() in the vendor's arch/mips/xburst/soc-t31/common/
- * gpio.c, which writes the sets, then the clears, then the group number.
+ * Measured on a T23, because the name invites the opposite assumption:
+ * PZGID2LD is NOT what commits those writes. Clearing bit 22 of PBMSK and
+ * PBPAT1 through PBMSKC and PBPAT1C moves both registers immediately, with
+ * nothing written to PZGID2LD at all. It is written anyway, because the
+ * vendor writes it and it is harmless, but the shadow group it is named for
+ * is a different mechanism -- one that stages a whole port and loads it in
+ * one go -- and this code does not use it.
+ *
+ * The consequence is a transient. A pin passes through whatever the
+ * half-changed nibble spells, and half of those spell other device functions:
+ * going from GPIO input (0110) to function 0 (0000) is briefly function 2.
+ * Ordering cannot fix it in general -- parking the pin in the GPIO block
+ * first only moves the transient onto the pads that start on a peripheral --
+ * so anyone who needs the mux to be glitch-free wants the shadow group and a
+ * TRM to work out how it is driven.
  *
  * The names are generated: see tools/gen_ingenic_padmux.py. */
 
@@ -32,6 +43,10 @@
 #include "hal/ingenic_padmux.h"
 #include "padmux.h"
 
+/* Same on every T-series part here: the ports are 0x1000 apart from
+ * GPIO_IOBASE, and the register offsets below are identical. What differs is
+ * how many ports there are -- three on T23 and T31, six on T21 -- and that
+ * comes out of the table rather than from here. */
 #define GPIO_BASE 0x10010000u
 #define PORT_STRIDE 0x1000u
 
@@ -53,6 +68,10 @@
 
 static const ingenic_soc_t *ingenic_soc(void) {
     switch (chip_generation) {
+    case T21:
+        return &T21_padmux;
+    case T23:
+        return &T23_padmux;
     case T31:
         return &T31_padmux;
     default:
@@ -176,11 +195,11 @@ static int stage_bit(int pad, unsigned reg, bool set, const padmux_io_t *io) {
     return io->write(addr, 1u << (pad % 32), 32) ? 0 : IPCHW_PADMUX_IO;
 }
 
-/* Put one nibble of enum gpio_function on the pin, atomically.
+/* Put one nibble of enum gpio_function on the pin.
  *
- * Sets first, then clears, then the port's group number to PZGID2LD, which is
- * the order the vendor's gpio_set_func() uses and the one that commits all
- * four bits together. */
+ * Sets first, then clears, then the port's group number -- the order the
+ * vendor's gpio_set_func() uses. Each write lands as it is made; see the
+ * note on the transient at the top of this file. */
 static int write_code(int pad, unsigned code, const padmux_io_t *io) {
     static const unsigned regs[4] = {REG_INT, REG_MSK, REG_PAT1, REG_PAT0};
     static const unsigned bits[4] = {FUNC_INT, FUNC_MSK, FUNC_PAT1, FUNC_PAT0};

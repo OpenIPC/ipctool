@@ -2811,7 +2811,14 @@ static const muxctrl_reg_t **dump_regs_by_chip(void) {
         return I6E_regs;
 #endif
 #ifdef IPCHW_VENDOR_INGENIC
+    case T21:
+        /* Six ports, so its own list: the three-port one would leave half the
+         * chip out of the dump, and --pads reads the mux rather than the
+         * controller. */
+        return T21_regs;
+    case T23:
     case T31:
+        /* Three ports of the same IP at the same offsets. */
         return T31_regs;
 #endif
     default:
@@ -2835,7 +2842,11 @@ static uint32_t dump_mask(void) {
     case INFINITY6C:
     case INFINITY6E:
         return 0xffff;
+    case T21:
+    case T23:
     case T31:
+        /* Not a selector at all: these are whole 32-bit controller registers
+         * and every bit of them is worth printing. */
         return 0xffffffff;
     default:
         return padmux_func_mask();

@@ -56,6 +56,8 @@ const padmux_ops_t *padmux_ops(void) {
         return &PADMUX_OPS_SSTAR;
 #endif
 #ifdef IPCHW_PADMUX_INGENIC
+    case T21:
+    case T23:
     case T31:
         return &PADMUX_OPS_INGENIC;
 #endif
