@@ -2,18 +2,12 @@
 #include "chipid.h"
 #include "hal/hisi/hal_hisi.h"
 #include "hal/ingenic.h"
-#ifdef IPCHW_VENDOR_INGENIC
-#include "hal/ingenic_reginfo.h"
-#endif
 #include "hal/sstar.h"
-#ifdef IPCHW_VENDOR_SSTAR
-#include "hal/sstar_reginfo.h"
-#endif
+#include "padmux.h"
 #include "tools.h"
 
 #include "ipchw.h"
 
-#include <assert.h>
 #include <dirent.h>
 #include <ctype.h>
 #include <getopt.h>
@@ -2476,38 +2470,11 @@ static const muxctrl_reg_t *DV500regs[] = {
 };
 #endif /* IPCHW_PADMUX_V5 */
 
-/* Which bits of a pad register are the function selector.
- *
- * HiSilicon (and Goke, which is the same silicon) put it in the low nibble;
- * SigmaStar uses the low half-word. The rest of the register carries drive
- * strength, pull and slew that the boot chose, so every write here is a
- * read-modify-write against this mask rather than a whole-register store.
- *
- * Keyed on chip_generation rather than on the vendor string because a caller
- * may set the generation directly -- that is what makes the lookups below
- * exercisable on a host with no camera under it. */
-static uint32_t padmux_func_mask(void) {
-    switch (chip_generation) {
-    case HISI_V1:
-    case HISI_V2:
-    case HISI_V2A:
-    case HISI_V3:
-    case HISI_V3A:
-    case HISI_V4:
-    case HISI_V4A:
-    case HISI_OT:
-    case HISI_3536C:
-    case HISI_3536D:
-        return 0xf;
-    case INFINITY6:
-    case INFINITY6B:
-    case INFINITY6C:
-    case INFINITY6E:
-        return 0xffff;
-    default:
-        return 0xffffffff;
-    }
-}
+/* Which bits of a pad register are the function selector: the low nibble, on
+ * every HiSilicon and Goke part. Named and placed here rather than inlined
+ * because three callers used to disagree about it -- one matched vendor
+ * strings, one open-coded 0xf and one zeroed the top half of the register. */
+static uint32_t padmux_func_mask(void) { return 0xf; }
 
 static const muxctrl_reg_t **regs_by_chip() {
     switch (chip_generation) {
@@ -2569,19 +2536,6 @@ static const muxctrl_reg_t **regs_by_chip() {
     case HISI_3536D:
         return DV100regs;
 #endif
-#ifdef IPCHW_VENDOR_SSTAR
-    case INFINITY6:
-    case INFINITY6B:
-        return I6B_regs;
-    case INFINITY6C:
-        return I6C_regs;
-    case INFINITY6E:
-        return I6E_regs;
-#endif
-#ifdef IPCHW_VENDOR_INGENIC
-    case T31:
-        return T31_regs;
-#endif
     }
 
     /* No table for this SoC, or none compiled into this build. NULL rather
@@ -2591,8 +2545,15 @@ static const muxctrl_reg_t **regs_by_chip() {
 }
 
 /* ------------------------------------------------------------------------
- * The public pad-mux lookups. Contract and caveats are on the prototypes in
- * include/ipchw.h; this half is just the walk.
+ * The HiSilicon and Goke backend.
+ *
+ * One register per pad, a selector field in the low nibble, and funcs[] above
+ * indexed by the value in it. That is the shape the whole API was drawn
+ * around, and it is the only one of the three vendors that has it -- see
+ * src/padmux.h for what the other two do instead and for the seam this plugs
+ * into. The contract a caller sees is on the prototypes in include/ipchw.h.
+ *
+ * Not one table row moved to get here.
  * ---------------------------------------------------------------------- */
 
 /* "GPIO5_2" -> 42, the running-integer form every consumer of this speaks:
@@ -2632,9 +2593,9 @@ static void row_gpio(const muxctrl_reg_t *reg, const char **name, int *pad,
     }
 }
 
-/* One walk behind all three entry points. `match` decides which functions of
- * a row are wanted (NULL means every one of them) and `pad` optionally
- * narrows to the rows that carry that GPIO (-1 means every row).
+/* `match` decides which functions of a row are wanted (NULL means every one
+ * of them) and `pad` optionally narrows to the rows that carry that GPIO (-1
+ * means every row).
  *
  * Both filters live here rather than in a post-pass over the results because
  * a whole table is far more rows than any caller wants to hold: the EV300
@@ -2643,18 +2604,8 @@ static void row_gpio(const muxctrl_reg_t *reg, const char **name, int *pad,
  * Counting continues past `max` on purpose: the return value is the number of
  * matches, not the number written, so a caller that guessed its array too
  * small learns the right size instead of silently losing rows. */
-typedef bool (*padmux_match_fn)(const char *func_name, const void *arg);
-
-static int padmux_walk(padmux_match_fn match, const void *arg, int pad,
-                       ipchw_padmux_t *out, int max) {
-    if (max < 0 || (max > 0 && out == NULL))
-        return IPCHW_PADMUX_BAD_ARG;
-
-    if (!chip_generation && getchipname() == NULL)
-        return IPCHW_PADMUX_NO_CHIP;
-    if (!chip_generation)
-        return IPCHW_PADMUX_NO_CHIP;
-
+static int hisi_walk(padmux_match_fn match, const void *arg, int pad,
+                     ipchw_padmux_t *out, int max) {
     const muxctrl_reg_t **regs = regs_by_chip();
     if (regs == NULL)
         return IPCHW_PADMUX_NO_TABLE;
@@ -2688,6 +2639,11 @@ static int padmux_walk(padmux_match_fn match, const void *arg, int pad,
                     .gpio_name = gpio_name,
                     .gpio_pad = gpio_pad,
                     .gpio_func = gpio_func,
+                    /* One register, one field, every alternative of the pad
+                     * in it: the two strongest promises the API can make, and
+                     * only this vendor can make them. */
+                    .flags = IPCHW_PADMUX_F_RMW | IPCHW_PADMUX_F_SHARED_REG |
+                             (i == gpio_func ? IPCHW_PADMUX_F_GPIO : 0),
                 };
             }
             found++;
@@ -2697,78 +2653,136 @@ static int padmux_walk(padmux_match_fn match, const void *arg, int pad,
     return found;
 }
 
-static bool match_exact(const char *func_name, const void *arg) {
-    return !strcmp(func_name, (const char *)arg);
+/* The one register of `pad`, plus the GPIO facts derived from it. NULL when
+ * this SoC has no such pad -- which on these parts also means "no table",
+ * because a pad the table does not name is a pad this build cannot reach. */
+static const muxctrl_reg_t *hisi_pad_reg(int pad, const char **gpio_name,
+                                         int *gpio_pad, int *gpio_func) {
+    const muxctrl_reg_t **regs = regs_by_chip();
+    if (regs == NULL)
+        return NULL;
+
+    for (int reg_num = 0; regs[reg_num]; reg_num++) {
+        row_gpio(regs[reg_num], gpio_name, gpio_pad, gpio_func);
+        if (*gpio_pad == pad)
+            return regs[reg_num];
+    }
+
+    return NULL;
 }
 
-static bool match_prefix(const char *func_name, const void *arg) {
-    const char *prefix = arg;
+static int hisi_get(int pad, ipchw_padmux_t *out, const padmux_io_t *io) {
+    const char *gpio_name;
+    int gpio_pad, gpio_func;
 
-    return !strncmp(func_name, prefix, strlen(prefix));
+    if (regs_by_chip() == NULL)
+        return IPCHW_PADMUX_NO_TABLE;
+
+    const muxctrl_reg_t *reg =
+        hisi_pad_reg(pad, &gpio_name, &gpio_pad, &gpio_func);
+    if (reg == NULL)
+        return IPCHW_PADMUX_NO_PAD;
+
+    uint32_t val;
+    if (!io->read(reg->address, &val, 32))
+        return IPCHW_PADMUX_IO;
+
+    const uint32_t mask = padmux_func_mask();
+    uint32_t sel = val & mask;
+
+    /* A selector past the end of the list, or one pointing at a hole. Both
+     * mean this build cannot name what the pad is doing, which is a different
+     * answer from "it is doing nothing". */
+    int i;
+    for (i = 0; reg->funcs[i]; i++)
+        if ((uint32_t)i == sel)
+            break;
+    if (reg->funcs[i] == NULL || !strcmp(reg->funcs[i], "reserved"))
+        return 0;
+
+    *out = (ipchw_padmux_t){
+        .address = reg->address,
+        .func_mask = mask,
+        .func = (int)sel,
+        .func_name = reg->funcs[i],
+        .gpio_name = gpio_name,
+        .gpio_pad = gpio_pad,
+        .gpio_func = gpio_func,
+        .flags = IPCHW_PADMUX_F_RMW | IPCHW_PADMUX_F_SHARED_REG |
+                 ((int)sel == gpio_func ? IPCHW_PADMUX_F_GPIO : 0),
+    };
+
+    return 1;
 }
 
-int ipchw_padmux_by_func(const char *func_name, ipchw_padmux_t *out, int max) {
-    if (func_name == NULL || !*func_name)
-        return IPCHW_PADMUX_BAD_ARG;
+static int hisi_set(int pad, const char *func_name, const padmux_io_t *io) {
+    const char *gpio_name;
+    int gpio_pad, gpio_func;
 
-    return padmux_walk(match_exact, func_name, -1, out, max);
+    if (regs_by_chip() == NULL)
+        return IPCHW_PADMUX_NO_TABLE;
+
+    const muxctrl_reg_t *reg =
+        hisi_pad_reg(pad, &gpio_name, &gpio_pad, &gpio_func);
+    if (reg == NULL)
+        return IPCHW_PADMUX_NO_PAD;
+
+    int want = -1;
+    if (!strcmp(func_name, IPCHW_PADMUX_GPIO)) {
+        want = gpio_func;
+    } else {
+        for (int i = 0; reg->funcs[i]; i++) {
+            /* "reserved" is a hole in the selector, not a function. The walk
+             * and the read both treat it as unnamed; resolving it here would
+             * let ipchw_padmux_set(pad, "reserved") put a pad into a state
+             * the part does not define. */
+            if (!strcmp(reg->funcs[i], "reserved"))
+                continue;
+            if (!strcmp(reg->funcs[i], func_name)) {
+                want = i;
+                break;
+            }
+        }
+    }
+    if (want < 0)
+        return IPCHW_PADMUX_NO_FUNC;
+
+    uint32_t val;
+    if (!io->read(reg->address, &val, 32))
+        return IPCHW_PADMUX_IO;
+
+    /* Only the selector field moves. The rest of the register carries the
+     * drive strength, pull and slew the boot chose. */
+    const uint32_t mask = padmux_func_mask();
+    val = (val & ~mask) | ((uint32_t)want & mask);
+    if (!io->write(reg->address, val, 32))
+        return IPCHW_PADMUX_IO;
+
+    return 0;
 }
 
-int ipchw_padmux_by_prefix(const char *prefix, ipchw_padmux_t *out, int max) {
-    if (prefix == NULL)
-        return IPCHW_PADMUX_BAD_ARG;
-
-    /* An empty prefix is every function, which is how a caller walks the
-     * whole table -- an integrity sweep, or a "what can this pad do" report. */
-    return padmux_walk(match_prefix, prefix, -1, out, max);
-}
-
-int ipchw_padmux_by_pad(int pad, ipchw_padmux_t *out, int max) {
-    if (pad < 0)
-        return IPCHW_PADMUX_BAD_ARG;
-
-    return padmux_walk(NULL, NULL, pad, out, max);
-}
+const padmux_ops_t PADMUX_OPS_HISI = {
+    .name = "hisi",
+    .walk = hisi_walk,
+    .get = hisi_get,
+    .set = hisi_set,
+};
 
 /* Everything below is the command-line half of ipctool: it prints, it parses
  * argv, and it calls print_usage() out of main.c. STANDALONE_LIBRARY builds
  * (libipchw) take the tables and the lookups above and stop here. */
 #ifndef STANDALONE_LIBRARY
 
+#ifdef IPCHW_VENDOR_INGENIC
+#include "hal/ingenic_reginfo.h"
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
+#include "hal/sstar_reginfo.h"
+#endif
+
 static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func);
-
-static const char *num2gpio_groupnum(const char *gpio_name, char cgpio[64]) {
-    if (strchr(gpio_name, '_') != NULL)
-        return gpio_name;
-
-    unsigned long plain_num = strtoul(gpio_name, NULL, 10);
-    int group = plain_num / 8;
-    int num = plain_num % 8;
-    snprintf(cgpio, 64, "%d_%d", group, num);
-    return cgpio;
-}
-
-static int find_pinfunc(const char *const *func, const char *name) {
-    for (int i = 0; func[i]; i++) {
-        if (!strcmp(func[i], name))
-            return i;
-    }
-
-    return -1;
-}
-
-/* regs_by_chip() answers NULL for an SoC it has no table for. The CLI has
- * always treated that as fatal and still does; only the library needs the
- * softer answer. */
-static const muxctrl_reg_t **regs_by_chip_or_die(void) {
-    const muxctrl_reg_t **regs = regs_by_chip();
-    if (regs == NULL) {
-        fprintf(stderr, "Platform is not supported\n");
-        exit(EXIT_FAILURE);
-    }
-    return regs;
-}
+static int padmux_refuse(int code, const char *pad_spec, const char *func);
 
 static void show_function(const char *const *func, unsigned val) {
     for (size_t i = 0; func[i]; i++) {
@@ -2780,8 +2794,56 @@ static void show_function(const char *const *func, unsigned val) {
     puts("");
 }
 
+/* What `reginfo` dumps. On HiSilicon and Goke it is the pad-mux table itself.
+ * On SigmaStar and Ingenic it is the GPIO controller's own registers, which is
+ * what those two lists have always been -- per-pad direction and level on one,
+ * the port INT/MSK/PAT/pull/drive registers on the other. Useful, and not
+ * pin-mux: `reginfo --pads` is the pin-mux view on every family. */
+static const muxctrl_reg_t **dump_regs_by_chip(void) {
+    switch (chip_generation) {
+#ifdef IPCHW_VENDOR_SSTAR
+    case INFINITY6:
+    case INFINITY6B:
+        return I6B_regs;
+    case INFINITY6C:
+        return I6C_regs;
+    case INFINITY6E:
+        return I6E_regs;
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
+    case T31:
+        return T31_regs;
+#endif
+    default:
+        break;
+    }
+
+    const muxctrl_reg_t **regs = regs_by_chip();
+    if (regs == NULL) {
+        fprintf(stderr, "Platform is not supported\n");
+        exit(EXIT_FAILURE);
+    }
+    return regs;
+}
+
+/* The field of a dumped register worth bracketing a name against. Only the
+ * HiSilicon dump is a selector at all; the other two print the whole port. */
+static uint32_t dump_mask(void) {
+    switch (chip_generation) {
+    case INFINITY6:
+    case INFINITY6B:
+    case INFINITY6C:
+    case INFINITY6E:
+        return 0xffff;
+    case T31:
+        return 0xffffffff;
+    default:
+        return padmux_func_mask();
+    }
+}
+
 static int dump_regs(bool script_mode) {
-    const muxctrl_reg_t **regs = regs_by_chip_or_die();
+    const muxctrl_reg_t **regs = dump_regs_by_chip();
 
     for (int reg_num = 0; regs[reg_num]; reg_num++) {
         uint32_t val;
@@ -2795,7 +2857,7 @@ static int dump_regs(bool script_mode) {
             continue;
         }
 
-        val &= padmux_func_mask();
+        val &= dump_mask();
 
         printf("muxctrl_reg%d %#x %#x", reg_num, regs[reg_num]->address, val);
         show_function(regs[reg_num]->funcs, val);
@@ -2804,22 +2866,77 @@ static int dump_regs(bool script_mode) {
     return EXIT_SUCCESS;
 }
 
+/* `ipctool reginfo --pads`: one line per pad, what it is carrying and what
+ * else it could carry.
+ *
+ * The register dump above is per-register and per-vendor; this is per-pad and
+ * is the same question on every SoC, which is what makes it the thing to run
+ * on a board of a family whose table has just been entered. */
+static int dump_pads(void) {
+    int n = ipchw_padmux_by_prefix("", NULL, 0);
+    if (n < 0)
+        return padmux_refuse(n, "this SoC", NULL);
+    if (n == 0)
+        return EXIT_SUCCESS;
+
+    ipchw_padmux_t *rows = calloc((size_t)n, sizeof(*rows));
+    if (rows == NULL) {
+        fprintf(stderr, "out of memory\n");
+        return EXIT_FAILURE;
+    }
+    n = ipchw_padmux_by_prefix("", rows, n);
+
+    for (int i = 0; i < n;) {
+        int pad = rows[i].gpio_pad;
+        int j = i;
+        while (j < n && rows[j].gpio_pad == pad)
+            j++;
+        if (pad < 0) {
+            i = j;
+            continue;
+        }
+
+        ipchw_padmux_t now;
+        int res = ipchw_padmux_get(pad, &now);
+        const char *carrying = res == 1   ? now.func_name
+                               : res == 0 ? "?"
+                                          : "unreadable";
+
+        printf("pad %-4d %-16s [%s]", pad,
+               rows[i].gpio_name ? rows[i].gpio_name : "-", carrying);
+        for (int k = i; k < j; k++)
+            if (strcmp(rows[k].func_name, carrying) != 0)
+                printf(" %s", rows[k].func_name);
+        puts("");
+
+        i = j;
+    }
+
+    free(rows);
+    return EXIT_SUCCESS;
+}
+
 extern void print_usage();
 
 int reginfo_cmd(int argc, char **argv) {
     const struct option long_options[] = {
         {"script", no_argument, NULL, 's'},
+        {"pads", no_argument, NULL, 'p'},
         {NULL, 0, NULL, 0},
     };
     bool script_mode = false;
+    bool pad_mode = false;
     int res;
     int option_index;
 
-    while ((res = getopt_long_only(argc, argv, "s", long_options,
+    while ((res = getopt_long_only(argc, argv, "sp", long_options,
                                    &option_index)) != -1) {
         switch (res) {
         case 's':
             script_mode = true;
+            break;
+        case 'p':
+            pad_mode = true;
             break;
         case '?':
             print_usage();
@@ -2828,6 +2945,9 @@ int reginfo_cmd(int argc, char **argv) {
     }
 
     getchipname();
+
+    if (pad_mode)
+        return dump_pads();
 
     return dump_regs(script_mode);
 }
@@ -2990,51 +3110,101 @@ static int gpio_set_cmd(int argc, char **argv) {
     return gpio_manipulate(argv, true);
 }
 
-static int gpio_mux_by(const char *gpio_number, int func_num,
-                       const char *set_func) {
-    const char *gpio_grnum = num2gpio_groupnum(gpio_number, (char[64]){0});
-    if (gpio_grnum == NULL)
-        return EXIT_FAILURE;
-
-    getchipname();
-    const muxctrl_reg_t **regs = regs_by_chip_or_die();
-
-    for (int reg_num = 0; regs[reg_num]; reg_num++) {
-        const char *const *func = regs[reg_num]->funcs;
-        for (int i = 0; func[i]; i++) {
-            if ((!strncmp("GPIO", func[i], 4)) &&
-                (!strcmp(func[i] + 4, gpio_grnum))) {
-
-                uint32_t val;
-                if (!mem_reg(regs[reg_num]->address, &val, OP_READ)) {
-                    printf("read reg %#x error\n", regs[reg_num]->address);
-                    return EXIT_FAILURE;
-                }
-
-                int new_func = func_num;
-                if (new_func == -1 && set_func != NULL)
-                    new_func = find_pinfunc(func, set_func);
-
-                if (new_func == -1)
-                    new_func = i;
-                /* Only the selector field moves. The old mask was 0xfff0,
-                 * which zeroed every bit above 15 -- on these 32-bit pad
-                 * registers that quietly dropped whatever the boot had put
-                 * there. */
-                uint32_t mask = padmux_func_mask();
-                val = (val & ~mask) | ((uint32_t)new_func & mask);
-                if (!mem_reg(regs[reg_num]->address, &val, OP_WRITE)) {
-                    printf("write reg %#x error\n", regs[reg_num]->address);
-                    return EXIT_FAILURE;
-                }
-
-                return EXIT_SUCCESS;
-            }
-        }
+/* One place to turn a refusal from the library into the message the command
+ * line has always printed. A missing table stays fatal here: the CLI has
+ * always treated it that way, and only the library needs the softer answer. */
+static int padmux_refuse(int code, const char *pad_spec, const char *func) {
+    switch (code) {
+    case IPCHW_PADMUX_NO_CHIP:
+    case IPCHW_PADMUX_NO_TABLE:
+        fprintf(stderr, "Platform is not supported\n");
+        exit(EXIT_FAILURE);
+    case IPCHW_PADMUX_NO_PAD:
+        fprintf(stderr, "GPIO %s is not found\n", pad_spec);
+        break;
+    case IPCHW_PADMUX_NO_FUNC:
+        fprintf(stderr, "GPIO %s cannot carry %s\n", pad_spec,
+                func ? func : "that");
+        break;
+    case IPCHW_PADMUX_IO:
+        fprintf(stderr, "Cannot reach the pad-mux register of GPIO %s\n",
+                pad_spec);
+        break;
+    default:
+        fprintf(stderr, "Pad-mux error %d on GPIO %s\n", code, pad_spec);
+        break;
     }
 
-    fprintf(stderr, "GPIO %s is not found\n", gpio_grnum);
     return EXIT_FAILURE;
+}
+
+/* `ipctool gpio mux <pad> [<function>|<selector>]`, and the implicit "put it
+ * back to GPIO" that `gpio get` and `gpio set` do first.
+ *
+ * The write is ipchw_padmux_set() rather than a read-modify-write composed
+ * here, so this command means the same thing on a vendor where the write is
+ * not one register. The numeric form still works: a selector value is
+ * resolved to the name of the function it selects, which is the only spelling
+ * the two other vendors have. */
+static int gpio_mux_by(const char *gpio_number, int func_num,
+                       const char *set_func) {
+    int pad = padmux_parse_pad(gpio_number);
+    if (pad < 0) {
+        fprintf(stderr, "Not a GPIO number: %s\n", gpio_number);
+        return EXIT_FAILURE;
+    }
+
+    getchipname();
+
+    const char *want = set_func;
+    if (func_num >= 0) {
+        ipchw_padmux_t rows[64];
+        int n = ipchw_padmux_by_pad(pad, rows, ARRCNT(rows));
+        if (n < 0)
+            return padmux_refuse(n, gpio_number, set_func);
+        if (n > (int)ARRCNT(rows))
+            n = (int)ARRCNT(rows);
+
+        /* A selector value is not a name, and outside HiSilicon it is not
+         * even unique to a function: a SigmaStar `func` is a value in place,
+         * so two peripherals whose fields sit at different offsets of
+         * different registers can both select on 0x40 -- SPI1_MODE_4 and
+         * TTL_MODE_1 do, on PAD_GPIO0. Take the number only when one
+         * function answers to it, and say so when several do rather than
+         * muxing the first one found.
+         *
+         * IPCHW_PADMUX_F_RMW is deliberately NOT required here: an Ingenic
+         * row never carries it, because putting a function on the pad is four
+         * staged writes rather than one -- but the selector is still a
+         * perfectly good name for which function is meant, and
+         * ipchw_padmux_set() knows how to write it. */
+        want = NULL;
+        for (int i = 0; i < n; i++) {
+            if (rows[i].func != func_num)
+                continue;
+            if (want != NULL && strcmp(want, rows[i].func_name) != 0) {
+                fprintf(stderr,
+                        "GPIO %s: selector %d selects both %s and %s here; "
+                        "name the one you mean\n",
+                        gpio_number, func_num, want, rows[i].func_name);
+                return EXIT_FAILURE;
+            }
+            want = rows[i].func_name;
+        }
+        if (want == NULL) {
+            fprintf(stderr, "GPIO %s has no function %d\n", gpio_number,
+                    func_num);
+            return EXIT_FAILURE;
+        }
+    } else if (want == NULL) {
+        want = IPCHW_PADMUX_GPIO;
+    }
+
+    int res = ipchw_padmux_set(pad, want);
+    if (res != 0)
+        return padmux_refuse(res, gpio_number, want);
+
+    return EXIT_SUCCESS;
 }
 
 static int gpio_mux_cmd(int argc, char **argv) {
@@ -3056,35 +3226,19 @@ static int gpio_mux_cmd(int argc, char **argv) {
     return gpio_mux_by(argv[1], func_num, set_func);
 }
 
-/* False when this SoC has no pad table, so a caller can drop the part of its
+/* Which pads are muxed to plain GPIO right now, a bitmask per bank of eight.
+ *
+ * False when this SoC has no pad table, so a caller can drop the part of its
  * report that needs one instead of taking the whole process down with it. */
 static bool fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
-    const muxctrl_reg_t **regs = regs_by_chip();
-    if (regs == NULL)
+    if (ipchw_padmux_by_prefix("", NULL, 0) < 0)
         return false;
 
     memset(enabled, 0, sizeof(size_t) * GPIO_Groups);
-    for (int reg_num = 0; regs[reg_num]; reg_num++) {
-        const char *const *func = regs[reg_num]->funcs;
-        for (size_t i = 0; func[i]; i++) {
-            if (!strncmp("GPIO", func[i], 4)) {
-                uint32_t val;
-                if (!mem_reg(regs[reg_num]->address, &val, OP_READ)) {
-                    printf("read reg %#x error\n", regs[reg_num]->address);
-                    continue;
-                }
-
-                if ((val & padmux_func_mask()) == (uint32_t)i) {
-                    int group, num;
-                    if (sscanf(func[i] + 4, "%d_%d", &group, &num) != 2)
-                        assert("Parsing error");
-                    assert(group <= GPIO_Groups);
-                    enabled[group] |= 1 << num;
-                }
-                break;
-            }
-        }
-    }
+    for (size_t group = 0; group < GPIO_Groups; group++)
+        for (int pin = 0; pin < 8; pin++)
+            if (padmux_pad_is_gpio((int)(group * 8) + pin))
+                enabled[group] |= (size_t)1 << pin;
 
     return true;
 }

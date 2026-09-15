@@ -37,16 +37,19 @@
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
-enum REG_OPS { OP_READ, OP_WRITE };
+/* OP_*_16 reach a 16-bit port. SigmaStar's RIU banks are half-word registers
+ * in four-byte slots whose upper half is not mapped at all, so a 32-bit store
+ * there writes two bytes that do not exist. */
+enum REG_OPS { OP_READ, OP_WRITE, OP_READ_16, OP_WRITE_16 };
 
 int regex_compile(regex_t *r, const char *regex_text);
-/* Read or write one 32-bit register through /dev/mem.
+/* Read or write one register through /dev/mem, 32 bits wide or 16.
  *
  * NOT thread-safe and not reentrant: the mapping, its offset, its size and the
  * file descriptor are four function-local statics with no lock around them, and
  * any address outside the cached window unmaps it and maps another. Two threads
- * on different windows will unmap the mapping the other is about to dereference.
- * Every caller must come from one thread.
+ * on different windows will unmap the mapping the other is about to
+ * dereference. Every caller must come from one thread.
  *
  * Returns false only when /dev/mem cannot be opened or mmapped -- a bad address
  * on live silicon raises SIGBUS rather than returning. Call with addr == 0 to

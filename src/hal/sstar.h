@@ -1,6 +1,9 @@
 #ifndef HAL_SSTAR_H
 #define HAL_SSTAR_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #define CMD_PATH "/proc/cmdline"
 #define TEMP_PATH "/sys/class/mstar/msys/TEMP_R"
 

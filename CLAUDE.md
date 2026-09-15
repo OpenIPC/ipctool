@@ -54,12 +54,16 @@ CMake knobs worth knowing:
 - `-DIPCHW_VENDORS=all|none|"sstar;ingenic"` selects which vendor HALs go into
   `libipchw`. HiSilicon is always in. The `ipctool` executable always carries
   every vendor.
-- `-DIPCHW_PADMUX=all|none|"v1;v4"` selects which SoC families' pad-mux tables
-  go into `libipchw`. They are 46 KB on arm32 and `regs_by_chip()` names every
-  one of them from a single switch, so `--gc-sections` drops nothing: a
-  consumer that wants one family has to say so. `v4` is the expensive token
-  (13.6 KB) because one SDK build runs on ev200, ev300, 3518ev300 and dv200,
-  and those are four different tables. The macros are PUBLIC on the `ipchw`
+- `-DIPCHW_PADMUX=all|none|"v1;v4;sstar"` selects which SoC families' pad-mux
+  tables go into `libipchw`. `sstar` and `ingenic` are families here too: the
+  vendor knob answers "can this build detect the SoC", this one answers "does
+  it carry the SoC's pad table", and they are deliberately separate. All of it
+  is ~75 KB on arm32 and nothing is dropped by `--gc-sections`, because
+  `regs_by_chip()` and `padmux_ops()` name every family from a single switch:
+  a consumer that wants one family has to say so. `v4` is the expensive
+  HiSilicon token (13.6 KB) because one SDK build runs on ev200, ev300,
+  3518ev300 and dv200, and those are four different tables; `sstar` is 25 KB
+  for three families and ~2200 claims. The macros are PUBLIC on the `ipchw`
   target so a consumer can `#error` on a family it forgot. The `ipctool`
   executable always carries every table.
 - `-DONLY_LIBRARY=ON` builds just `libipchw`. `-DSKIP_VERSION=ON` skips the
@@ -72,14 +76,18 @@ CMake knobs worth knowing:
 
 - `./build/cYAML_test`: covers the JSON-to-YAML printer
   (`src/cjson/cYAML.c`), including UTF-8 and invalid-byte escaping.
-- `./build/reginfo_test`: the pad-mux tables and the `ipchw_padmux_*` lookups,
-  on a host with no camera. `chip_generation` and `chip_name` are plain
-  globals, so setting them puts any SoC's tables in front of the code under
-  test; the asserted rows are ones a real camera was measured against. It also
-  sweeps every compiled-in family for two invariants worth having over 1333
-  hand-entered rows: no selector wider than its own field, and no GPIO name
-  that fails to parse. It links the real `libipchw`, which is what proves the
-  lookups are exported and not merely present.
+- `./build/reginfo_test`: the pad-mux tables, the `ipchw_padmux_*` lookups and
+  the `ipchw_padmux_get/_set` accessors, on a host with no camera.
+  `chip_generation` and `chip_name` are plain globals, so setting them puts
+  any SoC's tables in front of the code under test; the asserted rows are ones
+  a real camera was measured against. It installs a fabricated register file
+  through the `padmux_io_t` seam in `src/padmux.h`, which is the only way the
+  write paths are exercised at all off a camera. Over every compiled-in family
+  it sweeps structural invariants (a selector fits its field in place, one pad
+  has one GPIO spelling, no pad offers a function twice or two functions
+  through one selector value, no pad number in two places) and then sets every
+  function of every pad and reads it back. It links the real `libipchw`, which
+  is what proves the lookups are exported and not merely present.
 - `tools/test_pipeline.sh`: hardware-free end-to-end check of the sensor
   driver extraction pipeline (`trace_segment.py` -> `trace_to_driver.py` ->
   `gcc -fsyntax-only` -> `trace_diff.py`). Needs only python3 and gcc.
@@ -184,16 +192,23 @@ cJSON or prints diagnostics in those shared files must sit inside
   rejects the larger window. Kernels built with strict devmem filtering can
   refuse some ranges entirely. It is **not thread-safe** -- one cached
   window in four file-statics, no lock -- so serialise every caller yourself.
-- `src/reginfo.c` carries the pad-mux tables: per SoC, which physical register
-  and which selector value put a named function on a pad, and which GPIO that
-  pad carries otherwise. `ipchw_padmux_by_func/_by_prefix/_by_pad` in
-  `include/ipchw.h` are how a library consumer asks. Two things surprise
-  people: a function is not unique to a pad (hi3516ev300 has PWM2 and PWM3 on
-  three pads each), and the spelling is not portable (`PWM_OUT0` on V1, `PWM0`
-  from V2, `PWM0_OUT1` on V5 -- and `SVB_PWM`/`PMC_PWM` are *different*
-  controllers, so match the prefix anchored, never anywhere in the string).
-  The lookups are safe to call concurrently once the SoC has been detected;
+- Pad multiplexing spans `src/padmux.c` (the public entry points and the
+  backend dispatch), `src/reginfo.c` (1333 hand-entered HiSilicon/Goke rows
+  plus their backend), `src/hal/sstar_padmux.*` and
+  `src/hal/ingenic_padmux.*`. The three vendors select a pad's function three
+  different ways and only HiSilicon's is one register per pad, which is why
+  there is a `padmux_ops_t` seam rather than one table format. `docs/padmux.md`
+  has the mechanisms, the generators, and the traps -- read it before touching
+  any of this. Two that catch everyone: a function is not unique to a pad
+  (hi3516ev300 has PWM2 and PWM3 on three pads each), and the spelling is not
+  portable (`PWM_OUT0` on V1, `PWM0` from V2, `PWM0_OUT1` on V5, `PWM0_MODE_4`
+  on SigmaStar; `SVB_PWM` and `PMC_PWM` are *different* controllers, so match
+  the prefix anchored, never anywhere in the string). The SigmaStar and
+  Ingenic tables are generated from vendor sources by `tools/gen_*_padmux.py`
+  and are in `.clang-format-hook-exclude`. `ipchw_padmux_by_func/_by_prefix/
+  _by_pad` are safe to call concurrently once the SoC has been detected;
   detection itself is not, so call `getchipname()` once at startup.
+  `ipchw_padmux_get/_set` touch `/dev/mem` and must stay on one thread.
 - `src/fake_symbols.c` holds empty definitions of HiSilicon SDK audio symbols,
   added when the Hi3518EV100 SDK was linked in; nothing in the current tree
   references them. `src/stack.c` is a stack-protector shim and is not in the

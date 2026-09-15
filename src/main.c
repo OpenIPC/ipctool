@@ -102,6 +102,8 @@ void print_usage() {
         "                            dump data from I2C/SPI device\n"
         "  i2cdetect [-b, --bus]     attempt to detect devices on I2C bus\n"
         "  reginfo [--script]        dump current status of pinmux registers\n"
+        "  reginfo --pads            what each pad carries, and what else it "
+        "could\n"
         "  gpio (scan|mux)           GPIO utilities\n"
         "  clocks|freq [--json]      show CPU/peripheral PLL, DDR clock and\n"
         "                            per-die HPM bin (Hisilicon V4 / Goke "
