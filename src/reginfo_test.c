@@ -684,6 +684,25 @@ static void test_ingenic(void) {
     CHECK(ipchw_padmux_by_func("SFC_PORTA", rows, 8) == 4);
     CHECK(ipchw_padmux_by_func("GMAC_PORTB", rows, 16) == 10);
 
+    puts("Ingenic: T40 has four ports and comes from a pinctrl devicetree");
+    as_chip(T40, "T40");
+
+    /* Four ports, so pad numbers stop at 127. */
+    CHECK(ipchw_padmux_get(128, &r23) == IPCHW_PADMUX_NO_PAD);
+    CHECK(ipchw_padmux_get(160, &r23) == IPCHW_PADMUX_NO_PAD);
+
+    /* The devicetree labels a routing by device AND port, so the same device
+     * on two ports is two names a lookup can tell apart -- the thing a board
+     * file's .name could not do. */
+    CHECK(ipchw_padmux_by_func("UART0_PC", rows, 8) == 4);
+    CHECK(ipchw_padmux_by_func("UART0_PA", rows, 8) == 2);
+
+    /* A group node spanning a range and the per-pin nodes inside it are one
+     * device family, not a disagreement: PC02 keeps the numbered name, and
+     * the name of the group it came from is gone. */
+    CHECK(ipchw_padmux_by_func("PWM0_PC", rows, 8) == 1);
+    CHECK(ipchw_padmux_by_func("PWM_PC", rows, 8) == 0);
+
     as_chip(T31, "T31");
 }
 #endif
@@ -874,6 +893,7 @@ static void test_table_integrity(void) {
         {T21, "T21N"},
         {T23, "T23N"},
         {T31, "T31"},
+        {T40, "T40"},
 #endif
     };
 

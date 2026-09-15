@@ -2812,13 +2812,12 @@ static const muxctrl_reg_t **dump_regs_by_chip(void) {
 #endif
 #ifdef IPCHW_VENDOR_INGENIC
     case T21:
-        /* Six ports, so its own list: the three-port one would leave half the
-         * chip out of the dump, and --pads reads the mux rather than the
-         * controller. */
-        return T21_regs;
+        return T21_regs; /* six ports */
+    case T40:
+        return T40_regs; /* four */
     case T23:
     case T31:
-        /* Three ports of the same IP at the same offsets. */
+        /* Three, and the list these two have always dumped. */
         return T31_regs;
 #endif
     default:
@@ -2845,6 +2844,7 @@ static uint32_t dump_mask(void) {
     case T21:
     case T23:
     case T31:
+    case T40:
         /* Not a selector at all: these are whole 32-bit controller registers
          * and every bit of them is worth printing. */
         return 0xffffffff;

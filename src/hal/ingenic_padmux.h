@@ -6,7 +6,9 @@
  * src/hal/ingenic_padmux.c holds the registers.
  *
  * Regenerate with:
- *   tools/gen_ingenic_padmux.py --soc T31 --spec T31_H.3_gpio_spec.pdf --soc T21 --spec platform.h --soc T23 --spec platform.h
+ *   tools/gen_ingenic_padmux.py --soc T31 --spec T31_H.3_gpio_spec.pdf --soc
+ * T21 --spec platform.h --soc T23 --spec platform.h --soc T40 --spec
+ * t40-pinctrl.dtsi
  */
 
 #ifndef HAL_INGENIC_PADMUX_H
@@ -308,5 +310,119 @@ static const ingenic_pad_t T23_pads[] = {
 };
 
 static const ingenic_soc_t T23_padmux = {T23_pads, 67};
+
+/* T40: 100 pads named, of 128 in the SoC's 4 ports. A pad no source
+ * names is not here at all, which is a different answer from one
+ * whose four functions are all unused.
+ *
+ * From the pinctrl devicetree, one node per routing: a port, a
+ * pin range and a function code, named for the device and the
+ * port it lands on. Device-level, not per wire.
+ *   84b81752457d1a6c  t40-pinctrl.dtsi
+ */
+static const ingenic_pad_t T40_pads[] = {
+    {0, "PA00", {"VIC_PA", "reserved", "reserved", "reserved"}},
+    {1, "PA01", {"VIC_PA", "reserved", "reserved", "reserved"}},
+    {2, "PA02", {"VIC_PA", "reserved", "UART3_PA", "reserved"}},
+    {3, "PA03", {"VIC_PA", "reserved", "UART3_PA", "reserved"}},
+    {4, "PA04", {"VIC_PA", "reserved", "reserved", "reserved"}},
+    {5, "PA05", {"VIC_PA", "reserved", "reserved", "reserved"}},
+    {6, "PA06", {"VIC_PA", "reserved", "UART2_PA", "reserved"}},
+    {7, "PA07", {"VIC_PA", "reserved", "UART2_PA", "reserved"}},
+    {8, "PA08", {"VIC_PA", "reserved", "reserved", "reserved"}},
+    {9, "PA09", {"VIC_PA", "reserved", "reserved", "reserved"}},
+    {10, "PA10", {"VIC_PA", "reserved", "UART0_PA", "reserved"}},
+    {11, "PA11", {"VIC_PA", "reserved", "UART0_PA", "reserved"}},
+    {12, "PA12", {"VIC_PA", "I2C0_PA", "reserved", "reserved"}},
+    {13, "PA13", {"VIC_PA", "I2C0_PA", "reserved", "reserved"}},
+    {14, "PA14", {"VIC_PA", "reserved", "reserved", "reserved"}},
+    {17, "PA17", {"reserved", "I2C1_PA", "UART1_PA", "reserved"}},
+    {18, "PA18", {"reserved", "I2C1_PA", "UART1_PA", "reserved"}},
+    {21, "PA21", {"reserved", "reserved", "I2C3_PA", "reserved"}},
+    {22, "PA22", {"reserved", "reserved", "I2C3_PA", "reserved"}},
+    {23, "PA23", {"reserved", "SFC_PA", "reserved", "reserved"}},
+    {24, "PA24", {"reserved", "SFC_PA", "reserved", "reserved"}},
+    {25, "PA25", {"reserved", "SFC_PA", "reserved", "reserved"}},
+    {26, "PA26", {"reserved", "SFC_PA", "reserved", "reserved"}},
+    {27, "PA27", {"reserved", "SFC_PA", "reserved", "reserved"}},
+    {28, "PA28", {"reserved", "SFC_PA", "reserved", "reserved"}},
+    {32, "PB00", {"MSC0_PB", "reserved", "reserved", "reserved"}},
+    {33, "PB01", {"MSC0_PB", "reserved", "reserved", "reserved"}},
+    {34, "PB02", {"MSC0_PB", "reserved", "reserved", "reserved"}},
+    {35, "PB03", {"MSC0_PB", "reserved", "reserved", "reserved"}},
+    {36, "PB04", {"MSC0_PB", "reserved", "reserved", "reserved"}},
+    {37, "PB05", {"MSC0_PB", "reserved", "reserved", "reserved"}},
+    {39, "PB07", {"MAC0_RMII_P1", "reserved", "reserved", "reserved"}},
+    {47, "PB15", {"MAC0_RMII_P0_NORMAL", "reserved", "reserved", "reserved"}},
+    {48, "PB16", {"MAC0_RMII_P0_NORMAL", "reserved", "reserved", "reserved"}},
+    {49, "PB17", {"MSC1_PB", "I2C1_PB", "reserved", "reserved"}},
+    {50, "PB18", {"MSC1_PB", "I2C1_PB", "reserved", "reserved"}},
+    {51, "PB19", {"MSC1_PB", "reserved", "reserved", "reserved"}},
+    {52, "PB20", {"MSC1_PB", "I2C3_PB1", "reserved", "reserved"}},
+    {53, "PB21", {"MSC1_PB", "I2C3_PB1", "reserved", "reserved"}},
+    {54, "PB22", {"MSC1_PB", "reserved", "reserved", "reserved"}},
+    {55, "PB23", {"UART1_PB", "reserved", "reserved", "reserved"}},
+    {56, "PB24", {"UART1_PB", "reserved", "reserved", "reserved"}},
+    {57, "PB25", {"I2C2_PB", "reserved", "SPI1_PB", "reserved"}},
+    {58, "PB26", {"I2C2_PB", "reserved", "SPI1_PB", "reserved"}},
+    {59, "PB27", {"reserved", "reserved", "SPI1_PB", "reserved"}},
+    {60, "PB28", {"I2C3_PB", "UART2_PB", "SPI1_PB", "reserved"}},
+    {61, "PB29", {"I2C3_PB", "UART2_PB", "SPI1_PB", "reserved"}},
+    {62, "PB30", {"reserved", "reserved", "SPI1_PB", "reserved"}},
+    {66, "PC02", {"UART0_PC", "SPI0_PC", "PWM0_PC", "reserved"}},
+    {67, "PC03", {"UART0_PC", "SPI0_PC", "PWM1_PC", "reserved"}},
+    {68, "PC04", {"UART0_PC", "SPI0_PC", "PWM2_PC", "reserved"}},
+    {69, "PC05", {"UART0_PC", "SPI0_PC", "PWM3_PC", "reserved"}},
+    {70, "PC06", {"UART3_PC", "reserved", "PWM4_PC", "reserved"}},
+    {71, "PC07", {"UART3_PC", "reserved", "PWM5_PC", "reserved"}},
+    {72, "PC08", {"MSC1_PC", "reserved", "SPI1_PC", "reserved"}},
+    {73, "PC09", {"MSC1_PC", "reserved", "SPI1_PC", "reserved"}},
+    {74, "PC10", {"MSC1_PC", "reserved", "SPI1_PC", "reserved"}},
+    {75, "PC11", {"MSC1_PC", "reserved", "SPI1_PC", "reserved"}},
+    {76, "PC12", {"MSC1_PC", "reserved", "SPI1_PC", "reserved"}},
+    {77, "PC13", {"MSC1_PC", "reserved", "SPI1_PC", "reserved"}},
+    {78, "PC14", {"reserved", "UART0_PC1", "I2C2_PC", "reserved"}},
+    {79, "PC15", {"reserved", "UART0_PC1", "I2C2_PC", "reserved"}},
+    {80, "PC16", {"reserved", "reserved", "I2C0_PC", "reserved"}},
+    {81, "PC17", {"reserved", "reserved", "I2C0_PC", "reserved"}},
+    {82, "PC18", {"UART2_PC", "reserved", "reserved", "reserved"}},
+    {83, "PC19", {"UART2_PC", "reserved", "reserved", "reserved"}},
+    {88, "PC24", {"reserved", "reserved", "DMIC_PC", "reserved"}},
+    {89, "PC25", {"reserved", "reserved", "DMIC_PC", "reserved"}},
+    {90, "PC26", {"reserved", "reserved", "DMIC_PC", "reserved"}},
+    {93, "PC29", {"reserved", "CIM2_VIC_MCLK_PC", "reserved", "reserved"}},
+    {94, "PC30", {"reserved", "CIM1_VIC_MCLK_PC", "reserved", "reserved"}},
+    {95, "PC31", {"reserved", "CIM0_VIC_MCLK_PC", "reserved", "reserved"}},
+    {96, "PD00", {"TFT_LCD_PD", "reserved", "SMART_LCD_PD", "reserved"}},
+    {97, "PD01", {"TFT_LCD_PD", "reserved", "SMART_LCD_PD", "reserved"}},
+    {98, "PD02", {"TFT_LCD_PD", "reserved", "SMART_LCD_PD", "reserved"}},
+    {99, "PD03", {"TFT_LCD_PD", "reserved", "SMART_LCD_PD", "reserved"}},
+    {100, "PD04", {"TFT_LCD_PD", "reserved", "SMART_LCD_PD", "reserved"}},
+    {101, "PD05", {"TFT_LCD_PD", "reserved", "SMART_LCD_PD", "reserved"}},
+    {102, "PD06", {"TFT_LCD_PD", "reserved", "SMART_LCD_PD", "reserved"}},
+    {103, "PD07", {"TFT_LCD_PD", "reserved", "SMART_LCD_PD", "reserved"}},
+    {104, "PD08", {"TFT_LCD_PD", "reserved", "SMART_LCD_PD", "reserved"}},
+    {105, "PD09", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {106, "PD10", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {107, "PD11", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {108, "PD12", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {109, "PD13", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {110, "PD14", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {111, "PD15", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {112, "PD16", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {113, "PD17", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {114, "PD18", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {115, "PD19", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {116, "PD20", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {117, "PD21", {"TFT_LCD_PD", "reserved", "reserved", "reserved"}},
+    {118, "PD22", {"UART3_PD", "reserved", "PWM6_PD", "reserved"}},
+    {119, "PD23", {"UART3_PD", "reserved", "PWM7_PD", "reserved"}},
+    {120, "PD24", {"UART3_PD", "reserved", "reserved", "reserved"}},
+    {121, "PD25", {"UART3_PD", "reserved", "reserved", "reserved"}},
+    {122, "PD26", {"I2C1_PD", "reserved", "reserved", "reserved"}},
+    {123, "PD27", {"I2C1_PD", "reserved", "reserved", "reserved"}},
+};
+
+static const ingenic_soc_t T40_padmux = {T40_pads, 100};
 
 #endif /* HAL_INGENIC_PADMUX_H */

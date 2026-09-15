@@ -59,6 +59,7 @@ const padmux_ops_t *padmux_ops(void) {
     case T21:
     case T23:
     case T31:
+    case T40:
         return &PADMUX_OPS_INGENIC;
 #endif
     default:
