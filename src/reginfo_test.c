@@ -11,6 +11,7 @@
 
 #include "chipid.h"
 #include "hal/hisi/hal_hisi.h"
+#include "hal/ingenic.h"
 #include "hal/sstar.h"
 #include "ipchw.h"
 #include "padmux.h"
@@ -236,6 +237,19 @@ static struct {
 static int NREGS;
 static bool IO_FAILS;
 
+/* Which set/clear aliases were poked, so a test can assert that a write went
+ * through the alias rather than over the whole register. */
+static uint32_t ALIASED[64];
+static int NALIASED;
+
+static bool poked(uint32_t addr) {
+    for (int i = 0;
+         i < NALIASED && i < (int)(sizeof(ALIASED) / sizeof(*ALIASED)); i++)
+        if (ALIASED[i] == addr)
+            return true;
+    return false;
+}
+
 static int reg_slot(uint32_t addr) {
     for (int i = 0; i < NREGS; i++)
         if (REGS[i].addr == addr)
@@ -253,9 +267,39 @@ static bool fake_read(uint32_t addr, uint32_t *val, int width) {
     return true;
 }
 
+/* Ingenic gives every port register a set alias at +4 and a clear alias at
+ * +8, and writes only ever go through those -- that is how one pin is changed
+ * without reading the other thirty-one. A fake that stored them as plain
+ * addresses would make the round trip below assert nothing at all. */
+static bool ingenic_alias(uint32_t addr, uint32_t *base, bool *set) {
+    if (addr < 0x10010000u || addr >= 0x10018000u)
+        return false;
+
+    unsigned off = addr & 0xffu;
+    if ((off & 0xfu) != 4 && (off & 0xfu) != 8)
+        return false;
+    if (off >= 0xf0u) /* PZGID2LD and friends are plain stores */
+        return false;
+
+    *set = (off & 0xfu) == 4;
+    *base = addr - ((off & 0xfu) == 4 ? 4 : 8);
+    return true;
+}
+
 static bool fake_write(uint32_t addr, uint32_t val, int width) {
     if (IO_FAILS)
         return false;
+
+    uint32_t base;
+    bool set;
+    if (ingenic_alias(addr, &base, &set)) {
+        uint32_t cur = 0;
+        int j = reg_slot(base);
+        if (j >= 0)
+            cur = REGS[j].val;
+        ALIASED[NALIASED++ % (int)(sizeof(ALIASED) / sizeof(*ALIASED))] = addr;
+        return fake_write(base, set ? cur | val : cur & ~val, 32);
+    }
 
     int i = reg_slot(addr);
     if (i < 0) {
@@ -275,6 +319,7 @@ static const padmux_io_t FAKE_IO = {fake_read, fake_write};
 
 static void regs_reset(void) {
     NREGS = 0;
+    NALIASED = 0;
     IO_FAILS = false;
 }
 
@@ -408,6 +453,81 @@ static void test_sstar(void) {
 
     CHECK(ipchw_padmux_set(23, "PWM0_MODE_4") == IPCHW_PADMUX_NO_FUNC);
     CHECK(ipchw_padmux_get(4000, &r) == IPCHW_PADMUX_NO_PAD);
+}
+#endif
+
+#ifdef IPCHW_PADMUX_INGENIC
+static void test_ingenic(void) {
+    puts("Ingenic: four functions a pad has, and no field that selects them");
+    as_chip(T31, "T31");
+
+    /* PB25 is pad 32 + 25. The spec gives it smb1_sda on FUNCTION0 and
+     * ssi1_ce0_o on FUNCTION1 -- SMB is what Ingenic calls I2C and SSI is
+     * what it calls SPI, which is exactly why func_name is not portable. */
+    ipchw_padmux_t rows[8];
+    int n = ipchw_padmux_by_pad(57, rows, 8);
+    CHECK(n == 3); /* GPIO, SMB1_SDA, SSI1_CE0 -- FUNCTION2 and 3 are unused */
+    CHECK((rows[0].flags & IPCHW_PADMUX_F_GPIO) != 0);
+    CHECK(rows[0].gpio_name && !strcmp(rows[0].gpio_name, "PB25"));
+    if (n >= 2) {
+        CHECK(!strcmp(rows[1].func_name, "SMB1_SDA"));
+        CHECK(rows[1].func == 0);
+        /* Nothing a caller can write: four bits in four registers. */
+        CHECK(rows[1].address == IPCHW_PADMUX_ADDR_NONE);
+        CHECK(rows[1].func_mask == 0);
+        CHECK((rows[1].flags & IPCHW_PADMUX_F_RMW) == 0);
+        CHECK(rows[1].gpio_pad == 57);
+    }
+
+    /* A pad the package does not bring out is not in the table at all, which
+     * is a different answer from a pad whose functions are all unused. */
+    ipchw_padmux_t r;
+    CHECK(ipchw_padmux_get(44, &r) == IPCHW_PADMUX_NO_PAD); /* PB12 */
+
+    puts("Ingenic: the four bits are staged and committed together");
+    regs_reset();
+    /* INT 0, MSK 0, PAT1 0, PAT0 1 on bit 25 of port B is FUNCTION1. */
+    fake_write(0x10011040, 1u << 25, 32); /* PBPAT0 */
+    CHECK(ipchw_padmux_get(57, &r) == 1);
+    CHECK(!strcmp(r.func_name, "SSI1_CE0"));
+
+    regs_reset();
+    CHECK(ipchw_padmux_set(57, "SMB1_SDA") == 0);
+    /* Every write went through a set or clear alias -- one pin's bit, never
+     * the other thirty-one -- and the group number committed them. */
+    CHECK(poked(0x10011018));       /* PBINTC */
+    CHECK(poked(0x10011028));       /* PBMSKC */
+    CHECK(poked(0x10011038));       /* PBPAT1C */
+    CHECK(poked(0x10011048));       /* PBPAT0C */
+    CHECK(reg_of(0x100110F0) == 1); /* PZGID2LD = port B */
+    CHECK(ipchw_padmux_get(57, &r) == 1);
+    CHECK(!strcmp(r.func_name, "SMB1_SDA"));
+
+    /* The neighbours of the pin are not disturbed. */
+    regs_reset();
+    fake_write(0x10011030, 0xffffffffu & ~(1u << 25), 32); /* PBPAT1 */
+    CHECK(ipchw_padmux_set(57, "SMB1_SDA") == 0);
+    CHECK(reg_of(0x10011030) == (0xffffffffu & ~(1u << 25)));
+
+    regs_reset();
+    CHECK(ipchw_padmux_set(57, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0x10011020) == 1u << 25); /* PBMSK: the GPIO block's */
+    CHECK(reg_of(0x10011030) == 1u << 25); /* PBPAT1: an input */
+    CHECK(reg_of(0x10011040) == 0);        /* PBPAT0 */
+    CHECK(ipchw_padmux_get(57, &r) == 1);
+    CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
+
+    /* A pad already held as a GPIO output keeps the level it was driving:
+     * direction and level are the same nibble as the mux here. */
+    regs_reset();
+    fake_write(0x10011020, 1u << 25, 32); /* PBMSK: already GPIO */
+    fake_write(0x10011040, 1u << 25, 32); /* PBPAT0: driving high */
+    CHECK(ipchw_padmux_set(57, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0x10011040) == 1u << 25); /* still high */
+    CHECK(reg_of(0x10011030) == 0);        /* still an output */
+
+    CHECK(ipchw_padmux_set(57, "PWM0") == IPCHW_PADMUX_NO_FUNC);
+    CHECK(ipchw_padmux_set(57, "reserved") == IPCHW_PADMUX_NO_FUNC);
 }
 #endif
 
@@ -571,14 +691,31 @@ static void test_table_integrity(void) {
         int generation;
         const char *name;
     } chips[] = {
-        {HISI_V1, "3518EV100"},  {HISI_V2, "3516CV200"},
-        {HISI_V2, "3518EV200"},  {HISI_V2A, "3516AV100"},
-        {HISI_V3, "3516CV300"},  {HISI_V3A, "3519V101"},
-        {HISI_V4, "3516EV200"},  {HISI_V4, "3516EV300"},
-        {HISI_V4, "3518EV300"},  {HISI_V4, "3516DV200"},
-        {HISI_V4A, "3516CV500"}, {HISI_V4A, "3516AV300"},
-        {HISI_OT, "3516CV610"},  {HISI_OT, "3519DV500"},
-        {HISI_3536C, "3536CV100"}, {HISI_3536D, "3536DV100"},
+        {HISI_V1, "3518EV100"},
+        {HISI_V2, "3516CV200"},
+        {HISI_V2, "3518EV200"},
+        {HISI_V2A, "3516AV100"},
+        {HISI_V3, "3516CV300"},
+        {HISI_V3A, "3519V101"},
+        {HISI_V4, "3516EV200"},
+        {HISI_V4, "3516EV300"},
+        {HISI_V4, "3518EV300"},
+        {HISI_V4, "3516DV200"},
+        {HISI_V4A, "3516CV500"},
+        {HISI_V4A, "3516AV300"},
+        {HISI_OT, "3516CV610"},
+        {HISI_OT, "3519DV500"},
+        {HISI_3536C, "3536CV100"},
+        {HISI_3536D, "3536DV100"},
+#ifdef IPCHW_PADMUX_SSTAR
+        {INFINITY6, "SSC32X"},
+        {INFINITY6B, "SSC33X"},
+        {INFINITY6E, "SSC33X"},
+        {INFINITY6C, "SSC37X"},
+#endif
+#ifdef IPCHW_PADMUX_INGENIC
+        {T31, "T31"},
+#endif
     };
 
     for (size_t c = 0; c < sizeof(chips) / sizeof(*chips); c++) {
@@ -625,6 +762,9 @@ int main(void) {
 #endif
 #ifdef IPCHW_PADMUX_SSTAR
     test_sstar();
+#endif
+#ifdef IPCHW_PADMUX_INGENIC
+    test_ingenic();
 #endif
     test_refusals_do_not_exit();
     test_table_integrity();
