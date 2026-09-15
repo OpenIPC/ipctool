@@ -2811,7 +2811,12 @@ static const muxctrl_reg_t **dump_regs_by_chip(void) {
         return I6E_regs;
 #endif
 #ifdef IPCHW_VENDOR_INGENIC
+    case T21:
+    case T23:
     case T31:
+        /* One list for all three: the GPIO controller is the same IP at the
+         * same offsets. T21 has six ports where these two have three, so its
+         * dump stops after port C -- `reginfo --pads` covers the rest. */
         return T31_regs;
 #endif
     default:
