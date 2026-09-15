@@ -101,9 +101,16 @@ def normalise(name):
 FUNCS = {"GPIO_FUNC_0": 0, "GPIO_FUNC_1": 1, "GPIO_FUNC_2": 2, "GPIO_FUNC_3": 3}
 
 # What the board file got wrong, collected so the generated header can say so
-# rather than the tool quietly deciding.
+# rather than the tool quietly deciding. Reset per SoC, by both parsers.
 CONFLICTS = []
 OVERFLOWS = []
+
+# A slot two incompatible claims fought over. It has to be distinct from the
+# "nothing here" marker, or the next claim on that pad fills it back in and
+# the table advertises a function the header calls unknowable. Emitted as
+# "reserved", like any other hole.
+EMPTY = "reserved"
+CONFLICTED = "\0conflicted"
 
 # The macro that wraps each claim, and the claim. The macro identifier is the
 # name used here rather than the .name inside it, because .name is not unique:
@@ -136,7 +143,9 @@ def merge_names(have, want, where, func):
     refuse only when they agree on nothing -- that would be two different
     peripherals claiming one function code, which the silicon cannot do.
     """
-    if have == "reserved" or have == want:
+    if have == CONFLICTED:
+        return have  # already fought over; nothing later gets to win it
+    if have == EMPTY or have == want:
         return want
 
     keep = 0
@@ -154,7 +163,7 @@ def merge_names(have, want, where, func):
         # them and there is no way to tell which. Lose the slot rather than
         # pick, and say so.
         CONFLICTS.append("%s function %d: %s vs %s" % (where, func, have, want))
-        return "reserved"
+        return CONFLICTED
     return stem
 
 
@@ -213,7 +222,7 @@ def parse_platform(text, soc):
                 continue
             pad = (ord(port) - ord("A")) * PINS_PER_PORT + pin
             slot = pads.setdefault(pad, ["P%s%02d" % (port, pin),
-                                         ["reserved"] * 4])
+                                         [EMPTY] * 4])
             have = slot[1][FUNCS[func]]
             slot[1][FUNCS[func]] = merge_names(have, normalise(name),
                                                "P%s%02d" % (port, pin),
@@ -221,11 +230,14 @@ def parse_platform(text, soc):
 
     if not pads:
         raise Refusal("found no devio claims -- is this a platform.h?")
-    return {pad: (v[0], v[1]) for pad, v in pads.items()}
+    return {pad: (v[0], [EMPTY if f == CONFLICTED else f for f in v[1]])
+            for pad, v in pads.items()}
 
 
 def parse(text, soc):
     _, nports, _ = SOCS[soc]
+    del CONFLICTS[:]
+    del OVERFLOWS[:]
     pads = {}
 
     # full-width parentheses appear in a few rows of the T31 spec

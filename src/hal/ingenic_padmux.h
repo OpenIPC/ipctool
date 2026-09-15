@@ -203,7 +203,7 @@ static const ingenic_pad_t T21_pads[] = {
     {120, "PD24", {"DPU_PORTD_TFT_18BIT", "DPU_PORTD_SLCD_16BIT", "reserved", "reserved"}},
     {121, "PD25", {"DPU_PORTD_TFT_18BIT", "DPU_PORTD_SLCD_16BIT", "reserved", "reserved"}},
     {122, "PD26", {"DPU_PORTD_TFT_18BIT", "MII_PORTBDF", "reserved", "reserved"}},
-    {123, "PD27", {"DPU_PORTD_TFT_18BIT", "DPU_PORTD_SLCD", "reserved", "reserved"}},
+    {123, "PD27", {"DPU_PORTD_TFT_18BIT", "reserved", "reserved", "reserved"}},
     {124, "PD28", {"reserved", "MII_PORTBDF", "reserved", "reserved"}},
     {125, "PD29", {"reserved", "MII_PORTBDF", "reserved", "reserved"}},
     {164, "PF04", {"MII_PORTBDF", "reserved", "reserved", "reserved"}},
