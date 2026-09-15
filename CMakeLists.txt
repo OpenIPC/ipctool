@@ -112,6 +112,8 @@ set(COMMON_LIB_SRC_BASE
     src/hwinfo.c
     src/hwinfo.h
     src/mmap.h
+    src/padmux.c
+    src/padmux.h
     src/reginfo.c
     src/reginfo.h
     src/sensors.c

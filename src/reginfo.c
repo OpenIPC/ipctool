@@ -9,6 +9,7 @@
 #ifdef IPCHW_VENDOR_SSTAR
 #include "hal/sstar_reginfo.h"
 #endif
+#include "padmux.h"
 #include "tools.h"
 
 #include "ipchw.h"
@@ -2591,8 +2592,15 @@ static const muxctrl_reg_t **regs_by_chip() {
 }
 
 /* ------------------------------------------------------------------------
- * The public pad-mux lookups. Contract and caveats are on the prototypes in
- * include/ipchw.h; this half is just the walk.
+ * The HiSilicon and Goke backend.
+ *
+ * One register per pad, a selector field in the low nibble, and funcs[] above
+ * indexed by the value in it. That is the shape the whole API was drawn
+ * around, and it is the only one of the three vendors that has it -- see
+ * src/padmux.h for what the other two do instead and for the seam this plugs
+ * into. The contract a caller sees is on the prototypes in include/ipchw.h.
+ *
+ * Not one table row moved to get here.
  * ---------------------------------------------------------------------- */
 
 /* "GPIO5_2" -> 42, the running-integer form every consumer of this speaks:
@@ -2632,9 +2640,9 @@ static void row_gpio(const muxctrl_reg_t *reg, const char **name, int *pad,
     }
 }
 
-/* One walk behind all three entry points. `match` decides which functions of
- * a row are wanted (NULL means every one of them) and `pad` optionally
- * narrows to the rows that carry that GPIO (-1 means every row).
+/* `match` decides which functions of a row are wanted (NULL means every one
+ * of them) and `pad` optionally narrows to the rows that carry that GPIO (-1
+ * means every row).
  *
  * Both filters live here rather than in a post-pass over the results because
  * a whole table is far more rows than any caller wants to hold: the EV300
@@ -2643,18 +2651,8 @@ static void row_gpio(const muxctrl_reg_t *reg, const char **name, int *pad,
  * Counting continues past `max` on purpose: the return value is the number of
  * matches, not the number written, so a caller that guessed its array too
  * small learns the right size instead of silently losing rows. */
-typedef bool (*padmux_match_fn)(const char *func_name, const void *arg);
-
-static int padmux_walk(padmux_match_fn match, const void *arg, int pad,
-                       ipchw_padmux_t *out, int max) {
-    if (max < 0 || (max > 0 && out == NULL))
-        return IPCHW_PADMUX_BAD_ARG;
-
-    if (!chip_generation && getchipname() == NULL)
-        return IPCHW_PADMUX_NO_CHIP;
-    if (!chip_generation)
-        return IPCHW_PADMUX_NO_CHIP;
-
+static int hisi_walk(padmux_match_fn match, const void *arg, int pad,
+                     ipchw_padmux_t *out, int max) {
     const muxctrl_reg_t **regs = regs_by_chip();
     if (regs == NULL)
         return IPCHW_PADMUX_NO_TABLE;
@@ -2688,6 +2686,11 @@ static int padmux_walk(padmux_match_fn match, const void *arg, int pad,
                     .gpio_name = gpio_name,
                     .gpio_pad = gpio_pad,
                     .gpio_func = gpio_func,
+                    /* One register, one field, every alternative of the pad
+                     * in it: the two strongest promises the API can make, and
+                     * only this vendor can make them. */
+                    .flags = IPCHW_PADMUX_F_RMW | IPCHW_PADMUX_F_SHARED_REG |
+                             (i == gpio_func ? IPCHW_PADMUX_F_GPIO : 0),
                 };
             }
             found++;
@@ -2697,38 +2700,10 @@ static int padmux_walk(padmux_match_fn match, const void *arg, int pad,
     return found;
 }
 
-static bool match_exact(const char *func_name, const void *arg) {
-    return !strcmp(func_name, (const char *)arg);
-}
-
-static bool match_prefix(const char *func_name, const void *arg) {
-    const char *prefix = arg;
-
-    return !strncmp(func_name, prefix, strlen(prefix));
-}
-
-int ipchw_padmux_by_func(const char *func_name, ipchw_padmux_t *out, int max) {
-    if (func_name == NULL || !*func_name)
-        return IPCHW_PADMUX_BAD_ARG;
-
-    return padmux_walk(match_exact, func_name, -1, out, max);
-}
-
-int ipchw_padmux_by_prefix(const char *prefix, ipchw_padmux_t *out, int max) {
-    if (prefix == NULL)
-        return IPCHW_PADMUX_BAD_ARG;
-
-    /* An empty prefix is every function, which is how a caller walks the
-     * whole table -- an integrity sweep, or a "what can this pad do" report. */
-    return padmux_walk(match_prefix, prefix, -1, out, max);
-}
-
-int ipchw_padmux_by_pad(int pad, ipchw_padmux_t *out, int max) {
-    if (pad < 0)
-        return IPCHW_PADMUX_BAD_ARG;
-
-    return padmux_walk(NULL, NULL, pad, out, max);
-}
+const padmux_ops_t PADMUX_OPS_HISI = {
+    .name = "hisi",
+    .walk = hisi_walk,
+};
 
 /* Everything below is the command-line half of ipctool: it prints, it parses
  * argv, and it calls print_usage() out of main.c. STANDALONE_LIBRARY builds
