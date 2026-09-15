@@ -8,7 +8,6 @@
 
 #include "ipchw.h"
 
-#include <assert.h>
 #include <dirent.h>
 #include <ctype.h>
 #include <getopt.h>
@@ -2869,7 +2868,7 @@ static int dump_regs(bool script_mode) {
 static int dump_pads(void) {
     int n = ipchw_padmux_by_prefix("", NULL, 0);
     if (n < 0)
-        return padmux_refuse(n, "table", NULL);
+        return padmux_refuse(n, "this SoC", NULL);
     if (n == 0)
         return EXIT_SUCCESS;
 
@@ -3117,7 +3116,8 @@ static int padmux_refuse(int code, const char *pad_spec, const char *func) {
         fprintf(stderr, "GPIO %s is not found\n", pad_spec);
         break;
     case IPCHW_PADMUX_NO_FUNC:
-        fprintf(stderr, "GPIO %s cannot carry %s\n", pad_spec, func);
+        fprintf(stderr, "GPIO %s cannot carry %s\n", pad_spec,
+                func ? func : "that");
         break;
     case IPCHW_PADMUX_IO:
         fprintf(stderr, "Cannot reach the pad-mux register of GPIO %s\n",
