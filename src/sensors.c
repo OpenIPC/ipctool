@@ -551,6 +551,7 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     case 0x2330:
         strcpy(ctx->sensor_id, "SC307H");
+        return true;
     case 0x3035:
         break;
     case 0x3235:
@@ -675,10 +676,10 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0xda23:
         // XM 530
         res = 0x1345;
-        return true;
+        break;
     case 0xdc42:
         res = 0x4336;
-        return true;
+        break;
     case 0xda4d:
         strcpy(ctx->sensor_id, "SC1346");
         return true;

@@ -361,6 +361,16 @@ if(NOT ONLY_LIBRARY)
   target_include_directories(reginfo_test PRIVATE include src)
   target_link_libraries(reginfo_test ipchw)
 
+  # Includes sensors.c rather than linking it, to reach the static probes,
+  # so it must not also link ipchw. hal/common.c supplies the bus hooks the
+  # mock installs; getchipvendor()/getchipname() are stubbed in the test,
+  # which is what keeps chipid.c and every vendor HAL out of it.
+  add_executable(sensors_test src/sensors_test.c src/hal/common.c src/tools.c
+                              ${VERSION_OBJ})
+  target_include_directories(sensors_test PRIVATE include src)
+  target_compile_definitions(sensors_test PRIVATE STANDALONE_LIBRARY)
+  target_link_libraries(sensors_test m Threads::Threads)
+
   # Parsing only: longse.c itself pulls in cJSON and the HAL, and the part
   # worth testing off a camera is the version extraction, which is standalone.
   add_executable(longse_test src/boards/longse_test.c src/boards/longse.c
