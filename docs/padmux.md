@@ -130,7 +130,9 @@ Still open:
 - **`DV500`** (Hi3519D V500 and Hi3516D V500) is worse: 131 registers in the
   workbook against 102 rows, and many of the rows it does have carry
   `"reserved"` where the document names a real function, GPIO names included.
-  It needs re-entering from the document rather than patching.
+  It needs re-entering from the document rather than patching. Two different
+  releases of that workbook give the same verdict, so it is the table that is
+  short and not the document that is stale.
 `AV200` serves four SoCs and there are workbooks for all of them, in two
 places that do not look like each other:
 
