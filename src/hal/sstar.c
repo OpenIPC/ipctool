@@ -122,8 +122,18 @@ static bool sstar_detect_brom_tag(uint32_t addr, char *buf) {
     return false;
 }
 
-static int sstar_open_sensor_fd() {
-    return universal_open_sensor_fd("/dev/i2c-1");
+/* Honours the adapter number rather than hardcoding the one SigmaStar
+ * normally wires the sensor to. Two things were wrong while it did not: the
+ * report printed `bus: 0` for a sensor answering on /dev/i2c-1, because the
+ * bus field comes from i2c_adapter_nr and nothing kept the two in step; and
+ * the fall-through sweep in getsensorid() re-opened the same node on every
+ * iteration, so a sensor on any other bus could never be found. */
+static int sstar_open_sensor_fd(int adapter_nr) {
+    char adapter_name[FILENAME_MAX];
+
+    snprintf(adapter_name, sizeof(adapter_name), "/dev/i2c-%d", adapter_nr);
+
+    return universal_open_sensor_fd(adapter_name);
 }
 
 static void sstar_hal_cleanup() {
@@ -178,6 +188,9 @@ static void sstar_chip_properties(cJSON *j_inner) {
 #endif
 
 void sstar_setup_hal() {
+    /* The bus SigmaStar wires the sensor to, and now the value the report
+     * prints, since the two are finally the same number. */
+    i2c_adapter_nr = 1;
     open_i2c_sensor_fd = sstar_open_sensor_fd;
     possible_i2c_addrs = sstar_possible_i2c_addrs;
     hal_cleanup = sstar_hal_cleanup;
