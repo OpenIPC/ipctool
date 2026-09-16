@@ -107,11 +107,15 @@ several banks needs no special handling.
 | `DV300` | Hi3516D V300 | 113 | agrees | workbook, EN + CN |
 | `RCV100` | Hi3536C V100 | 77 | agrees | workbook, EN + CN |
 | `DV100` | Hi3536D V100 | 47 | agrees | workbook, EN + CN |
-| `AV200` | Hi3519 V101, Hi3559/Hi3556 V100, Hi3516A V200 | 106 | agrees, see below | workbook, EN + CN |
+| `AV200` | Hi3519 V101, Hi3559/Hi3556 V100, Hi3516A V200 | 106 | **91 of 106**; the checker exits non-zero | workbook, EN + CN |
 
-Every one was run against two independent editions -- two data sheet
-revisions, or an English and a Chinese workbook, or two SDK releases -- and
-they agree on every selector value. The only difference anywhere is a name
+Every row above **except `AV200`** was run against two independent editions --
+two data sheet revisions, or an English and a Chinese workbook, or two SDK
+releases -- and agrees on every selector value, with the checker exiting 0.
+`AV200` does not, and the row says so: the only workbook covers two of its
+four SoCs and 15 rows are unsettled, so `check_hisi_padmux.py` reports them
+and exits 1. Read that row as "no defect found", not as "verified". Among
+the ones that do agree, the only difference anywhere is a name
 (`muxctrl_reg93` on AV100 is `RMII_CLK` in SPC050 and
 `RMII_CLK_OUT/MII_TX_CLK` in SPC080, and the table carries the newer
 spelling). `CV300`'s count is 66 against 65 registers because
@@ -130,17 +134,24 @@ Still open:
   workbook against 102 rows, and many of the rows it does have carry
   `"reserved"` where the document names a real function, GPIO names included.
   It needs re-entering from the document rather than patching.
-`AV200` serves four SoCs and the only workbook for any of them covers
-Hi3559 V100 and Hi3556 V100. All 106 registers are there at the same
-addresses, and 91 rows match outright. The other 15 differ in one direction
-only: the table names an **Ethernet** function -- `RGMII_*`, `RMII_CLK`,
-`MDIO`, `EPHY_CLK`, `EPHY_RSTN` -- where that document has nothing or
-`reserved`. Hi3559/Hi3556 V100 are *HD Mobile Camera* parts and do not bring
-Ethernet out; Hi3519 V101 and Hi3516A V200 do, and are what the table was
-entered from. So every function this document does describe agrees: no
-missing hole, no rename, no wrong address. `Hi3519V101_PINOUT_CN.xls` would
-settle the remaining 15, and is in none of the releases here -- referenced by
-the user guide, not shipped.
+**`AV200` is partly verified, and the 15 unsettled rows are not a formality.**
+It serves four SoCs and the only workbook for any of them covers Hi3559 V100
+and Hi3556 V100. All 106 registers are there at the same addresses and 91
+rows match outright. The other 15 differ in one direction only: the table
+names an **Ethernet** function -- `RGMII_*`, `RMII_CLK`, `MDIO`, `EPHY_CLK`,
+`EPHY_RSTN` -- where that document has nothing or `reserved`.
+
+The likely reading is that Hi3559/Hi3556 V100 are *HD Mobile Camera* parts
+that do not bring Ethernet out, while Hi3519 V101 and Hi3516A V200 do and are
+what the table was entered from -- a part-variant difference rather than an
+error. It is a reading, not a verification: nothing here rules out a hole
+having been dropped inside those 15 rows the same way 19 were dropped from
+each V2 table, because the document that would show it describes a part that
+has no such pins. Treat Ethernet selectors on this family as unconfirmed.
+
+`Hi3519V101_PINOUT_CN.xls` settles it. Its own user guide names it and no
+release here ships it; note the `.xls`, which `tools/xlsx_min.py` cannot read
+without converting first.
 
 SDK source is no substitute for either: it shows the values a driver
 *writes*, and a hole is exactly the value nobody writes.
