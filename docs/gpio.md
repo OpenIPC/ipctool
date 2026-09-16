@@ -76,9 +76,23 @@ Three reasons, in the order worth checking:
 exits normally, so a block-buffered stdout was never flushed and a redirected
 capture came out empty.
 
-### Finding the IR-cut pins
+## Identifying what a pad is for
 
-Start with what ipctool already guesses. The plain report carries a
+The method is the same for every role, and it is worth stating once: **make the
+firmware drive the pad and watch, rather than driving it yourself to see what
+happens.** Running `gpio scan` while you exercise a feature from the web UI
+tells you which pads that feature owns, and it does so without writing to a pad
+whose function you have not confirmed yet. Driving first is how people discover
+what a pad was for by breaking it.
+
+Before writing to any pad you have identified, check two things in the scan's
+baseline table: that `Dir:` says what you expect, and that the pad is not
+printed as `x` (not muxed to GPIO — `gpio mux <pad>` will say what it actually
+carries).
+
+### IR-cut filter
+
+Start with ipctool's own guess. The plain report carries a
 `possible-IR-cut-GPIO` line in the `board:` section:
 
 ```yaml
@@ -87,15 +101,50 @@ board:
   possible-IR-cut-GPIO: 10,11
 ```
 
-That is a heuristic — outputs in a group the streamer has mapped, or otherwise
-outputs sitting low — and IR-cut is nearly always a *pair* of pads, driven in
-opposite directions to flip the filter. To confirm a candidate pair, run
-`gpio scan` and switch the camera between day and night mode in the web UI:
-whatever the firmware drives will appear as two lines that move together.
+The heuristic behind it picks one of two rules, never both. If it can tell
+which GPIO groups the streamer has mapped, it reports **only** outputs in those
+groups, and only from groups with at most two outputs in total — a dedicated
+IR-cut group usually has one or two pins. Outputs sitting low elsewhere are not
+reported in that case. Only when no streamer group is known does it fall back
+to reporting every output currently sitting low, which is a much broader guess.
+So a short list means the first rule fired and is worth trusting; a long one
+means the second did.
 
-That is the reliable direction of travel. Driving a suspected pad with
-`gpio set` to see what happens works too, but you are then writing to a pad
-whose function you have not confirmed — see the warning below.
+IR-cut is nearly always a *pair* of pads, driven in opposite directions to flip
+the filter between its two positions. To confirm a pair, run `gpio scan` and
+switch the camera between day and night mode in the web UI. Both pads change in
+the same sample, in opposite directions.
+
+### IR illuminator
+
+A single output, unlike IR-cut, and it usually moves in the same moment as the
+IR-cut pair — night mode turns the LEDs on and pulls the filter at once. Run
+`gpio scan` across a day/night transition and look for the odd pad out: two
+pads flipping in opposite directions are the filter, a third changing with them
+is the illuminator.
+
+If your firmware separates the two — some expose an "IR light" toggle of its
+own — use that instead, since it moves one pad at a time and removes the
+ambiguity entirely. Where the illuminator is driven by PWM for brightness
+control rather than switched on and off, it will not show up in `gpio scan` at
+all: the pad is muxed to a PWM function, prints as `x`, and `ipctool reginfo`
+is where you will find it.
+
+### Light sensor (SDC / CDS input)
+
+This is the one role that is an **input**, which changes the method: the pad is
+driven by the photoresistor circuit rather than by the SoC, so you do not need
+the firmware's cooperation at all. Run `gpio scan` and cover the sensor with
+your hand, or shine a torch at it. Hold it for a second — comfortably longer
+than the 100 ms poll — and watch for a pad whose `Dir:` reads `Input`
+flipping. That is safe to stimulate precisely because it is an input.
+
+Two things to expect. Many boards read ambient light through an ADC channel
+rather than a GPIO (`LSADC_CH0` and friends on HiSilicon), in which case no pad
+will ever change and `gpio scan` is the wrong tool — check `ipctool reginfo`
+for an ADC function instead. And on boards that do use a digital input, the
+threshold is in hardware, so you may need near-darkness rather than shade
+before the bit moves.
 
 ### Numbering in other tools
 
