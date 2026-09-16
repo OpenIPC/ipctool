@@ -58,6 +58,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Check the pipeline suite is still wired in
+        # Deliberately NOT inside test_pipeline.sh: a check that only runs
+        # once the thing it protects has already run protects nothing.
+        # It lives in this job rather than test-extraction-pipeline for the
+        # same reason -- both jobs are required, so dropping that job's step
+        # leaves this one still failing.
+        # Matches a run: line and nothing else. A bare grep for the script
+        # name finds this very step's own text and can never fail.
+        run: |
+          grep -qE '^[[:space:]]*run:[[:space:]]*tools/test_pipeline\.sh[[:space:]]*$' \
+              .github/workflows/pr-build-check.yml \
+            || { echo "no job in this workflow runs tools/test_pipeline.sh"; exit 1; }
       - name: Build and run
         run: |
           cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release

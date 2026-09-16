@@ -334,20 +334,26 @@ def main():
     ap.add_argument("--selftest", action="store_true",
                     help="check the parsing against a built-in fixture and "
                          "exit; needs no data sheet, so CI can run it")
-    ap.add_argument("--datasheet", required=True)
-    ap.add_argument("--prefix", required=True,
-                    help="MUXCTRL row prefix, e.g. EV20X_")
-    ap.add_argument("--base", required=True,
+    # Not required=True: --selftest is a complete invocation on its own, and
+    # argparse has to see the whole command line either way so that a typo
+    # next to --selftest is an error rather than a pass.
+    ap.add_argument("--datasheet")
+    ap.add_argument("--prefix", help="MUXCTRL row prefix, e.g. EV20X_")
+    ap.add_argument("--base",
                     help="physical address of muxctrl_reg0, e.g. 0x200f0000")
     ap.add_argument("--soc", help="which chapter, when the document has several")
     ap.add_argument("--reginfo", default="src/reginfo.c")
     ap.add_argument("--fix", action="store_true",
                     help="rewrite the mismatched rows in place")
-    # --selftest stands alone: it parses a fixture, not a document
-    if "--selftest" in sys.argv[1:]:
-        return selftest()
-
     args = ap.parse_args()
+
+    # --selftest stands alone: it parses a fixture, not a document
+    if args.selftest:
+        return selftest()
+    missing = [n for n in ("datasheet", "prefix", "base")
+               if getattr(args, n) is None]
+    if missing:
+        ap.error("--%s is required" % ", --".join(missing))
 
     lines = as_text(args.datasheet).splitlines()
     found = chapters(lines)

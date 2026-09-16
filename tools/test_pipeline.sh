@@ -10,20 +10,6 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-self=tools/test_pipeline.sh
-
-# A test nothing runs is not a test, and there are two quiet ways for that to
-# happen here: a tool grows a --selftest that this script never invokes, or
-# this script stops being wired into the workflow. Check both rather than
-# assume them -- it is the same class of mistake the selftests exist to catch.
-for tool in tools/*.py; do
-    grep -q -- '"--selftest"' "$tool" || continue
-    grep -q -- "$tool --selftest" "$self" || {
-        echo "$tool declares --selftest but $self never runs it"; exit 1; }
-done
-grep -rql -- "$self" .github/workflows/ >/dev/null || {
-    echo "no CI workflow runs $self"; exit 1; }
-
 tmp=$(mktemp -d)
 trap "rm -rf $tmp" EXIT
 
@@ -153,11 +139,22 @@ gcc -Wall -Wextra -fsyntax-only "$tmp/sony.c"
 grep -q '^void sonyimx_linear_init' "$tmp/sony.c" \
     || { echo "sony scaffold missing linear_init"; exit 1; }
 
-# The pad-mux generators parse vendor sources that are not in this repo, so
-# --verify needs an SDK and CI cannot run it. --selftest runs the same parsing
-# against a built-in fixture, which is what guards the shapes that have gone
-# wrong before -- a nested register offset among them.
-python3 tools/gen_sstar_padmux.py --selftest
-python3 tools/check_hisi_padmux.py --selftest
+# The pad-mux tools parse vendor sources and data sheets that are not in this
+# repo, so their --verify needs something CI does not have. --selftest runs
+# the same parsing against a built-in fixture, which is what guards the shapes
+# that have gone wrong before.
+#
+# Discovered by ASKING each tool, not by grepping its source: how the option
+# is spelled in the file is an implementation detail, and a grep for an
+# invocation is equally satisfied by a comment. Running whatever turns up is
+# the only form of this check that cannot be met by text that never executes.
+found=0
+for tool in tools/*.py; do
+    python3 "$tool" --help 2>/dev/null | grep -q -- '--selftest' || continue
+    echo "  selftest: $tool"
+    python3 "$tool" --selftest
+    found=$((found + 1))
+done
+[ "$found" -gt 0 ] || { echo "no tool offers --selftest; has one been lost?"; exit 1; }
 
 echo "OK: pipeline test passed"
