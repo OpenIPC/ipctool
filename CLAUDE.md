@@ -93,6 +93,11 @@ CMake knobs worth knowing:
   through one selector value, no pad number in two places) and then sets every
   function of every pad and reads it back. It links the real `libipchw`, which
   is what proves the lookups are exported and not merely present.
+- `./build/longse_test`: the `_W_` version extraction in
+  `src/boards/longse.c`, which is the only check that code gets -- no one on
+  the project has a Longse camera. Note it uses a local `CHECK` macro rather
+  than `assert()`: the release flags carry `-DNDEBUG`, so an `assert()`-based
+  test compiles away to nothing and passes unconditionally.
 - `tools/test_pipeline.sh`: hardware-free end-to-end check of the sensor
   driver extraction pipeline (`trace_segment.py` -> `trace_to_driver.py` ->
   `gcc -fsyntax-only` -> `trace_diff.py`), plus

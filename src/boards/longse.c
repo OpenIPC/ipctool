@@ -26,6 +26,20 @@ bool is_longse_board() {
  * and the sensor ipctool has already detected for itself, and guessing at the
  * feature code would be inventing meaning. The whole string is reported as
  * `firmware-id` so the part we do not parse is still there to read. */
+/* Split out so it can be tested without a Longse camera, which nobody on the
+ * project has. Returns the version that follows the `_W_` marker, or NULL when
+ * the string carries no marker or nothing after it. */
+const char *longse_version_of(const char *sofvar) {
+    if (!sofvar)
+        return NULL;
+
+    const char *ver = strstr(sofvar, "_W_");
+    if (!ver || !*(ver + 3))
+        return NULL;
+
+    return ver + 3;
+}
+
 bool gather_longse_board_info(cJSON *j_inner) {
     char buf[256];
 
@@ -35,9 +49,9 @@ bool gather_longse_board_info(cJSON *j_inner) {
     ADD_PARAM("vendor", "Longse");
     ADD_PARAM("firmware-id", buf);
 
-    const char *ver = strstr(buf, "_W_");
-    if (ver && *(ver + 3)) {
-        ADD_PARAM("version", ver + 3);
+    const char *ver = longse_version_of(buf);
+    if (ver) {
+        ADD_PARAM("version", ver);
     }
     return true;
 }

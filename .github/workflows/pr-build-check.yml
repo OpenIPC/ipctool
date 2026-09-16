@@ -61,9 +61,10 @@ jobs:
       - name: Build and run
         run: |
           cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --target cYAML_test reginfo_test
+          cmake --build build --target cYAML_test reginfo_test longse_test
           ./build/cYAML_test
           ./build/reginfo_test
+          ./build/longse_test
       - name: Build trimmed, and run again
         # The pad tables are the largest thing in libipchw and a consumer
         # picks the families it targets. Prove the trimmed configure
