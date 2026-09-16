@@ -147,6 +147,155 @@ ROW_RE = re.compile(
     r"\s*([^,]+?)\s*,\s*(PINMUX_FOR_\w+)\s*,?\s*\}", re.S)
 
 
+def function_body(text, name):
+    """The braced body of a function definition, or None."""
+    m = re.search(r"\b" + re.escape(name) + r"\s*\([^;{}]*\)\s*\{", text)
+    if not m:
+        return None
+    i = text.index("{", m.end() - 1)
+    depth, j = 0, i
+    while j < len(text):
+        if text[j] == "{":
+            depth += 1
+        elif text[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[i + 1:j]
+        j += 1
+    raise Refusal("unterminated function %s" % name)
+
+
+LABEL_RE = re.compile(r"\bcase\s+(PAD_\w+)\s*:|\bdefault\s*:")
+RIUA_OPEN_RE = re.compile(r"_RIUA_16BIT\s*\(")
+
+
+def macro_args(text, start):
+    r"""The arguments of a macro call whose "(" ends at `start`.
+
+    Split on top-level commas only. A regex cannot do this: the offsets are
+    written relative to the first pad of a group, so
+    `REG_FUART_RX_GPIO_MODE+(u32PadID-PAD_FUART_RX)` has a nested pair, and a
+    lazy `(.+?)\)` stops at the inner one and hands back an expression with
+    an unbalanced parenthesis.
+    """
+    args, cur, depth, i = [], "", 1, start
+    while i < len(text):
+        ch = text[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                args.append(cur)
+                return [a.strip() for a in args], i + 1
+        if depth == 1 and ch == ",":
+            args.append(cur)
+            cur = ""
+        else:
+            cur += ch
+        i += 1
+    raise Refusal("unterminated macro call")
+
+
+def parse_misc(pinmux, pads, defs, family):
+    """Which pads HalPadSetMode_MISC() programs, and through which registers.
+
+    m_stPadMuxTbl is not the whole truth. Some pads are muxed from banks the
+    table never mentions -- an Ethernet pair by REG_ETH_GPIO_EN in ALBANY2, a
+    USB pair by the UTMI0 power-down bits -- and the vendor routes exactly
+    those through HalPadSetMode_MISC() instead of HalPadSetMode_General().
+    Their rows in the table are still there, and on infinity6e they are
+    copy-paste from PAD_SPI_HLD: PAD_ETH_RN through PAD_USB2_DP each claim
+    SPIHOLDN_MODE and EMMC0_8B_MODE_1 through the SPI pad's own fields. Taken
+    at face value that reports all six pads as carrying whatever the flash
+    HOLD pin carries, and offers to put eMMC data lines on the Ethernet
+    magnetics.
+
+    So MISC is parsed for what it actually writes per pad. The caller drops a
+    pad's table rows when the two disagree completely -- see misc_conflicts().
+    A pad whose MISC path writes registers the table DOES name is left alone:
+    the FUART pads are muxed through their own PADTOP fields either way, and
+    MISC only adds a side effect the table cannot express.
+
+    Returns {pad id: set of physical addresses}.
+    """
+    body = function_body(pinmux, "HalPadSetMode_MISC")
+    if body is None:
+        return {}
+
+    by_name = {v: k for k, v in pads.items()}
+    labels = list(LABEL_RE.finditer(body))
+    out = {}
+    for i, lab in enumerate(labels):
+        if lab.group(1) is None:
+            continue
+        end = labels[i + 1].start() if i + 1 < len(labels) else len(body)
+        seg = body[lab.end():end]
+        if not seg.strip():
+            continue  # a bare label falling through into the next block
+
+        # every label that falls through into this block shares it
+        group, j = [lab.group(1)], i - 1
+        while (j >= 0 and labels[j].group(1) is not None
+               and not body[labels[j].end():labels[j + 1].start()].strip()):
+            group.append(labels[j].group(1))
+            j -= 1
+
+        for pad_name in group:
+            pad_id = by_name.get(pad_name)
+            if pad_id is None:
+                raise Refusal("%s: HalPadSetMode_MISC names %s, which gpio.h "
+                              "does not" % (family, pad_name))
+            pos = 0
+            while True:
+                m = RIUA_OPEN_RE.search(seg, pos)
+                if m is None:
+                    break
+                args, pos = macro_args(seg, m.end())
+                if len(args) != 2:
+                    raise Refusal("%s: _RIUA_16BIT near %s takes %d arguments"
+                                  % (family, pad_name, len(args)))
+                bank, off = args
+                # offsets are written relative to the first pad of the group,
+                # e.g. REG_FUART_RX_GPIO_MODE+(u32PadID-PAD_FUART_RX)
+                expr = off.replace("u32PadID", str(pad_id))
+                try:
+                    addr = (RIU_PHYS_BASE + (defs.value(bank) << 1)
+                            + (defs.value(expr) << 2))
+                except Refusal as exc:
+                    # Not skippable. A register this parser drops shrinks the
+                    # pad's MISC set, and a pad whose whole set is dropped
+                    # never reaches misc_conflicts() at all -- so the rows
+                    # this check exists to catch would be kept, silently.
+                    raise Refusal("%s: cannot resolve the register "
+                                  "HalPadSetMode_MISC() writes for %s "
+                                  "(%s, %s): %s"
+                                  % (family, pad_name, bank, off, exc))
+                out.setdefault(pad_id, set()).add(addr)
+    return out
+
+
+def misc_conflicts(misc, per_pad, tuples, gpio_tuple, pads, family):
+    """The pads whose table rows describe a register MISC never touches.
+
+    Overlap, not containment: the vendor is inconsistent about which of a
+    group's modes it lists (infinity6e gives PWM9_MODE_2 to PAD_FUART_CTS but
+    not to PAD_FUART_RX, though MISC programs it for both), so requiring the
+    table to be complete would throw away good rows. One shared register is
+    enough to say the rows are about this pad.
+    """
+    bad = []
+    for pad_id, regs in sorted(misc.items()):
+        named = {t[0] for t in gpio_tuple.get(pad_id, [])}
+        for mid in per_pad.get(pad_id, []):
+            for tup, tup_pads in tuples.get(mid, {}).items():
+                if pad_id in tup_pads:
+                    named.add(tup[0])
+        if named and not (named & regs):
+            bad.append(pad_id)
+    return bad
+
+
 def parse_family(kernel, family):
     gpio_dir = os.path.join(kernel, "drivers/sstar/gpio", family)
     inc_dir = os.path.join(kernel, "drivers/sstar/include", family)
@@ -234,6 +383,31 @@ def parse_family(kernel, family):
     if not rows:
         raise Refusal("%s: found no pad-mux rows at all" % family)
 
+    # A pad the vendor muxes from banks m_stPadMuxTbl never names keeps rows
+    # that are about some other pad. Drop them before the pass below, not
+    # after: a mode that looked like it had two registers only because one of
+    # them came from such a row is a perfectly ordinary mode once the row is
+    # gone, and the pads that really do offer it should keep it.
+    misc = parse_misc(pinmux, pads, defs, family)
+    misc_dropped = []
+    for pad_id in misc_conflicts(misc, per_pad, tuples, gpio_tuple, pads,
+                                 family):
+        misc_dropped.append(pads[pad_id])
+        for mid in list(per_pad.get(pad_id, [])):
+            for tup in list(tuples.get(mid, {})):
+                if pad_id in tuples[mid][tup]:
+                    tuples[mid][tup].remove(pad_id)
+                    if not tuples[mid][tup]:
+                        del tuples[mid][tup]
+            if not tuples.get(mid):
+                tuples.pop(mid, None)
+        per_pad[pad_id] = []
+        gpio_tuple.pop(pad_id, None)
+        rows = [r for r in rows if r[0] != pad_id]
+
+    if not rows:
+        raise Refusal("%s: every pad-mux row belongs to a MISC pad" % family)
+
     # A mode is one field of one register and one value in it -- for all but a
     # handful. The exceptions are the pads the vendor's own driver will not
     # program from the table either (HalPadSetMode_MISC: the SAR, ETH and USB
@@ -293,6 +467,7 @@ def parse_family(kernel, family):
         "modes": modes,
         "rows": len(rows),
         "dropped": dropped,
+        "misc_dropped": misc_dropped,
         "unnamed": unnamed,
         # relative to the kernel tree, not to this machine: the banner has to
         # mean the same thing to whoever regenerates it next
@@ -366,6 +541,12 @@ def emit(families, argv):
             w(" * register on different pads and no one write can reach it:")
             for name, pad_names in fam["dropped"]:
                 w(" *   %s on %s" % (name, ", ".join(pad_names)))
+        if fam["misc_dropped"]:
+            w(" *")
+            w(" * Listed with no modes at all, because the vendor muxes them")
+            w(" * from a bank this table does not reach (HalPadSetMode_MISC)")
+            w(" * and the rows they do carry name another pad's registers:")
+            w(" *   %s" % ", ".join(fam["misc_dropped"]))
         w(" */")
         w("static const sstar_mode_t %s_modes[] = {" % tag)
         for mid, name, (addr, mask, val) in fam["modes"]:
@@ -429,9 +610,109 @@ def emit(families, argv):
     return "\n".join(out) + "\n"
 
 
+SELFTEST_SRC = """
+#define PADTOP_BANK   0x103C00
+#define UTMI0_BANK    0x142100
+#define PAD_FUART_RX  46
+#define PAD_FUART_TX  47
+#define PAD_USB2_DM   125
+#define PAD_USB2_DP   126
+#define REG_FUART_RX_GPIO_MODE  0x60
+#define REG_PWM0_MODE           0x50
+#define REG_UTMI0_GPIO_EN       0x1f
+
+static S32 HalPadSetMode_MISC(U32 u32PadID, U32 u32Mode)
+{
+    switch(u32PadID)
+    {
+    case PAD_FUART_RX:
+    case PAD_FUART_TX:
+        _GPIO_W_WORD_MASK(_RIUA_16BIT(PADTOP_BANK,REG_FUART_RX_GPIO_MODE+(u32PadID-PAD_FUART_RX)), BIT3, MASK);
+        _GPIO_W_WORD_MASK(_RIUA_16BIT(PADTOP_BANK,REG_PWM0_MODE), 0, MASK);
+        break;
+    case PAD_USB2_DM:
+    case PAD_USB2_DP:
+        _GPIO_W_WORD_MASK(_RIUA_16BIT(UTMI0_BANK,REG_UTMI0_GPIO_EN), 0, MASK);
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+"""
+
+
+def selftest():
+    """Exercise the MISC parse without an SDK, so CI can run it.
+
+    Everything here is a shape that has already gone wrong once. The nested
+    offset is the one that matters: a lazy regex stops at its inner ")" and
+    hands back an unbalanced expression, which then fails to evaluate -- and
+    when the failure was skipped rather than raised, a pad whose whole
+    register set was dropped never reached misc_conflicts() at all, so the
+    bogus rows this check exists to catch stayed in the table.
+    """
+    fails = []
+
+    def check(ok, what):
+        if not ok:
+            fails.append(what)
+
+    # 1. the arguments come back balanced, nesting and all
+    text = "_RIUA_16BIT(A_BANK,REG_X+(u32PadID-PAD_Y))"
+    args, end = macro_args(text, text.index("(") + 1)
+    check(args == ["A_BANK", "REG_X+(u32PadID-PAD_Y)"], "macro_args nesting: %r" % (args,))
+    check(end == len(text), "macro_args end: %d of %d" % (end, len(text)))
+
+    pads = {46: "PAD_FUART_RX", 47: "PAD_FUART_TX",
+            125: "PAD_USB2_DM", 126: "PAD_USB2_DP"}
+    defs = Defines(SELFTEST_SRC)
+    try:
+        misc = parse_misc(strip_comments(SELFTEST_SRC), pads, defs, "selftest")
+    except Refusal as exc:
+        print("gen_sstar_padmux selftest: the fixture would not parse: %s"
+              % exc, file=sys.stderr)
+        return 1
+
+    # 2. every pad of a fall-through case group gets that group's registers,
+    #    and the per-pad offset really is per pad
+    fuart_gpio = RIU_PHYS_BASE + (0x103C00 << 1)
+    check(misc.get(46) == {fuart_gpio + (0x60 << 2), fuart_gpio + (0x50 << 2)},
+          "pad 46 regs: %r" % (misc.get(46),))
+    check(misc.get(47) == {fuart_gpio + (0x61 << 2), fuart_gpio + (0x50 << 2)},
+          "pad 47 regs: %r" % (misc.get(47),))
+    utmi = RIU_PHYS_BASE + (0x142100 << 1) + (0x1F << 2)
+    check(misc.get(125) == {utmi} and misc.get(126) == {utmi},
+          "USB regs: %r %r" % (misc.get(125), misc.get(126)))
+
+    # 3. a register that cannot be resolved is a refusal, never a silent skip
+    broken = SELFTEST_SRC.replace("REG_PWM0_MODE), 0", "REG_NOT_DEFINED), 0")
+    try:
+        parse_misc(strip_comments(broken), pads, Defines(broken), "selftest")
+        check(False, "an unresolvable MISC register was skipped, not refused")
+    except Refusal:
+        pass
+
+    # 4. overlap keeps a pad, no overlap drops it
+    tuples = {1: {(fuart_gpio + (0x50 << 2), 0x7, 0x1): [46]},
+              2: {(fuart_gpio + (0x99 << 2), 0x7, 0x1): [125]}}
+    per_pad = {46: [1], 125: [2]}
+    bad = misc_conflicts(misc, per_pad, tuples, {}, pads, "selftest")
+    check(bad == [125], "misc_conflicts picked %r, wanted [125]" % (bad,))
+
+    for f in fails:
+        print("gen_sstar_padmux selftest: %s" % f, file=sys.stderr)
+    if not fails:
+        print("gen_sstar_padmux: selftest passed")
+    return 1 if fails else 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--selftest", action="store_true",
+                    help="check the vendor-source parsing against a built-in "
+                         "fixture and exit; needs no SDK, so CI can run it")
     ap.add_argument("--kernel", action="append", required=True,
                     help="a vendor kernel tree; repeat to draw families from "
                          "more than one")
@@ -440,6 +721,10 @@ def main():
     ap.add_argument("--verify", metavar="HEADER",
                     help="re-derive and diff against this file instead of "
                          "writing; exit 1 when they differ")
+    # --selftest stands alone: it parses a fixture, not a tree
+    if "--selftest" in sys.argv[1:]:
+        return selftest()
+
     args = ap.parse_args()
 
     families = []

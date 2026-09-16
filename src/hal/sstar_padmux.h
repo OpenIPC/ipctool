@@ -325,7 +325,12 @@ static const sstar_family_t I6B_padmux = {
     I6B_pool, I6B_gpio_fields, I6B_unnamed_fields,
 };
 
-/* I6E -- INFINITY6E (Pudding): 127 pads, 260 modes, 888 claims.
+/* I6E -- INFINITY6E (Pudding): 127 pads, 260 modes, 876 claims.
+ *
+ * Listed with no modes at all, because the vendor muxes them
+ * from a bank this table does not reach (HalPadSetMode_MISC)
+ * and the rows they do carry name another pad's registers:
+ *   PAD_ETH_RN, PAD_ETH_RP, PAD_ETH_TN, PAD_ETH_TP, PAD_USB2_DM, PAD_USB2_DP
  */
 static const sstar_mode_t I6E_modes[] = {
     {"EJ_MODE_1", 0x1F207980, 0x0180, 0x0080},
@@ -646,8 +651,7 @@ static const uint16_t I6E_pool[] = {
     21, 130, 35, 208, 210, 211, 168, 63, 156, 7, 9, 163, 213, 214, 5, 208,
     210, 211, 215, 106, 207, 35, 49, 63, 163, 156, 7, 9, 112, 146, 5, 208,
     210, 211, 215, 207, 35, 49, 63, 213, 214, 7, 9, 163, 170, 15, 36, 170,
-    12, 36, 62, 12, 36, 62, 12, 36, 13, 62, 14, 62, 14, 62, 14, 62,
-    14, 62, 14, 62, 14, 62, 14, 62,
+    12, 36, 62, 12, 36, 62, 12, 36, 13, 62, 14, 62,
 };
 
 /* The fields that say "this pad is GPIO", where the part has any.
@@ -906,12 +910,12 @@ static const sstar_pad_t I6E_pads[] = {
     {"PAD_SPI_DO", 869, 3, 118, 1, 0, 0}, /* 118 */
     {"PAD_SPI_WPZ", 872, 2, 119, 1, 0, 0}, /* 119 */
     {"PAD_SPI_HLD", 874, 2, 120, 1, 0, 0}, /* 120 */
-    {"PAD_ETH_RN", 876, 2, 121, 0, 0, 0}, /* 121 */
-    {"PAD_ETH_RP", 878, 2, 121, 0, 0, 0}, /* 122 */
-    {"PAD_ETH_TN", 880, 2, 121, 0, 0, 0}, /* 123 */
-    {"PAD_ETH_TP", 882, 2, 121, 0, 0, 0}, /* 124 */
-    {"PAD_USB2_DM", 884, 2, 121, 0, 0, 0}, /* 125 */
-    {"PAD_USB2_DP", 886, 2, 121, 0, 0, 0}, /* 126 */
+    {"PAD_ETH_RN", 876, 0, 121, 0, 0, 0}, /* 121 */
+    {"PAD_ETH_RP", 876, 0, 121, 0, 0, 0}, /* 122 */
+    {"PAD_ETH_TN", 876, 0, 121, 0, 0, 0}, /* 123 */
+    {"PAD_ETH_TP", 876, 0, 121, 0, 0, 0}, /* 124 */
+    {"PAD_USB2_DM", 876, 0, 121, 0, 0, 0}, /* 125 */
+    {"PAD_USB2_DP", 876, 0, 121, 0, 0, 0}, /* 126 */
 };
 
 static const sstar_family_t I6E_padmux = {

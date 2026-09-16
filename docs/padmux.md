@@ -14,7 +14,14 @@ int ipchw_padmux_set(int pad, const char *func_name);
 ```
 
 `ipctool reginfo --pads` is all five in one command, and is what to run first
-on a board of a family whose table has just been entered.
+on a board of a family whose table has just been entered. `ipctool gpio mux
+<pad>` asks about one pad and `ipctool gpio mux <pad> <function>` changes it;
+`<function>` may be a name or a selector value, and `GPIO` is the name that
+puts the pad back.
+
+> Until 2026-09 the bare `gpio mux <pad>` form did **not** ask -- it muxed the
+> pad to GPIO. A pad that a MISC-style table drop hides from `reginfo --pads`
+> still answers here, which is the one place to see it.
 
 ## Three vendors, three mechanisms
 
@@ -68,9 +75,26 @@ overlap, and a pad is plain GPIO when nothing claims it. Consequences:
   **not mapped**, so every access uses `OP_*_16`. A 32-bit store there writes
   two bytes that do not exist.
 
+- **`m_stPadMuxTbl` is not the whole truth.** Some pads are muxed from banks
+  the table never names -- an Ethernet pair by `REG_ETH_GPIO_EN` in ALBANY2, a
+  USB pair by the UTMI0 power-down bits -- and the vendor routes exactly those
+  through `HalPadSetMode_MISC()`. Their rows are still in the table, and on
+  infinity6e they are copy-paste from the pad above them: `PAD_ETH_RN`
+  through `PAD_USB2_DP` each claim `SPIHOLDN_MODE` and `EMMC0_8B_MODE_1`
+  through **`PAD_SPI_HLD`'s own fields**. Believing them reports six pads as
+  carrying whatever the flash HOLD pin carries, and offers to put eMMC data
+  lines on the Ethernet magnetics. The generator now reads the MISC dispatch
+  and drops a pad's rows when they share no register with what MISC actually
+  writes for it -- overlap, not containment, because the vendor is also
+  inconsistent about which of a group's modes it lists. Such a pad is listed
+  with no modes at all: `by_pad()` returns nothing, `get()` says "cannot say"
+  and `set()` refuses.
+
 `src/hal/sstar_reginfo.h` is *not* this. It is the per-pad OEN/OUT/IN
 registers of the GPIO controller, which is what `reginfo` dumps on SigmaStar
-and what it has always been.
+and what it has always been. Bit 0 of those per-pad registers is the **live
+input level**, so a pad's register legitimately changes value with no one
+writing it -- do not treat a diff there as a failed restore.
 
 ### Ingenic -- four bits in four registers
 
@@ -142,6 +166,17 @@ tools/gen_ingenic_padmux.py \
 Each generated header carries the exact command that made it, so the recipe
 above is only the shape; the header is the record.
 
+Both generators take `--verify <header>`, which re-derives and diffs instead
+of writing. That needs the SDK, so CI cannot run it;
+`tools/gen_sstar_padmux.py --selftest` runs the vendor-source parsing against
+a built-in fixture instead, needs nothing, and is what `tools/test_pipeline.sh`
+runs. The fixture is not decorative -- every shape in it is one that has
+already gone wrong, the nested register offset
+`REG_FUART_RX_GPIO_MODE+(u32PadID-PAD_FUART_RX)` included: a lazy regex stops
+at its inner `)` and yields an expression that will not evaluate, and a
+register dropped that way shrinks a pad's MISC set until the pad stops being
+checked at all.
+
 Ingenic parts do not share a source, and the three kinds are not equally good:
 
 | kind | source | names | covers |
@@ -180,7 +215,9 @@ in.
   several banks and a `0xBABE` PM unlock, and the vendor's own driver handles
   them in a hand-written switch rather than from the table. Three infinity6c
   modes that name a different register on each of those pads are dropped by
-  the generator and named in the header.
+  the generator and named in the header, as are the six infinity6e ETH and USB
+  pads whose rows describe `PAD_SPI_HLD`. Reading these would mean teaching
+  the backend ALBANY and UTMI0; nothing needs it yet.
 - **Ingenic pads the package does not bring out** are absent from the table
   rather than present and empty.
 - **Other Ingenic parts.** T21, T23, T31 and T40 have tables. T10, T20, T30 and
@@ -188,9 +225,9 @@ in.
   which, for the parts checked so far, does not exist in the vendor releases.
 - **Hardware.** Every claim here is verified against vendor source and on a
   host. On top of that, HiSilicon, SigmaStar infinity6/6b0/6c, and Ingenic
-  T21, T23 and T31 have been run on real cameras and checked against an
-  independent decode of their live registers. SigmaStar infinity6e and Ingenic
-  T40 have not: nobody has had one.
+  T21, T23, T31 and SigmaStar infinity6e have been run on real cameras and
+  checked against an independent decode of their live registers. Ingenic T40
+  has not: nobody has had one.
 
 ## Adding a family
 
