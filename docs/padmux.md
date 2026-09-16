@@ -126,12 +126,53 @@ it, `get()` says nothing, `set()` refuses -- which is exactly how every pad
 behaves on a family that has no table at all. A row that names the wrong
 function does not degrade, it misleads.
 
-- **`CV610`** (76 rows) is the one to be careful with. It disagrees with its
-  workbook and **not** as a missing hole: functions are absent, renamed, or
-  merged into one slashed entry where the document gives two values. Which
-  package also matters -- the BGA sheet disagrees on 65 rows, the QFN sheet
-  and the Hi3516CV608 sheet on 24 each -- so which part the table was entered
-  from has to be settled before any of it is rewritten.
+- **`CV610`** (76 rows) is right for one package and wrong for another, and
+  `chip_generation == HISI_OT` covers more parts than the name suggests.
+
+  `regs_by_chip()` hands `CV610regs` to everything under `HISI_OT` that is not
+  a DV500, which is Hi3516CV608, Hi3516CV610 and Hi3516CV613. And
+  "Hi3516CV610" is itself five orderable parts in two packages -- the data
+  sheet says so outright: *"Hi3516CV610-10B/20S/20G uses the QFN package,
+  while Hi3516CV610-00S/00G uses the TFBGA package."*
+
+  **The ids are per SKU, not per die.** `0x3516C613` is not a separate chip:
+  the commit that added it says so -- *"Add id 0x3516c613 for HI3516CV610
+  mod. 20S"* -- and `-20S` is one of the QFN parts. So two SKUs of the same
+  silicon already report two different ids, which is the useful fact here.
+
+  | part | package | mux map | the table |
+  |---|---|---|---|
+  | Hi3516CV608 | QFN 9x9, only package | same as CV610 QFN, register for register | correct, 52 of 52 |
+  | Hi3516CV610-10B/-20S/-20G | QFN 9x9 | QFN map | correct, 52 of 52 |
+  | Hi3516CV610-00S/-00G | TFBGA 12x13.3 | **differs on 25 of the 52 common registers** | wrong on those 25 |
+  | Hi3516CV613 | QFN 9x9 -- it *is* Hi3516CV610-20S | QFN map | correct, 52 of 52 |
+
+  The two packages really do encode differently, not just expose different
+  pads: on QFN the eMMC data lines share the SDIO0 selector
+  (`1: SDIO0_CDATA1/EMMC_DATA1`, value 2 reserved), while on TFBGA they are
+  separate values (`1: SDIO0_CDATA1`, `2: EMMC_DATA0`). What reads like
+  functions "merged into one slashed entry" is simply the QFN encoding,
+  correctly transcribed.
+
+  The table also carries 24 rows for pads only the TFBGA package brings out,
+  entered partially -- no GPIO name, and `USB_OVRCUR` where the TFBGA sheet
+  says `USB2_OVRCUR`. On a QFN part those describe pads that are not bonded
+  out; they are noise rather than a hazard.
+
+  **How bad the TFBGA case is depends on what those parts report**, and no
+  one here has one. `CHIP_ID` (SC_CTRL `0x0EE0`, which `hisi_detect_cpu()`
+  already reads) is an OTP readback, and `-20S` proving to be `0x3516C613`
+  says the fusing does vary by SKU. So a `-00S`/`-00G` most likely reports an
+  id of its own, which this build does not know: `get_hisi_chip_id()` would
+  print `Got unexpected ID` and return `"unknown"`, `chip_generation` would
+  not be set to `HISI_OT`, and `regs_by_chip()` would return NULL. **No table
+  rather than the wrong one** -- the safe failure.
+
+  The 25 wrong registers only land if a TFBGA part reports `0x3516C610`
+  itself. If one turns up, the fix is a second table selected on its id, and
+  the id is the thing to capture from the board. Until then this is left
+  alone: changing `CV610regs` to the TFBGA map would break the three QFN SKUs
+  and the CV608 it is currently right about.
 - **`DV500`** (Hi3519D V500 and Hi3516D V500) is merely partial, and worth
   having as it is. 131 registers in the workbook against 102 rows, 29 of them
   absent entirely, and 44 of the rows present carry `"reserved"` at selector 0
