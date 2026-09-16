@@ -62,8 +62,13 @@ VALUE = re.compile(r"\b([01]{1,4}):\s*([A-Za-z_][\w/]*)")
 # "muxctrl_reg22" reads as "muxctrl_reg2" and hands that register's values to
 # a register five pages earlier. Headings start at column 0.
 HEAD = re.compile(r"muxctrl_reg(\d+)\s*")
-MUX = re.compile(r"MUXCTRL\(\s*(\w+)\s*,\s*(0x[0-9a-fA-F]+)\s*,(.*?)\)\s*$",
-                 re.S | re.M)
+# The trailing ";" is optional: the V5 tables (CV610, DV500) terminate
+# their rows and the older ones do not. Requiring one shape silently
+# matched none of the other's rows, which reads as a table with almost
+# nothing in it rather than as a parse that missed.
+MUX = re.compile(
+    r"MUXCTRL\(\s*(\w+)\s*,\s*(0x[0-9a-fA-F]+)\s*,(.*?)\)\s*;?\s*$",
+    re.S | re.M)
 
 
 def as_text(path):
@@ -142,11 +147,18 @@ OK, HOLE, RENAME, UNALIGNED, NOSUCH = "ok", "hole", "rename", "unaligned", "nosu
 
 
 def classify(addr, funcs, ds, base):
-    """(verdict, register number or None, the data sheet's row or None)."""
-    if addr < base or (addr - base) % 4:
-        return UNALIGNED, None, None
-    num = (addr - base) // 4
-    want = ds.get(num)
+    """(verdict, register number or None, the document's row or None).
+
+    `ds` is keyed by ABSOLUTE address. A PINOUT workbook states those
+    directly; a data sheet numbers its registers instead, so --base turns
+    them into addresses and is also what makes the alignment check possible.
+    """
+    num = None
+    if base is not None:
+        if addr < base or (addr - base) % 4:
+            return UNALIGNED, None, None
+        num = (addr - base) // 4
+    want = ds.get(addr)
     if want is None:
         return NOSUCH, num, None
     if funcs == want:
@@ -157,6 +169,87 @@ def classify(addr, funcs, ds, base):
             [f for f in want if f != "reserved"]:
         return RENAME, num, want
     return HOLE, num, want
+
+
+# The same statement, moved. From Hi3516CV300 onwards the pin-mux register
+# chapter left the data sheet and became a sheet of the chip's PINOUT
+# workbook -- "3.muxctrl_reg Description" on Hi3516CV300, "3. Pin Control
+# Registers" on everything after it, "3.管脚控制寄存器" in the Chinese
+# editions, which for Hi3516DV200/EV200/EV300 and Hi3518EV300 are the only
+# editions shipped.
+PINOUT_SHEET = re.compile(
+    r"Pin Control Registers|muxctrl_reg Description|管脚控制寄存器")
+# The mux is one field among pull-ups and drive strength; this names it.
+FUNC_FIELD = re.compile(r"Function sel|功能选择")
+# "0: EMMC_CLK", "0x1：UART0_RXD；". Anchored, so "Other value: reserved"
+# cannot be read as a value ('e' is a hex digit).
+# A name may be two names joined by "/", and the workbooks are
+# inconsistent about spacing around it -- "VOU1120_DATA2/ VOU656_DATA2"
+# on Hi3516DV300. The tables carry it unspaced, so the spacing is
+# normalised away rather than reported as a rename.
+XVALUE = re.compile(r"^\s*(0x)?([0-9A-Fa-f]+)\s*[:：]\s*"
+                    r"([A-Za-z_][\w]*(?:\s*/\s*[A-Za-z_][\w]*)*)")
+REGNAME = re.compile(r"(?:muxctrl_reg|iocfg_reg|io\d_cfg_reg)\d+$")
+# include/ipchw.h: IPCHW_PADMUX_ADDR_NONE
+ADDR_NONE = 0xDEADBEEF
+
+
+def _xvalues(text):
+    """{selector value: function} out of one field description."""
+    vals = {}
+    for line in text.splitlines():
+        m = XVALUE.match(line)
+        if not m:
+            continue
+        v = int(m.group(2), 16 if m.group(1) else 10)
+        name = re.sub(r"\s*/\s*", "/", m.group(3))
+        if name.lower() != "reserved":
+            vals.setdefault(v, name)
+    return vals
+
+
+def pinout_registers(path):
+    """{absolute address: [function per selector value]} from a workbook."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import xlsx_min
+    book = xlsx_min.sheets(path)
+    name = next((n for n in book if PINOUT_SHEET.search(n)), None)
+    if name is None:
+        sys.exit("no pin-control-register sheet in %s; it has %s"
+                 % (path, ", ".join(book)))
+
+    out, addr, pending = {}, None, {}
+
+    def flush():
+        if addr is not None and pending:
+            out[addr] = [pending.get(i, "reserved")
+                         for i in range(max(pending) + 1)]
+
+    for row in book[name]:
+        first = row.get("A", "")
+        if REGNAME.search(first):
+            flush()
+            pending = {}
+            # "0x10FF_0000" on the newer sheets
+            addr_s = ""
+            for col in ("C", "D"):
+                if re.fullmatch(r"0x[0-9A-Fa-f_]+", row.get(col, "")):
+                    addr_s = row[col]
+                    break
+            addr = int(addr_s.replace("_", ""), 16) if addr_s else None
+        if addr is None:
+            continue
+        # Hi3516CV300 puts the whole value list in the register's own row;
+        # everything after it gives one row per field, and only one of those
+        # fields is the mux.
+        for col in ("E", "G"):
+            text = row.get(col, "")
+            if FUNC_FIELD.search(text) or (col == "E" and not row.get("F")):
+                got = _xvalues(text)
+                if got:
+                    pending.update(got)
+    flush()
+    return out
 
 
 def table_rows(src, prefix):
@@ -233,7 +326,7 @@ MUXCTRL(FOO_0, 0x10000000, "GPIO0_0", "AAA", "reserved", "BBB", "CCC")
 MUXCTRL(FOO_1, 0x10000004, "GPIO0_1", "DDD")
 MUXCTRL(FOO_2, 0x10000008, "GPIO0_2", "EEE", "FFF_OUT/GGG_CLK")
 MUXCTRL(FOO_22, 0x10000058, "GPIO2_2", "HHH",
-        "III")
+        "III");
 '''
 
 
@@ -271,8 +364,8 @@ def selftest():
     #    every 1- and 2-bit register in the document.
     check(ds.get(1) == ["GPIO0_1", "DDD"], "reg1 (1-bit): %r" % (ds.get(1),))
 
-    # 4. a slashed name is one name, and a spelled-out "11: reserved" is a
-    #    hole rather than a fifth entry
+    # 4. a slashed name is one name, and a spelled-out "11: reserved" is
+    #    a hole rather than a fifth entry
     check(ds.get(2) == ["GPIO0_2", "EEE", "FFF_OUT/GGG_CLK"],
           "reg2 (slash, trailing reserved): %r" % (ds.get(2),))
 
@@ -303,10 +396,32 @@ def selftest():
     check(sorted(have) == [0x10000000, 0x10000004, 0x10000008, 0x10000058],
           "table_rows addresses: %r" % (sorted(map(hex, have)),))
     check(have.get(0x10000058, (None, None, []))[2] == ["GPIO2_2", "HHH", "III"],
-          "table_rows wrapped row: %r" % (have.get(0x10000058),))
+          "table_rows wrapped/terminated row: %r"
+          % (have.get(0x10000058),))
 
-    # 9. the verdicts, which decide what --fix may touch
+    # 9. the workbook field descriptions, which say the same thing in a
+    #    different shape: English or Chinese, decimal or 0x, ASCII or
+    #    full-width punctuation, and a "/" name the sheets space differently
+    #    from the tables ("VOU1120_DATA2/ VOU656_DATA2" on Hi3516DV300).
+    check(_xvalues("Function select\n0: EMMC_CLK\n1: SFC_CLK\n"
+                   "2: SFC_BOOT_MODE")
+          == {0: "EMMC_CLK", 1: "SFC_CLK", 2: "SFC_BOOT_MODE"},
+          "workbook values, English")
+    check(_xvalues("功能选择：\n0x0：GPIO0_1；\n0x1：UART0_RXD；\n其它：保留。")
+          == {0: "GPIO0_1", 1: "UART0_RXD"},
+          "workbook values, Chinese and full-width")
+    check(_xvalues("Function select\n3: VOU1120_DATA2/ VOU656_DATA2")
+          == {3: "VOU1120_DATA2/VOU656_DATA2"},
+          "workbook values, spaced slash: %r"
+          % (_xvalues("Function select\n3: VOU1120_DATA2/ VOU656_DATA2"),))
+    check(_xvalues("0: A\nOther value: reserved\n1: B") == {0: "A", 1: "B"},
+          "workbook values: 'Other value: reserved' is not a value")
+    check(_xvalues("0xA: TEN\n11: ELEVEN") == {10: "TEN", 11: "ELEVEN"},
+          "workbook values: 0x is hex, bare is decimal")
+
+    # 10. the verdicts, which decide what --fix may touch
     base = 0x10000000
+    byaddr = {base + 4 * num: row for num, row in ds.items()}
     cases = [
         (0x10000000, ["GPIO0_0", "AAA", "reserved", "BBB", "CCC"], OK),
         (0x10000000, ["GPIO0_0", "AAA", "BBB", "CCC"], HOLE),
@@ -316,9 +431,17 @@ def selftest():
         (0x10000100, ["GPIO0_0"], NOSUCH),      # no such register
     ]
     for addr, funcs, want in cases:
-        got = classify(addr, funcs, ds, base)[0]
+        got = classify(addr, funcs, byaddr, base)[0]
         check(got == want, "classify(%#x, %r) = %s, wanted %s"
               % (addr, funcs, got, want))
+
+    # With a workbook there is no --base: the addresses are stated, so an
+    # address the document does not carry is simply absent, and there is no
+    # alignment to check because nothing was derived.
+    check(classify(0x10000011, ["X"], byaddr, None)[0] == NOSUCH,
+          "no --base should make an odd address NOSUCH, not UNALIGNED")
+    check(classify(0x10000000, ["GPIO0_0", "AAA", "reserved", "BBB", "CCC"],
+                   byaddr, None)[0] == OK, "no --base, matching row")
 
     for f in fails:
         print("check_hisi_padmux selftest: %s" % f, file=sys.stderr)
@@ -337,10 +460,18 @@ def main():
     # Not required=True: --selftest is a complete invocation on its own, and
     # argparse has to see the whole command line either way so that a typo
     # next to --selftest is an error rather than a pass.
-    ap.add_argument("--datasheet")
+    ap.add_argument("--datasheet",
+                    help="a data sheet PDF (or its pdftotext -layout output) "
+                         "whose chapter 2.3 defines the registers")
+    ap.add_argument("--pinout",
+                    help="a <chip>_PINOUT_*.xlsx, which is where that moved "
+                         "from Hi3516CV300 onwards. Preferred: it states "
+                         "absolute addresses, so --base is not needed and a "
+                         "table spread over several banks works too")
     ap.add_argument("--prefix", help="MUXCTRL row prefix, e.g. EV20X_")
     ap.add_argument("--base",
-                    help="physical address of muxctrl_reg0, e.g. 0x200f0000")
+                    help="physical address of muxctrl_reg0, e.g. 0x200f0000; "
+                         "required with --datasheet, ignored with --pinout")
     ap.add_argument("--soc", help="which chapter, when the document has several")
     ap.add_argument("--reginfo", default="src/reginfo.c")
     ap.add_argument("--fix", action="store_true",
@@ -350,34 +481,48 @@ def main():
     # --selftest stands alone: it parses a fixture, not a document
     if args.selftest:
         return selftest()
-    missing = [n for n in ("datasheet", "prefix", "base")
-               if getattr(args, n) is None]
-    if missing:
-        ap.error("--%s is required" % ", --".join(missing))
+    if args.prefix is None:
+        ap.error("--prefix is required")
+    if bool(args.datasheet) == bool(args.pinout):
+        ap.error("pass exactly one of --datasheet or --pinout")
 
-    lines = as_text(args.datasheet).splitlines()
-    found = chapters(lines)
-    if not found:
-        sys.exit("no '2.3 Pin Multiplexing Control Registers' chapter found")
-    if args.soc:
-        found = [c for c in found if args.soc.lower() in c[0].lower()]
+    if args.pinout:
+        # the workbook names the addresses, so there is nothing to derive and
+        # nothing to get wrong about the numbering
+        base = None
+        who = os.path.basename(args.pinout)
+        ds = pinout_registers(args.pinout)
+    else:
+        if args.base is None:
+            ap.error("--base is required with --datasheet")
+        base = int(args.base, 16)
+        lines = as_text(args.datasheet).splitlines()
+        found = chapters(lines)
         if not found:
-            sys.exit("no chapter for %r" % args.soc)
-    if len(found) > 1:
-        print("this document covers several SoCs; pass --soc:", file=sys.stderr)
-        for who, lo, hi in found:
-            print("  %-16s (lines %d..%d)" % (who, lo, hi), file=sys.stderr)
-        return 1
+            sys.exit("no '2.3 Pin Multiplexing Control Registers' chapter "
+                     "found. If this is a Hi3516CV300 or newer part the "
+                     "chapter moved into <chip>_PINOUT_*.xlsx -- pass that "
+                     "with --pinout instead.")
+        if args.soc:
+            found = [c for c in found if args.soc.lower() in c[0].lower()]
+            if not found:
+                sys.exit("no chapter for %r" % args.soc)
+        if len(found) > 1:
+            print("this document covers several SoCs; pass --soc:",
+                  file=sys.stderr)
+            for w, lo, hi in found:
+                print("  %-16s (lines %d..%d)" % (w, lo, hi), file=sys.stderr)
+            return 1
+        who, lo, hi = found[0]
+        ds = {base + 4 * num: row
+              for num, row in registers(lines, lo, hi).items()}
 
-    who, lo, hi = found[0]
-    ds = registers(lines, lo, hi)
-    base = int(args.base, 16)
     src = open(args.reginfo, encoding="utf-8").read()
     have = table_rows(src, args.prefix)
     if not have:
         sys.exit("no MUXCTRL rows with prefix %r" % args.prefix)
 
-    print("%s: %d registers in the data sheet, %d rows named %s*"
+    print("%s: %d registers in the document, %d rows named %s*"
           % (who, len(ds), len(have), args.prefix))
 
     # A missing hole is the one thing this tool knows how to repair. Anything
@@ -387,26 +532,29 @@ def main():
     # the wrong document, the wrong --soc or the wrong --base as a wrong
     # table, and "repairing" a table against the wrong document would wreck it.
     holes, unfixable, fixed = 0, 0, 0
-    numbered = {}
     for addr in sorted(have):
         name, addr_s, funcs, whole = have[addr]
+        if addr == ADDR_NONE:
+            # IPCHW_PADMUX_ADDR_NONE: a pad whose mux this build cannot
+            # reach, carried deliberately so the pad is still enumerable.
+            # No document has a register at it, and that is the point.
+            continue
         verdict, num, want = classify(addr, funcs, ds, base)
-        if num is not None:
-            numbered[num] = name
         if verdict == UNALIGNED:
             print("  %-14s %s is not %s + 4n. The table's address is what gets"
                   " read and written, so this is not a naming quibble."
                   % (name, addr_s, args.base))
             unfixable += 1
             continue
+        where = "muxctrl_reg%d" % num if num is not None else addr_s
         if verdict == NOSUCH:
-            print("  %-14s %s -> muxctrl_reg%d is not in this data sheet"
-                  % (name, addr_s, num))
+            print("  %-14s %s -> %s is not in this document"
+                  % (name, addr_s, where))
             unfixable += 1
             continue
         if verdict == OK:
             continue
-        print("  %-14s %s muxctrl_reg%d" % (name, addr_s, num))
+        print("  %-14s %s %s" % (name, addr_s, where))
         print("      table     : %s" % " ".join(funcs))
         print("      data sheet: %s" % " ".join(want))
         if verdict == RENAME:
@@ -421,12 +569,12 @@ def main():
             src = src.replace(whole, new)
             fixed += 1
 
-    missing = sorted(set(ds) - set(numbered))
+    missing = sorted(set(ds) - set(have))
     if missing:
         # a pad with no row is absent from every lookup, which is a quieter
         # wrong answer than a shifted selector, not a smaller one
-        print("  in the data sheet but not in the table: %s"
-              % ", ".join("muxctrl_reg%d" % n for n in missing))
+        print("  in the document but not in the table: %s"
+              % ", ".join("%#010x" % a for a in missing))
         unfixable += len(missing)
 
     if args.fix and fixed and unfixable == 0:

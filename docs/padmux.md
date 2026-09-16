@@ -75,26 +75,52 @@ diagram whose clipped label reads `muxctrl_reg2` when it means `muxctrl_reg22`.
 
 Where it has been run:
 
-| table | SoC | rows | result | revisions |
+**The chapter moves house at Hi3516CV300.** Up to Hi3518EV20X it is chapter
+2.3 of the data sheet PDF; from Hi3516CV300 onwards the PDF only mentions
+`iocfg_reg55` in passing and the definitions live in the chip's
+`<chip>_PINOUT_*.xlsx` instead -- sheet `3.muxctrl_reg Description` on
+Hi3516CV300, `3. Pin Control Registers` after it, `3.管脚控制寄存器` in the
+Chinese editions, which for Hi3516DV200/EV200/EV300 and Hi3518EV300 are the
+only editions shipped. Pass a workbook with `--pinout` and a PDF with
+`--datasheet`. The workbook is the better source: it states absolute
+addresses, so there is no `--base` to get wrong and a table spread over
+several banks needs no special handling.
+
+| table | SoC | rows | result | source |
 |---|---|---|---|---|
-| `CV100` | Hi3518E V100 | 87 | agrees | SPC081, SPC0B0 |
-| `AV100` | Hi3516A/D V100 | 123 | 2 holes restored | SPC050, SPC080 |
-| `EV20X` | Hi3518E V20X | 66 | 19 holes restored | SPC040, SPC050 |
-| `CV200` | Hi3516C V200 | 66 | 19 holes restored | SPC040, SPC050 |
+| `CV100` | Hi3518E V100 | 87 | agrees | PDF, SPC081 + SPC0B0 |
+| `AV100` | Hi3516A/D V100 | 123 | 2 holes restored | PDF, SPC050 + SPC080 |
+| `EV20X` | Hi3518E V20X | 66 | 19 holes restored | PDF, SPC040 + SPC050 |
+| `CV200` | Hi3516C V200 | 66 | 19 holes restored | PDF, SPC040 + SPC050 |
+| `CV300` | Hi3516C V300 | 66 | agrees | workbook |
+| `EV200` | Hi3516E V200 | 52 | agrees | workbook |
+| `EV300` | Hi3516E V300 | 93 | agrees | workbook |
+| `_8EV300` | Hi3518E V300 | 56 | agrees | workbook |
+| `DV200` | Hi3516D V200 | 99 | agrees | workbook |
+| `CV500` | Hi3516C V500 | 104 | agrees | workbook |
+| `DV300` | Hi3516D V300 | 113 | agrees | workbook |
 
-Each was run against two independent revisions of its data sheet, and they
-agree on every selector value. The one difference anywhere is a name:
-`muxctrl_reg93` on AV100 is `RMII_CLK` in SPC050 and `RMII_CLK_OUT/MII_TX_CLK`
-in SPC080. The table carries the newer spelling.
+The four PDF ones were each run against two independent revisions, which
+agree on every selector value; the only difference anywhere is a name
+(`muxctrl_reg93` on AV100 is `RMII_CLK` in SPC050 and
+`RMII_CLK_OUT/MII_TX_CLK` in SPC080, and the table carries the newer
+spelling). `CV300`'s count is 66 against 65 registers because
+`CV300_muxctrl_reg66` is the `IPCHW_PADMUX_ADDR_NONE` sentinel, which no
+document has and is not supposed to.
 
-The rest -- `AV200`, `CV300`, `CV500`, `DV300`, `EV200`, `EV300`, `_8EV300`,
-`DV200`, `DV500`, `CV610`, `RCV100`, `DV100`, about 900 rows -- are
-**unchecked**, and not for want of trying: from Hi3516CV300 onwards the data
-sheet stopped carrying chapter 2.3 at all. The newer documents mention
-`iocfg_reg55` in passing and define none of them, so the encoding lives in a
-pin-multiplexing document that is not in these SDK releases. SDK source is no
-substitute: it shows the values a driver *writes*, and a hole is exactly the
-value nobody writes.
+Still open:
+
+- **`CV610`** (76 rows) disagrees with its workbook and is **not** a missing
+  hole: functions are absent, renamed, or merged into one slashed entry where
+  the document gives two values. It also matters which package -- the BGA
+  sheet disagrees on 65 rows, the QFN sheet and the Hi3516CV608 sheet on 24
+  each -- so which part the table was entered from has to be settled before
+  any of it is rewritten.
+- **`AV200`** (Hi3519V101), **`DV500`** (Hi3519DV500), **`RCV100`**
+  (Hi3536C) and **`DV100`** (Hi3536D) have no document here in either form.
+
+SDK source is no substitute for either: it shows the values a driver
+*writes*, and a hole is exactly the value nobody writes.
 
 ### SigmaStar -- a selector per peripheral
 
