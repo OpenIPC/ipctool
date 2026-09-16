@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "ipchw.h"
+#include "padmux_names.h"
 
 /* The shape of the generated tables in sstar_padmux.h. Separate from them so
  * the generator emits data and nothing else.
@@ -13,8 +14,12 @@
  * mode is claimed by the same field and the same value -- that is what lets a
  * pad hold mode indices instead of triples, and tools/gen_sstar_padmux.py
  * proves it over every row of the vendor table rather than assuming it. */
+/* `name` is an OFFSET into padmux_names, not a pointer -- see reginfo.h for
+ * the arithmetic. This table and the pad table below held 882 name pointers
+ * between them, which is 7 KB of relocations in a position-independent
+ * consumer. padmux_name() turns one back into a `const char *`. */
 typedef const struct {
-    const char *name; /* the vendor's own spelling, "I2C1_MODE_3" */
+    uint16_t name;    /* the vendor's own spelling, "I2C1_MODE_3" */
     uint32_t address; /* physical; a 16-bit port in a four-byte slot */
     uint16_t mask;    /* the field, IN PLACE */
     uint16_t val;     /* the value that selects this mode, in place */
@@ -31,8 +36,8 @@ typedef const struct {
 } sstar_field_t;
 
 typedef const struct {
-    const char *name; /* "PAD_SR_IO03" -- the vendor's name for the pad */
-    uint16_t first;   /* first of this pad's entries in the mode pool */
+    uint16_t name;  /* "PAD_SR_IO03" -- the vendor's name for the pad */
+    uint16_t first; /* first of this pad's entries in the mode pool */
     uint16_t nmodes;
     uint16_t gpio_first; /* first of its entries in the GPIO-field pool */
     uint16_t ngpio;

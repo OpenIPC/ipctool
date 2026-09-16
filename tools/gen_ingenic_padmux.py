@@ -35,6 +35,20 @@ import re
 import subprocess
 import sys
 
+def pmx(name):
+    """The PMX_ identifier a pad or function name is spelled as in the table.
+
+    The table holds offsets into padmux_names rather than pointers -- see
+    src/hal/ingenic_padmux_types.h -- and tools/gen_padmux_names.py is what
+    turns these identifiers into that blob. Its mangling and this one have to
+    agree; its --selftest is what pins the rule, and a disagreement is a
+    compile error in the generated header rather than a wrong name.
+    """
+    ident = re.sub(r"[^A-Za-z0-9_]", "__", name)
+    if not ident or ident[0].isdigit():
+        ident = "_" + ident
+    return "PMX_" + ident
+
 PORTS = "ABCD"
 PINS_PER_PORT = 32
 
@@ -448,8 +462,8 @@ def emit(socs, argv):
         w("static const ingenic_pad_t %s_pads[] = {" % tag)
         for pad in sorted(pads):
             name, funcs = pads[pad]
-            w('    {%d, "%s", {%s}},'
-              % (pad, name, ", ".join('"%s"' % f for f in funcs)))
+            w('    {%d, %s, {%s}},'
+              % (pad, pmx(name), ", ".join(pmx(f) for f in funcs)))
         w("};")
         w("")
         w("static const ingenic_soc_t %s_padmux = {%s_pads, %d};"
