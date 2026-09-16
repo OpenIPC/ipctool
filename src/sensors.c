@@ -1248,19 +1248,30 @@ static bool i2c_bus_openable(int adapter_nr) {
     return true;
 }
 
+/* Before every probe, not just the first one in the process and not just the
+ * first bus in the sweep.
+ *
+ * getchipname() sets the HAL up once and then returns its cached answer
+ * forever, so anything the setup did to make the sensor answerable was done
+ * once too. On Ingenic that is the sensor's clock, and the vendor SDK gates it
+ * off when it tears a pipeline down: a second probe in the same process then
+ * found an unclocked sensor and reported that the board has none. A fresh
+ * process got it right, which is what made it look like the hardware rather
+ * than us.
+ *
+ * The same holds within a single probe. get_sensor_id_i2c() ends in
+ * hal_cleanup(), and on HiSilicon V4 and OT that puts the sensor CRG back the
+ * way it was found -- gating the clock off again. Every bus after the first in
+ * the sweep below would otherwise read an unclocked sensor, which is the
+ * failure the sweep exists to avoid. */
+static void arm_sensor_clock(void) {
+    if (hal_enable_sensor_clock)
+        hal_enable_sensor_clock();
+}
+
 bool getsensorid(sensor_ctx_t *ctx) {
     if (!getchipname())
         return false;
-
-    /* Every probe, not just the first. getchipname() sets the HAL up once and
-     * then returns its cached answer forever, so anything the setup did to
-     * make the sensor answerable was done once too. On Ingenic that is the
-     * sensor's clock, and the vendor SDK gates it off when it tears a pipeline
-     * down: a second probe in the same process then found an unclocked sensor
-     * and reported that the board has none. A fresh process got it right,
-     * which is what made it look like the hardware rather than us. */
-    if (hal_enable_sensor_clock)
-        hal_enable_sensor_clock();
 
     const int preferred_adapter = i2c_adapter_nr;
 
@@ -1270,6 +1281,7 @@ bool getsensorid(sensor_ctx_t *ctx) {
 
     /* The bus the HAL nominated, first. A missing adapter is no longer the end
      * of the probe: the sweep below can still find the sensor elsewhere. */
+    arm_sensor_clock();
     if (i2c_bus_openable(i2c_adapter_nr) && get_sensor_id_i2c(ctx)) {
         strcpy(ctx->control, "i2c");
         return true;
@@ -1277,6 +1289,7 @@ bool getsensorid(sensor_ctx_t *ctx) {
 
     /* SPI once, not once per i2c bus: open_spi_sensor_fd() takes no adapter
      * number, so every call addresses the very same device. */
+    arm_sensor_clock();
     if (get_sensor_id_spi(ctx)) {
         strcpy(ctx->control, "spi");
         return true;
@@ -1299,6 +1312,7 @@ bool getsensorid(sensor_ctx_t *ctx) {
         ctx->data_width = 1;
         ctx->reg_width = 2;
 
+        arm_sensor_clock();
         if (get_sensor_id_i2c(ctx)) {
             strcpy(ctx->control, "i2c");
             return true;

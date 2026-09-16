@@ -461,6 +461,21 @@ static void ot_ensure_sensor_restored() {
     }
 }
 
+/* hisi_hal_cleanup() puts the sensor CRG back the way it found it, so on V4
+ * and OT the sensor clock is gated off again the moment a probe finishes. The
+ * bus sweep in getsensorid() probes more than once, and everything after the
+ * first attempt would read an unclocked sensor. Installed as
+ * hal_enable_sensor_clock so the sweep can re-arm before each attempt; every
+ * branch is idempotent and does nothing when the clock is already running. */
+static void hisi_ensure_sensor_enabled() {
+    if (chip_generation == HISI_V3)
+        v3_ensure_sensor_enabled();
+    else if (chip_generation == HISI_V4)
+        v4_ensure_sensor_enabled();
+    else if (chip_generation == HISI_OT)
+        ot_ensure_sensor_enabled();
+}
+
 static void hisi_hal_cleanup() {
     if (chip_generation == HISI_V4)
         v4_ensure_sensor_restored();
@@ -495,12 +510,8 @@ static void get_hisi_sdk(cJSON *j_inner) {
 
 void setup_hal_hisi() {
     disable_printk();
-    if (chip_generation == HISI_V3)
-        v3_ensure_sensor_enabled();
-    else if (chip_generation == HISI_V4)
-        v4_ensure_sensor_enabled();
-    else if (chip_generation == HISI_OT)
-        ot_ensure_sensor_enabled();
+    hal_enable_sensor_clock = hisi_ensure_sensor_enabled;
+    hisi_ensure_sensor_enabled();
 
     open_i2c_sensor_fd = hisi_open_i2c_fd;
     open_spi_sensor_fd = hisi_open_spi_fd;
