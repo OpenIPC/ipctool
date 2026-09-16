@@ -1197,15 +1197,21 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
 
     /* Borrowed, not taken: both are process-global function pointers and the
      * i2c sweep that runs after this probe needs them back the way the HAL
-     * left them. The dummy addr-setter is the one that bites. It reports
-     * success without issuing ioctl(I2C_SLAVE), and universal_i2c_read_register
-     * -- the reader every HAL but HiSilicon and XM leaves in place -- ignores
-     * the address argument entirely and plain read()s the descriptor, so it
-     * only ever addresses the slave that call selected. Leave the dummy in
-     * place and the i2c probes that follow a failed SPI attempt talk to slave
-     * 0 on a freshly opened bus. HiSilicon and XM pass the address per message
-     * (I2C_RDWR), which is why this never showed up on the boards that get
-     * tested most. */
+     * left them. Leaving the dummy addr-setter installed is the dangerous
+     * half -- it reports success without issuing ioctl(I2C_SLAVE), and
+     * universal_i2c_read_register, the reader every HAL but HiSilicon and XM
+     * leaves in place, ignores its address argument and plain read()s the
+     * descriptor. It can only ever reach the slave that call selected.
+     *
+     * No board hits that today, and it is worth being exact about why rather
+     * than leaving a scary comment: HiSilicon is the only vendor that installs
+     * open_spi_sensor_fd, so it is the only vendor that reaches this function
+     * at all, and HiSilicon carries the address per message (I2C_RDWR) and
+     * does not consult the pointer. Measured both ways -- an A/B with and
+     * without this restore found the sensor either way on a lab Hi3516AV300
+     * and on a lab SSC30KQ. The restore is here so that stays true when some
+     * other vendor gains SPI sensor support, which is the moment the latent
+     * version of this becomes a real one. */
     read_register_t saved_read = sensor_read_register;
     int (*saved_change_addr)(int, unsigned char) = i2c_change_addr;
 
