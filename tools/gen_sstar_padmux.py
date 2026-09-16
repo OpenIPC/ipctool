@@ -308,6 +308,24 @@ def mode_name_from_macro(mode_id, mid):
     raise Refusal("mode %d has no name anywhere" % mid)
 
 
+def wrap_command(argv):
+    """The invocation, one option pair to a line.
+
+    It goes in a C comment, and a comment long enough to be reflowed comes out
+    the other side split at a space, which is not a command any more. Shell
+    continuations keep it one.
+    """
+    lines, pair = [argv[0]], []
+    for arg in argv[1:]:
+        pair.append(arg)
+        if len(pair) == 2:
+            lines.append("    " + " ".join(pair))
+            pair = []
+    if pair:
+        lines.append("    " + " ".join(pair))
+    return [l + " \\" for l in lines[:-1]] + lines[-1:]
+
+
 def emit(families, argv):
     out = []
     w = out.append
@@ -320,7 +338,8 @@ def emit(families, argv):
     w(" * it does not look like the HiSilicon tables in src/reginfo.c.")
     w(" *")
     w(" * Regenerate with:")
-    w(" *   %s" % argv)
+    for line in wrap_command(argv.split()):
+        w(" *   %s" % line)
     w(" *")
     w(" * From, in a vendor kernel tree:")
     for fam in families:

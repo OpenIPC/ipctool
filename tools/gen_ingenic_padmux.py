@@ -189,7 +189,8 @@ def merge_names(have, want, where, func):
 # ingenic,pinmux-funcsel = <PINCTL_FUNCTIONn>.
 DT_GROUP_RE = re.compile(r"(\w+)\s*:\s*[\w-]+\s*\{([^{}]*?)\}", re.S)
 DT_PINMUX_RE = re.compile(r"ingenic,pinmux\s*=\s*<\s*&gp([a-g])\s+(\d+)\s+(\d+)\s*>")
-DT_FUNC_RE = re.compile(r"ingenic,pinmux-funcsel\s*=\s*<\s*PINCTL_FUNCTION(\d)\s*>")
+DT_FUNC_RE = re.compile(
+    r"ingenic,pinmux-funcsel\s*=\s*<\s*PINCTL_FUNCTION(\w+)\s*>")
 
 
 def parse_dt(text, soc):
@@ -216,6 +217,17 @@ def parse_dt(text, soc):
         if not func:
             continue  # a GPIO level, not a device function
 
+        # PINCTL_FUNCTION<n> is the only form that names a device function.
+        # Anything else through that spelling -- a wider n on some future
+        # part, or a constant this parser has not met -- is a refusal rather
+        # than an index off the end of a four-slot pad.
+        if not func.group(1).isdigit():
+            continue
+        fn = int(func.group(1))
+        if fn > 3:
+            raise Refusal("%s asks for PINCTL_FUNCTION%d, and a pad has four "
+                          "functions" % (label, fn))
+
         port, first, last = pinmux.group(1), int(pinmux.group(2)), \
             int(pinmux.group(3))
         if ord(port) - ord("a") >= nports:
@@ -229,9 +241,8 @@ def parse_dt(text, soc):
             pad = (ord(port) - ord("a")) * PINS_PER_PORT + pin
             slot = pads.setdefault(pad, ["P%s%02d" % (port.upper(), pin),
                                          [EMPTY] * 4])
-            slot[1][int(func.group(1))] = merge_names(
-                slot[1][int(func.group(1))], normalise(label),
-                "P%s%02d" % (port.upper(), pin), int(func.group(1)))
+            slot[1][fn] = merge_names(slot[1][fn], normalise(label),
+                                      "P%s%02d" % (port.upper(), pin), fn)
 
     if not pads:
         raise Refusal("found no pinmux nodes -- is this a <soc>-pinctrl.dtsi?")
@@ -360,6 +371,25 @@ def parse(text, soc):
     return pads
 
 
+def wrap_command(argv):
+    """The invocation, one --soc/--spec pair to a line.
+
+    It goes in a C comment, and a comment long enough to be reflowed comes out
+    the other side with --soc on one line and its value on the next, which is
+    not a command any more. Shell continuations keep it one, and keep every
+    line short enough that nothing wants to reflow it.
+    """
+    lines, pair = [argv[0]], []
+    for arg in argv[1:]:
+        pair.append(arg)
+        if len(pair) == 4:  # --soc X --spec Y
+            lines.append("    " + " ".join(pair))
+            pair = []
+    if pair:
+        lines.append("    " + " ".join(pair))
+    return [l + " \\" for l in lines[:-1]] + lines[-1:]
+
+
 def emit(socs, argv):
     """socs: (soc, pads, sources, overflows, conflicts) per SoC."""
     out = []
@@ -372,7 +402,8 @@ def emit(socs, argv):
     w(" * src/hal/ingenic_padmux.c holds the registers.")
     w(" *")
     w(" * Regenerate with:")
-    w(" *   %s" % " ".join(argv))
+    for line in wrap_command(argv):
+        w(" *   %s" % line)
     w(" */")
     w("")
     w("#ifndef HAL_INGENIC_PADMUX_H")

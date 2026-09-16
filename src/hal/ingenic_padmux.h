@@ -6,9 +6,11 @@
  * src/hal/ingenic_padmux.c holds the registers.
  *
  * Regenerate with:
- *   tools/gen_ingenic_padmux.py --soc T31 --spec T31_H.3_gpio_spec.pdf --soc
- * T21 --spec platform.h --soc T23 --spec platform.h --soc T40 --spec
- * t40-pinctrl.dtsi
+ *   tools/gen_ingenic_padmux.py \
+ *       --soc T31 --spec T31_H.3_gpio_spec.pdf \
+ *       --soc T21 --spec platform.h \
+ *       --soc T23 --spec platform.h \
+ *       --soc T40 --spec t40-pinctrl.dtsi
  */
 
 #ifndef HAL_INGENIC_PADMUX_H
