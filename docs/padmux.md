@@ -81,7 +81,9 @@ Where it has been run:
 `<chip>_PINOUT_*.xlsx` instead -- sheet `3.muxctrl_reg Description` on
 Hi3516CV300, `3. Pin Control Registers` after it, `3.管脚控制寄存器` in the
 Chinese editions, which for Hi3516DV200/EV200/EV300 and Hi3518EV300 are the
-only editions shipped. Pass a workbook with `--pinout` and a PDF with
+only editions shipped -- and `3.管脚复用寄存器` in the older Chinese
+Hi3516CV300 and Hi3516EV100 workbooks, next to a `3.管脚驱动能力寄存器` that
+is the drive-strength list and not the mux. Pass a workbook with `--pinout` and a PDF with
 `--datasheet`. The workbook is the better source: it states absolute
 addresses, so there is no `--base` to get wrong and a table spread over
 several banks needs no special handling.
@@ -92,16 +94,17 @@ several banks needs no special handling.
 | `AV100` | Hi3516A/D V100 | 123 | 2 holes restored | PDF, SPC050 + SPC080 |
 | `EV20X` | Hi3518E V20X | 66 | 19 holes restored | PDF, SPC040 + SPC050 |
 | `CV200` | Hi3516C V200 | 66 | 19 holes restored | PDF, SPC040 + SPC050 |
-| `CV300` | Hi3516C V300 | 66 | agrees | workbook |
-| `EV200` | Hi3516E V200 | 52 | agrees | workbook |
-| `EV300` | Hi3516E V300 | 93 | agrees | workbook |
-| `_8EV300` | Hi3518E V300 | 56 | agrees | workbook |
-| `DV200` | Hi3516D V200 | 99 | agrees | workbook |
-| `CV500` | Hi3516C V500 | 104 | agrees | workbook |
-| `DV300` | Hi3516D V300 | 113 | agrees | workbook |
+| `CV300` | Hi3516C V300 | 66 | agrees | workbook, EN + CN + SPC010 |
+| `EV200` | Hi3516E V200 | 52 | agrees | workbook, SPC011 + SPC012 |
+| `EV300` | Hi3516E V300 | 93 | agrees | workbook, SPC011 + SPC012 |
+| `_8EV300` | Hi3518E V300 | 56 | agrees | workbook, SPC011 + SPC012 |
+| `DV200` | Hi3516D V200 | 99 | agrees | workbook, SPC011 + SPC012 |
+| `CV500` | Hi3516C V500 | 104 | agrees | workbook, EN + CN |
+| `DV300` | Hi3516D V300 | 113 | agrees | workbook, EN + CN |
 
-The four PDF ones were each run against two independent revisions, which
-agree on every selector value; the only difference anywhere is a name
+Every one was run against two independent editions -- two data sheet
+revisions, or an English and a Chinese workbook, or two SDK releases -- and
+they agree on every selector value. The only difference anywhere is a name
 (`muxctrl_reg93` on AV100 is `RMII_CLK` in SPC050 and
 `RMII_CLK_OUT/MII_TX_CLK` in SPC080, and the table carries the newer
 spelling). `CV300`'s count is 66 against 65 registers because

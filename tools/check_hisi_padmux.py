@@ -177,8 +177,11 @@ def classify(addr, funcs, ds, base):
 # Registers" on everything after it, "3.管脚控制寄存器" in the Chinese
 # editions, which for Hi3516DV200/EV200/EV300 and Hi3518EV300 are the only
 # editions shipped.
+# Four spellings so far, and one near-miss to stay clear of: the sheet next
+# to this one is the DRIVE CAPABILITY register list (管脚驱动能力寄存器 /
+# "Pin Drive Capability Registers"), which is not the mux and must not match.
 PINOUT_SHEET = re.compile(
-    r"Pin Control Registers|muxctrl_reg Description|管脚控制寄存器")
+    r"Pin Control Registers|muxctrl_reg Description|管脚(?:控制|复用)寄存器")
 # The mux is one field among pull-ups and drive strength; this names it.
 FUNC_FIELD = re.compile(r"Function sel|功能选择")
 # "0: EMMC_CLK", "0x1：UART0_RXD；". Anchored, so "Other value: reserved"
@@ -208,15 +211,37 @@ def _xvalues(text):
     return vals
 
 
-def pinout_registers(path):
+def pick_sheet(names, want=None):
+    """The one register sheet, or a message saying why there isn't one.
+
+    Never "the first that matches". Every workbook seen so far has exactly
+    one, but silently picking among several is the failure that keeps
+    recurring here -- the data sheets hold two SoCs' chapters and that path
+    refuses too.
+    """
+    if want is not None:
+        if want not in names:
+            return None, "no sheet named %r; the workbook has %s" % (
+                want, ", ".join(names))
+        return want, None
+    hits = [n for n in names if PINOUT_SHEET.search(n)]
+    if not hits:
+        return None, ("no pin-control-register sheet; the workbook has %s"
+                      % ", ".join(names))
+    if len(hits) > 1:
+        return None, ("several sheets could be it, so pass --sheet: %s"
+                      % ", ".join(hits))
+    return hits[0], None
+
+
+def pinout_registers(path, want=None):
     """{absolute address: [function per selector value]} from a workbook."""
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import xlsx_min
     book = xlsx_min.sheets(path)
-    name = next((n for n in book if PINOUT_SHEET.search(n)), None)
+    name, why = pick_sheet(list(book), want)
     if name is None:
-        sys.exit("no pin-control-register sheet in %s; it has %s"
-                 % (path, ", ".join(book)))
+        sys.exit("%s: %s" % (path, why))
 
     out, addr, pending = {}, None, {}
 
@@ -419,7 +444,25 @@ def selftest():
     check(_xvalues("0xA: TEN\n11: ELEVEN") == {10: "TEN", 11: "ELEVEN"},
           "workbook values: 0x is hex, bare is decimal")
 
-    # 10. the verdicts, which decide what --fix may touch
+    # 10. choosing the register sheet. Four spellings, a near-miss next to
+    #     it, and never a silent pick among several.
+    OLD_CN = "3.管脚复用寄存器"
+    NEW_CN = "3.管脚控制寄存器"
+    DRIVE = "4.管脚驱动能力寄存器"
+    for names, want, expect in (
+            (["0.说明", OLD_CN, DRIVE], None, OLD_CN),
+            (["0.说明", NEW_CN, DRIVE], None, NEW_CN),
+            (["x", "3. Pin Control Registers"], None, "3. Pin Control Registers"),
+            (["x", "3.muxctrl_reg Description"], None, "3.muxctrl_reg Description"),
+            ([DRIVE, "0.说明"], None, None),          # the near-miss alone
+            ([OLD_CN, NEW_CN], None, None),           # ambiguous -> refuse
+            ([OLD_CN, NEW_CN], NEW_CN, NEW_CN),       # ...unless told which
+            ([OLD_CN], "nope", None)):                # --sheet must exist
+        got, why = pick_sheet(names, want)
+        check(got == expect, "pick_sheet(%r, %r) = %r, wanted %r (%s)"
+              % (names, want, got, expect, why))
+
+    # 11. the verdicts, which decide what --fix may touch
     base = 0x10000000
     byaddr = {base + 4 * num: row for num, row in ds.items()}
     cases = [
@@ -468,6 +511,9 @@ def main():
                          "from Hi3516CV300 onwards. Preferred: it states "
                          "absolute addresses, so --base is not needed and a "
                          "table spread over several banks works too")
+    ap.add_argument("--sheet",
+                    help="which worksheet holds the registers, when --pinout "
+                         "cannot tell on its own")
     ap.add_argument("--prefix", help="MUXCTRL row prefix, e.g. EV20X_")
     ap.add_argument("--base",
                     help="physical address of muxctrl_reg0, e.g. 0x200f0000; "
@@ -491,7 +537,7 @@ def main():
         # nothing to get wrong about the numbering
         base = None
         who = os.path.basename(args.pinout)
-        ds = pinout_registers(args.pinout)
+        ds = pinout_registers(args.pinout, args.sheet)
     else:
         if args.base is None:
             ap.error("--base is required with --datasheet")
