@@ -59,12 +59,17 @@ static int hisi_open_spi_fd() {
     snprintf(filename, sizeof(filename), "/dev/spidev0.%d", adapter_nr);
 
     int fd = universal_open_sensor_fd(filename);
+    /* Cameras without spidev are the common case, not an error worth three
+     * lines on stderr: every ioctl below was being issued on -1. */
+    if (fd < 0)
+        return -1;
 
     value = SPI_MODE_3 | SPI_LSB_FIRST;
     ret = ioctl(fd, SPI_IOC_WR_MODE, &value);
     if (ret < 0) {
         fprintf(stderr, "ioctl SPI_IOC_WR_MODE err, value = %d ret = %d\n",
                 value, ret);
+        close(fd);
         return ret;
     }
 
@@ -74,6 +79,7 @@ static int hisi_open_spi_fd() {
         fprintf(stderr,
                 "ioctl SPI_IOC_WR_BITS_PER_WORD err, value = %d ret = %d\n",
                 value, ret);
+        close(fd);
         return ret;
     }
 
@@ -83,6 +89,7 @@ static int hisi_open_spi_fd() {
         fprintf(stderr,
                 "ioctl SPI_IOC_WR_MAX_SPEED_HZ err, value = %d ret = %d\n",
                 value, ret);
+        close(fd);
         return ret;
     }
 
