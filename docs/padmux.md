@@ -119,20 +119,31 @@ spelling). `CV300`'s count is 66 against 65 registers because
 `CV300_muxctrl_reg66` is the `IPCHW_PADMUX_ADDR_NONE` sentinel, which no
 document has and is not supposed to.
 
-Still open:
+Two tables still disagree with their documents, and they are not the same
+kind of problem. **Incomplete is fine; wrong is not.** A pad a table does not
+describe is simply not offered -- `ipchw_padmux_by_pad()` returns nothing for
+it, `get()` says nothing, `set()` refuses -- which is exactly how every pad
+behaves on a family that has no table at all. A row that names the wrong
+function does not degrade, it misleads.
 
-- **`CV610`** (76 rows) disagrees with its workbook and is **not** a missing
-  hole: functions are absent, renamed, or merged into one slashed entry where
-  the document gives two values. It also matters which package -- the BGA
-  sheet disagrees on 65 rows, the QFN sheet and the Hi3516CV608 sheet on 24
-  each -- so which part the table was entered from has to be settled before
-  any of it is rewritten.
-- **`DV500`** (Hi3519D V500 and Hi3516D V500) is worse: 131 registers in the
-  workbook against 102 rows, and many of the rows it does have carry
-  `"reserved"` where the document names a real function, GPIO names included.
-  It needs re-entering from the document rather than patching. Two different
-  releases of that workbook give the same verdict, so it is the table that is
-  short and not the document that is stale.
+- **`CV610`** (76 rows) is the one to be careful with. It disagrees with its
+  workbook and **not** as a missing hole: functions are absent, renamed, or
+  merged into one slashed entry where the document gives two values. Which
+  package also matters -- the BGA sheet disagrees on 65 rows, the QFN sheet
+  and the Hi3516CV608 sheet on 24 each -- so which part the table was entered
+  from has to be settled before any of it is rewritten.
+- **`DV500`** (Hi3519D V500 and Hi3516D V500) is merely partial, and worth
+  having as it is. 131 registers in the workbook against 102 rows, 29 of them
+  absent entirely, and 44 of the rows present carry `"reserved"` at selector 0
+  where the document names the GPIO. But 91 of the 96 differing rows are a
+  strict **subset** of the document: every function it does name sits at the
+  right selector value, so nothing it says is wrong and nothing is shifted the
+  way the V2 tables were. Filling it in from the workbook is additive and can
+  be done a register at a time. Two different releases of that workbook give
+  the same verdict, so it is the table that is short, not the document that is
+  stale. (The five rows that are not subsets are three spellings --
+  `PWM2`/`SVB_PWM2`, `MDCLK0`/`MDCK`, `MDIO0`/`MDIO` -- and two functions the
+  table marks `reserved`: `BOOT_PARA_SEL2` and `I2C2_SCL`.)
 `AV200` serves four SoCs and there are workbooks for all of them, in two
 places that do not look like each other:
 

@@ -30,13 +30,22 @@ A data sheet may cover several SoCs back to back, each with its own chapter 2
 --soc picks one; without it, every chapter found is listed and the script
 exits non-zero so the choice is deliberate.
 
-Exit status is 0 only when the table and the chapter agree -- or, under
---fix, when every disagreement was a missing hole and all of them were
-rewritten. Anything this tool will not repair on its own (a row the chapter
-does not describe, an address that is not base + 4n, a renamed function, a
-register with no row at all) stops --fix from writing at all: each of those
-is at least as likely to mean the wrong document, --soc or --base as a wrong
-table.
+Exit status: 0 when the table and the document agree, or when --fix has
+just made them agree. 2 when the only differences are INCOMPLETENESS -- rows
+that fill some of the document's selectors and leave the rest, or registers
+with no row at all. 1 for anything unresolved: a renamed function, an address
+that is not base + 4n, a row the document does not describe, or holes that
+--fix was not asked to repair.
+
+The 2 is deliberate. An incomplete table is worth having: a pad it does not
+describe is simply not offered, which is how every pad behaves on a family
+with no table at all, and every function it does name sits at the right
+selector. A row that names the WRONG function does not degrade, it misleads,
+and that is what 1 is for.
+
+Anything this tool will not repair on its own stops --fix from writing at
+all: each of those is at least as likely to mean the wrong document, --soc or
+--base as a wrong table.
 
 Needs pdftotext (poppler) for a PDF. Data sheets are not in this repo, so CI
 cannot run this; it is for whoever has the document.
@@ -143,7 +152,8 @@ def registers(lines, lo, hi):
 
 # What is wrong with one row, if anything. Kept apart from the printing so it
 # can be exercised without a data sheet -- see selftest().
-OK, HOLE, RENAME, UNALIGNED, NOSUCH = "ok", "hole", "rename", "unaligned", "nosuch"
+OK, HOLE, PARTIAL, RENAME, UNALIGNED, NOSUCH = (
+    "ok", "hole", "partial", "rename", "unaligned", "nosuch")
 
 
 def classify(addr, funcs, ds, base):
@@ -163,8 +173,20 @@ def classify(addr, funcs, ds, base):
         return NOSUCH, num, None
     if funcs == want:
         return OK, num, want
-    # Only a hole is repairable. A differing NAME means the parse, the --soc
-    # or the --base is at least as suspect as the table.
+
+    # Incomplete is not the same as wrong, and the difference is what a
+    # reader needs. A row that fills only some of the document's selectors,
+    # leaving the rest "reserved" or simply stopping early, says less than the
+    # document but nothing that contradicts it: every function it does name is
+    # at the value the document gives. That degrades safely -- the missing
+    # alternatives are not offered, exactly as on a family with no table --
+    # so it is reported apart from a row that names something else.
+    if len(funcs) <= len(want) and all(
+            f == "reserved" or f == want[i] for i, f in enumerate(funcs)):
+        return PARTIAL, num, want
+
+    # Only a hole is repairable by this tool. A differing NAME means the
+    # parse, the --soc or the --base is at least as suspect as the table.
     if [f for f in funcs if f != "reserved"] != \
             [f for f in want if f != "reserved"]:
         return RENAME, num, want
@@ -486,6 +508,17 @@ def selftest():
         (0x10000000, ["GPIO0_0", "AAA", "reserved", "BBB", "CCC"], OK),
         (0x10000000, ["GPIO0_0", "AAA", "BBB", "CCC"], HOLE),
         (0x10000000, ["GPIO0_0", "AAA", "reserved", "BBB", "ZZZ"], RENAME),
+        # incomplete, not wrong: selector 0 left blank, the rest dropped.
+        # Must NOT be confused with a hole, which is what the case above it
+        # is, nor with a rename, which is what a wrong name at a filled
+        # position is.
+        (0x10000000, ["reserved", "AAA"], PARTIAL),
+        (0x10000000, ["GPIO0_0", "AAA"], PARTIAL),
+        (0x10000000, ["GPIO0_0", "AAA", "reserved", "BBB"], PARTIAL),
+        (0x10000000, ["reserved", "ZZZ"], RENAME),
+        # longer than the document is not "incomplete" by any reading
+        (0x10000000, ["GPIO0_0", "AAA", "reserved", "BBB", "CCC", "DDD"],
+         RENAME),
         (0x10000011, ["GPIO0_0"], UNALIGNED),   # not base + 4n
         (0x0FFFFFFC, ["GPIO0_0"], UNALIGNED),   # below base
         (0x10000100, ["GPIO0_0"], NOSUCH),      # no such register
@@ -594,7 +627,7 @@ def main():
     # -- is kept apart, because each of those is at least as likely to mean
     # the wrong document, the wrong --soc or the wrong --base as a wrong
     # table, and "repairing" a table against the wrong document would wreck it.
-    holes, unfixable, fixed = 0, 0, 0
+    holes, partial, absent, unfixable, fixed = 0, 0, 0, 0, 0
     for addr in sorted(have):
         name, addr_s, funcs, whole = have[addr]
         if addr == ADDR_NONE:
@@ -617,9 +650,14 @@ def main():
             continue
         if verdict == OK:
             continue
-        print("  %-14s %s %s" % (name, addr_s, where))
+        print("  %-14s %s %s%s" % (name, addr_s, where,
+                                   "  (incomplete, not wrong)"
+                                   if verdict == PARTIAL else ""))
         print("      table     : %s" % " ".join(funcs))
         print("      data sheet: %s" % " ".join(want))
+        if verdict == PARTIAL:
+            partial += 1
+            continue
         if verdict == RENAME:
             print("      ^ not just a missing hole; --fix will not touch this")
             unfixable += 1
@@ -638,7 +676,7 @@ def main():
         # wrong answer than a shifted selector, not a smaller one
         print("  in the document but not in the table: %s"
               % ", ".join("%#010x" % a for a in missing))
-        unfixable += len(missing)
+        absent += len(missing)
 
     if args.fix and fixed and unfixable == 0:
         open(args.reginfo, "w", encoding="utf-8").write(src)
@@ -648,11 +686,23 @@ def main():
               "holes. Check --soc, --base and the document before assuming "
               "the table is what is wrong." % unfixable)
 
-    print("%d of %d rows disagree (%d missing holes, %d this tool will not "
-          "touch)" % (holes + unfixable, len(have), holes, unfixable))
+    total = holes + partial + unfixable + absent
+    if total == 0:
+        print("%d rows, all agreeing" % len(have))
+    else:
+        print("%d row(s) of %d differ, and %d register(s) have no row: "
+              "%d missing hole(s), %d incomplete but not wrong, "
+              "%d this tool will not touch"
+              % (holes + partial + unfixable, len(have), absent,
+                 holes, partial, unfixable))
     if unfixable:
         return 1
-    return 0 if holes == 0 or (args.fix and fixed == holes) else 1
+    # Incomplete and absent rows are a gap, not a defect: they are worth
+    # reporting and worth filling in, and they are not a reason to call the
+    # table broken. Exit non-zero only for what is actually unresolved.
+    if holes and not (args.fix and fixed == holes):
+        return 1
+    return 2 if (partial or absent) else 0
 
 
 if __name__ == "__main__":
