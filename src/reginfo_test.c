@@ -566,6 +566,47 @@ static void test_sstar(void) {
     CHECK((r.flags & IPCHW_PADMUX_F_GPIO) != 0);
     CHECK(r.gpio_name && !strcmp(r.gpio_name, "PAD_UART1_RX"));
 
+    puts("SigmaStar: a pad the vendor muxes from a bank this table cannot "
+         "reach");
+    /* Measured on an SSC30KQ. m_stPadMuxTbl gives PAD_ETH_RN..PAD_USB2_DP a
+     * row apiece for SPIHOLDN_MODE and EMMC0_8B_MODE_1 -- copy-paste from
+     * PAD_SPI_HLD, naming the SPI pad's own fields. The real selector is
+     * REG_ETH_GPIO_EN in ALBANY2 (0x1F2A2DC4) for the Ethernet pairs and the
+     * UTMI0 power-down bits for USB, neither of which is in this table, so
+     * the vendor routes all six through HalPadSetMode_MISC(). Taken at face
+     * value the rows report six pads as carrying whatever the flash HOLD pin
+     * carries; the board's own answer was "Ethernet", with the link up. */
+    as_chip(INFINITY6E, "SSC30KQ");
+
+    regs_reset();
+    CHECK(ipchw_padmux_get(120, &r) == 1); /* PAD_SPI_HLD really does */
+    CHECK(!strcmp(r.func_name, "SPIHOLDN_MODE"));
+    for (int pad = 121; pad <= 126; pad++) {
+        CHECK(ipchw_padmux_get(pad, &r) == 0);          /* cannot say */
+        CHECK(ipchw_padmux_by_pad(pad, rows, 16) == 0); /* nothing to offer */
+        CHECK(ipchw_padmux_set(pad, "EMMC0_8B_MODE_1") == IPCHW_PADMUX_NO_FUNC);
+        CHECK(ipchw_padmux_set(pad, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_NO_FUNC);
+    }
+    /* and the mode they used to borrow is left to the pad that owns it */
+    CHECK(ipchw_padmux_by_func("SPIHOLDN_MODE", rows, 16) == 1);
+    CHECK(rows[0].gpio_pad == 120);
+
+    puts("SigmaStar: four PWM fields of one register, three of them claimed");
+    /* Also measured on that camera: reg 0x1F207994 read 0x1101, which is
+     * PWM0_MODE_1 and PWM2_MODE_1 and PWM3_MODE_1 asserted and PWM1 idle.
+     * The negative is the half worth pinning -- a decoder that ignored the
+     * field offsets would report all four. */
+    regs_reset();
+    fake_write(0x1F207994, 0x1101, 16);
+    CHECK(ipchw_padmux_get(107, &r) == 1); /* PAD_GPIO8 */
+    CHECK(!strcmp(r.func_name, "PWM0_MODE_1"));
+    CHECK(ipchw_padmux_get(109, &r) == 1); /* PAD_GPIO10 */
+    CHECK(!strcmp(r.func_name, "PWM2_MODE_1"));
+    CHECK(ipchw_padmux_get(110, &r) == 1); /* PAD_GPIO11 */
+    CHECK(!strcmp(r.func_name, "PWM3_MODE_1"));
+    CHECK(ipchw_padmux_get(108, &r) == 1); /* PAD_GPIO9, and PWM1 is idle */
+    CHECK(strcmp(r.func_name, "PWM1_MODE_1") != 0);
+
     as_chip(INFINITY6B, "SSC33X");
 }
 #endif

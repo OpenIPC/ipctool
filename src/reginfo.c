@@ -3208,7 +3208,35 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
             return EXIT_FAILURE;
         }
     } else if (want == NULL) {
-        want = IPCHW_PADMUX_GPIO;
+        /* No function named: say what the pad is carrying. This used to mux
+         * the pad to GPIO instead -- `new_func = i`, the pad's own GPIO
+         * index, when neither a name nor a number was given -- which made a
+         * command that reads like a question perform a write. There was no
+         * way to ask at all, and the mistake is silent: running it on an
+         * SSC30KQ's PAD_ETH_LED0 dropped LED0_MODE_1 and left the link LED
+         * dark until the mode was put back. "Set this pad to GPIO" still has
+         * a spelling, and it is the unambiguous one: `gpio mux <pad> GPIO`. */
+        ipchw_padmux_t now;
+        int res = ipchw_padmux_get(pad, &now);
+        if (res < 0)
+            return padmux_refuse(res, gpio_number, NULL);
+
+        ipchw_padmux_t rows[64];
+        int n = ipchw_padmux_by_pad(pad, rows, ARRCNT(rows));
+        if (n < 0)
+            return padmux_refuse(n, gpio_number, NULL);
+        if (n > (int)ARRCNT(rows))
+            n = (int)ARRCNT(rows);
+
+        const char *carrying = res == 1 ? now.func_name : "?";
+        const char *name = n > 0 && rows[0].gpio_name ? rows[0].gpio_name : "-";
+
+        printf("pad %-4d %-16s [%s]", pad, name, carrying);
+        for (int i = 0; i < n; i++)
+            if (strcmp(rows[i].func_name, carrying) != 0)
+                printf(" %s", rows[i].func_name);
+        puts("");
+        return EXIT_SUCCESS;
     }
 
     int res = ipchw_padmux_set(pad, want);
@@ -3220,9 +3248,11 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
 
 static int gpio_mux_cmd(int argc, char **argv) {
     if (argc < 2 || argc > 3) {
-        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "mux",
+        printf("Usage: ipctool gpio %s <gpio number>%s\n%s%s", "mux",
                " [function name or number]",
-               "where: <gpio number> either number in 5_6 or 46 format\n");
+               "where: <gpio number> either number in 5_6 or 46 format\n",
+               "       with no function, reports what the pad carries;\n"
+               "       pass GPIO to mux it back to plain GPIO\n");
         return EXIT_FAILURE;
     }
 
