@@ -18,7 +18,7 @@ smartsens 2245 SC1145
 smartsens 2300 SC307P
 smartsens 2310 SC2310
 smartsens 2311 SC2315
-smartsens 2330 SC2330
+smartsens 2330 SC307H
 smartsens 3035 SC3035
 smartsens 3235 SC4236
 smartsens 4210 SC4210
@@ -59,9 +59,9 @@ smartsens ce1a SC5332
 smartsens ce1f SC501AI
 smartsens ce39 SC430AI
 smartsens ce50 SC5336
-smartsens da23 <uninitialised>
+smartsens da23 SC1345
 smartsens da4d SC1346
-smartsens dc42 <uninitialised>
+smartsens dc42 SC4336
 smartsens eb2c SC2355
 soi 0500 JXK00
 soi 0501 JXK01
