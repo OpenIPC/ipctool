@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,6 +20,16 @@ char chip_name[128];
 char nor_chip_name[128];
 char nor_chip_id[128];
 static char chip_manufacturer[128];
+
+/* Which of the two detection paths ran, so a failure can report the input
+ * that actually let us down: a known UART0 base picks a vendor detector and
+ * never looks at /proc/cpuinfo, while the fallback does the opposite. */
+static enum {
+    DETECT_PATH_NONE,
+    DETECT_PATH_UART,    /* a known UART0 base chose a vendor detector */
+    DETECT_PATH_GENERIC, /* fell back to the /proc/cpuinfo table */
+} detect_path;
+static long detect_uart_base = -1;
 
 static long get_uart0_address() {
     char buf[256];
@@ -88,6 +99,8 @@ static const manufacturers_t manufacturers[] = {
 static bool generic_detect_cpu() {
     char buf[256] = "unknown";
 
+    detect_path = DETECT_PATH_GENERIC;
+
     strcpy(chip_name, "unknown");
     bool res = line_from_file("/proc/cpuinfo", "Hardware.+:.(\\w+)",
                 buf, sizeof(buf));
@@ -124,6 +137,8 @@ static bool generic_detect_cpu() {
 static bool detect_and_set(const char *manufacturer,
                            bool (*detect_fn)(char *, uint32_t),
                            void (*setup_hal_fn)(void), uint32_t base) {
+    detect_path = DETECT_PATH_UART;
+
     bool ret = detect_fn(chip_name, base);
     if (ret) {
         strcpy(chip_manufacturer, manufacturer);
@@ -135,6 +150,8 @@ static bool detect_and_set(const char *manufacturer,
 
 static bool hw_detect_system() {
     long uart_base = get_uart0_address();
+
+    detect_uart_base = uart_base;
     switch (uart_base) {
     // hi3516cv610 (ARMv7) / hi3519dv500 (aarch64) — HiSilicon V5 family
     case 0x11040000: {
@@ -256,6 +273,81 @@ const char *getchipvendor() {
 }
 
 #ifndef STANDALONE_LIBRARY
+/* getchipname() failing used to be silent: every report section came out
+ * empty and ipctool exited 1 without a word, which reads as a broken binary
+ * (#134 on an Anyka AK3918, #138 on a desktop). Report the input detection
+ * actually used -- and only that one, since a known UART0 base and the
+ * /proc/cpuinfo table are alternatives, never both. */
+
+/* -1 from get_uart0_address() covers three different situations and the
+ * advice differs for each, so take them apart here rather than widen
+ * line_from_file(), which half the codebase calls. */
+static void explain_missing_uart0() {
+    FILE *f = fopen("/proc/iomem", "r");
+    if (!f) {
+        fprintf(stderr, "  /proc/iomem could not be read: %s\n",
+                strerror(errno));
+        return;
+    }
+    fclose(f);
+
+    if (geteuid() != 0)
+        fprintf(stderr, "  no UART0 entry in /proc/iomem, which zeroes every\n"
+                        "  address unless you are root -- try again as root\n");
+    else
+        fprintf(stderr, "  no UART0 entry in /proc/iomem\n");
+}
+
+void explain_unknown_chip() {
+    char buf[256];
+
+    fprintf(stderr,
+            "ipctool: SoC not recognised, no hardware report possible.\n");
+
+    if (detect_path == DETECT_PATH_UART) {
+        /* The UART0 base named a family, so the SoC is one ipctool knows;
+         * what failed is reading its identity register. A kernel built with
+         * CONFIG_STRICT_DEVMEM looks exactly like this from here. */
+        fprintf(stderr,
+                "  UART0 base 0x%lx in /proc/iomem is a known one, but the\n"
+                "  chip did not identify itself -- reading its registers\n"
+                "  through /dev/mem may be blocked (CONFIG_STRICT_DEVMEM)\n",
+                detect_uart_base);
+    } else {
+        if (detect_uart_base != -1)
+            fprintf(stderr,
+                    "  UART0 base 0x%lx in /proc/iomem is not one ipctool\n"
+                    "  knows\n",
+                    detect_uart_base);
+        else
+            explain_missing_uart0();
+
+        if (line_from_file("/proc/cpuinfo", "Hardware.+:.(\\w+)", buf,
+                           sizeof(buf)) ||
+            line_from_file("/proc/cpuinfo", "vendor_id.+:.(\\w+)", buf,
+                           sizeof(buf)) ||
+            line_from_file("/proc/cpuinfo", "machine.+:.(\\w+)", buf,
+                           sizeof(buf)))
+            fprintf(stderr, "  no vendor matches /proc/cpuinfo: %s\n", buf);
+        else
+            fprintf(stderr,
+                    "  no Hardware/vendor_id/machine line in /proc/cpuinfo\n");
+    }
+
+#if defined(__i386__) || defined(__x86_64__)
+    fprintf(stderr,
+            "This is an x86 build. ipctool probes camera hardware\n"
+            "directly, so it has to run on the camera itself, not on a\n"
+            "desktop.\n");
+#else
+    fprintf(stderr,
+            "Run it as root on the camera. If this is an IP camera or DVR,\n"
+            "please report the SoC with the output of\n"
+            "'cat /proc/cpuinfo; cat /proc/iomem; dmesg | head -40' at\n"
+            "https://github.com/OpenIPC/ipctool/issues\n");
+#endif
+}
+
 cJSON *detect_chip() {
     cJSON *j_inner = cJSON_CreateObject();
 
