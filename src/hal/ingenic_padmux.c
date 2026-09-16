@@ -74,6 +74,8 @@ static const ingenic_soc_t *ingenic_soc(void) {
         return &T23_padmux;
     case T31:
         return &T31_padmux;
+    case T40:
+        return &T40_padmux;
     default:
         return NULL;
     }

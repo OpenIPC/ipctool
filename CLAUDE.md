@@ -107,7 +107,10 @@ Cameras usually lack `sftp-server`, so copy with `scp -O`; `/tmp` is tmpfs.
 
 `.clang-format` is LLVM style with 4-space indent. `contributors.md` asks for
 the hook: `./scripts/git-pre-commit-format install`. `scripts/apply-format`
-reformats only the changed hunks of a diff.
+reformats only the changed hunks of a diff -- but it only learns about
+`.clang-format-hook-exclude` when the hook passes it in, so run
+`scripts/format-changed` instead, or a generated header gets reflowed and stops
+matching its generator.
 
 ## Architecture
 

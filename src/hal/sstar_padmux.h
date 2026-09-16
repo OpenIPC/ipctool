@@ -7,7 +7,11 @@
  * it does not look like the HiSilicon tables in src/reginfo.c.
  *
  * Regenerate with:
- *   tools/gen_sstar_padmux.py --kernel <tree> --family infinity6b0 --family infinity6e --family infinity6c
+ *   tools/gen_sstar_padmux.py \
+ *       --kernel <tree> \
+ *       --family infinity6b0 \
+ *       --family infinity6e \
+ *       --family infinity6c
  *
  * From, in a vendor kernel tree:
  *   a3e6bd1740e49a5d  drivers/sstar/gpio/infinity6b0/mhal_pinmux.c

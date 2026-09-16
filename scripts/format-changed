@@ -1,0 +1,16 @@
+#!/bin/sh
+# Reformat the staged hunks, skipping the files .clang-format-hook-exclude
+# names. apply-format only learns about that file when the pre-commit hook
+# passes it in, so a manual run reformats generated headers and silently
+# breaks whatever the generator laid out -- which is how a regeneration
+# recipe ended up wrapped mid-option.
+set -e
+top=$(git rev-parse --show-toplevel)
+opts=""
+if [ -e "$top/.clang-format-hook-exclude" ]; then
+    while IFS= read -r line; do
+        case "$line" in ''|'#'*) continue ;; esac
+        opts="$opts --internal-opt-ignore-regex=$line"
+    done < "$top/.clang-format-hook-exclude"
+fi
+exec "$top/scripts/apply-format" -i --staged $opts "$@"

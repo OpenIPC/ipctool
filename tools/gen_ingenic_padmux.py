@@ -46,6 +46,11 @@ PINS_PER_PORT = 32
 #   "platform" the vendor kernel's arch/mips/xburst/soc-<x>/include/mach/
 #             platform.h -- {name, port, func, pins} claims, named per DEVICE
 #             (uart1, dvp-pa-12bit) and only for what the board file wires up.
+#   "dt"       the vendor kernel's arch/mips/boot/dts/ingenic/<x>-pinctrl.dtsi
+#             -- one node per routing, carrying a port, a pin RANGE and a
+#             function code, labelled by device and port (uart0_pc). Same
+#             device-level naming as "platform", better structured, and the
+#             label distinguishes routings that a board file's .name does not.
 #
 # The second is weaker and it is what exists for T21 and T23. It is still worth
 # having: measured against the live registers on a T21 it names 80 of 97 pads
@@ -54,6 +59,7 @@ SOCS = {
     "T31": ("T31", 3, "spec"),
     "T21": ("T21", 6, "platform"),
     "T23": ("T23", 3, "platform"),
+    "T40": ("T40", 4, "dt"),
 }
 
 
@@ -148,6 +154,17 @@ def merge_names(have, want, where, func):
     if have == EMPTY or have == want:
         return want
 
+    # One device family, spelled once for the block and once per pin: T40's
+    # pwm_pc covers PC02..PC07 at function 2 while pwm0_pc..pwm5_pc name the
+    # individual pins at the same function. Not a disagreement -- the numbered
+    # one simply says more about THIS pad. Only when exactly one of the two
+    # carries a digit, so UART0_PA against UART2_PA stays a real conflict.
+    have_num = any(c.isdigit() for c in have)
+    want_num = any(c.isdigit() for c in want)
+    if have_num != want_num and \
+            re.sub(r"\d+", "", have) == re.sub(r"\d+", "", want):
+        return want if want_num else have
+
     keep = 0
     for i, (a, b) in enumerate(zip(have, want)):
         if a != b:
@@ -165,6 +182,72 @@ def merge_names(have, want, where, func):
         CONFLICTS.append("%s function %d: %s vs %s" % (where, func, have, want))
         return CONFLICTED
     return stem
+
+
+# A labelled leaf node of <x>-pinctrl.dtsi, and the two properties that make
+# it a routing:  ingenic,pinmux = <&gpX first last>  over a pin RANGE, and
+# ingenic,pinmux-funcsel = <PINCTL_FUNCTIONn>.
+DT_GROUP_RE = re.compile(r"(\w+)\s*:\s*[\w-]+\s*\{([^{}]*?)\}", re.S)
+DT_PINMUX_RE = re.compile(r"ingenic,pinmux\s*=\s*<\s*&gp([a-g])\s+(\d+)\s+(\d+)\s*>")
+DT_FUNC_RE = re.compile(
+    r"ingenic,pinmux-funcsel\s*=\s*<\s*PINCTL_FUNCTION(\w+)\s*>")
+
+
+def parse_dt(text, soc):
+    """The pinctrl devicetree's routings, turned into per-pad function names.
+
+    Each leaf node is one routing of one device onto one range of pins of one
+    port, at one function code, and its label says which -- uart0_pc is UART0
+    on port C. That label is the name used here: it is what distinguishes the
+    routings a board file's .name collapses together.
+
+    A node whose funcsel is not FUNCTION0..3 is asking for a GPIO level rather
+    than a device function -- PINCTL_FUNCHILVL and friends -- and is not a mux.
+    """
+    _, nports, _ = SOCS[soc]
+    pads = {}
+    del CONFLICTS[:]
+    del OVERFLOWS[:]
+
+    for label, body in DT_GROUP_RE.findall(text):
+        pinmux = DT_PINMUX_RE.search(body)
+        if not pinmux:
+            continue
+        func = DT_FUNC_RE.search(body)
+        if not func:
+            continue  # a GPIO level, not a device function
+
+        # PINCTL_FUNCTION<n> is the only form that names a device function.
+        # Anything else through that spelling -- a wider n on some future
+        # part, or a constant this parser has not met -- is a refusal rather
+        # than an index off the end of a four-slot pad.
+        if not func.group(1).isdigit():
+            continue
+        fn = int(func.group(1))
+        if fn > 3:
+            raise Refusal("%s asks for PINCTL_FUNCTION%d, and a pad has four "
+                          "functions" % (label, fn))
+
+        port, first, last = pinmux.group(1), int(pinmux.group(2)), \
+            int(pinmux.group(3))
+        if ord(port) - ord("a") >= nports:
+            raise Refusal("%s is on port %s, and this SoC has %d ports"
+                          % (label, port.upper(), nports))
+        if last < first or last >= PINS_PER_PORT:
+            raise Refusal("%s spans pins %d..%d of a %d-pin port"
+                          % (label, first, last, PINS_PER_PORT))
+
+        for pin in range(first, last + 1):
+            pad = (ord(port) - ord("a")) * PINS_PER_PORT + pin
+            slot = pads.setdefault(pad, ["P%s%02d" % (port.upper(), pin),
+                                         [EMPTY] * 4])
+            slot[1][fn] = merge_names(slot[1][fn], normalise(label),
+                                      "P%s%02d" % (port.upper(), pin), fn)
+
+    if not pads:
+        raise Refusal("found no pinmux nodes -- is this a <soc>-pinctrl.dtsi?")
+    return {pad: (v[0], [EMPTY if f == CONFLICTED else f for f in v[1]])
+            for pad, v in pads.items()}
 
 
 def parse_platform(text, soc):
@@ -288,6 +371,25 @@ def parse(text, soc):
     return pads
 
 
+def wrap_command(argv):
+    """The invocation, one --soc/--spec pair to a line.
+
+    It goes in a C comment, and a comment long enough to be reflowed comes out
+    the other side with --soc on one line and its value on the next, which is
+    not a command any more. Shell continuations keep it one, and keep every
+    line short enough that nothing wants to reflow it.
+    """
+    lines, pair = [argv[0]], []
+    for arg in argv[1:]:
+        pair.append(arg)
+        if len(pair) == 4:  # --soc X --spec Y
+            lines.append("    " + " ".join(pair))
+            pair = []
+    if pair:
+        lines.append("    " + " ".join(pair))
+    return [l + " \\" for l in lines[:-1]] + lines[-1:]
+
+
 def emit(socs, argv):
     """socs: (soc, pads, sources, overflows, conflicts) per SoC."""
     out = []
@@ -300,7 +402,8 @@ def emit(socs, argv):
     w(" * src/hal/ingenic_padmux.c holds the registers.")
     w(" *")
     w(" * Regenerate with:")
-    w(" *   %s" % " ".join(argv))
+    for line in wrap_command(argv):
+        w(" *   %s" % line)
     w(" */")
     w("")
     w("#ifndef HAL_INGENIC_PADMUX_H")
@@ -319,6 +422,10 @@ def emit(socs, argv):
         if kind == "spec":
             w(" * From the GPIO spec's port summary tables: FUNCTION0..3 per")
             w(" * pad, named per wire.")
+        elif kind == "dt":
+            w(" * From the pinctrl devicetree, one node per routing: a port, a")
+            w(" * pin range and a function code, named for the device and the")
+            w(" * port it lands on. Device-level, not per wire.")
         else:
             w(" * From the vendor kernel's board file, which names a DEVICE")
             w(" * rather than a wire -- a 12-bit DVP bus is twelve pads all")
@@ -362,8 +469,9 @@ def main():
                          "in one header")
     ap.add_argument("--spec", action="append", required=True,
                     help="the vendor GPIO spec (.pdf, or pdftotext -layout "
-                         "output) for a spec-sourced SoC, or the kernel's "
-                         "include/mach/platform.h for a platform-sourced one")
+                         "output), the kernel's include/mach/platform.h, or "
+                         "its boot/dts/ingenic/<soc>-pinctrl.dtsi -- whichever "
+                         "kind that SoC is listed as")
     ap.add_argument("--verify", metavar="HEADER")
     args = ap.parse_args()
 
@@ -375,8 +483,11 @@ def main():
     socs, argv = [], ["tools/gen_ingenic_padmux.py"]
     for soc, spec in zip(args.soc, args.spec):
         text = spec_text(spec)
-        if SOCS[soc][2] == "platform":
+        kind = SOCS[soc][2]
+        if kind == "platform":
             pads = parse_platform(text, soc)
+        elif kind == "dt":
+            pads = parse_dt(text, soc)
         else:
             pads = parse(text, soc)
         socs.append((soc, pads, [(os.path.basename(spec), sha256(spec))],

@@ -129,10 +129,30 @@ tools/gen_sstar_padmux.py \
     --family infinity6b0 --family infinity6e --family infinity6c \
     > src/hal/sstar_padmux.h
 
-# Ingenic: from the vendor GPIO spec's port summary tables
-tools/gen_ingenic_padmux.py --spec T31_H.3_gpio_spec.pdf --soc T31 \
+# Ingenic: one --spec per --soc, and each SoC says which KIND of source it
+# takes -- see the table below
+tools/gen_ingenic_padmux.py \
+    --soc T31 --spec T31_H.3_gpio_spec.pdf \
+    --soc T21 --spec .../soc-t21/include/mach/platform.h \
+    --soc T23 --spec .../soc-t23/include/mach/platform.h \
+    --soc T40 --spec .../boot/dts/ingenic/t40-pinctrl.dtsi \
     > src/hal/ingenic_padmux.h
 ```
+
+Each generated header carries the exact command that made it, so the recipe
+above is only the shape; the header is the record.
+
+Ingenic parts do not share a source, and the three kinds are not equally good:
+
+| kind | source | names | covers |
+|---|---|---|---|
+| `spec` (T31) | the GPIO spec's port summary tables | per **wire** -- `UART1_RXD` | every pad the package brings out |
+| `dt` (T40) | `boot/dts/ingenic/<soc>-pinctrl.dtsi` | per **device and port** -- `UART0_PC` | every routing the devicetree describes |
+| `platform` (T21, T23) | `soc-<x>/include/mach/platform.h` | per **device** -- `UART0_PORTB` | only what the board file wires up |
+
+Only T31 has a GPIO spec; only T40 has a pinctrl devicetree. `T40GPIO.xlsx`,
+which sits beside the T40 SDK and looks like the T31 spec, is a net list for
+one reference board and is not a source for this.
 
 Both take `--verify <header>` to re-derive and diff without writing, so a
 maintainer with the sources can prove the checked-in file still matches. Both
@@ -147,8 +167,12 @@ reads it back, against a fabricated register file installed through the
 `padmux_io_t` seam in `src/padmux.h`. Breaking one of Ingenic's four writes
 fails 84 checks.
 
-The generated headers are in `.clang-format-hook-exclude`: reformatting them
-would make `--verify` disagree with the generator forever after.
+The generated headers are in `.clang-format-hook-exclude`, because reformatting
+them would make `--verify` disagree with the generator forever after. That file
+is read by the pre-commit hook and **not** by `scripts/apply-format` run by
+hand, which is how a regeneration recipe once ended up wrapped mid-option and
+no longer runnable. Use `scripts/format-changed`, which passes the exclusions
+in.
 
 ## What is not covered
 
@@ -159,11 +183,14 @@ would make `--verify` disagree with the generator forever after.
   the generator and named in the header.
 - **Ingenic pads the package does not bring out** are absent from the table
   rather than present and empty.
-- **Other Ingenic parts.** Only T31 has a table; T10/T20/T21/T23/T30/T40 would
-  each need their own GPIO spec run through the generator.
-- **Hardware.** Every SigmaStar and Ingenic claim above is verified against
-  vendor source and on a host. Nobody has yet run it on a camera of either
-  family.
+- **Other Ingenic parts.** T21, T23, T31 and T40 have tables. T10, T20, T30 and
+  T41 do not, and would each need a source of one of the three kinds above --
+  which, for the parts checked so far, does not exist in the vendor releases.
+- **Hardware.** Every claim here is verified against vendor source and on a
+  host. On top of that, HiSilicon, SigmaStar infinity6/6b0/6c, and Ingenic
+  T21, T23 and T31 have been run on real cameras and checked against an
+  independent decode of their live registers. SigmaStar infinity6e and Ingenic
+  T40 have not: nobody has had one.
 
 ## Adding a family
 
