@@ -3425,6 +3425,12 @@ static int gpio_scan_cmd() {
     size_t GPIO_Base = 0;
     size_t GPIO_Offset = 0;
 
+    /* This command is a loop that only ever ends on Ctrl-C, so a block-buffered
+     * stdout never gets flushed: `gpio scan > log` or `| tee` captured an empty
+     * file, which is precisely what someone recording a pin hunt does. Line
+     * buffering costs nothing at ten samples a second. */
+    setvbuf(stdout, NULL, _IOLBF, 0);
+
     getchipname();
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
         return EXIT_FAILURE;

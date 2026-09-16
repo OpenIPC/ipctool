@@ -234,6 +234,8 @@ set(IPCTOOL_SRC
     src/boards/hankvision.h
     src/boards/linux.c
     src/boards/linux.h
+    src/boards/longse.c
+    src/boards/longse.h
     src/boards/openwrt.c
     src/boards/openwrt.h
     src/boards/ruision.c
@@ -303,4 +305,10 @@ if(NOT ONLY_LIBRARY)
   add_executable(reginfo_test src/reginfo_test.c)
   target_include_directories(reginfo_test PRIVATE include src)
   target_link_libraries(reginfo_test ipchw)
+
+  # Parsing only: longse.c itself pulls in cJSON and the HAL, and the part
+  # worth testing off a camera is the version extraction, which is standalone.
+  add_executable(longse_test src/boards/longse_test.c src/boards/longse.c
+                             src/tools.c ${VERSION_OBJ})
+  target_include_directories(longse_test PRIVATE include src)
 endif()

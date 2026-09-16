@@ -331,10 +331,12 @@ float ingenic_get_temp() {
     return ret;
 }
 
-static int ingenic_open_i2c_fd() {
-    int adapter_nr = 0;
-    if (!strncmp(chip_name, "T40", 3))
-        adapter_nr = 1;
+/* Honours the adapter number instead of re-deriving it from the chip name on
+ * every call. The per-chip default now lands in i2c_adapter_nr at setup, which
+ * is both what the report prints as the bus and what the fall-through sweep in
+ * getsensorid() varies -- the sweep re-opened the same node every iteration
+ * while this function ignored its argument. */
+static int ingenic_open_i2c_fd(int adapter_nr) {
     char adapter_name[FILENAME_MAX];
 
     snprintf(adapter_name, sizeof(adapter_name), "/dev/i2c-%d", adapter_nr);
@@ -367,6 +369,7 @@ void setup_hal_ingenic() {
     disable_printk();
     ingenic_enable_sensor_clock();
     possible_i2c_addrs = ingenic_possible_i2c_addrs;
+    i2c_adapter_nr = !strncmp(chip_name, "T40", 3) ? 1 : 0;
     open_i2c_sensor_fd = ingenic_open_i2c_fd;
     /* Also as a hook, because the call above only ever runs once: getchipname()
      * caches the chip id and returns before ever reaching here again. Anything

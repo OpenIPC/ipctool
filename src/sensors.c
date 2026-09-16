@@ -635,6 +635,15 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         // XM530
         res = 0x2336;
         break;
+    // SC223A, SC2239P and SC233A are one die wearing three labels. Their
+    // vendor drivers share a register map byte for byte and differ only in
+    // PLL/timing constants (81 vs 84 MHz SCLK, 0x5a0 vs 0x640 VTS) and in the
+    // settings index they write to 0x301f -- 0x08, 0x0d, 0x09/0x65. Nothing
+    // read-only separates them: no driver so much as touches 0x3109, the
+    // register the field reports had hoped would disambiguate them, and it
+    // reads 0x01 on unrelated SmartSens parts too, so it is a revision byte.
+    // 0x301f only says which init table the running driver loaded, which is a
+    // statement about the firmware and not about the silicon. See issue #112.
     case 0xcb3e:
         // XM
         strcpy(ctx->sensor_id, "SC223A");
@@ -1186,6 +1195,26 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
     if (fd < 0)
         return false;
 
+    /* Borrowed, not taken: both are process-global function pointers and the
+     * i2c sweep that runs after this probe needs them back the way the HAL
+     * left them. Leaving the dummy addr-setter installed is the dangerous
+     * half -- it reports success without issuing ioctl(I2C_SLAVE), and
+     * universal_i2c_read_register, the reader every HAL but HiSilicon and XM
+     * leaves in place, ignores its address argument and plain read()s the
+     * descriptor. It can only ever reach the slave that call selected.
+     *
+     * No board hits that today, and it is worth being exact about why rather
+     * than leaving a scary comment: HiSilicon is the only vendor that installs
+     * open_spi_sensor_fd, so it is the only vendor that reaches this function
+     * at all, and HiSilicon carries the address per message (I2C_RDWR) and
+     * does not consult the pointer. Measured both ways -- an A/B with and
+     * without this restore found the sensor either way on a lab Hi3516AV300
+     * and on a lab SSC30KQ. The restore is here so that stays true when some
+     * other vendor gains SPI sensor support, which is the moment the latent
+     * version of this becomes a real one. */
+    read_register_t saved_read = sensor_read_register;
+    int (*saved_change_addr)(int, unsigned char) = i2c_change_addr;
+
     sensor_read_register = spi_read_register;
     i2c_change_addr = dummy_change_addr;
 
@@ -1194,6 +1223,10 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
         strcpy(ctx->vendor, "Sony");
     }
     close(fd);
+
+    sensor_read_register = saved_read;
+    i2c_change_addr = saved_change_addr;
+
     return res;
 }
 
@@ -1221,75 +1254,80 @@ static bool i2c_bus_openable(int adapter_nr) {
     return true;
 }
 
-bool getsensorid(sensor_ctx_t *ctx) {
-
-int current_i2c_adapter_nr;
-    if (!getchipname())
-        return NULL;
-
-    /* Every probe, not just the first. getchipname() sets the HAL up once and
-     * then returns its cached answer forever, so anything the setup did to
-     * make the sensor answerable was done once too. On Ingenic that is the
-     * sensor's clock, and the vendor SDK gates it off when it tears a pipeline
-     * down: a second probe in the same process then found an unclocked sensor
-     * and reported that the board has none. A fresh process got it right,
-     * which is what made it look like the hardware rather than us. */
+/* Before every probe, not just the first one in the process and not just the
+ * first bus in the sweep.
+ *
+ * getchipname() sets the HAL up once and then returns its cached answer
+ * forever, so anything the setup did to make the sensor answerable was done
+ * once too. On Ingenic that is the sensor's clock, and the vendor SDK gates it
+ * off when it tears a pipeline down: a second probe in the same process then
+ * found an unclocked sensor and reported that the board has none. A fresh
+ * process got it right, which is what made it look like the hardware rather
+ * than us.
+ *
+ * The same holds within a single probe. get_sensor_id_i2c() ends in
+ * hal_cleanup(), and on HiSilicon V4 and OT that puts the sensor CRG back the
+ * way it was found -- gating the clock off again. Every bus after the first in
+ * the sweep below would otherwise read an unclocked sensor, which is the
+ * failure the sweep exists to avoid. */
+static void arm_sensor_clock(void) {
     if (hal_enable_sensor_clock)
         hal_enable_sensor_clock();
-
-    // there is no platform specific i2c/spi access layer
-    if (!i2c_bus_openable(i2c_adapter_nr))
-        return false;
-
-    // Use common settings as default
-    ctx->data_width = 1;
-    ctx->reg_width = 2;
-
-    bool i2c_detected = get_sensor_id_i2c(ctx);
-    if (i2c_detected) {
-        strcpy(ctx->control, "i2c");
-        return true;
-    }
-
-    bool spi_detected = get_sensor_id_spi(ctx);
-    if (spi_detected) {
-        strcpy(ctx->control, "spi");
-       return spi_detected;
-    }
-   // "try  sensor search  at not standart i2c buses"
-
-current_i2c_adapter_nr = i2c_adapter_nr; 
-
-for (int i = 0; i <= 5; i++) {
-    if (i == current_i2c_adapter_nr) {
-        continue; // Skip the current value
-    }
- 					
-i2c_adapter_nr = i;
-					
-   
-if (!i2c_bus_openable(i2c_adapter_nr))
-        return false;
-
-    // Use common settings as default
-    ctx->data_width = 1;
-    ctx->reg_width = 2;
-
-     i2c_detected = get_sensor_id_i2c(ctx);
-    if (i2c_detected) {
-        strcpy(ctx->control, "i2c");
-        return true;
-    }
-
-     spi_detected = get_sensor_id_spi(ctx);
-    if (spi_detected) {
-        strcpy(ctx->control, "spi");
-       return spi_detected;
-    }
-
-
-
 }
+
+bool getsensorid(sensor_ctx_t *ctx) {
+    if (!getchipname())
+        return false;
+
+    const int preferred_adapter = i2c_adapter_nr;
+
+    // Use common settings as default
+    ctx->data_width = 1;
+    ctx->reg_width = 2;
+
+    /* The bus the HAL nominated, first. A missing adapter is no longer the end
+     * of the probe: the sweep below can still find the sensor elsewhere. */
+    arm_sensor_clock();
+    if (i2c_bus_openable(i2c_adapter_nr) && get_sensor_id_i2c(ctx)) {
+        strcpy(ctx->control, "i2c");
+        return true;
+    }
+
+    /* SPI once, not once per i2c bus: open_spi_sensor_fd() takes no adapter
+     * number, so every call addresses the very same device. */
+    arm_sensor_clock();
+    if (get_sensor_id_spi(ctx)) {
+        strcpy(ctx->control, "spi");
+        return true;
+    }
+
+    /* Then the buses the HAL did not nominate. A bus that is not there is not
+     * a reason to give up -- this used to `return false` on the first gap in
+     * the numbering, and /dev/i2c-1 is missing on most single-bus boards, so
+     * the sweep died one iteration in and never reached the buses behind it.
+     * The fallback has been dead on that hardware since it was written. */
+    for (int i = 0; i <= 5; i++) {
+        if (i == preferred_adapter)
+            continue;
+
+        i2c_adapter_nr = i;
+        if (!i2c_bus_openable(i2c_adapter_nr))
+            continue;
+
+        // Use common settings as default
+        ctx->data_width = 1;
+        ctx->reg_width = 2;
+
+        arm_sensor_clock();
+        if (get_sensor_id_i2c(ctx)) {
+            strcpy(ctx->control, "i2c");
+            return true;
+        }
+    }
+
+    /* Nothing answered anywhere. Put the adapter number back where the HAL set
+     * it: it is process-global and `ipctool i2cget` and friends read it. */
+    i2c_adapter_nr = preferred_adapter;
 
     /* All buses probed, nothing answered. Without this the function fell off
      * the end (UB): the bool came back indeterminate — often true — and the
