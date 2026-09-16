@@ -28,6 +28,10 @@ jobs:
             cc: aarch64-buildroot-linux-musl-gcc
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The size step below builds the PR's base commit as well as its
+          # head, so the history has to be there to check out.
+          fetch-depth: 0
       - name: Fetch toolchain
         run: |
           # Download to file (with retries) before extracting — piping
@@ -44,6 +48,58 @@ jobs:
           export PATH=/opt/${{ matrix.toolchain_dir }}/bin:$PATH
           cmake -H. -Bbuild -DCMAKE_C_COMPILER=${{ matrix.cc }} -DCMAKE_BUILD_TYPE=Release
           cmake --build build
+
+      - name: ipcinfo size
+        # ipcinfo ships on all but three of the OpenIPC firmware tree's board
+        # configs, onto cameras whose rootfs cap leaves tens of KB spare, and
+        # nothing here measured it until now -- the job above builds a static
+        # binary, which is not what those images carry.
+        #
+        # The configure below reproduces the firmware package's: shared libs
+        # (which is what drops the global -static), SKIP_VERSION, and
+        # CMAKE_C_FLAGS_RELEASE cleared. That last one matters. CMake appends
+        # its own "-O3 -DNDEBUG" after CMAKE_C_FLAGS, so a plain Release
+        # configure silently measures -O3; Buildroot's toolchain file clears
+        # the variable, which is why the firmware genuinely gets the -Os this
+        # file asks for.
+        #
+        # The comparison is against the PR's base commit, not a number written
+        # down here. This job's toolchain is not one any camera is built with
+        # -- it is whatever toolchain.hisilicon-hi3516cv100.tgz ships, and it
+        # produces an ipcinfo some 12 KB larger than the gcc 13.3 toolchains
+        # the boards use -- so an absolute ceiling here would describe no
+        # shipped binary and would go stale the moment that URL moves. A
+        # delta does not care which compiler measured it.
+        if: matrix.target == 'arm32'
+        run: |
+          export PATH=/opt/${{ matrix.toolchain_dir }}/bin:$PATH
+          measure() {
+            out=$(mktemp -d)
+            cmake -H"$1" -B"$out" -DCMAKE_C_COMPILER=${{ matrix.cc }} \
+                  -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE=" -DNDEBUG" \
+                  -DBUILD_SHARED_LIBS=ON -DSKIP_VERSION=ON \
+                  -DIPCHW_VENDORS="$2" > /dev/null
+            cmake --build "$out" --target ipcinfo > /dev/null
+            stat -c %s "$out/ipcinfo"
+          }
+          git worktree add -f /tmp/ipcinfo-base \
+              "${{ github.event.pull_request.base.sha }}" > /dev/null
+          status=0
+          # "all" is what the firmware tree builds today; "none" is what it
+          # builds once its ipctool.mk passes the knob added in #178.
+          for vendors in all none; do
+            base=$(measure /tmp/ipcinfo-base "$vendors")
+            head=$(measure . "$vendors")
+            delta=$((head - base))
+            echo "ipcinfo, IPCHW_VENDORS=$vendors: $base -> $head ($delta bytes)"
+            if [ "$delta" -gt 1024 ]; then
+              echo "::error::ipcinfo (IPCHW_VENDORS=$vendors) grows $delta bytes. Over the 1024-byte budget: say in the PR why the camera should carry it."
+              status=1
+            elif [ "$delta" -gt 0 ]; then
+              echo "::warning::ipcinfo (IPCHW_VENDORS=$vendors) grows $delta bytes."
+            fi
+          done
+          exit $status
 
   test-extraction-pipeline:
     name: Test sensor extraction pipeline

@@ -55,22 +55,68 @@ static bool find_xm_mac(int i, size_t size) {
     return false;
 }
 
+/* The options, and the only place one is spelled out. The getopt short string,
+ * the long-option array and the help text were three separate literals that
+ * had to agree by hand, so every long name was written twice and the help
+ * carried its own column padding -- 1023 bytes of rodata for the help alone,
+ * more than nine of the eleven sensor probes cost, in a binary that ships on
+ * all but three of the firmware tree's board configs.
+ *
+ * Order is the order -h prints. Listing them as string literals rather than
+ * char is what lets the blob below be built by concatenation. */
+#define IPCINFO_OPTIONS                                                        \
+    X("c", "chip-name", "read chip name")                                      \
+    X("f", "family", "read chip family")                                       \
+    X("v", "vendor", "read chip manufacturer")                                 \
+    X("l", "long-sensor", "read sensor model and control line")                \
+    X("s", "short-sensor", "read sensor model")                                \
+    X("F", "flash-type", "read flash type (nor, nand)")                        \
+    X("t", "temp", "read chip temperature (where supported)")                  \
+    X("i", "info", "read chip serial (where supported)")                       \
+    X("x", "xm-mac", "read MAC address (for XM chips)")                        \
+    X("S", "streamer", "read streamer name")                                   \
+    X("V", "version", "display version")                                       \
+    X("h", "help", "display this help")
+
+#define X(s, n, d) +1
+enum { N_OPTIONS = 0 IPCINFO_OPTIONS };
+#undef X
+
+#define X(s, n, d) s
+static const char short_options[] = IPCINFO_OPTIONS;
+#undef X
+
+/* One object, so a PIE build pays no relocation for it. An array of
+ * {char, const char *, const char *} costs 8 bytes of .rel.dyn per pointer,
+ * which is most of what dropping the duplicated names would have saved --
+ * measured, it turned an 840-byte win into 208. Each record is the option
+ * letter, then the long name and the description, each NUL-terminated. */
+#define X(s, n, d) s n "\0" d "\0"
+static const char options_blob[] = IPCINFO_OPTIONS;
+#undef X
+
+/* Step over one record, handing back its three fields. */
+static const char *option_next(const char *p, char *opt, const char **name,
+                               const char **desc) {
+    *opt = *p++;
+    *name = p;
+    p += strlen(p) + 1;
+    *desc = p;
+    return p + strlen(p) + 1;
+}
+
 static void print_usage() {
-    printf(
-        "Usage: ipcinfo [OPTIONS]\n"
-        "Where:\n"
-        "  -c, --chip-name           read chip name\n"
-        "  -f, --family              read chip family\n"
-        "  -v, --vendor              read chip manufacturer\n"
-        "  -l, --long-sensor         read sensor model and control line\n"
-        "  -s, --short-sensor        read sensor model\n"
-        "  -F, --flash-type          read flash type (nor, nand)\n"
-        "  -t, --temp                read chip temperature (where supported)\n"
-        "  -i, --info                read chip serial (where supported)\n"
-        "  -x, --xm-mac              read MAC address (for XM chips)\n"
-        "  -S, --streamer            read streamer name\n"
-        "  -V, --version             display version\n"
-        "  -h, --help                display this help\n");
+    const char *p = options_blob;
+    char opt;
+    const char *name, *desc;
+
+    printf("Usage: ipcinfo [OPTIONS]\nWhere:\n");
+    while (*p) {
+        p = option_next(p, &opt, &name, &desc);
+        /* 19 plus the separating space is the column the hand-padded text
+         * used, so -h output is unchanged byte for byte. */
+        printf("  -%c, --%-19s %s\n", opt, name, desc);
+    }
 }
 
 static void print_chip_family() {
@@ -222,21 +268,21 @@ static void cleanup_hal(void) {
 }
 
 int main(int argc, char **argv) {
-    const char *short_options = "cfvhlstiFSxV";
-    const struct option long_options[] = {
-        {"chip-name", no_argument, NULL, 'c'},
-        {"family", no_argument, NULL, 'f'},
-        {"vendor", no_argument, NULL, 'v'},
-        {"help", no_argument, NULL, 'h'},
-        {"long-sensor", no_argument, NULL, 'l'},
-        {"short-sensor", no_argument, NULL, 's'},
-        {"flash-type", no_argument, NULL, 'F'},
-        {"temp", no_argument, NULL, 't'},
-        {"info", no_argument, NULL, 'i'},
-        {"streamer", no_argument, NULL, 'S'},
-        {"xm-mac", no_argument, NULL, 'x'},
-        {"version", no_argument, NULL, 'V'},
-        {NULL, 0, NULL, 0}};
+    /* Built here rather than as a static initialiser: a static array of
+     * struct option is 16 bytes and one relocation per entry in .data.rel.ro,
+     * whereas this one lives on the stack and costs nothing in the image. */
+    struct option long_options[N_OPTIONS + 1];
+    const char *p = options_blob;
+
+    for (int i = 0; i < N_OPTIONS; i++) {
+        char opt;
+        const char *desc;
+        p = option_next(p, &opt, &long_options[i].name, &desc);
+        long_options[i].has_arg = no_argument;
+        long_options[i].flag = NULL;
+        long_options[i].val = opt;
+    }
+    memset(&long_options[N_OPTIONS], 0, sizeof(long_options[0]));
 
     int opt;
     int long_index = 0;
