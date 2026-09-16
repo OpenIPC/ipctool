@@ -45,6 +45,29 @@ selects a function (`IPCHW_PADMUX_F_RMW`), and every alternative of the pad is
 in that same field, so one read says which is live
 (`IPCHW_PADMUX_F_SHARED_REG`).
 
+**The holes are load-bearing, and a data sheet states them twice.** These rows
+are hand-entered, and the document says the same thing in two chapters that do
+not agree:
+
+| chapter | shape | for `muxctrl_reg4` |
+|---|---|---|
+| 2.3 Pin Multiplexing Control Registers | the bit field, value by value | `000: GPIO2_0`, `001: RMII_CLK`, `011: VO_CLK`, `100: SDIO1_CCLK_OUT` |
+| 2.4 Software Multiplexed Pins | columns headed "Multiplexed Signal 0", "Signal 1", "Signals 2-4" | `GPIO2_0`, `RMII_CLK`, `VO_CLK`, `SDIO1_CCLK_OUT` |
+
+Chapter 2.3 is the encoding: `010` is not assigned, so `VO_CLK` is 3 and
+`SDIO1_CCLK_OUT` is 4. Chapter 2.4 lists the alternatives by **position**,
+with the holes closed up, and its last column is a *range* (`2-4`) that never
+says which is which. Transcribe that one and every function after a hole is
+off by one -- which is what happened to Hi3518EV20X and Hi3516CV200, on 19
+registers each, and cost the reporter of issue #135 a working WiFi module
+until they read the registers off their own stock firmware.
+
+`tools/check_hisi_padmux.py` diffs a table against chapter 2.3 and will
+`--fix` a missing hole (only a hole -- a renamed function makes it refuse, on
+the grounds that the parse is then more likely wrong than the table). Data
+sheets are not in this repo, so CI cannot run it. The other HiSilicon families
+have **not** been checked this way; whoever has their data sheets should.
+
 ### SigmaStar -- a selector per peripheral
 
 There is no per-pad selector at all. A field belongs to a *peripheral* and its
