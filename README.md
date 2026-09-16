@@ -73,6 +73,21 @@ C library to work on vast majority of hardware.
      46% |**************                 | 61952   0:00:01 ETA
   ```
 
+* *From an SD card*, if the camera has a slot and mounts it. Copy the binary
+  onto the card from a desktop, put the card in the camera and find the mount
+  point (`mount | grep -iE "mmc|sd"`, commonly `/mnt/mmc`, `/mnt/sdcard` or
+  `/media/mmcblk0p1`), then **copy it to `/tmp` before running it**:
+
+  ```console
+  # cp /mnt/mmc/ipctool /tmp/ && chmod +x /tmp/ipctool
+  # /tmp/ipctool
+  ```
+
+  The copy is not optional in practice. SD cards are nearly always FAT, which
+  cannot store a permission bit, and the card is often mounted `noexec`
+  besides — so running it in place fails with `Permission denied` however many
+  times you `chmod +x` it. `/tmp` is tmpfs and always executable.
+
 * *Using telnet/console only*: uses a python script to transfer ipctool via
   telnet/echo to the camera.
 
