@@ -148,7 +148,10 @@ void add_yaml_fragment(cJSON *root, const char *key, cJSON *json) {
 }
 
 static cJSON *build_yaml() {
-    if (!getchipname()) return NULL;
+    if (!getchipname()) {
+        explain_unknown_chip();
+        return NULL;
+    }
 
     cJSON *root = cJSON_CreateObject();
     add_yaml_fragment(root, "chip", detect_chip());
@@ -237,8 +240,10 @@ int main(int argc, char *argv[]) {
         case '1':
         case 'c': {
             const char *chipname = getchipname();
-            if (!chipname)
+            if (!chipname) {
+                explain_unknown_chip();
                 return EXIT_FAILURE;
+            }
             puts(chipname);
             return EXIT_SUCCESS;
         }
@@ -246,8 +251,13 @@ int main(int argc, char *argv[]) {
         case '2':
         case 's': {
             const char *sensor = getsensoridentity();
-            if (!sensor)
+            if (!sensor) {
+                if (!getchipname())
+                    explain_unknown_chip();
+                else
+                    fprintf(stderr, "No sensor detected\n");
                 return EXIT_FAILURE;
+            }
             puts(sensor);
             return EXIT_SUCCESS;
         }

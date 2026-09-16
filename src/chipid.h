@@ -27,6 +27,7 @@ const char *getchipname();
 #include "cjson/cJSON.h"
 
 cJSON *detect_chip();
+void explain_unknown_chip();
 #endif
 
 #endif /* CHIPID_H */

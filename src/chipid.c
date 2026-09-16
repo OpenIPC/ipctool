@@ -256,6 +256,47 @@ const char *getchipvendor() {
 }
 
 #ifndef STANDALONE_LIBRARY
+/* Detection failing used to be silent: getchipname() returned NULL, every
+ * report section came out empty and ipctool exited 1 without a word, which
+ * reads as a broken binary (#134 on an Anyka AK3918, #138 on a desktop).
+ * Say what failed, and show the two inputs detection actually looked at. */
+void explain_unknown_chip() {
+    char buf[256];
+    long uart_base = get_uart0_address();
+
+    fprintf(stderr,
+            "ipctool: SoC not recognised, no hardware report possible.\n");
+
+    if (uart_base != -1)
+        fprintf(stderr, "  UART0 base in /proc/iomem: 0x%lx\n", uart_base);
+    else
+        fprintf(stderr,
+                "  no UART0 entry in /proc/iomem (reading it needs root)\n");
+
+    if (line_from_file("/proc/cpuinfo", "Hardware.+:.(\\w+)", buf,
+                       sizeof(buf)) ||
+        line_from_file("/proc/cpuinfo", "vendor_id.+:.(\\w+)", buf,
+                       sizeof(buf)) ||
+        line_from_file("/proc/cpuinfo", "machine.+:.(\\w+)", buf, sizeof(buf)))
+        fprintf(stderr, "  /proc/cpuinfo reports: %s\n", buf);
+    else
+        fprintf(stderr,
+                "  no Hardware/vendor_id/machine line in /proc/cpuinfo\n");
+
+#if defined(__i386__) || defined(__x86_64__)
+    fprintf(stderr,
+            "This is an x86 build. ipctool probes camera hardware\n"
+            "directly, so it has to run on the camera itself, not on a\n"
+            "desktop.\n");
+#else
+    fprintf(stderr,
+            "Run it as root on the camera. If this is an IP camera or DVR,\n"
+            "please report the SoC with the output of\n"
+            "'cat /proc/cpuinfo; cat /proc/iomem; dmesg | head -40' at\n"
+            "https://github.com/OpenIPC/ipctool/issues\n");
+#endif
+}
+
 cJSON *detect_chip() {
     cJSON *j_inner = cJSON_CreateObject();
 
