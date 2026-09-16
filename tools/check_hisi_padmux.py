@@ -678,13 +678,25 @@ def main():
               % ", ".join("%#010x" % a for a in missing))
         absent += len(missing)
 
-    if args.fix and fixed and unfixable == 0:
+    # --fix writes only when EVERY difference is a missing hole. Splitting
+    # "incomplete" out of "unfixable" for reporting must not quietly widen
+    # this: a register the table has no row for, or a row that fills only
+    # some of the document's selectors, is exactly what pointing at a related
+    # but wrong part looks like. The Hi3559 workbook against the AV200 table
+    # is the worked example -- a real document, a real family, and fifteen
+    # rows that are not this chip.
+    blocked = unfixable + partial + absent
+    wrote = False
+    if args.fix and fixed and blocked == 0:
         open(args.reginfo, "w", encoding="utf-8").write(src)
+        wrote = True
         print("rewrote %d rows -- now run scripts/format-changed" % fixed)
-    elif args.fix and unfixable:
-        print("NOT rewriting anything: %d problem(s) above are not missing "
-              "holes. Check --soc, --base and the document before assuming "
-              "the table is what is wrong." % unfixable)
+    elif args.fix and blocked:
+        print("NOT rewriting anything: %d difference(s) above are not missing "
+              "holes (%d this tool will not touch, %d incomplete, %d register(s) "
+              "with no row). Check --soc, --base and the document before "
+              "assuming the table is what is wrong."
+              % (blocked, unfixable, partial, absent))
 
     total = holes + partial + unfixable + absent
     if total == 0:
@@ -697,11 +709,14 @@ def main():
                  holes, partial, unfixable))
     if unfixable:
         return 1
-    # Incomplete and absent rows are a gap, not a defect: they are worth
-    # reporting and worth filling in, and they are not a reason to call the
-    # table broken. Exit non-zero only for what is actually unresolved.
-    if holes and not (args.fix and fixed == holes):
+    # A hole counts as settled only if the file was actually WRITTEN. `fixed`
+    # counts replacements made in memory, and the guard above can decline to
+    # write them -- reporting success on a run that changed nothing would be
+    # the worst of both.
+    if holes and not (wrote and fixed == holes):
         return 1
+    # Incomplete and absent rows are a gap, not a defect: worth reporting and
+    # worth filling in, and not a reason to call the table broken.
     return 2 if (partial or absent) else 0
 
 
