@@ -107,6 +107,7 @@ several banks needs no special handling.
 | `DV300` | Hi3516D V300 | 113 | agrees | workbook, EN + CN |
 | `RCV100` | Hi3536C V100 | 77 | agrees | workbook, EN + CN |
 | `DV100` | Hi3536D V100 | 47 | agrees | workbook, EN + CN |
+| `AV200` | Hi3519 V101, Hi3559/Hi3556 V100, Hi3516A V200 | 106 | agrees, see below | workbook, EN + CN |
 
 Every one was run against two independent editions -- two data sheet
 revisions, or an English and a Chinese workbook, or two SDK releases -- and
@@ -129,9 +130,17 @@ Still open:
   workbook against 102 rows, and many of the rows it does have carry
   `"reserved"` where the document names a real function, GPIO names included.
   It needs re-entering from the document rather than patching.
-- **`AV200`** (Hi3519 V101, Hi3559 V100, Hi3556 V100, Hi3516A V200) has no
-  document here. Its user guide says to see `Hi3519V101_PINOUT_CN.xlsx`, and
-  that workbook is in neither SPC040 nor SPC050 nor the release archive.
+`AV200` serves four SoCs and the only workbook for any of them covers
+Hi3559 V100 and Hi3556 V100. All 106 registers are there at the same
+addresses, and 91 rows match outright. The other 15 differ in one direction
+only: the table names an **Ethernet** function -- `RGMII_*`, `RMII_CLK`,
+`MDIO`, `EPHY_CLK`, `EPHY_RSTN` -- where that document has nothing or
+`reserved`. Hi3559/Hi3556 V100 are *HD Mobile Camera* parts and do not bring
+Ethernet out; Hi3519 V101 and Hi3516A V200 do, and are what the table was
+entered from. So every function this document does describe agrees: no
+missing hole, no rename, no wrong address. `Hi3519V101_PINOUT_CN.xls` would
+settle the remaining 15, and is in none of the releases here -- referenced by
+the user guide, not shipped.
 
 SDK source is no substitute for either: it shows the values a driver
 *writes*, and a hole is exactly the value nobody writes.
