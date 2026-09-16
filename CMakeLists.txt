@@ -234,6 +234,8 @@ set(IPCTOOL_SRC
     src/boards/hankvision.h
     src/boards/linux.c
     src/boards/linux.h
+    src/boards/longse.c
+    src/boards/longse.h
     src/boards/openwrt.c
     src/boards/openwrt.h
     src/boards/ruision.c

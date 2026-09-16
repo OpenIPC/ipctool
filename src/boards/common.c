@@ -10,6 +10,7 @@
 #include "boards/anjoy.h"
 #include "boards/buildroot.h"
 #include "boards/hankvision.h"
+#include "boards/longse.h"
 #include "boards/openwrt.h"
 #include "boards/ruision.h"
 #include "boards/sstar.h"
@@ -31,6 +32,7 @@ static const board_vendors_t vendors[] = {
     {is_br_board, gather_br_board_info},
     {is_ruision_board, gather_ruision_board_info},
     {is_hankvision_board, gather_hankvision_board_info},
+    {is_longse_board, gather_longse_board_info},
     {is_anjoy_board, gather_anjoy_board},
     {is_sstar_board, gather_sstar_board_info},
 };
