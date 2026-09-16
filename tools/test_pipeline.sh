@@ -139,4 +139,10 @@ gcc -Wall -Wextra -fsyntax-only "$tmp/sony.c"
 grep -q '^void sonyimx_linear_init' "$tmp/sony.c" \
     || { echo "sony scaffold missing linear_init"; exit 1; }
 
+# The pad-mux generators parse vendor sources that are not in this repo, so
+# --verify needs an SDK and CI cannot run it. --selftest runs the same parsing
+# against a built-in fixture, which is what guards the shapes that have gone
+# wrong before -- a nested register offset among them.
+python3 tools/gen_sstar_padmux.py --selftest
+
 echo "OK: pipeline test passed"

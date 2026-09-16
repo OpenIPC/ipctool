@@ -166,6 +166,17 @@ tools/gen_ingenic_padmux.py \
 Each generated header carries the exact command that made it, so the recipe
 above is only the shape; the header is the record.
 
+Both generators take `--verify <header>`, which re-derives and diffs instead
+of writing. That needs the SDK, so CI cannot run it;
+`tools/gen_sstar_padmux.py --selftest` runs the vendor-source parsing against
+a built-in fixture instead, needs nothing, and is what `tools/test_pipeline.sh`
+runs. The fixture is not decorative -- every shape in it is one that has
+already gone wrong, the nested register offset
+`REG_FUART_RX_GPIO_MODE+(u32PadID-PAD_FUART_RX)` included: a lazy regex stops
+at its inner `)` and yields an expression that will not evaluate, and a
+register dropped that way shrinks a pad's MISC set until the pad stops being
+checked at all.
+
 Ingenic parts do not share a source, and the three kinds are not equally good:
 
 | kind | source | names | covers |
