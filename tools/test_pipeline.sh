@@ -10,6 +10,20 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+self=tools/test_pipeline.sh
+
+# A test nothing runs is not a test, and there are two quiet ways for that to
+# happen here: a tool grows a --selftest that this script never invokes, or
+# this script stops being wired into the workflow. Check both rather than
+# assume them -- it is the same class of mistake the selftests exist to catch.
+for tool in tools/*.py; do
+    grep -q -- '"--selftest"' "$tool" || continue
+    grep -q -- "$tool --selftest" "$self" || {
+        echo "$tool declares --selftest but $self never runs it"; exit 1; }
+done
+grep -rql -- "$self" .github/workflows/ >/dev/null || {
+    echo "no CI workflow runs $self"; exit 1; }
+
 tmp=$(mktemp -d)
 trap "rm -rf $tmp" EXIT
 
@@ -144,5 +158,6 @@ grep -q '^void sonyimx_linear_init' "$tmp/sony.c" \
 # against a built-in fixture, which is what guards the shapes that have gone
 # wrong before -- a nested register offset among them.
 python3 tools/gen_sstar_padmux.py --selftest
+python3 tools/check_hisi_padmux.py --selftest
 
 echo "OK: pipeline test passed"

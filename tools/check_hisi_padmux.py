@@ -136,6 +136,29 @@ def registers(lines, lo, hi):
     return out
 
 
+# What is wrong with one row, if anything. Kept apart from the printing so it
+# can be exercised without a data sheet -- see selftest().
+OK, HOLE, RENAME, UNALIGNED, NOSUCH = "ok", "hole", "rename", "unaligned", "nosuch"
+
+
+def classify(addr, funcs, ds, base):
+    """(verdict, register number or None, the data sheet's row or None)."""
+    if addr < base or (addr - base) % 4:
+        return UNALIGNED, None, None
+    num = (addr - base) // 4
+    want = ds.get(num)
+    if want is None:
+        return NOSUCH, num, None
+    if funcs == want:
+        return OK, num, want
+    # Only a hole is repairable. A differing NAME means the parse, the --soc
+    # or the --base is at least as suspect as the table.
+    if [f for f in funcs if f != "reserved"] != \
+            [f for f in want if f != "reserved"]:
+        return RENAME, num, want
+    return HOLE, num, want
+
+
 def table_rows(src, prefix):
     out = {}
     for m in MUX.finditer(src):
@@ -146,10 +169,171 @@ def table_rows(src, prefix):
     return out
 
 
+# A synthetic data sheet in the shape pdftotext -layout actually produces.
+# Every oddity in it is one that has already cost a wrong answer, so the
+# layout matters as much as the content: the column-0 headings, the indented
+# copy of the name inside the bit diagram, the page break landing in the
+# middle of a value list, and the widths that vary from 1 to 3 bits.
+SELFTEST_DOC = """
+2.1.1 Package
+                  HiFoo V100 uses the lead thin & fine-pitch ball grid array
+2.3 Pin Multiplexing Control Registers
+2.3.1 Register Summary
+muxctrl_reg0
+                         muxctrl_reg0 is a multiplexing control register.
+                          0x000                muxctrl_reg0                0x00000000
+                                                                                 muxctrl_reg0
+        Bits         Access       Name                     Description
+        [31:3]       RO           reserved                 Reserved
+        [2:0]        RW           muxctrl_reg0             000: GPIO0_0
+                                                           001: AAA
+                                              HiSilicon Proprietary and Confidential
+Issue 03 (2018-01-25)                                                            2-45
+                                           Copyright (c) HiSilicon
+                                                           011: BBB
+                                                           100: CCC
+                                                           Other values: reserved
+muxctrl_reg1
+                         muxctrl_reg1 is a multiplexing control register.
+                          0x004                muxctrl_reg1                0x00000000
+                                                                                 muxctrl_reg1
+        [31:1]       RO           reserved                 Reserved
+        [0]          RW           muxctrl_reg1             0: GPIO0_1
+                                                           1: DDD
+muxctrl_reg2
+                         muxctrl_reg2 is a multiplexing control register.
+                          0x008                muxctrl_reg2                0x00000000
+                                                                                 muxctrl_reg2
+        [31:2]       RO           reserved                 Reserved
+        [1:0]        RW           muxctrl_reg2             00: GPIO0_2
+                                                           01: EEE
+                                                           10: FFF_OUT/GGG_CLK
+                                                           11: reserved
+muxctrl_reg22
+                         muxctrl_reg22 is a multiplexing control register.
+                          0x058                muxctrl_reg22               0x00000000
+                                                                                 muxctrl_reg2
+        [31:2]       RO           reserved                 Reserved
+        [1:0]        RW           muxctrl_reg22            00: GPIO2_2
+                                                           01: HHH
+                                                           11: III
+2.4 Software Multiplexed Pins
+2.1.1 Package
+                  HiBar V200 uses the lead thin & fine-pitch ball grid array
+2.3 Pin Multiplexing Control Registers
+muxctrl_reg0
+                          0x000                muxctrl_reg0                0x00000000
+        [1:0]        RW           muxctrl_reg0             00: GPIO0_0
+                                                           01: JJJ
+2.4 Software Multiplexed Pins
+"""
+
+SELFTEST_TABLE = '''
+MUXCTRL(FOO_0, 0x10000000, "GPIO0_0", "AAA", "reserved", "BBB", "CCC")
+MUXCTRL(FOO_1, 0x10000004, "GPIO0_1", "DDD")
+MUXCTRL(FOO_2, 0x10000008, "GPIO0_2", "EEE", "FFF_OUT/GGG_CLK")
+MUXCTRL(FOO_22, 0x10000058, "GPIO2_2", "HHH",
+        "III")
+'''
+
+
+def selftest():
+    """Run the parsing and the row verdicts against a built-in fixture.
+
+    Data sheets cannot live in this repo, so --verify needs a document CI
+    does not have. This needs nothing. Every case below is one that has
+    silently produced a wrong answer at least once.
+    """
+    fails = []
+
+    def check(ok, what):
+        if not ok:
+            fails.append(what)
+
+    lines = SELFTEST_DOC.splitlines()
+
+    # 1. both SoCs' chapters are found, and named from the package blurb
+    ch = chapters(lines)
+    check([c[0] for c in ch] == ["HiFoo V100", "HiBar V200"],
+          "chapters: %r" % ([c[0] for c in ch],))
+    if not ch:
+        print("gen: fixture has no chapter at all", file=sys.stderr)
+        return 1
+
+    ds = registers(lines, ch[0][1], ch[0][2])
+
+    # 2. a value list broken across a page break is still one list, and an
+    #    unassigned value in the middle becomes a hole that shifts the rest
+    check(ds.get(0) == ["GPIO0_0", "AAA", "reserved", "BBB", "CCC"],
+          "reg0 (page break + middle hole): %r" % (ds.get(0),))
+
+    # 3. a single-bit field. Insisting on three binary digits silently drops
+    #    every 1- and 2-bit register in the document.
+    check(ds.get(1) == ["GPIO0_1", "DDD"], "reg1 (1-bit): %r" % (ds.get(1),))
+
+    # 4. a slashed name is one name, and a spelled-out "11: reserved" is a
+    #    hole rather than a fifth entry
+    check(ds.get(2) == ["GPIO0_2", "EEE", "FFF_OUT/GGG_CLK"],
+          "reg2 (slash, trailing reserved): %r" % (ds.get(2),))
+
+    # 5. THE ONE THAT BIT. reg22's bit diagram repeats its name indented, and
+    #    pdftotext clips the trailing digit so the line reads "muxctrl_reg2".
+    #    Keyed on, it hands reg22's values to reg2 twenty registers earlier.
+    check(ds.get(22) == ["GPIO2_2", "HHH", "reserved", "III"],
+          "reg22 (clipped diagram label): %r" % (ds.get(22),))
+    check("HHH" not in (ds.get(2) or []),
+          "reg2 was contaminated by reg22's diagram label")
+
+    # 6. the second chapter is a different SoC, not more of the first
+    ds2 = registers(lines, ch[1][1], ch[1][2])
+    check(ds2.get(0) == ["GPIO0_0", "JJJ"], "second chapter: %r" % (ds2.get(0),))
+
+    # 7. a value too wide for its own field means the parse is wrong, and
+    #    saying so beats publishing it
+    try:
+        registers(["muxctrl_reg9",
+                   "        [0]          RW           muxctrl_reg9   0: X",
+                   "                                                11: Y"], 0, 3)
+        check(False, "a value outside its field width was accepted")
+    except SystemExit:
+        pass
+
+    # 8. the table parse, including a row wrapped across lines
+    have = table_rows(SELFTEST_TABLE, "FOO_")
+    check(sorted(have) == [0x10000000, 0x10000004, 0x10000008, 0x10000058],
+          "table_rows addresses: %r" % (sorted(map(hex, have)),))
+    check(have.get(0x10000058, (None, None, []))[2] == ["GPIO2_2", "HHH", "III"],
+          "table_rows wrapped row: %r" % (have.get(0x10000058),))
+
+    # 9. the verdicts, which decide what --fix may touch
+    base = 0x10000000
+    cases = [
+        (0x10000000, ["GPIO0_0", "AAA", "reserved", "BBB", "CCC"], OK),
+        (0x10000000, ["GPIO0_0", "AAA", "BBB", "CCC"], HOLE),
+        (0x10000000, ["GPIO0_0", "AAA", "reserved", "BBB", "ZZZ"], RENAME),
+        (0x10000011, ["GPIO0_0"], UNALIGNED),   # not base + 4n
+        (0x0FFFFFFC, ["GPIO0_0"], UNALIGNED),   # below base
+        (0x10000100, ["GPIO0_0"], NOSUCH),      # no such register
+    ]
+    for addr, funcs, want in cases:
+        got = classify(addr, funcs, ds, base)[0]
+        check(got == want, "classify(%#x, %r) = %s, wanted %s"
+              % (addr, funcs, got, want))
+
+    for f in fails:
+        print("check_hisi_padmux selftest: %s" % f, file=sys.stderr)
+    if not fails:
+        print("check_hisi_padmux: selftest passed")
+    return 1 if fails else 0
+
+
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--selftest", action="store_true",
+                    help="check the parsing against a built-in fixture and "
+                         "exit; needs no data sheet, so CI can run it")
     ap.add_argument("--datasheet", required=True)
     ap.add_argument("--prefix", required=True,
                     help="MUXCTRL row prefix, e.g. EV20X_")
@@ -159,6 +343,10 @@ def main():
     ap.add_argument("--reginfo", default="src/reginfo.c")
     ap.add_argument("--fix", action="store_true",
                     help="rewrite the mismatched rows in place")
+    # --selftest stands alone: it parses a fixture, not a document
+    if "--selftest" in sys.argv[1:]:
+        return selftest()
+
     args = ap.parse_args()
 
     lines = as_text(args.datasheet).splitlines()
@@ -196,27 +384,26 @@ def main():
     numbered = {}
     for addr in sorted(have):
         name, addr_s, funcs, whole = have[addr]
-        if addr < base or (addr - base) % 4:
+        verdict, num, want = classify(addr, funcs, ds, base)
+        if num is not None:
+            numbered[num] = name
+        if verdict == UNALIGNED:
             print("  %-14s %s is not %s + 4n. The table's address is what gets"
                   " read and written, so this is not a naming quibble."
                   % (name, addr_s, args.base))
             unfixable += 1
             continue
-        num = (addr - base) // 4
-        numbered[num] = name
-        want = ds.get(num)
-        if want is None:
+        if verdict == NOSUCH:
             print("  %-14s %s -> muxctrl_reg%d is not in this data sheet"
                   % (name, addr_s, num))
             unfixable += 1
             continue
-        if funcs == want:
+        if verdict == OK:
             continue
         print("  %-14s %s muxctrl_reg%d" % (name, addr_s, num))
         print("      table     : %s" % " ".join(funcs))
         print("      data sheet: %s" % " ".join(want))
-        if [f for f in funcs if f != "reserved"] != \
-                [f for f in want if f != "reserved"]:
+        if verdict == RENAME:
             print("      ^ not just a missing hole; --fix will not touch this")
             unfixable += 1
             continue

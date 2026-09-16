@@ -95,10 +95,13 @@ CMake knobs worth knowing:
   is what proves the lookups are exported and not merely present.
 - `tools/test_pipeline.sh`: hardware-free end-to-end check of the sensor
   driver extraction pipeline (`trace_segment.py` -> `trace_to_driver.py` ->
-  `gcc -fsyntax-only` -> `trace_diff.py`), plus
-  `gen_sstar_padmux.py --selftest`, which parses a built-in fixture because
-  `--verify` needs a vendor SDK that CI does not have. Needs only python3
-  and gcc.
+  `gcc -fsyntax-only` -> `trace_diff.py`), plus the `--selftest` of every
+  pad-mux tool that has one (`gen_sstar_padmux.py`, `check_hisi_padmux.py`).
+  Those parse built-in fixtures because their `--verify` wants a vendor SDK
+  or a data sheet that CI does not have. The script also asserts that every
+  `tools/*.py` declaring `--selftest` is actually invoked from it and that a
+  workflow actually invokes the script, so a test cannot quietly stop being
+  run. Needs only python3 and gcc.
 - `.github/workflows/pr-build-check.yml`: every PR must build clean on arm32,
   mips32 **and** arm64 and pass `test_pipeline.sh`. Keep `#ifdef __arm__` /
   `__mips__` / `__aarch64__` guards consistent when touching arch-specific code.
