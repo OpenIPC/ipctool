@@ -635,6 +635,15 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         // XM530
         res = 0x2336;
         break;
+    // SC223A, SC2239P and SC233A are one die wearing three labels. Their
+    // vendor drivers share a register map byte for byte and differ only in
+    // PLL/timing constants (81 vs 84 MHz SCLK, 0x5a0 vs 0x640 VTS) and in the
+    // settings index they write to 0x301f -- 0x08, 0x0d, 0x09/0x65. Nothing
+    // read-only separates them: no driver so much as touches 0x3109, the
+    // register the field reports had hoped would disambiguate them, and it
+    // reads 0x01 on unrelated SmartSens parts too, so it is a revision byte.
+    // 0x301f only says which init table the running driver loaded, which is a
+    // statement about the firmware and not about the silicon. See issue #112.
     case 0xcb3e:
         // XM
         strcpy(ctx->sensor_id, "SC223A");
