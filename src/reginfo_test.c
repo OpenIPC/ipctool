@@ -139,6 +139,55 @@ static void test_v2_pwm(void) {
 }
 #endif
 
+#ifdef IPCHW_PADMUX_V2A
+static void test_v2a_holes(void) {
+    puts("V2A (hi3516av100): the two selectors that skip a value");
+    as_chip(HISI_V2A, "3516AV100");
+
+    /* Found by diffing all 123 rows against the data sheet's register
+     * chapter after issue #135, not by anyone hitting it on a board. Two
+     * registers of the Hi3516A/D sheet leave a value out:
+     *   muxctrl_reg54  00 GPIO0_1,  10 TEMPER_DQ
+     *   muxctrl_reg122 00 GPIO13_7, 01 VI_DAT0, 11 PWM4
+     * Both revisions of that document, SPC050 and SPC080, say the same. */
+    ipchw_padmux_t rows[8];
+    /* Both functions live on several pads here, so ask by address. That is
+     * also what made these two visible: TEMPER_DQ sits at selector 2 on
+     * muxctrl_reg53, 55, 56 and 57 as well, each of those with a real
+     * function at 1 -- so reg54 offering it at 1 was the one row out of step
+     * with its neighbours. */
+    struct {
+        const char *func;
+        uint32_t address;
+        int selector;
+        const char *pad;
+    } want[] = {
+        {"TEMPER_DQ", 0x200f00d8, 2, "GPIO0_1"},
+        {"PWM4", 0x200f01e8, 3, "GPIO13_7"},
+        /* Not a hole -- a spelling. The two revisions of the data sheet
+         * disagree about this one name: SPC050 calls muxctrl_reg93 value 2
+         * RMII_CLK, SPC080 writes out the two signals it is. The table
+         * carries the newer one, and the selector is the same either way. */
+        {"RMII_CLK_OUT/MII_TX_CLK", 0x200f0174, 2, "GPIO4_0"},
+    };
+    for (size_t i = 0; i < sizeof(want) / sizeof(want[0]); i++) {
+        int n = ipchw_padmux_by_func(want[i].func, rows,
+                                     sizeof(rows) / sizeof(rows[0]));
+        CHECK(n > 0);
+        bool seen = false;
+        for (int k = 0; k < n && k < (int)(sizeof(rows) / sizeof(rows[0]));
+             k++) {
+            if (rows[k].address != want[i].address)
+                continue;
+            seen = true;
+            CHECK(rows[k].func == want[i].selector);
+            CHECK(rows[k].gpio_name && !strcmp(rows[k].gpio_name, want[i].pad));
+        }
+        CHECK(seen);
+    }
+}
+#endif
+
 #ifdef IPCHW_PADMUX_V4
 static void test_v4_pwm(void) {
     puts("V4 (hi3516ev200/ev300): the pads the field already uses");
@@ -1018,6 +1067,9 @@ int main(void) {
 #endif
 #ifdef IPCHW_PADMUX_V2
     test_v2_pwm();
+#endif
+#ifdef IPCHW_PADMUX_V2A
+    test_v2a_holes();
 #endif
 #ifdef IPCHW_PADMUX_V4
     test_v4_pwm();

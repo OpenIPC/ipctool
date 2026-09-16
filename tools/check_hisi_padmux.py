@@ -51,8 +51,17 @@ import sys
 import tempfile
 
 NOISE = re.compile(r"HiSilicon Proprietary|Copyright ©|Issue \d+ \(")
-VALUE = re.compile(r"\b([01]{1,4}):\s*([A-Za-z_]\w*)")
-HEAD = re.compile(r"\s*muxctrl_reg(\d+)\s*")
+# "10: RMII_CLK_OUT/MII_TX_CLK" -- one pad value, two names for it depending
+# on the mode the block is in. The tables carry the slashed spelling verbatim,
+# so the parse has to keep it or every such row reads as a rename.
+VALUE = re.compile(r"\b([01]{1,4}):\s*([A-Za-z_][\w/]*)")
+# A section heading, and only that. The same name is repeated deeply indented
+# inside each register's bit-layout diagram, and the diagram's copy is not
+# safe to key on: in the Hi3518EV100 sheet it is pushed out to column ~140 and
+# comes back from pdftotext with its trailing digits clipped, so
+# "muxctrl_reg22" reads as "muxctrl_reg2" and hands that register's values to
+# a register five pages earlier. Headings start at column 0.
+HEAD = re.compile(r"muxctrl_reg(\d+)\s*")
 MUX = re.compile(r"MUXCTRL\(\s*(\w+)\s*,\s*(0x[0-9a-fA-F]+)\s*,(.*?)\)\s*$",
                  re.S | re.M)
 
@@ -110,6 +119,12 @@ def registers(lines, lo, hi):
             if width is None and re.search(r"\[0\]\s+RW", l):
                 width = 1
             for m in VALUE.finditer(l):
+                # "11: reserved" spelled out is the same statement as leaving
+                # 11 off the list, and the tables only carry a hole when a
+                # later value needs its index. Recording it as a function
+                # would make every such row read as one entry too long.
+                if m.group(2).lower() == "reserved":
+                    continue
                 vals.setdefault(int(m.group(1), 2), m.group(2))
         if not vals:
             continue

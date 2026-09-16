@@ -65,8 +65,25 @@ until they read the registers off their own stock firmware.
 `tools/check_hisi_padmux.py` diffs a table against chapter 2.3 and will
 `--fix` a missing hole (only a hole -- a renamed function makes it refuse, on
 the grounds that the parse is then more likely wrong than the table). Data
-sheets are not in this repo, so CI cannot run it. The other HiSilicon families
-have **not** been checked this way; whoever has their data sheets should.
+sheets are not in this repo, so CI cannot run it.
+
+Where it has been run:
+
+| table | SoC | rows | result |
+|---|---|---|---|
+| `CV100` | Hi3518E V100 | 87 | agrees, on both document revisions |
+| `AV100` | Hi3516A/D V100 | 123 | 2 holes restored; both revisions agree |
+| `EV20X` | Hi3518E V20X | 66 | 19 holes restored |
+| `CV200` | Hi3516C V200 | 66 | 19 holes restored |
+
+The rest -- `AV200`, `CV300`, `CV500`, `DV300`, `EV200`, `EV300`, `_8EV300`,
+`DV200`, `DV500`, `CV610`, `RCV100`, `DV100`, about 900 rows -- are
+**unchecked**, and not for want of trying: from Hi3516CV300 onwards the data
+sheet stopped carrying chapter 2.3 at all. The newer documents mention
+`iocfg_reg55` in passing and define none of them, so the encoding lives in a
+pin-multiplexing document that is not in these SDK releases. SDK source is no
+substitute: it shows the values a driver *writes*, and a hole is exactly the
+value nobody writes.
 
 ### SigmaStar -- a selector per peripheral
 
