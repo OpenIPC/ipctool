@@ -713,19 +713,25 @@ def main():
     ap.add_argument("--selftest", action="store_true",
                     help="check the vendor-source parsing against a built-in "
                          "fixture and exit; needs no SDK, so CI can run it")
-    ap.add_argument("--kernel", action="append", required=True,
+    # Not required=True: --selftest is a complete invocation on its own, and
+    # argparse has to see the whole command line either way so that a typo
+    # next to --selftest is an error rather than a pass.
+    ap.add_argument("--kernel", action="append",
                     help="a vendor kernel tree; repeat to draw families from "
                          "more than one")
-    ap.add_argument("--family", action="append", required=True,
+    ap.add_argument("--family", action="append",
                     choices=sorted(FAMILIES))
     ap.add_argument("--verify", metavar="HEADER",
                     help="re-derive and diff against this file instead of "
                          "writing; exit 1 when they differ")
-    # --selftest stands alone: it parses a fixture, not a tree
-    if "--selftest" in sys.argv[1:]:
-        return selftest()
-
     args = ap.parse_args()
+
+    # --selftest stands alone: it parses a fixture, not a tree
+    if args.selftest:
+        return selftest()
+    missing = [n for n in ("kernel", "family") if not getattr(args, n)]
+    if missing:
+        ap.error("--%s is required" % ", --".join(missing))
 
     families = []
     for family in args.family:

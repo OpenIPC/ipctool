@@ -65,7 +65,13 @@ until they read the registers off their own stock firmware.
 `tools/check_hisi_padmux.py` diffs a table against chapter 2.3 and will
 `--fix` a missing hole (only a hole -- a renamed function makes it refuse, on
 the grounds that the parse is then more likely wrong than the table). Data
-sheets are not in this repo, so CI cannot run it.
+sheets are not in this repo, so CI cannot run that; `--selftest` runs the
+parsing and the row verdicts against a built-in fixture instead, and
+`tools/test_pipeline.sh` runs it. The fixture is written in the shape
+`pdftotext -layout` actually emits, because every case in it is one that has
+silently produced a wrong answer: a value list split by a page break, a
+one-bit field, a slashed name, a spelled-out `11: reserved`, and a bit
+diagram whose clipped label reads `muxctrl_reg2` when it means `muxctrl_reg22`.
 
 Where it has been run:
 
