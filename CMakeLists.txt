@@ -114,16 +114,69 @@ foreach(_f sstar ingenic)
 endforeach()
 set(IPCHW_PADMUX_BACKENDS_ALL src/hal/sstar_padmux.c src/hal/ingenic_padmux.c)
 
-set(COMMON_LIB_SRC_BASE
+# Which HiSilicon generations libipchw can identify. IPCHW_VENDORS cannot
+# reach any of this: chipid.c dispatches to the HiSilicon HAL directly rather
+# than through the vendor table, so hal_hisi.c has always been compiled in
+# whole -- the chip-ID table for all ten generations, a sensor-bus back-end
+# per generation, and the temperature and die-ID readers for each. A consumer
+# built against one vendor SDK runs on one generation of one family.
+#
+# Same shape and vocabulary as IPCHW_PADMUX above, and "none" is meaningful
+# here too: a SigmaStar or Ingenic consumer drops the HiSilicon HAL entirely.
+# The ipctool executable always carries every generation.
+set(IPCHW_HISI_GENERATIONS v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d)
+set(IPCHW_HISI "all" CACHE STRING
+    "HiSilicon generations to compile into libipchw: 'all', 'none', or a \
+;-separated subset of: ${IPCHW_HISI_GENERATIONS}")
+
+if(IPCHW_HISI STREQUAL "all")
+  set(_hisi_selected ${IPCHW_HISI_GENERATIONS})
+elseif(IPCHW_HISI STREQUAL "none")
+  set(_hisi_selected "")
+else()
+  set(_hisi_selected ${IPCHW_HISI})
+endif()
+
+foreach(_g IN LISTS IPCHW_HISI_GENERATIONS)
+  string(TOUPPER ${_g} _G)
+  list(APPEND IPCHW_HISI_ALL_DEFS IPCHW_HISI_${_G})
+endforeach()
+
+foreach(_g IN LISTS _hisi_selected)
+  if(NOT _g IN_LIST IPCHW_HISI_GENERATIONS)
+    message(FATAL_ERROR
+            "IPCHW_HISI: unknown generation '${_g}'; "
+            "expected 'all', 'none', or a subset of ${IPCHW_HISI_GENERATIONS}")
+  endif()
+  string(TOUPPER ${_g} _G)
+  list(APPEND IPCHW_HISI_DEFS IPCHW_HISI_${_G})
+endforeach()
+
+# Nothing left to identify means the HAL itself can go, not just its arms.
+# IPCHW_HISI_ANY is what the rest of the tree tests: chipid.c has to stop
+# naming hisi_detect_cpu, and ipcinfo has to stop naming hisi_get_die_id.
+set(IPCHW_HISI_SRC_ALL src/hal/hisi/hal_hisi.c src/hal/hisi/hal_hisi.h
+                       src/hal/hisi/ispreg.c)
+set(IPCHW_HISI_SRC "")
+if(_hisi_selected)
+  set(IPCHW_HISI_SRC ${IPCHW_HISI_SRC_ALL})
+  list(APPEND IPCHW_HISI_DEFS IPCHW_HISI_ANY)
+endif()
+list(APPEND IPCHW_HISI_ALL_DEFS IPCHW_HISI_ANY)
+message(STATUS "libipchw HiSilicon generations: ${_hisi_selected}")
+
+# Split either side of where the HiSilicon HAL sits so that a build carrying
+# it hands the archiver the same member order as before: --gc-sections keeps
+# whatever it keeps in link order, so appending the HAL instead of splicing it
+# back in place relaid the whole .text and made an unchanged build unprovable.
+set(_common_lib_src_head
     src/chipid.c
     src/chipid.h
     src/cjson/cJSON.c
     src/cjson/cJSON.h
     src/hal/common.c
-    src/hal/common.h
-    src/hal/hisi/hal_hisi.c
-    src/hal/hisi/hal_hisi.h
-    src/hal/hisi/ispreg.c
+    src/hal/common.h)
+set(_common_lib_src_tail
     src/hwinfo.c
     src/hwinfo.h
     src/mmap.h
@@ -138,7 +191,8 @@ set(COMMON_LIB_SRC_BASE
     src/version.h)
 
 # Full set, used by the ipctool executable
-set(COMMON_LIB_SRC_ALL ${COMMON_LIB_SRC_BASE} ${IPCHW_PADMUX_BACKENDS_ALL})
+set(COMMON_LIB_SRC_ALL ${_common_lib_src_head} ${IPCHW_HISI_SRC_ALL}
+    ${_common_lib_src_tail} ${IPCHW_PADMUX_BACKENDS_ALL})
 foreach(_v IN LISTS IPCHW_OPTIONAL_VENDORS)
   list(APPEND COMMON_LIB_SRC_ALL src/hal/${_v}.c src/hal/${_v}.h)
   string(TOUPPER ${_v} _V)
@@ -146,7 +200,8 @@ foreach(_v IN LISTS IPCHW_OPTIONAL_VENDORS)
 endforeach()
 
 # Selected subset, used by libipchw
-set(COMMON_LIB_SRC ${COMMON_LIB_SRC_BASE} ${IPCHW_PADMUX_BACKENDS})
+set(COMMON_LIB_SRC ${_common_lib_src_head} ${IPCHW_HISI_SRC}
+    ${_common_lib_src_tail} ${IPCHW_PADMUX_BACKENDS})
 foreach(_v IN LISTS _ipchw_selected)
   if(NOT _v IN_LIST IPCHW_OPTIONAL_VENDORS)
     message(FATAL_ERROR
@@ -261,7 +316,7 @@ target_include_directories(ipchw PUBLIC
 # missing macro at compile time rather than meet IPCHW_PADMUX_NO_TABLE on a
 # camera.
 target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY ${IPCHW_VENDOR_DEFS}
-                           ${IPCHW_PADMUX_DEFS})
+                           ${IPCHW_PADMUX_DEFS} ${IPCHW_HISI_DEFS})
 # Threads is carried on the interface so anything linking this static library
 # (ipcinfo here, and external consumers of libipchw) pulls pthread in too.
 target_link_libraries(ipchw m Threads::Threads)
@@ -287,7 +342,7 @@ if(NOT ONLY_LIBRARY)
   add_executable(ipctool ${IPCTOOL_SRC} ${COMMON_LIB_SRC_ALL} ${VERSION_OBJ})
   target_include_directories(ipctool PRIVATE include)
   target_compile_definitions(ipctool PRIVATE ${IPCHW_ALL_VENDOR_DEFS}
-                             ${IPCHW_PADMUX_ALL_DEFS})
+                             ${IPCHW_PADMUX_ALL_DEFS} ${IPCHW_HISI_ALL_DEFS})
 
   target_link_libraries(ipctool m Threads::Threads)
   install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)

@@ -96,6 +96,7 @@ static int hisi_open_spi_fd() {
     return fd;
 }
 
+#ifdef IPCHW_HISI_V1
 static int hisi_gen1_open_i2c_sensor_fd() {
     return universal_open_sensor_fd("/dev/hi_i2c");
 }
@@ -104,8 +105,12 @@ static int hisi_gen1_open_spi_sensor_fd() {
     return universal_open_sensor_fd("/dev/ssp");
 }
 
+#endif /* IPCHW_HISI_V1 */
+
 #define I2C_16BIT_REG 0x0709  /* 16BIT REG WIDTH */
 #define I2C_16BIT_DATA 0x070a /* 16BIT DATA WIDTH */
+
+#if defined(IPCHW_HISI_V2) || defined(IPCHW_HISI_V2A)
 int hisi_gen2_set_width(int fd, unsigned int reg_width,
                         unsigned int data_width) {
     int ret;
@@ -130,6 +135,9 @@ int hisi_gen2_set_width(int fd, unsigned int reg_width,
     return 0;
 }
 
+#endif /* IPCHW_HISI_V2 || IPCHW_HISI_V2A */
+
+#ifdef IPCHW_HISI_V1
 int hisi_gen1_sensor_write_register(int fd, unsigned char i2c_addr,
                              unsigned int reg_addr, unsigned int reg_width,
                              unsigned int data, unsigned int data_width) {
@@ -152,6 +160,9 @@ int hisi_gen1_sensor_write_register(int fd, unsigned char i2c_addr,
     return 0;
 }
 
+#endif /* IPCHW_HISI_V1 */
+
+#if defined(IPCHW_HISI_V2) || defined(IPCHW_HISI_V2A)
 int hisi_gen2_sensor_write_register(int fd, unsigned char i2c_addr,
                                     unsigned int reg_addr,
                                     unsigned int reg_width, unsigned int data,
@@ -193,6 +204,8 @@ int hisi_gen2_sensor_write_register(int fd, unsigned char i2c_addr,
     return 0;
 }
 
+#endif /* IPCHW_HISI_V2 || IPCHW_HISI_V2A */
+
 int hisi_sensor_write_register(int fd, unsigned char i2c_addr,
                                unsigned int reg_addr, unsigned int reg_width,
                                unsigned int data, unsigned int data_width) {
@@ -228,6 +241,7 @@ int hisi_sensor_write_register(int fd, unsigned char i2c_addr,
     return 0;
 }
 
+#ifdef IPCHW_HISI_V1
 int hisi_gen1_sensor_read_register(int fd, unsigned char i2c_addr,
                             unsigned int reg_addr, unsigned int reg_width,
                             unsigned int data_width) {
@@ -248,6 +262,9 @@ int hisi_gen1_sensor_read_register(int fd, unsigned char i2c_addr,
     return i2c_data.data;
 }
 
+#endif /* IPCHW_HISI_V1 */
+
+#if defined(IPCHW_HISI_V2) || defined(IPCHW_HISI_V2A)
 int hisi_gen2_sensor_read_register(int fd, unsigned char i2c_addr,
                                    unsigned int reg_addr,
                                    unsigned int reg_width,
@@ -278,6 +295,8 @@ int hisi_gen2_sensor_read_register(int fd, unsigned char i2c_addr,
 
     return data;
 }
+
+#endif /* IPCHW_HISI_V2 || IPCHW_HISI_V2A */
 
 int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
                               unsigned int reg_addr, unsigned int reg_width,
@@ -338,6 +357,7 @@ int hisi_sensor_read_register(int fd, unsigned char i2c_addr,
 }
 
 #define SSP_READ_ALT 0x1
+#ifdef IPCHW_HISI_V1
 int sony_ssp_read_register(int fd, unsigned char i2c_addr,
                            unsigned int reg_addr, unsigned int reg_width,
                            unsigned int data_width) {
@@ -346,6 +366,8 @@ int sony_ssp_read_register(int fd, unsigned char i2c_addr,
     int ret = ioctl(fd, SSP_READ_ALT, &data);
     return data & 0xff;
 }
+
+#endif /* IPCHW_HISI_V1 */
 
 static unsigned long hisi_media_mem() {
     char buf[256];
@@ -383,6 +405,7 @@ unsigned long hisi_totalmem(unsigned long *media_mem) {
 #define CV300_MUX14_ADDR CV300_MUX_BASE + 0x0038
 #define CV300_MUX15_ADDR CV300_MUX_BASE + 0x003c
 
+#ifdef IPCHW_HISI_V3
 static void v3_ensure_sensor_enabled() {
     uint32_t reg;
     if (mem_reg(CV300_MUX30_ADDR, (uint32_t *)&reg, OP_READ)) {
@@ -403,6 +426,9 @@ static void v3_ensure_sensor_enabled() {
     }
 }
 
+#endif /* IPCHW_HISI_V3 */
+
+#ifdef IPCHW_HISI_V4
 static struct EV300_PERI_CRG60 peri_crg60;
 static bool crg60_changed;
 static void v4_ensure_sensor_enabled() {
@@ -426,6 +452,9 @@ static void v4_ensure_sensor_restored() {
     }
 }
 
+#endif /* IPCHW_HISI_V4 */
+
+#ifdef IPCHW_HISI_V5
 static struct CV610_PERI_CRG8464 peri_crg8464;
 static struct CV610_PERI_CRG8464 peri_crg8472;
 static bool crg8464_changed;
@@ -467,20 +496,49 @@ static void ot_ensure_sensor_restored() {
  * first attempt would read an unclocked sensor. Installed as
  * hal_enable_sensor_clock so the sweep can re-arm before each attempt; every
  * branch is idempotent and does nothing when the clock is already running. */
+#endif /* IPCHW_HISI_V5 */
+
+/* A switch, like hisi_get_temp() and hisi_get_die_id() below: it takes a
+ * per-generation guard on each arm without the dangling else an #ifdef'd
+ * if/else chain leaves behind, and a build that kept every generation emits
+ * what was here before. */
 static void hisi_ensure_sensor_enabled() {
-    if (chip_generation == HISI_V3)
+    switch (chip_generation) {
+#ifdef IPCHW_HISI_V3
+    case HISI_V3:
         v3_ensure_sensor_enabled();
-    else if (chip_generation == HISI_V4)
+        break;
+#endif
+#ifdef IPCHW_HISI_V4
+    case HISI_V4:
         v4_ensure_sensor_enabled();
-    else if (chip_generation == HISI_OT)
+        break;
+#endif
+#ifdef IPCHW_HISI_V5
+    case HISI_OT:
         ot_ensure_sensor_enabled();
+        break;
+#endif
+    default:
+        break;
+    }
 }
 
 static void hisi_hal_cleanup() {
-    if (chip_generation == HISI_V4)
+    switch (chip_generation) {
+#ifdef IPCHW_HISI_V4
+    case HISI_V4:
         v4_ensure_sensor_restored();
-    else if (chip_generation == HISI_OT)
+        break;
+#endif
+#ifdef IPCHW_HISI_V5
+    case HISI_OT:
         ot_ensure_sensor_restored();
+        break;
+#endif
+    default:
+        break;
+    }
     restore_printk();
 }
 
@@ -516,19 +574,31 @@ void setup_hal_hisi() {
     open_i2c_sensor_fd = hisi_open_i2c_fd;
     open_spi_sensor_fd = hisi_open_spi_fd;
     hal_cleanup = hisi_hal_cleanup;
-    if (chip_generation == HISI_V1) {
+    /* V2 and V2A share a back-end, so they share a guard: a V2-only build
+     * still carries the HISI_V2A label, which is inert because the chip-ID
+     * table that would return that generation is not compiled in. */
+    switch (chip_generation) {
+#ifdef IPCHW_HISI_V1
+    case HISI_V1:
         open_i2c_sensor_fd = hisi_gen1_open_i2c_sensor_fd;
         open_spi_sensor_fd = hisi_gen1_open_spi_sensor_fd;
         i2c_read_register = hisi_gen1_sensor_read_register;
         i2c_write_register = hisi_gen1_sensor_write_register;
         spi_read_register = sony_ssp_read_register;
-    } else if (chip_generation == HISI_V2 || chip_generation == HISI_V2A) {
+        break;
+#endif
+#if defined(IPCHW_HISI_V2) || defined(IPCHW_HISI_V2A)
+    case HISI_V2:
+    case HISI_V2A:
         i2c_read_register = hisi_gen2_sensor_read_register;
         i2c_write_register = hisi_gen2_sensor_write_register;
         i2c_change_addr = i2c_change_plain_addr;
-    } else {
+        break;
+#endif
+    default:
         i2c_read_register = hisi_sensor_read_register;
         i2c_write_register = hisi_sensor_write_register;
+        break;
     }
     possible_i2c_addrs = my_possible_i2c_addrs;
     hal_temperature = hisi_get_temp;
@@ -592,54 +662,70 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
 static float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
+#ifdef IPCHW_HISI_V2
     case HISI_V2:
         // PERI_PMC69 bit[7:0]
         tempo =
             hisi_reg_temp(CV200_PERI_PMC69, 8, CV200_PERI_PMC68, 0x60FA0000);
         tempo = ((tempo * 180) / 256) - 40;
         break;
+#endif
+#ifdef IPCHW_HISI_V3A
     case HISI_V3A:
         // PERI_PMC70 bit[9:0]
         tempo =
             hisi_reg_temp(AV200_PERI_PMC70, 10, AV200_PERI_PMC68, 0x60FA0000);
         tempo = ((tempo - 125) / 806) * 165 - 40;
         break;
+#endif
+#ifdef IPCHW_HISI_V3
     case HISI_V3:
         // MISC_CTRL41 bit[9:0]
         tempo =
             hisi_reg_temp(CV300_MISC_CTRL41, 10, CV300_MISC_CTRL39, 0x60FA0000);
         tempo = ((tempo - 125) / 806) * 165 - 40;
         break;
+#endif
+#ifdef IPCHW_HISI_V4A
     case HISI_V4A:
         // MISC_CTRL47 bit[9:0]
         tempo =
             hisi_reg_temp(AV300_MISC_CTRL47, 10, AV300_MISC_CTRL45, 0x60FA0000);
         tempo = ((tempo - 136) / 793 * 165) - 40;
         break;
+#endif
+#ifdef IPCHW_HISI_V4
     case HISI_V4:
         // MISC_CTRL47 bit[9:0]
         tempo =
             hisi_reg_temp(EV300_MISC_CTRL47, 10, EV300_MISC_CTRL45, 0xC3200000);
         tempo = ((tempo - 117) / 798) * 165 - 40;
         break;
+#endif
+#ifdef IPCHW_HISI_3536D
     case HISI_3536D:
         // PMC70 bit[9:0]
         tempo =
             hisi_reg_temp(HI3536_PERI_PMC70, 10, HI3536_PERI_PMC68, 0x40000000);
         tempo = ((tempo * 180) / 256) - 40;
         break;
+#endif
+#ifdef IPCHW_HISI_3536C
     case HISI_3536C:
         // PMC70 bit[9:0]
         tempo =
             hisi_reg_temp(HI3536_PERI_PMC70, 10, HI3536_PERI_PMC68, 0x40000000);
         tempo = ((tempo - 125) / 806) * 165 - 40;
         break;
+#endif
+#ifdef IPCHW_HISI_V5
     case HISI_OT:
         // TSENSOR_CTRL2 bit[9:0]
         tempo =
             hisi_reg_temp(CV610_TSENSOR_CTRL2, 10, CV610_PERI_CRG4560, 0x11);
         tempo = ((tempo - 127) / 784 * 165) - 40;
         break;
+#endif
     default:
         return NAN;
     }
@@ -647,6 +733,7 @@ static float hisi_get_temp() {
     return tempo;
 }
 
+#ifdef IPCHW_HISI_V1
 static const char *get_chip_V1() {
     uint32_t val;
     if (!mem_reg(0x2005008C, &val, OP_READ))
@@ -678,7 +765,9 @@ static const char *get_chip_V1() {
 err:
     return "unknown";
 }
+#endif /* IPCHW_HISI_V1 */
 
+#ifdef IPCHW_HISI_V2A
 static const char *get_chip_V2A(uint8_t scsysid0) {
     switch (scsysid0) {
     case 0:
@@ -692,7 +781,9 @@ static const char *get_chip_V2A(uint8_t scsysid0) {
         return "unknown";
     }
 }
+#endif /* IPCHW_HISI_V2A */
 
+#ifdef IPCHW_HISI_V2
 static const char *get_chip_V2(uint8_t scsysid0) {
     switch (scsysid0) {
     case 1:
@@ -706,7 +797,9 @@ static const char *get_chip_V2(uint8_t scsysid0) {
         return "unknown";
     }
 }
+#endif /* IPCHW_HISI_V2 */
 
+#ifdef IPCHW_HISI_V3A
 static const char *get_chip_V3A(uint8_t scsysid0) {
     switch (scsysid0) {
     case 0:
@@ -729,7 +822,9 @@ static const char *get_chip_V3A(uint8_t scsysid0) {
         return "unknown";
     }
 }
+#endif /* IPCHW_HISI_V3A */
 
+#ifdef IPCHW_HISI_V3
 static const char *get_chip_V3(uint8_t scsysid0) {
     switch (scsysid0) {
     case 0:
@@ -741,66 +836,105 @@ static const char *get_chip_V3(uint8_t scsysid0) {
         return "unknown";
     }
 }
+#endif /* IPCHW_HISI_V3 */
 
 static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
     switch (family_id) {
+#ifdef IPCHW_HISI_V2A
     case 0x3516A100:
         chip_generation = HISI_V2A;
         return get_chip_V2A(scsysid0);
+#endif
+#ifdef IPCHW_HISI_V3A
     case 0x35190101:
         chip_generation = HISI_V3A;
         return get_chip_V3A(scsysid0);
+#endif
+#ifdef IPCHW_HISI_V4A
     case 0x3516A300:
         chip_generation = HISI_V4A;
         return "3516AV300";
+#endif
+#ifdef IPCHW_HISI_V3
     case 0x3516C300:
         chip_generation = HISI_V3;
         return get_chip_V3(scsysid0);
+#endif
+#ifdef IPCHW_HISI_V4A
     case 0x3516C500:
         chip_generation = HISI_V4A;
         return "3516CV500";
+#endif
+#ifdef IPCHW_HISI_V5
     case 0x3516C608:
         chip_generation = HISI_OT;
         return "3516CV608";
+#endif
+#ifdef IPCHW_HISI_V5
     case 0x3516C610:
         chip_generation = HISI_OT;
         return "3516CV610";
+#endif
+#ifdef IPCHW_HISI_V5
     case 0x3516C613:
         chip_generation = HISI_OT;
         return "3516CV613";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x3516D200:
         chip_generation = HISI_V4;
         return "3516DV200";
+#endif
+#ifdef IPCHW_HISI_V4A
     case 0x3516D300:
         chip_generation = HISI_V4A;
         return "3516DV300";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x3516E200:
         chip_generation = HISI_V4;
         return "3516EV200";
+#endif
+#ifdef IPCHW_HISI_V5
     case 0x3516D500:
         chip_generation = HISI_OT;
         return "3516DV500";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x3516E300:
         chip_generation = HISI_V4;
         return "3516EV300";
+#endif
+#ifdef IPCHW_HISI_V1
     case 0x35180100:
         chip_generation = HISI_V1;
         return get_chip_V1();
+#endif
+#ifdef IPCHW_HISI_V2
     case 0x3518E200:
         chip_generation = HISI_V2;
         return get_chip_V2(scsysid0);
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x3518E300:
         chip_generation = HISI_V4;
         return "3518EV300";
+#endif
+#ifdef IPCHW_HISI_V5
     case 0x3519D500:
         chip_generation = HISI_OT;
         return "3519DV500";
+#endif
+#ifdef IPCHW_HISI_3536C
     case 0x3536C100:
         chip_generation = HISI_3536C;
         return "3536CV100";
+#endif
+#ifdef IPCHW_HISI_3536D
     case 0x3536D100:
         chip_generation = HISI_3536D;
         return "3536DV100";
+#endif
     case 0x3520D100:
         return "3520DV200";
     case 0x35210100:
@@ -821,47 +955,69 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
                 fprintf(stderr, "reserved value %#x", scsysid0);
                 return "unknown";
         }
+#ifdef IPCHW_HISI_V4
     case 0x72050200:
         // former 3516EV200
         chip_generation = HISI_V4;
         return "7205V200";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x72020300:
         // former 3518EV300
         chip_generation = HISI_V4;
         return "7202V300";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x72050300:
         // former 3516EV300
         chip_generation = HISI_V4;
         return "7205V300";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x76050100:
         // former 3516DV200
         chip_generation = HISI_V4;
         return "7605V100";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x72050210:
         // new chip in the line?
         chip_generation = HISI_V4;
         return "7205V210";
 
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x72010200:
         chip_generation = HISI_V4;
         return "7201V200";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x72010300:
         chip_generation = HISI_V4;
         return "7201V300";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x72020330:
         chip_generation = HISI_V4;
         return "7202V330";
 
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x72050500:
         // A new chip that was received in the OpenIPC lab 2023.07.28
         chip_generation = HISI_V4;
         return "7205V500";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x72050510:
         chip_generation = HISI_V4;
         return "7205V510";
+#endif
+#ifdef IPCHW_HISI_V4
     case 0x72050530:
         chip_generation = HISI_V4;
         return "7205V530";
+#endif
 
     default:
         fprintf(stderr, "Got unexpected ID 0x%x for HiSilicon\n", family_id);

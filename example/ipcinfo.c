@@ -147,8 +147,10 @@ static void print_serial() {
     bool found = false;
 
     const char *vendor = getchipvendor();
+#ifdef IPCHW_HISI_ANY
     if (strstr(vendor, VENDOR_HISI) || strstr(vendor, VENDOR_GOKE))
         found = hisi_get_die_id(serial, sizeof serial);
+#endif
 #ifdef IPCHW_VENDOR_SSTAR
     if (strstr(vendor, VENDOR_SSTAR))
         found = sstar_get_die_id(serial, sizeof serial);
