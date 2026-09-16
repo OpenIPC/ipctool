@@ -35,6 +35,20 @@ import os
 import re
 import sys
 
+def pmx(name):
+    """The PMX_ identifier a mode or pad name is spelled as in the table.
+
+    The tables hold offsets into padmux_names rather than pointers -- see
+    src/hal/sstar_padmux_types.h -- and tools/gen_padmux_names.py is what
+    turns these identifiers into that blob. Its mangling and this one have to
+    agree; its --selftest is what pins the rule, and a disagreement is a
+    compile error in the generated header rather than a wrong name.
+    """
+    ident = re.sub(r"[^A-Za-z0-9_]", "__", name)
+    if not ident or ident[0].isdigit():
+        ident = "_" + ident
+    return "PMX_" + ident
+
 RIU_PHYS_BASE = 0x1F000000
 
 # The tag each family gets in the generated C, and the ipctool chip_generation
@@ -550,7 +564,7 @@ def emit(families, argv):
         w(" */")
         w("static const sstar_mode_t %s_modes[] = {" % tag)
         for mid, name, (addr, mask, val) in fam["modes"]:
-            w('    {"%s", 0x%08X, 0x%04X, 0x%04X},' % (name, addr, mask, val))
+            w('    {%s, 0x%08X, 0x%04X, 0x%04X},' % (pmx(name), addr, mask, val))
         w("};")
         w("")
 
@@ -596,8 +610,9 @@ def emit(families, argv):
         w("")
         w("static const sstar_pad_t %s_pads[] = {" % tag)
         for pad_id, name, first, count, gfirst, gcount, ufirst, ucount in pads:
-            w('    {"%s", %d, %d, %d, %d, %d, %d}, /* %d */'
-              % (name, first, count, gfirst, gcount, ufirst, ucount, pad_id))
+            w('    {%s, %d, %d, %d, %d, %d, %d}, /* %d */'
+              % (pmx(name), first, count, gfirst, gcount, ufirst, ucount,
+                 pad_id))
         w("};")
         w("")
         w("static const sstar_family_t %s_padmux = {" % tag)

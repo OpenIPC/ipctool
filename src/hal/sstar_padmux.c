@@ -73,7 +73,7 @@ static ipchw_padmux_t gpio_row(const sstar_pad_t *pd, int pad) {
         .func_mask = 0,
         .func = -1,
         .func_name = IPCHW_PADMUX_GPIO,
-        .gpio_name = pd->name,
+        .gpio_name = padmux_name(pd->name),
         .gpio_pad = pad,
         .gpio_func = -1,
         .flags = IPCHW_PADMUX_F_GPIO,
@@ -86,8 +86,8 @@ static ipchw_padmux_t mode_row(const sstar_mode_t *m, const sstar_pad_t *pd,
         .address = m->address,
         .func_mask = m->mask,
         .func = m->val,
-        .func_name = m->name,
-        .gpio_name = pd->name,
+        .func_name = padmux_name(m->name),
+        .gpio_name = padmux_name(pd->name),
         .gpio_pad = pad,
         /* No single value hands the pad back: see gpio_row(). */
         .gpio_func = -1,
@@ -120,7 +120,7 @@ static int sstar_walk(padmux_match_fn match, const void *arg, int pad,
 
         for (int k = 0; k < pd->nmodes; k++) {
             const sstar_mode_t *m = pad_mode(fam, pd, k);
-            if (match != NULL && !match(m->name, arg))
+            if (match != NULL && !match(padmux_name(m->name), arg))
                 continue;
 
             if (found < max)
@@ -278,13 +278,13 @@ static int sstar_set(int pad, const char *func_name, const padmux_io_t *io) {
     if (pad_is_dark(pd))
         return IPCHW_PADMUX_NO_FUNC;
 
-    bool to_gpio =
-        !strcmp(func_name, IPCHW_PADMUX_GPIO) || !strcmp(func_name, pd->name);
+    bool to_gpio = !strcmp(func_name, IPCHW_PADMUX_GPIO) ||
+                   !strcmp(func_name, padmux_name(pd->name));
 
     int want = -1;
     if (!to_gpio) {
         for (int k = 0; k < pd->nmodes; k++)
-            if (!strcmp(pad_mode(fam, pd, k)->name, func_name)) {
+            if (!strcmp(padmux_name(pad_mode(fam, pd, k)->name), func_name)) {
                 want = k;
                 break;
             }

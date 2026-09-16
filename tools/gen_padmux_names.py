@@ -53,16 +53,28 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # `reginfo` subcommand: they carry no family blocks, and the whole file is
 # behind one condition -- including `!STANDALONE_LIBRARY`, because libipchw
 # does not include them at all and must not pay for their names.
+# The third field is how names are spelled in the file.
+#
+#   "muxctrl" -- MUXCTRL(name, addr, ...) rows, one per line or wrapped.
+#   "table"   -- a generated C initialiser where EVERY string literal is a
+#                pad or function name. Comments are stripped first, because
+#                the banner in both of those files quotes example names and
+#                interning a name nothing indexes would be a silent leak
+#                into the blob.
 SOURCES = [
-    ("src/reginfo.c", None),
+    ("src/reginfo.c", None, "muxctrl"),
     (
         "src/hal/ingenic_reginfo.h",
         "defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)",
+        "muxctrl",
     ),
     (
         "src/hal/sstar_reginfo.h",
         "defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)",
+        "muxctrl",
     ),
+    ("src/hal/ingenic_padmux.h", "defined(IPCHW_PADMUX_INGENIC)", "table"),
+    ("src/hal/sstar_padmux.h", "defined(IPCHW_PADMUX_SSTAR)", "table"),
 ]
 
 FAMILY_OPEN = re.compile(r"^#if defined\((IPCHW_PADMUX_[A-Z0-9_]+)\)")
@@ -112,13 +124,86 @@ def demangle(ident):
     return ident.replace("__", "/")
 
 
+
+def map_code(line, in_block, fn):
+    """Apply `fn` to each run of CODE in `line`, leaving comments untouched.
+
+    Returns (rebuilt line, block-comment state after it). With `fn` as
+    identity the line comes back byte for byte, which is what makes it safe
+    to run over a whole file.
+
+    Only good enough for these five files -- it does not know about a `/*`
+    inside a string literal, and none of them has one. It exists because a
+    name quoted in a banner comment ("PB25", the spelling the datasheet uses)
+    must not reach the blob, and because the generated SigmaStar table ends
+    half its rows with a `/* 42 */` pad-id comment that a naive split would
+    either eat or stop the substitution reaching.
+    """
+    out = []
+    code = []
+    i = 0
+
+    def flush():
+        if code:
+            out.append(fn("".join(code)))
+            del code[:]
+
+    while i < len(line):
+        if in_block:
+            end = line.find("*/", i)
+            if end < 0:
+                out.append(line[i:])
+                return "".join(out), True
+            out.append(line[i:end + 2])
+            i = end + 2
+            in_block = False
+            continue
+        if line.startswith("/*", i):
+            flush()
+            in_block = True
+            out.append("/*")
+            i += 2
+            continue
+        if line.startswith("//", i):
+            flush()
+            out.append(line[i:])
+            return "".join(out), False
+        code.append(line[i])
+        i += 1
+    flush()
+    return "".join(out), in_block
+
+
+def code_of(line, in_block):
+    """Just the code part, for the scan."""
+    seen = []
+    _, after = map_code(line, in_block, lambda c: seen.append(c) or c)
+    return "".join(seen), after
+
+
 def scan():
     """name -> (spelling, {guard expression, ...}), in first-seen order."""
     names = {}
-    for rel, fixed_guard in SOURCES:
+    for rel, fixed_guard, mode in SOURCES:
         path = os.path.join(ROOT, rel)
         family = None
         pending = None
+        in_block = False
+
+        if mode == "table":
+            for line in open(path, encoding="utf-8"):
+                code, in_block = code_of(line, in_block)
+                # An #include's path is a string literal and is not a pad
+                # name. Nothing else in these two files is a directive.
+                if code.lstrip().startswith("#"):
+                    continue
+                for raw in STRING.findall(code):
+                    spelling = raw.encode().decode("unicode_escape")
+                    names.setdefault(spelling, set()).add(fixed_guard)
+                for ident in PMXREF.findall(code):
+                    names.setdefault(demangle(ident), set()).add(fixed_guard)
+            continue
+
         for line in open(path, encoding="utf-8"):
             if fixed_guard is None:
                 m = FAMILY_OPEN.match(line)
@@ -233,13 +318,36 @@ def render(names):
     return "\n".join(h), "\n".join(c)
 
 
+
+def sub_name(m):
+    """A `"NAME"` match -> `PMX_NAME`."""
+    return "PMX_" + mangle(m.group(1).encode().decode("unicode_escape"))
+
+
 def rewrite():
     """Turn the string literals in the MUXCTRL tables into PMX_ macros."""
     changed = []
-    for rel, _ in SOURCES:
+    for rel, _, mode in SOURCES:
         path = os.path.join(ROOT, rel)
         out = []
         pending = None
+        in_block = False
+
+        if mode == "table":
+            for line in open(path, encoding="utf-8"):
+                # An #include's path is a string literal and is not a pad
+                # name. Nothing else in these two files is a directive.
+                peek, _ = code_of(line, in_block)
+                fn = (lambda c: c) if peek.lstrip().startswith("#") else \
+                    (lambda c: STRING.sub(sub_name, c))
+                new_line, in_block = map_code(line, in_block, fn)
+                out.append(new_line)
+            text = "".join(out)
+            if text != open(path, encoding="utf-8").read():
+                open(path, "w", encoding="utf-8").write(text)
+                changed.append(rel)
+            continue
+
         for line in open(path, encoding="utf-8"):
             if MUXCTRL_OPEN.match(line):
                 pending = line
@@ -252,11 +360,7 @@ def rewrite():
             if pending.count("(") > pending.count(")"):
                 continue
 
-            def sub(m):
-                spelling = m.group(1).encode().decode("unicode_escape")
-                return "PMX_" + mangle(spelling)
-
-            out.append(STRING.sub(sub, pending))
+            out.append(STRING.sub(sub_name, pending))
             pending = None
         text = "".join(out)
         if text != open(path, encoding="utf-8").read():

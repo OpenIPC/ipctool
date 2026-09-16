@@ -22,6 +22,39 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .BOOT_SEL1 = "BOOT_SEL1",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .BT1120_OUT_MODE_1 = "BT1120_OUT_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .BT1120_OUT_MODE_2 = "BT1120_OUT_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .BT656_OUT_MODE_1 = "BT656_OUT_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .BT656_OUT_MODE_2 = "BT656_OUT_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .BT656_OUT_MODE_3 = "BT656_OUT_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .CCIR_MODE_1 = "CCIR_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .CCIR_MODE_2 = "CCIR_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .CCIR_MODE_3 = "CCIR_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .CIM0_VIC_MCLK_PC = "CIM0_VIC_MCLK_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .CIM1_VIC_MCLK_PC = "CIM1_VIC_MCLK_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .CIM2_VIC_MCLK_PC = "CIM2_VIC_MCLK_PC",
+#endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
     .CLK_TEST_OUT0 = "CLK_TEST_OUT0",
 #endif
@@ -34,8 +67,83 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
     .CLK_TEST_OUT3 = "CLK_TEST_OUT3",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .CS2 = "CS2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DLA_EJ_MODE_1 = "DLA_EJ_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DLA_EJ_MODE_2 = "DLA_EJ_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DLA_EJ_MODE_3 = "DLA_EJ_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_4CH_MODE_1 = "DMIC_4CH_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_4CH_MODE_2 = "DMIC_4CH_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_4CH_MODE_3 = "DMIC_4CH_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_6CH_MODE_1 = "DMIC_6CH_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_6CH_MODE_2 = "DMIC_6CH_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_6CH_MODE_3 = "DMIC_6CH_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_6CH_MODE_4 = "DMIC_6CH_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_6CH_MODE_5 = "DMIC_6CH_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DMIC_CLK = "DMIC_CLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DMIC_DAT0 = "DMIC_DAT0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DMIC_DAT1 = "DMIC_DAT1",
+#endif
 #if defined(IPCHW_PADMUX_V5)
     .DMIC_MCLK = "DMIC_MCLK",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_MODE_1 = "DMIC_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_MODE_2 = "DMIC_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_MODE_3 = "DMIC_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_MODE_4 = "DMIC_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_MODE_5 = "DMIC_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_MODE_6 = "DMIC_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_MODE_7 = "DMIC_MODE_7",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .DMIC_MODE_8 = "DMIC_MODE_8",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DMIC_PC = "DMIC_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DMIC_PORTC = "DMIC_PORTC",
 #endif
 #if defined(IPCHW_PADMUX_V5)
     .DMIC_SD0 = "DMIC_SD0",
@@ -48,6 +156,21 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V5)
     .DMIC_SD3 = "DMIC_SD3",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DPU_PORTD_SLCD = "DPU_PORTD_SLCD",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DPU_PORTD_SLCD_16BIT = "DPU_PORTD_SLCD_16BIT",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DPU_PORTD_SLCD_8BIT = "DPU_PORTD_SLCD_8BIT",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DPU_PORTD_TFT_18BIT = "DPU_PORTD_TFT_18BIT",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DRV_VBUS = "DRV_VBUS",
 #endif
 #if defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .DSI_CKN = "DSI_CKN",
@@ -78,6 +201,75 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .DSI_D3P = "DSI_D3P",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_D10 = "DVP_D10",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_D11 = "DVP_D11",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_D6 = "DVP_D6",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_D7 = "DVP_D7",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_D8 = "DVP_D8",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_D9 = "DVP_D9",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_HSYNC = "DVP_HSYNC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_MCLK = "DVP_MCLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_PCLK = "DVP_PCLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_PORTA = "DVP_PORTA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .DVP_VSYNC = "DVP_VSYNC",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EJ_MODE_1 = "EJ_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EJ_MODE_2 = "EJ_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EJ_MODE_3 = "EJ_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EMMC0_4B_MODE = "EMMC0_4B_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EMMC0_8B_MODE_1 = "EMMC0_8B_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EMMC0_8B_MODE_2 = "EMMC0_8B_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EMMC0_RST_MODE = "EMMC0_RST_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EMMC1_4B_MODE_1 = "EMMC1_4B_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EMMC1_4B_MODE_2 = "EMMC1_4B_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EMMC1_RST_MODE_1 = "EMMC1_RST_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EMMC1_RST_MODE_2 = "EMMC1_RST_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EMMC_4B_MODE_1 = "EMMC_4B_MODE_1",
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .EMMC_CLK = "EMMC_CLK",
@@ -112,6 +304,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V4)
     .EMMC_DS = "EMMC_DS",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .EMMC_RST_MODE_1 = "EMMC_RST_MODE_1",
+#endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .EMMC_RST_N = "EMMC_RST_N",
 #endif
@@ -145,6 +340,18 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V5)
     .ETH_LINK_STA_LED = "ETH_LINK_STA_LED",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .ETH_MODE = "ETH_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .ETH_MODE_1 = "ETH_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .ETH_MODE_2 = "ETH_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .ETH_MODE_3 = "ETH_MODE_3",
+#endif
 #if defined(IPCHW_PADMUX_3536D)
     .ETH_SPD_LED = "ETH_SPD_LED",
 #endif
@@ -156,6 +363,78 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .FLASH_TRIG = "FLASH_TRIG",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_2W_MODE_1 = "FUART_2W_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_2W_MODE_2 = "FUART_2W_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_2W_MODE_3 = "FUART_2W_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_2W_MODE_4 = "FUART_2W_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_MODE_1 = "FUART_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_MODE_2 = "FUART_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_MODE_3 = "FUART_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_MODE_4 = "FUART_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_MODE_5 = "FUART_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_MODE_6 = "FUART_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .FUART_MODE_7 = "FUART_MODE_7",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_INTERNAL_PHY_PORTB = "GMAC_INTERNAL_PHY_PORTB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_INTERNAL_PHY_PORTB_NO_ACTLED = "GMAC_INTERNAL_PHY_PORTB_NO_ACTLED",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_MDCK = "GMAC_MDCK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_MDIO = "GMAC_MDIO",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_PHY_CLK = "GMAC_PHY_CLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_PORTB = "GMAC_PORTB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_RXD0 = "GMAC_RXD0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_RXD1 = "GMAC_RXD1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_RXDV = "GMAC_RXDV",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_TXCLK = "GMAC_TXCLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_TXD0 = "GMAC_TXD0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_TXD1 = "GMAC_TXD1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .GMAC_TXEN = "GMAC_TXEN",
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO0_0 = "GPIO0_0",
@@ -547,11 +826,65 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V4A)
     .HDMI_SDA = "HDMI_SDA",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C0_MODE_1 = "I2C0_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C0_MODE_2 = "I2C0_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C0_MODE_3 = "I2C0_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C0_MODE_4 = "I2C0_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C0_MODE_5 = "I2C0_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C0_PA = "I2C0_PA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C0_PC = "I2C0_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C0_PORTA = "I2C0_PORTA",
+#endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C0_SCL = "I2C0_SCL",
 #endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C0_SDA = "I2C0_SDA",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C1_MODE_1 = "I2C1_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C1_MODE_2 = "I2C1_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C1_MODE_3 = "I2C1_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C1_MODE_4 = "I2C1_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C1_PA = "I2C1_PA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C1_PB = "I2C1_PB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C1_PD = "I2C1_PD",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C1_PORTA = "I2C1_PORTA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C1_PORTB = "I2C1_PORTB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C1_PORTC = "I2C1_PORTC",
 #endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C1_SCL = "I2C1_SCL",
@@ -559,11 +892,44 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C1_SDA = "I2C1_SDA",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C2_MODE_1 = "I2C2_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C2_MODE_2 = "I2C2_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C2_MODE_3 = "I2C2_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C2_MODE_4 = "I2C2_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2C2_MODE_5 = "I2C2_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C2_PB = "I2C2_PB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C2_PC = "I2C2_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C2_PORTB = "I2C2_PORTB",
+#endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C2_SCL = "I2C2_SCL",
 #endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C2_SDA = "I2C2_SDA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C3_PA = "I2C3_PA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C3_PB = "I2C3_PB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2C3_PB1 = "I2C3_PB1",
 #endif
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C3_SCL = "I2C3_SCL",
@@ -637,6 +1003,15 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C)
     .I2S2_WS_TX = "I2S2_WS_TX",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2S_ADC_BCLK = "I2S_ADC_BCLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2S_ADC_LRCK = "I2S_ADC_LRCK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2S_ADC_MCLK = "I2S_ADC_MCLK",
+#endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V5)
     .I2S_BCLK = "I2S_BCLK",
 #endif
@@ -646,14 +1021,104 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     .I2S_BCLK_TX = "I2S_BCLK_TX",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2S_DAC_BCLK = "I2S_DAC_BCLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2S_DAC_LRCK = "I2S_DAC_LRCK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2S_DAC_MCLK = "I2S_DAC_MCLK",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_MCK_MODE_1 = "I2S_MCK_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_MCK_MODE_2 = "I2S_MCK_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_MCK_MODE_3 = "I2S_MCK_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_MCK_MODE_4 = "I2S_MCK_MODE_4",
+#endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2S_MCLK = "I2S_MCLK",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_MODE_1 = "I2S_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_MODE_2 = "I2S_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_MODE_3 = "I2S_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2S_PORTC = "I2S_PORTC",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_RXTX_MODE_1 = "I2S_RXTX_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_RXTX_MODE_2 = "I2S_RXTX_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_RXTX_MODE_3 = "I2S_RXTX_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_RXTX_MODE_4 = "I2S_RXTX_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_RXTX_MODE_5 = "I2S_RXTX_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_RXTX_MODE_6 = "I2S_RXTX_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_RX_MODE_1 = "I2S_RX_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_RX_MODE_2 = "I2S_RX_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_RX_MODE_3 = "I2S_RX_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_RX_MODE_4 = "I2S_RX_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2S_SDTI = "I2S_SDTI",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .I2S_SDTO = "I2S_SDTO",
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2S_SD_RX = "I2S_SD_RX",
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2S_SD_TX = "I2S_SD_TX",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_TX_MODE_1 = "I2S_TX_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_TX_MODE_2 = "I2S_TX_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_TX_MODE_3 = "I2S_TX_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_TX_MODE_4 = "I2S_TX_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_TX_MODE_5 = "I2S_TX_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_TX_MODE_6 = "I2S_TX_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .I2S_TX_MODE_7 = "I2S_TX_MODE_7",
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V5)
     .I2S_WS = "I2S_WS",
@@ -666,6 +1131,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     .IR_IN = "IR_IN",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .IR_IN_MODE_1 = "IR_IN_MODE_1",
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .JTAG_TCK = "JTAG_TCK",
@@ -772,6 +1240,30 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4A)
     .LCD_VSYNC = "LCD_VSYNC",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .LED0_MODE_1 = "LED0_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .LED0_MODE_2 = "LED0_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .LED0_MODE_3 = "LED0_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .LED0_MODE_4 = "LED0_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .LED1_MODE_1 = "LED1_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .LED1_MODE_2 = "LED1_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .LED1_MODE_3 = "LED1_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .LED1_MODE_4 = "LED1_MODE_4",
+#endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .LSADC_CH0 = "LSADC_CH0",
 #endif
@@ -783,6 +1275,15 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V4)
     .LSADC_CH3 = "LSADC_CH3",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MAC0_RMII_P0_NORMAL = "MAC0_RMII_P0_NORMAL",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MAC0_RMII_P1 = "MAC0_RMII_P1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MCLK_PORTA = "MCLK_PORTA",
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .MDCK = "MDCK",
@@ -813,6 +1314,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1)
     .MII_CRS = "MII_CRS",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MII_PORTBDF = "MII_PORTBDF",
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1)
     .MII_RXCK = "MII_RXCK",
@@ -855,6 +1359,15 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1)
     .MII_TXER = "MII_TXER",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .MIPI_PAD_IN_1 = "MIPI_PAD_IN_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .MIPI_PAD_IN_2 = "MIPI_PAD_IN_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .MIPI_PAD_IN_3 = "MIPI_PAD_IN_3",
 #endif
 #if defined(IPCHW_PADMUX_V5)
     .MIPI_RX0_CK0N = "MIPI_RX0_CK0N",
@@ -964,6 +1477,75 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .MIPI_RX_D3P = "MIPI_RX_D3P",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .MIPI_TX_MODE_1 = "MIPI_TX_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .MIPI_TX_MODE_2 = "MIPI_TX_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .MIPI_TX_MODE_3 = "MIPI_TX_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .MIPI_TX_MODE_4 = "MIPI_TX_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC0_CLK = "MSC0_CLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC0_CMD = "MSC0_CMD",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC0_D0 = "MSC0_D0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC0_D1 = "MSC0_D1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC0_D2 = "MSC0_D2",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC0_D3 = "MSC0_D3",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC0_PB = "MSC0_PB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC0_PORTB_4BIT = "MSC0_PORTB_4BIT",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_CLK = "MSC1_CLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_CMD = "MSC1_CMD",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_D0 = "MSC1_D0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_D1 = "MSC1_D1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_D2 = "MSC1_D2",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_D3 = "MSC1_D3",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_PB = "MSC1_PB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_PC = "MSC1_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_PORTA = "MSC1_PORTA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_PORTB = "MSC1_PORTB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .MSC1_PORTC = "MSC1_PORTC",
+#endif
 #if defined(IPCHW_PADMUX_V2A)
     .NF_ALE = "NF_ALE",
 #endif
@@ -1015,553 +1597,640 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V2A)
     .OSC_TEST_CLK = "OSC_TEST_CLK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_INGENIC)
+    .OTG_DRVVUS = "OTG_DRVVUS",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .OTP_TEST = "OTP_TEST",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA00 = "PA00",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA01 = "PA01",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA02 = "PA02",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA03 = "PA03",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA04 = "PA04",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA05 = "PA05",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA06 = "PA06",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA07 = "PA07",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA08 = "PA08",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA09 = "PA09",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA10 = "PA10",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA11 = "PA11",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA12 = "PA12",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA13 = "PA13",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA14 = "PA14",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA15 = "PA15",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA16 = "PA16",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA17 = "PA17",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA18 = "PA18",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA21 = "PA21",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA22 = "PA22",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA23 = "PA23",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA24 = "PA24",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA25 = "PA25",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA26 = "PA26",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA27 = "PA27",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PA28 = "PA28",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_ETH_LED0 = "PAD_ETH_LED0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_ETH_LED1 = "PAD_ETH_LED1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_ETH_RN = "PAD_ETH_RN",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_ETH_RP = "PAD_ETH_RP",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_ETH_TN = "PAD_ETH_TN",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_ETH_TP = "PAD_ETH_TP",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_FUART_CTS = "PAD_FUART_CTS",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_FUART_RTS = "PAD_FUART_RTS",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_FUART_RX = "PAD_FUART_RX",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_FUART_TX = "PAD_FUART_TX",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO0 = "PAD_GPIO0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO1 = "PAD_GPIO1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO10 = "PAD_GPIO10",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO11 = "PAD_GPIO11",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO12 = "PAD_GPIO12",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO13 = "PAD_GPIO13",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO14 = "PAD_GPIO14",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO15 = "PAD_GPIO15",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO2 = "PAD_GPIO2",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO3 = "PAD_GPIO3",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO4 = "PAD_GPIO4",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO5 = "PAD_GPIO5",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO6 = "PAD_GPIO6",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO7 = "PAD_GPIO7",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO8 = "PAD_GPIO8",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_GPIO9 = "PAD_GPIO9",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_I2C0_SCL = "PAD_I2C0_SCL",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_I2C0_SDA = "PAD_I2C0_SDA",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_I2C1_SCL = "PAD_I2C1_SCL",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_I2C1_SDA = "PAD_I2C1_SDA",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_I2S0_BCK = "PAD_I2S0_BCK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_I2S0_DI = "PAD_I2S0_DI",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_I2S0_DO = "PAD_I2S0_DO",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_I2S0_MCLK = "PAD_I2S0_MCLK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_I2S0_WCK = "PAD_I2S0_WCK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO0 = "PAD_PM_GPIO0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO1 = "PAD_PM_GPIO1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO10 = "PAD_PM_GPIO10",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO2 = "PAD_PM_GPIO2",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO3 = "PAD_PM_GPIO3",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO4 = "PAD_PM_GPIO4",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO5 = "PAD_PM_GPIO5",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO6 = "PAD_PM_GPIO6",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO7 = "PAD_PM_GPIO7",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO8 = "PAD_PM_GPIO8",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_GPIO9 = "PAD_PM_GPIO9",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_I2CM_SCL = "PAD_PM_I2CM_SCL",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_I2CM_SDA = "PAD_PM_I2CM_SDA",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_IRIN = "PAD_PM_IRIN",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_LED0 = "PAD_PM_LED0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_LED1 = "PAD_PM_LED1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_SD_CDZ = "PAD_PM_SD_CDZ",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_SPI_CK = "PAD_PM_SPI_CK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_SPI_CZ = "PAD_PM_SPI_CZ",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_SPI_DI = "PAD_PM_SPI_DI",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_SPI_DO = "PAD_PM_SPI_DO",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_SPI_HLD = "PAD_PM_SPI_HLD",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_SPI_WPZ = "PAD_PM_SPI_WPZ",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_UART_RX = "PAD_PM_UART_RX",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_UART_RX1 = "PAD_PM_UART_RX1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_UART_TX = "PAD_PM_UART_TX",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PM_UART_TX1 = "PAD_PM_UART_TX1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PWM0 = "PAD_PWM0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_PWM1 = "PAD_PWM1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SAR_GPIO0 = "PAD_SAR_GPIO0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SAR_GPIO1 = "PAD_SAR_GPIO1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SAR_GPIO2 = "PAD_SAR_GPIO2",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SAR_GPIO3 = "PAD_SAR_GPIO3",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SAR_GPIO4 = "PAD_SAR_GPIO4",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SAR_GPIO5 = "PAD_SAR_GPIO5",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD0_CDZ = "PAD_SD0_CDZ",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD0_CLK = "PAD_SD0_CLK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD0_CMD = "PAD_SD0_CMD",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD0_D0 = "PAD_SD0_D0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD0_D1 = "PAD_SD0_D1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD0_D2 = "PAD_SD0_D2",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD0_D3 = "PAD_SD0_D3",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD0_GPIO0 = "PAD_SD0_GPIO0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_CDZ = "PAD_SD1_CDZ",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_CLK = "PAD_SD1_CLK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_CMD = "PAD_SD1_CMD",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_D0 = "PAD_SD1_D0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_D1 = "PAD_SD1_D1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_D2 = "PAD_SD1_D2",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_D3 = "PAD_SD1_D3",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_GPIO0 = "PAD_SD1_GPIO0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_GPIO1 = "PAD_SD1_GPIO1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_IO0 = "PAD_SD1_IO0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_IO1 = "PAD_SD1_IO1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_IO2 = "PAD_SD1_IO2",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_IO3 = "PAD_SD1_IO3",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_IO4 = "PAD_SD1_IO4",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_IO5 = "PAD_SD1_IO5",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_IO6 = "PAD_SD1_IO6",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_IO7 = "PAD_SD1_IO7",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD1_IO8 = "PAD_SD1_IO8",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD_CLK = "PAD_SD_CLK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD_CMD = "PAD_SD_CMD",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD_D0 = "PAD_SD_D0",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD_D1 = "PAD_SD_D1",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD_D2 = "PAD_SD_D2",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SD_D3 = "PAD_SD_D3",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI0_CK = "PAD_SPI0_CK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI0_CZ = "PAD_SPI0_CZ",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI0_DI = "PAD_SPI0_DI",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI0_DO = "PAD_SPI0_DO",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI1_CK = "PAD_SPI1_CK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI1_CZ = "PAD_SPI1_CZ",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI1_DI = "PAD_SPI1_DI",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI1_DO = "PAD_SPI1_DO",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI_CK = "PAD_SPI_CK",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI_CZ = "PAD_SPI_CZ",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI_DI = "PAD_SPI_DI",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI_DO = "PAD_SPI_DO",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI_HLD = "PAD_SPI_HLD",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SPI_WPZ = "PAD_SPI_WPZ",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO00 = "PAD_SR0_IO00",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO01 = "PAD_SR0_IO01",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO02 = "PAD_SR0_IO02",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO03 = "PAD_SR0_IO03",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO04 = "PAD_SR0_IO04",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO05 = "PAD_SR0_IO05",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO06 = "PAD_SR0_IO06",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO07 = "PAD_SR0_IO07",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO08 = "PAD_SR0_IO08",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO09 = "PAD_SR0_IO09",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO10 = "PAD_SR0_IO10",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO11 = "PAD_SR0_IO11",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO12 = "PAD_SR0_IO12",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO13 = "PAD_SR0_IO13",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO14 = "PAD_SR0_IO14",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO15 = "PAD_SR0_IO15",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO16 = "PAD_SR0_IO16",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO17 = "PAD_SR0_IO17",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO18 = "PAD_SR0_IO18",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR0_IO19 = "PAD_SR0_IO19",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO00 = "PAD_SR1_IO00",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO01 = "PAD_SR1_IO01",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO02 = "PAD_SR1_IO02",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO03 = "PAD_SR1_IO03",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO04 = "PAD_SR1_IO04",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO05 = "PAD_SR1_IO05",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO06 = "PAD_SR1_IO06",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO07 = "PAD_SR1_IO07",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO08 = "PAD_SR1_IO08",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO09 = "PAD_SR1_IO09",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO10 = "PAD_SR1_IO10",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO11 = "PAD_SR1_IO11",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO12 = "PAD_SR1_IO12",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO13 = "PAD_SR1_IO13",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO14 = "PAD_SR1_IO14",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO15 = "PAD_SR1_IO15",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO16 = "PAD_SR1_IO16",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO17 = "PAD_SR1_IO17",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO18 = "PAD_SR1_IO18",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR1_IO19 = "PAD_SR1_IO19",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO00 = "PAD_SR_IO00",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO01 = "PAD_SR_IO01",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO02 = "PAD_SR_IO02",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO03 = "PAD_SR_IO03",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO04 = "PAD_SR_IO04",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO05 = "PAD_SR_IO05",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO06 = "PAD_SR_IO06",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO07 = "PAD_SR_IO07",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO08 = "PAD_SR_IO08",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO09 = "PAD_SR_IO09",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO10 = "PAD_SR_IO10",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO11 = "PAD_SR_IO11",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO12 = "PAD_SR_IO12",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO13 = "PAD_SR_IO13",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO14 = "PAD_SR_IO14",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO15 = "PAD_SR_IO15",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO16 = "PAD_SR_IO16",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_SR_IO17 = "PAD_SR_IO17",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_UART0_RX = "PAD_UART0_RX",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_UART0_TX = "PAD_UART0_TX",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_UART1_RX = "PAD_UART1_RX",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_UART1_TX = "PAD_UART1_TX",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_USB2_DM = "PAD_USB2_DM",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_USB2_DP = "PAD_USB2_DP",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_USB_CID = "PAD_USB_CID",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_USB_DM = "PAD_USB_DM",
 #endif
-#if defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY)
+#if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_USB_DP = "PAD_USB_DP",
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
@@ -1698,6 +2367,99 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     .PAPUENS = "PAPUENS",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB00 = "PB00",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB01 = "PB01",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB02 = "PB02",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB03 = "PB03",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB04 = "PB04",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB05 = "PB05",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB06 = "PB06",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB07 = "PB07",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB08 = "PB08",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB09 = "PB09",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB10 = "PB10",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB11 = "PB11",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB13 = "PB13",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB14 = "PB14",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB15 = "PB15",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB16 = "PB16",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB17 = "PB17",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB18 = "PB18",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB19 = "PB19",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB20 = "PB20",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB21 = "PB21",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB22 = "PB22",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB23 = "PB23",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB24 = "PB24",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB25 = "PB25",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB26 = "PB26",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB27 = "PB27",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB28 = "PB28",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB29 = "PB29",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB30 = "PB30",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PB31 = "PB31",
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     .PBDRVH = "PBDRVH",
@@ -1866,6 +2628,96 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     .PBSMTS = "PBSMTS",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC00 = "PC00",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC01 = "PC01",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC02 = "PC02",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC03 = "PC03",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC04 = "PC04",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC05 = "PC05",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC06 = "PC06",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC07 = "PC07",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC08 = "PC08",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC09 = "PC09",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC10 = "PC10",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC11 = "PC11",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC12 = "PC12",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC13 = "PC13",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC14 = "PC14",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC15 = "PC15",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC16 = "PC16",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC17 = "PC17",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC18 = "PC18",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC19 = "PC19",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC20 = "PC20",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC21 = "PC21",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC22 = "PC22",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC23 = "PC23",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC24 = "PC24",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC25 = "PC25",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC26 = "PC26",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC29 = "PC29",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC30 = "PC30",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PC31 = "PC31",
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     .PCDRVH = "PCDRVH",
@@ -2040,6 +2892,96 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     .PCSMTS = "PCSMTS",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD00 = "PD00",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD01 = "PD01",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD02 = "PD02",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD03 = "PD03",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD04 = "PD04",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD05 = "PD05",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD06 = "PD06",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD07 = "PD07",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD08 = "PD08",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD09 = "PD09",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD10 = "PD10",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD11 = "PD11",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD12 = "PD12",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD13 = "PD13",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD14 = "PD14",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD15 = "PD15",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD16 = "PD16",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD17 = "PD17",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD18 = "PD18",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD19 = "PD19",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD20 = "PD20",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD21 = "PD21",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD22 = "PD22",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD23 = "PD23",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD24 = "PD24",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD25 = "PD25",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD26 = "PD26",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD27 = "PD27",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD28 = "PD28",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PD29 = "PD29",
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     .PDFLG = "PDFLG",
@@ -2311,6 +3253,42 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     .PEPUENS = "PEPUENS",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF04 = "PF04",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF05 = "PF05",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF06 = "PF06",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF07 = "PF07",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF08 = "PF08",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF09 = "PF09",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF10 = "PF10",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF11 = "PF11",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF12 = "PF12",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF13 = "PF13",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF14 = "PF14",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PF15 = "PF15",
+#endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     .PFFLG = "PFFLG",
 #endif
@@ -2479,11 +3457,203 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V3A)
     .PMC_PWM3 = "PMC_PWM3",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_I2CM_MODE_1 = "PM_I2CM_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_I2CM_MODE_2 = "PM_I2CM_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_IRIN_MODE = "PM_IRIN_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_LED_MODE = "PM_LED_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PIR_DIR_LINK_MODE_1 = "PM_PIR_DIR_LINK_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PIR_DIR_LINK_MODE_2 = "PM_PIR_DIR_LINK_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PIR_SERIN_MODE_1 = "PM_PIR_SERIN_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PIR_SERIN_MODE_2 = "PM_PIR_SERIN_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM51_UART_MODE_1 = "PM_PM51_UART_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM51_UART_MODE_2 = "PM_PM51_UART_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM51_UART_MODE_3 = "PM_PM51_UART_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_0 = "PM_PM_PAD_EXT_MODE_0",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_1 = "PM_PM_PAD_EXT_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_10 = "PM_PM_PAD_EXT_MODE_10",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_11 = "PM_PM_PAD_EXT_MODE_11",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_12 = "PM_PM_PAD_EXT_MODE_12",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_13 = "PM_PM_PAD_EXT_MODE_13",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_14 = "PM_PM_PAD_EXT_MODE_14",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_15 = "PM_PM_PAD_EXT_MODE_15",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_16 = "PM_PM_PAD_EXT_MODE_16",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_17 = "PM_PM_PAD_EXT_MODE_17",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_18 = "PM_PM_PAD_EXT_MODE_18",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_19 = "PM_PM_PAD_EXT_MODE_19",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_2 = "PM_PM_PAD_EXT_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_20 = "PM_PM_PAD_EXT_MODE_20",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_21 = "PM_PM_PAD_EXT_MODE_21",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_22 = "PM_PM_PAD_EXT_MODE_22",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_3 = "PM_PM_PAD_EXT_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_4 = "PM_PM_PAD_EXT_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_5 = "PM_PM_PAD_EXT_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_6 = "PM_PM_PAD_EXT_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_7 = "PM_PM_PAD_EXT_MODE_7",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_8 = "PM_PM_PAD_EXT_MODE_8",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_PAD_EXT_MODE_9 = "PM_PM_PAD_EXT_MODE_9",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PM_UART_IS_MODE = "PM_PM_UART_IS_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM0_MODE_1 = "PM_PWM0_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM0_MODE_2 = "PM_PWM0_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM10_MODE = "PM_PWM10_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM1_MODE_1 = "PM_PWM1_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM2_MODE_1 = "PM_PWM2_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM2_MODE_2 = "PM_PWM2_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM3_MODE_1 = "PM_PWM3_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM3_MODE_2 = "PM_PWM3_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM5_MODE = "PM_PWM5_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM8_MODE = "PM_PWM8_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_PWM9_MODE = "PM_PWM9_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_SD_CDZ_MODE = "PM_SD_CDZ_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_SPICSZ1_MODE = "PM_SPICSZ1_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_SPICSZ2_MODE = "PM_SPICSZ2_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_SPIHOLDN_MODE = "PM_SPIHOLDN_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_SPIWPN_MODE = "PM_SPIWPN_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_SPI_MODE = "PM_SPI_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_UART1_MODE = "PM_UART1_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_UART1_MODE_1 = "PM_UART1_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_UART1_MODE_2 = "PM_UART1_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_VID_MODE_1 = "PM_VID_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_VID_MODE_2 = "PM_VID_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PM_VID_MODE_3 = "PM_VID_MODE_3",
+#endif
 #if defined(IPCHW_PADMUX_V4)
     .POR_SEL = "POR_SEL",
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
+#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .PWM0 = "PWM0",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM0_MODE_1 = "PWM0_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM0_MODE_2 = "PWM0_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM0_MODE_3 = "PWM0_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM0_MODE_4 = "PWM0_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM0_MODE_5 = "PWM0_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM0_MODE_6 = "PWM0_MODE_6",
 #endif
 #if defined(IPCHW_PADMUX_V5)
     .PWM0_OUT1 = "PWM0_OUT1",
@@ -2494,8 +3664,41 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V5)
     .PWM0_OUT3 = "PWM0_OUT3",
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PWM0_PC = "PWM0_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .PWM1 = "PWM1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM10_MODE_1 = "PWM10_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM10_MODE_2 = "PWM10_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM10_MODE_3 = "PWM10_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM10_MODE_4 = "PWM10_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM1_MODE_1 = "PWM1_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM1_MODE_2 = "PWM1_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM1_MODE_3 = "PWM1_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM1_MODE_4 = "PWM1_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM1_MODE_5 = "PWM1_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM1_MODE_6 = "PWM1_MODE_6",
 #endif
 #if defined(IPCHW_PADMUX_V5)
     .PWM1_OUT0 = "PWM1_OUT0",
@@ -2521,23 +3724,200 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V5)
     .PWM1_OUT7 = "PWM1_OUT7",
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PWM1_PC = "PWM1_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM2 = "PWM2",
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM2_MODE_1 = "PWM2_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM2_MODE_2 = "PWM2_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM2_MODE_3 = "PWM2_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM2_MODE_4 = "PWM2_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM2_MODE_5 = "PWM2_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM2_MODE_6 = "PWM2_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PWM2_PC = "PWM2_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM3 = "PWM3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM3_MODE_1 = "PWM3_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM3_MODE_2 = "PWM3_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM3_MODE_3 = "PWM3_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM3_MODE_4 = "PWM3_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM3_MODE_5 = "PWM3_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM3_MODE_6 = "PWM3_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PWM3_PC = "PWM3_PC",
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
     .PWM4 = "PWM4",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM4_MODE_1 = "PWM4_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM4_MODE_2 = "PWM4_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM4_MODE_3 = "PWM4_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM4_MODE_4 = "PWM4_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM4_MODE_5 = "PWM4_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM4_MODE_6 = "PWM4_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PWM4_PC = "PWM4_PC",
+#endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
     .PWM5 = "PWM5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM5_MODE_1 = "PWM5_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM5_MODE_2 = "PWM5_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM5_MODE_3 = "PWM5_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM5_MODE_4 = "PWM5_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM5_MODE_5 = "PWM5_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM5_MODE_6 = "PWM5_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PWM5_PC = "PWM5_PC",
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
     .PWM6 = "PWM6",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM6_MODE_1 = "PWM6_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM6_MODE_2 = "PWM6_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM6_MODE_3 = "PWM6_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM6_MODE_4 = "PWM6_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM6_MODE_5 = "PWM6_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM6_MODE_6 = "PWM6_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PWM6_PD = "PWM6_PD",
+#endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
     .PWM7 = "PWM7",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM7_MODE_1 = "PWM7_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM7_MODE_2 = "PWM7_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM7_MODE_3 = "PWM7_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM7_MODE_4 = "PWM7_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM7_MODE_5 = "PWM7_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM7_MODE_6 = "PWM7_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .PWM7_PD = "PWM7_PD",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM8_MODE_1 = "PWM8_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM8_MODE_2 = "PWM8_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM8_MODE_3 = "PWM8_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM8_MODE_4 = "PWM8_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM8_MODE_5 = "PWM8_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM8_MODE_6 = "PWM8_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM8_MODE_7 = "PWM8_MODE_7",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM8_MODE_8 = "PWM8_MODE_8",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM9_MODE_1 = "PWM9_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM9_MODE_2 = "PWM9_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM9_MODE_3 = "PWM9_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM9_MODE_4 = "PWM9_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM9_MODE_5 = "PWM9_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM9_MODE_6 = "PWM9_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM9_MODE_7 = "PWM9_MODE_7",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .PWM9_MODE_8 = "PWM9_MODE_8",
 #endif
 #if defined(IPCHW_PADMUX_3536D)
     .PWM_FREE = "PWM_FREE",
@@ -2610,6 +3990,15 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     .PZPAT1S = "PZPAT1S",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .RD = "RD",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .RGB8_MODE_1 = "RGB8_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .RGB8_MODE_2 = "RGB8_MODE_2",
 #endif
 #if defined(IPCHW_PADMUX_V5)
     .RGB_CLK = "RGB_CLK",
@@ -2860,6 +4249,15 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
     .RTC_TEST_CLK = "RTC_TEST_CLK",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SA0 = "SA0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SA1 = "SA1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SA2 = "SA2",
+#endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3)
     .SAR_ADC_CH0 = "SAR_ADC_CH0",
 #endif
@@ -2872,6 +4270,18 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V3A)
     .SAR_ADC_CH3 = "SAR_ADC_CH3",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SAR_MODE_0 = "SAR_MODE_0",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SAR_MODE_1 = "SAR_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SAR_MODE_2 = "SAR_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SAR_MODE_3 = "SAR_MODE_3",
+#endif
 #if defined(IPCHW_PADMUX_3536D)
     .SATA_LED_N = "SATA_LED_N",
 #endif
@@ -2880,6 +4290,54 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536C)
     .SATA_LED_N1 = "SATA_LED_N1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SD0 = "SD0",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SD0_CDZ_MODE = "SD0_CDZ_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SD0_CDZ_MODE_1 = "SD0_CDZ_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SD0_MODE = "SD0_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SD0_MODE_1 = "SD0_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SD1 = "SD1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SD1_CDZ_MODE_1 = "SD1_CDZ_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SD1_CDZ_MODE_2 = "SD1_CDZ_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SD1_MODE_1 = "SD1_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SD1_MODE_2 = "SD1_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SD2 = "SD2",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SD3 = "SD3",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SD4 = "SD4",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SD5 = "SD5",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SD6 = "SD6",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SD7 = "SD7",
 #endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .SDIO0_CARD_DETECT = "SDIO0_CARD_DETECT",
@@ -3001,8 +4459,44 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V1)
     .SDIO_CDATA3 = "SDIO_CDATA3",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_CDZ_MODE_1 = "SDIO_CDZ_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_CDZ_MODE_2 = "SDIO_CDZ_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_CDZ_MODE_3 = "SDIO_CDZ_MODE_3",
+#endif
 #if defined(IPCHW_PADMUX_V1)
     .SDIO_CWPR = "SDIO_CWPR",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_MODE = "SDIO_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_MODE_1 = "SDIO_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_MODE_2 = "SDIO_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_MODE_3 = "SDIO_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_MODE_4 = "SDIO_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_RST_MODE_1 = "SDIO_RST_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_RST_MODE_2 = "SDIO_RST_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SDIO_RST_MODE_3 = "SDIO_RST_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SD_MODE = "SD_MODE",
 #endif
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .SENSOR0_CLK = "SENSOR0_CLK",
@@ -3052,7 +4546,13 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .SFC_BOOT_MODE = "SFC_BOOT_MODE",
 #endif
-#if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SFC_CE0 = "SFC_CE0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SFC_CE1 = "SFC_CE1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .SFC_CLK = "SFC_CLK",
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
@@ -3073,8 +4573,17 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V1)
     .SFC_DOI = "SFC_DOI",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SFC_DR = "SFC_DR",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SFC_DT = "SFC_DT",
+#endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V5)
     .SFC_EMMC_BOOT_MODE = "SFC_EMMC_BOOT_MODE",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SFC_GPC = "SFC_GPC",
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .SFC_HOLD_IO3 = "SFC_HOLD_IO3",
@@ -3097,11 +4606,74 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V2A)
     .SFC_NAND_BOOT_PIN2 = "SFC_NAND_BOOT_PIN2",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SFC_PA = "SFC_PA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SFC_PORTA = "SFC_PORTA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SFC_PORTA_QUAD = "SFC_PORTA_QUAD",
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .SFC_WP_IO2 = "SFC_WP_IO2",
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .SHUTTER_TRIG = "SHUTTER_TRIG",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_CS = "SLCD_CS",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_D0 = "SLCD_D0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_D1 = "SLCD_D1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_D2 = "SLCD_D2",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_D3 = "SLCD_D3",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_D4 = "SLCD_D4",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_D5 = "SLCD_D5",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_D6 = "SLCD_D6",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_D7 = "SLCD_D7",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_DC = "SLCD_DC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_RDY = "SLCD_RDY",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_TE = "SLCD_TE",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SLCD_WR = "SLCD_WR",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SMART_LCD_PD = "SMART_LCD_PD",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SMB0_SCK = "SMB0_SCK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SMB0_SDA = "SMB0_SDA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SMB1_SCK = "SMB1_SCK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SMB1_SDA = "SMB1_SDA",
 #endif
 #if defined(IPCHW_PADMUX_V3A)
     .SPI0_3WIRE_CLK = "SPI0_3WIRE_CLK",
@@ -3120,6 +4692,27 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V5)
     .SPI0_CSN1 = "SPI0_CSN1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI0_CZ1_MODE_1 = "SPI0_CZ1_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI0_CZ1_MODE_2 = "SPI0_CZ1_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI0_MODE_1 = "SPI0_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI0_MODE_2 = "SPI0_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI0_MODE_3 = "SPI0_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI0_MODE_4 = "SPI0_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SPI0_PC = "SPI0_PC",
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .SPI0_SCLK = "SPI0_SCLK",
@@ -3150,6 +4743,36 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V2A)
     .SPI1_CSN2 = "SPI1_CSN2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI1_CZ1_MODE_1 = "SPI1_CZ1_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI1_CZ1_MODE_2 = "SPI1_CZ1_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI1_CZ1_MODE_3 = "SPI1_CZ1_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI1_MODE_1 = "SPI1_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI1_MODE_2 = "SPI1_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI1_MODE_3 = "SPI1_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI1_MODE_4 = "SPI1_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI1_MODE_5 = "SPI1_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SPI1_PB = "SPI1_PB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SPI1_PC = "SPI1_PC",
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .SPI1_SCLK = "SPI1_SCLK",
@@ -3196,6 +4819,30 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V5)
     .SPI3_SDO = "SPI3_SDO",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPICSZ1_GPIO_0 = "SPICSZ1_GPIO_0",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPICSZ1_MODE = "SPICSZ1_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPICSZ2_GPIO_1 = "SPICSZ2_GPIO_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPICSZ2_MODE = "SPICSZ2_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPIHOLDN_MODE = "SPIHOLDN_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPIHOLDN_MODE_0 = "SPIHOLDN_MODE_0",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPIWPN_GPIO_0 = "SPIWPN_GPIO_0",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPIWPN_MODE = "SPIWPN_MODE",
+#endif
 #if defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4A)
     .SPI_3LINE_CSN = "SPI_3LINE_CSN",
 #endif
@@ -3220,8 +4867,35 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C)
     .SPI_CSN1 = "SPI_CSN1",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI_EXT_EN_MDOE_0 = "SPI_EXT_EN_MDOE_0",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI_EXT_EN_MDOE_1 = "SPI_EXT_EN_MDOE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI_EXT_EN_MDOE_2 = "SPI_EXT_EN_MDOE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI_EXT_EN_MDOE_3 = "SPI_EXT_EN_MDOE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI_EXT_EN_MDOE_4 = "SPI_EXT_EN_MDOE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI_EXT_EN_MDOE_5 = "SPI_EXT_EN_MDOE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI_EXT_EN_MDOE_6 = "SPI_EXT_EN_MDOE_6",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI_GPIO_0 = "SPI_GPIO_0",
+#endif
 #if defined(IPCHW_PADMUX_3536C)
     .SPI_MISO = "SPI_MISO",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SPI_MODE = "SPI_MODE",
 #endif
 #if defined(IPCHW_PADMUX_3536C)
     .SPI_MOSI = "SPI_MOSI",
@@ -3238,6 +4912,237 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V5)
     .SPI_TFT_DATA = "SPI_TFT_DATA",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_CTRL_MODE = "SR00_CTRL_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_MCLK_MODE = "SR00_MCLK_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_MCLK_MODE_1 = "SR00_MCLK_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_MCLK_MODE_2 = "SR00_MCLK_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_MIPI_MODE_1 = "SR00_MIPI_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_MIPI_MODE_2 = "SR00_MIPI_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_MIPI_MODE_3 = "SR00_MIPI_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_MIPI_MODE_4 = "SR00_MIPI_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_PDN_MODE_1 = "SR00_PDN_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_PDN_MODE_2 = "SR00_PDN_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_RST_MODE = "SR00_RST_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_RST_MODE_1 = "SR00_RST_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_RST_MODE_2 = "SR00_RST_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR00_RST_MODE_3 = "SR00_RST_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR01_CTRL_MODE = "SR01_CTRL_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR01_MCLK_MODE = "SR01_MCLK_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR01_MCLK_MODE_1 = "SR01_MCLK_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR01_MCLK_MODE_2 = "SR01_MCLK_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR01_MCLK_MODE_3 = "SR01_MCLK_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR01_MIPI_MODE = "SR01_MIPI_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR01_RST_MODE_1 = "SR01_RST_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR01_RST_MODE_2 = "SR01_RST_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_BT601_MODE_1 = "SR0_BT601_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_BT601_MODE_2 = "SR0_BT601_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_BT656_MODE_1 = "SR0_BT656_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_BT656_MODE_2 = "SR0_BT656_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_BT656_MODE_3 = "SR0_BT656_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_MIPI_MODE_1 = "SR0_MIPI_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_MIPI_MODE_2 = "SR0_MIPI_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_MIPI_MODE_3 = "SR0_MIPI_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_MIPI_MODE_4 = "SR0_MIPI_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_MODE_1 = "SR0_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_MODE_2 = "SR0_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR0_PCLK_MODE_1 = "SR0_PCLK_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_BT601_MODE = "SR1_BT601_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_BT656_MODE = "SR1_BT656_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_CTRL_MODE = "SR1_CTRL_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_MCLK_MODE_1 = "SR1_MCLK_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_MCLK_MODE_2 = "SR1_MCLK_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_MIPI_MODE_1 = "SR1_MIPI_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_MIPI_MODE_2 = "SR1_MIPI_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_MIPI_MODE_3 = "SR1_MIPI_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_MIPI_MODE_4 = "SR1_MIPI_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_MIPI_MODE_5 = "SR1_MIPI_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_RST_MODE_1 = "SR1_RST_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR1_RST_MODE_2 = "SR1_RST_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_HSYNC_MODE_1 = "SR_HSYNC_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_HVSYNC_MODE = "SR_HVSYNC_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_MCLK_MODE = "SR_MCLK_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_MODE_1 = "SR_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_MODE_2 = "SR_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_MODE_3 = "SR_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_MODE_4 = "SR_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_PCK_MODE = "SR_PCK_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_PDN_MODE_1 = "SR_PDN_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_PDN_MODE_2 = "SR_PDN_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_RST_MODE_1 = "SR_RST_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_RST_MODE_2 = "SR_RST_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .SR_VSYNC_MODE_1 = "SR_VSYNC_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI0_CE0 = "SSI0_CE0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI0_CE1 = "SSI0_CE1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI0_CLK = "SSI0_CLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI0_DR = "SSI0_DR",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI0_DT = "SSI0_DT",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI0_GPC = "SSI0_GPC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI0_PORTB = "SSI0_PORTB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI0_PORTB_3 = "SSI0_PORTB_3",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI0_PORTC = "SSI0_PORTC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI1_CE0 = "SSI1_CE0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI1_CLK = "SSI1_CLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI1_DR = "SSI1_DR",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI1_DT = "SSI1_DT",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI1_PORTC = "SSI1_PORTC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI_SLV_CE0 = "SSI_SLV_CE0",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI_SLV_CLK = "SSI_SLV_CLK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI_SLV_DR = "SSI_SLV_DR",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .SSI_SLV_DT = "SSI_SLV_DT",
+#endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .SVB_PWM = "SVB_PWM",
 #endif
@@ -3253,14 +5158,44 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .SYS_RSTN_OUT = "SYS_RSTN_OUT",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .TCK = "TCK",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .TDI = "TDI",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .TDO = "TDO",
+#endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A)
     .TEMPER_DQ = "TEMPER_DQ",
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .TEST_CLK = "TEST_CLK",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TEST_IN_MODE_1 = "TEST_IN_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TEST_IN_MODE_2 = "TEST_IN_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TEST_IN_MODE_3 = "TEST_IN_MODE_3",
+#endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .TEST_MODE = "TEST_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TEST_OUT_MODE_1 = "TEST_OUT_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TEST_OUT_MODE_2 = "TEST_OUT_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TEST_OUT_MODE_3 = "TEST_OUT_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .TFT_LCD_PD = "TFT_LCD_PD",
 #endif
 #if defined(IPCHW_PADMUX_V5)
     .THERMO_CLK = "THERMO_CLK",
@@ -3316,44 +5251,170 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V5)
     .THERMO_VS = "THERMO_VS",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .TMS = "TMS",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TTL16_MODE_1 = "TTL16_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TTL16_MODE_2 = "TTL16_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TTL16_MODE_3 = "TTL16_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TTL16_MODE_4 = "TTL16_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TTL24_MODE = "TTL24_MODE",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TTL24_MODE_1 = "TTL24_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TTL_MODE_1 = "TTL_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .TTL_MODE_2 = "TTL_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART0_CTS = "UART0_CTS",
+#endif
 #if defined(IPCHW_PADMUX_3536C)
     .UART0_CTSN = "UART0_CTSN",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART0_MODE_1 = "UART0_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART0_MODE_2 = "UART0_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART0_MODE_3 = "UART0_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART0_MODE_4 = "UART0_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART0_PA = "UART0_PA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART0_PC = "UART0_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART0_PC1 = "UART0_PC1",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART0_PORTB = "UART0_PORTB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART0_PORTB_FC = "UART0_PORTB_FC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART0_RTS = "UART0_RTS",
 #endif
 #if defined(IPCHW_PADMUX_3536C)
     .UART0_RTSN = "UART0_RTSN",
 #endif
-#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART0_RXD = "UART0_RXD",
 #endif
-#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART0_TXD = "UART0_TXD",
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART1_CTSN = "UART1_CTSN",
 #endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART1_MODE_1 = "UART1_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART1_MODE_2 = "UART1_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART1_MODE_3 = "UART1_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART1_MODE_4 = "UART1_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART1_MODE_5 = "UART1_MODE_5",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART1_MODE_6 = "UART1_MODE_6",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART1_PA = "UART1_PA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART1_PB = "UART1_PB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART1_PORTA = "UART1_PORTA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART1_PORTB = "UART1_PORTB",
+#endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART1_RTSN = "UART1_RTSN",
 #endif
-#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART1_RXD = "UART1_RXD",
 #endif
-#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART1_TXD = "UART1_TXD",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART2_CTS = "UART2_CTS",
 #endif
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .UART2_CTSN = "UART2_CTSN",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART2_PA = "UART2_PA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART2_PB = "UART2_PB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART2_PC = "UART2_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART2_PORTB = "UART2_PORTB",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART2_PORTB_FC = "UART2_PORTB_FC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART2_PORTC = "UART2_PORTC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART2_PORTC_FC = "UART2_PORTC_FC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART2_RTS = "UART2_RTS",
+#endif
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .UART2_RTSN = "UART2_RTSN",
 #endif
-#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART2_RXD = "UART2_RXD",
 #endif
-#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART2_TXD = "UART2_TXD",
 #endif
 #if defined(IPCHW_PADMUX_V4A)
     .UART3_CTSN = "UART3_CTSN",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART3_PA = "UART3_PA",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART3_PC = "UART3_PC",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .UART3_PD = "UART3_PD",
 #endif
 #if defined(IPCHW_PADMUX_V4A)
     .UART3_RTSN = "UART3_RTSN",
@@ -3369,6 +5430,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     .UART4_TXD = "UART4_TXD",
+#endif
+#if defined(IPCHW_PADMUX_SSTAR)
+    .UART_IS_GPIO_0 = "UART_IS_GPIO_0",
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .UPDATE_MODE = "UPDATE_MODE",
@@ -3456,6 +5520,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V3A)
     .VI1_VS = "VI1_VS",
+#endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .VIC_PA = "VIC_PA",
 #endif
 #if defined(IPCHW_PADMUX_V1)
     .VIU_CLK = "VIU_CLK",
@@ -3988,10 +6055,13 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V5)
     .VSYNC_TE_MIPITX = "VSYNC_TE_MIPITX",
 #endif
+#if defined(IPCHW_PADMUX_INGENIC)
+    .WAIT = "WAIT",
+#endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V5)
     .WDG_RSTN = "WDG_RSTN",
 #endif
-#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .reserved = "reserved",
 #endif
 };

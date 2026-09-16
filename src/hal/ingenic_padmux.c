@@ -102,8 +102,9 @@ static ipchw_padmux_t pad_row(const ingenic_pad_t *pd, int func) {
         .address = IPCHW_PADMUX_ADDR_NONE,
         .func_mask = 0,
         .func = func,
-        .func_name = func < 0 ? IPCHW_PADMUX_GPIO : pd->funcs[func],
-        .gpio_name = pd->name,
+        .func_name =
+            func < 0 ? IPCHW_PADMUX_GPIO : padmux_name(pd->funcs[func]),
+        .gpio_name = padmux_name(pd->name),
         .gpio_pad = pd->pad,
         .gpio_func = -1,
         .flags = func < 0 ? IPCHW_PADMUX_F_GPIO : 0,
@@ -129,9 +130,9 @@ static int ingenic_walk(padmux_match_fn match, const void *arg, int pad,
         }
 
         for (int f = 0; f < 4; f++) {
-            if (!strcmp(pd->funcs[f], "reserved"))
+            if (!strcmp(padmux_name(pd->funcs[f]), "reserved"))
                 continue;
-            if (match != NULL && !match(pd->funcs[f], arg))
+            if (match != NULL && !match(padmux_name(pd->funcs[f]), arg))
                 continue;
 
             if (found < max)
@@ -182,7 +183,7 @@ static int ingenic_get(int pad, ipchw_padmux_t *out, const padmux_io_t *io) {
     }
 
     int func = (int)(code & (FUNC_PAT1 | FUNC_PAT0));
-    if (!strcmp(pd->funcs[func], "reserved"))
+    if (!strcmp(padmux_name(pd->funcs[func]), "reserved"))
         return 0; /* on a function the spec says this pad does not have */
 
     *out = pad_row(pd, func);
@@ -232,7 +233,8 @@ static int ingenic_set(int pad, const char *func_name, const padmux_io_t *io) {
     if (pd == NULL)
         return IPCHW_PADMUX_NO_PAD;
 
-    if (!strcmp(func_name, IPCHW_PADMUX_GPIO) || !strcmp(func_name, pd->name)) {
+    if (!strcmp(func_name, IPCHW_PADMUX_GPIO) ||
+        !strcmp(func_name, padmux_name(pd->name))) {
         /* GPIO direction and level are the same nibble as the mux here, so
          * "make it GPIO" has to pick one. A pad that is already GPIO keeps
          * the direction and level it has; one coming off a peripheral becomes
@@ -250,9 +252,9 @@ static int ingenic_set(int pad, const char *func_name, const padmux_io_t *io) {
     }
 
     for (int f = 0; f < 4; f++) {
-        if (strcmp(pd->funcs[f], func_name) != 0)
+        if (strcmp(padmux_name(pd->funcs[f]), func_name) != 0)
             continue;
-        if (!strcmp(pd->funcs[f], "reserved"))
+        if (!strcmp(padmux_name(pd->funcs[f]), "reserved"))
             break;
 
         return write_code(pad, (unsigned)f, io);
