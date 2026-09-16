@@ -210,7 +210,12 @@ cJSON or prints diagnostics in those shared files must sit inside
   different ways and only HiSilicon's is one register per pad, which is why
   there is a `padmux_ops_t` seam rather than one table format. `docs/padmux.md`
   has the mechanisms, the generators, and the traps -- read it before touching
-  any of this. Two that catch everyone: a function is not unique to a pad
+  any of this. The HiSilicon rows are indexed by selector value, so an
+  unassigned value must appear as `"reserved"` or every function after it is
+  off by one; a data sheet's "Software Multiplexed Pins" chapter lists
+  alternatives by position with the holes closed up, which is how 19 rows of
+  each of the V2 tables came to be wrong. `tools/check_hisi_padmux.py` diffs a
+  table against the register chapter. Two more that catch everyone: a function is not unique to a pad
   (hi3516ev300 has PWM2 and PWM3 on three pads each), and the spelling is not
   portable (`PWM_OUT0` on V1, `PWM0` from V2, `PWM0_OUT1` on V5, `PWM0_MODE_4`
   on SigmaStar; `SVB_PWM` and `PMC_PWM` are *different* controllers, so match

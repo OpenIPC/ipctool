@@ -76,12 +76,17 @@ static void test_v2_pwm(void) {
     puts("V2 (hi3518ev200): PWM0 on two pads");
     as_chip(HISI_V2, "3518EV200");
 
-    ipchw_padmux_t rows[4];
+    ipchw_padmux_t rows[16];
     int n = ipchw_padmux_by_func("PWM0", rows, 4);
     CHECK(n == 2);
     if (n == 2) {
-        CHECK(rows[0].address == 0x200f007c && rows[0].func == 3 &&
+        /* muxctrl_reg31 is 000 GPIO1_0, 001 VI_DATA13, 011 I2S_BCLK_TX,
+         * 100 PWM0 -- 010 is not assigned, so PWM0 is selector 4 and not the
+         * 3 its position in the table would suggest. This assertion said 3
+         * until the whole V2 table was rebuilt from the register chapter. */
+        CHECK(rows[0].address == 0x200f007c && rows[0].func == 4 &&
               rows[0].gpio_pad == 8);
+        /* muxctrl_reg58 has no hole: 00 PMC_PWM, 01 GPIO7_2, 10 PWM0. */
         CHECK(rows[1].address == 0x200f00e8 && rows[1].func == 2 &&
               rows[1].gpio_pad == 58);
     }
@@ -92,6 +97,39 @@ static void test_v2_pwm(void) {
         CHECK(r.func == 0);
         CHECK(r.gpio_pad == 61);
     }
+
+    puts("V2 (hi3518ev200): SDIO1 sits at selector 4, not 3");
+    /* Reported from a camera whose stock firmware drives a WiFi module on
+     * SDIO1 (issue #135): every SDIO1 pin wants 0x4, and ipctool said 0x3.
+     * The data sheet agrees -- muxctrl_reg4..reg13 each skip 010, so the
+     * table had lost a hole and everything past it was off by one. Section
+     * 2.4 of the same document is what makes this easy to get wrong: it
+     * lists the alternatives in columns headed "Multiplexed Signals 2-4",
+     * by POSITION rather than by selector value. */
+    static const struct {
+        uint32_t address;
+        const char *func;
+    } sdio1[] = {
+        {0x200f0010, "SDIO1_CCLK_OUT"}, {0x200f0014, "SDIO1_CARD_DETECT"},
+        {0x200f0018, "SDIO1_CWPR"},     {0x200f001c, "SDIO1_CDATA1"},
+        {0x200f0020, "SDIO1_CDATA0"},   {0x200f0024, "SDIO1_CDATA3"},
+        {0x200f0028, "SDIO1_CCMD"},     {0x200f002c, "SDIO1_CARD_POWER_EN"},
+        {0x200f0034, "SDIO1_CDATA2"},
+    };
+    for (size_t i = 0; i < sizeof(sdio1) / sizeof(sdio1[0]); i++) {
+        if (one(sdio1[i].func, &r)) {
+            CHECK(r.address == sdio1[i].address);
+            CHECK(r.func == 4);
+        }
+    }
+
+    /* The hole itself is not a function: nothing answers to it, and it is
+     * not offered as an alternative of the pad that carries it. */
+    CHECK(ipchw_padmux_by_func("reserved", rows, 16) == 0);
+    n = ipchw_padmux_by_pad(16, rows, 16); /* GPIO2_0, muxctrl_reg4 */
+    CHECK(n == 4); /* GPIO2_0, RMII_CLK, VO_CLK, SDIO1_CCLK_OUT */
+    for (int i = 0; i < n && i < 16; i++)
+        CHECK(strcmp(rows[i].func_name, "reserved") != 0);
 }
 #endif
 
