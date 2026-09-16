@@ -101,6 +101,22 @@ static bool generic_detect_cpu() {
 
     detect_path = DETECT_PATH_GENERIC;
 
+    /* Only the sentinel left: every vendor HAL this build carries was
+     * compiled out for this architecture, so there is nothing the table can
+     * match and the three /proc/cpuinfo reads below are pure cost -- they
+     * bring in line_from_file() and with it the POSIX regex engine. The
+     * count is a compile-time constant, so the rest folds away.
+     *
+     * Both buffers still have to be filled: getchipvendor() hands back
+     * chip_manufacturer whether detection succeeded or not, so returning
+     * early without it makes `ipcinfo -v` print an empty line where it used
+     * to print "unknown" -- and S70vendor runs load_"$vendor". */
+    if (ARRCNT(manufacturers) == 1) {
+        strcpy(chip_name, "unknown");
+        strcpy(chip_manufacturer, "unknown");
+        return false;
+    }
+
     strcpy(chip_name, "unknown");
     bool res = line_from_file("/proc/cpuinfo", "Hardware.+:.(\\w+)",
                 buf, sizeof(buf));
@@ -153,18 +169,21 @@ static bool hw_detect_system() {
 
     detect_uart_base = uart_base;
     switch (uart_base) {
+#ifdef IPCHW_HISI_ANY
     // hi3516cv610 (ARMv7) / hi3519dv500 (aarch64) — HiSilicon V5 family
     case 0x11040000: {
         int ret = detect_and_set(VENDOR_HISI, hisi_detect_cpu, setup_hal_hisi,
                                  0x11020000);
         return ret;
     }
+#endif
 #ifdef __arm__
 #ifdef IPCHW_VENDOR_XM
     // xm510
     case 0x10030000:
         return detect_and_set("Xiongmai", xm_detect_cpu, setup_hal_xm, 0);
 #endif
+#ifdef IPCHW_HISI_ANY
     // hi3516cv300
     case 0x12100000:
     // hi3516ev200
@@ -186,7 +205,8 @@ static bool hw_detect_system() {
     case 0x20080000:
         return detect_and_set(VENDOR_HISI, hisi_detect_cpu, setup_hal_hisi,
                               0x20050000);
-#endif
+#endif /* IPCHW_HISI_ANY */
+#endif /* __arm__ */
     default:
         return generic_detect_cpu();
     }
@@ -215,53 +235,98 @@ const char *getchipname() {
 const char *getchipfamily() {
     const char *chip_name = getchipname();
     switch (chip_generation) {
+#ifdef IPCHW_HISI_V1
     case HISI_V1:
         return "hi3516cv100";
+#endif
+#ifdef IPCHW_HISI_V2A
     case HISI_V2A:
         return "hi3516av100";
+#endif
+#ifdef IPCHW_HISI_V2
     case HISI_V2:
         return "hi3516cv200";
+#endif
+#ifdef IPCHW_HISI_V3A
     case HISI_V3A:
         return "hi3519v100";
+#endif
+#ifdef IPCHW_HISI_V3
     case HISI_V3:
         return "hi3516cv300";
+#endif
+#ifdef IPCHW_HISI_V4A
     case HISI_V4A:
         return "hi3516cv500";
+#endif
+#ifdef IPCHW_HISI_V4
     case HISI_V4:
         if (*chip_name == 'g')
             return "gk7205v200";
         else
             return "hi3516ev200";
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
     case INFINITY3:
         return "infinity3";
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
     case INFINITY5:
         return "infinity5";
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
     case INFINITY6:
         return "infinity6";
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
     case INFINITY6B:
         return "infinity6b0";
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
     case INFINITY6C:
-        return "infinity6c";        
+        return "infinity6c";
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
     case INFINITY6E:
         return "infinity6e";
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
     case T10:
         return "t10";
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
     case T20:
         return "t20";
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
     case T21:
         return "t21";
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
     case T23:
         return "t23";
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
     case T30:
         return "t30";
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
     case T31:
         return "t31";
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
     case T40:
         return "t40";
+#endif
+#ifdef IPCHW_VENDOR_INGENIC
     case T41:
         return "t41";
+#endif
+#ifdef IPCHW_VENDOR_ROCKCHIP
     case RV1106:
         return "rv1106";
+#endif
+
     default:
         return chip_name;
     }

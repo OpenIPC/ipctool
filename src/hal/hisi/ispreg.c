@@ -691,6 +691,7 @@ static void hisi_ev300_sensor_clock(cJSON *j_inner) {
     }
 }
 
+#ifdef IPCHW_HISI_V4
 static bool hisi_ev300_get_die_id(char *buf, size_t len) {
     const uint32_t base_id_addr = 0x12020400;
     const int words = 6;
@@ -744,10 +745,13 @@ static bool hisi_ev300_get_die_id(char *buf, size_t len) {
  * ioremaps the ATE chip version register in it from an ordinary kernel module
  * (OTP_VERSION_ID_REG, +0x10C on the CV6xx parts and +0x120 on the DV500s).
  */
+#endif /* IPCHW_HISI_V4 */
+
 #define V5_OTP_SHADOW_BASE 0x101E0000u
 #define V5_OTP_DIE_ID 0xF0
 #define V5_DIE_ID_WORDS 4
 
+#ifdef IPCHW_HISI_V5
 static bool hisi_ot_get_die_id(char *buf, size_t len) {
     uint32_t id[V5_DIE_ID_WORDS];
     uint8_t bytes[sizeof id];
@@ -783,6 +787,8 @@ static bool hisi_ot_get_die_id(char *buf, size_t len) {
  * mixture out too, while still accepting a legitimate id that contains a zero
  * word.
  */
+#endif /* IPCHW_HISI_V5 */
+
 static bool die_id_is_usable(const char *buf) {
     for (const char *p = buf; *p; p++)
         if (*p != '0' && *p != 'f')
@@ -794,12 +800,16 @@ bool hisi_get_die_id(char *buf, size_t len) {
     bool ok;
 
     switch (chip_generation) {
+#ifdef IPCHW_HISI_V4
     case HISI_V4:
         ok = hisi_ev300_get_die_id(buf, len);
         break;
+#endif
+#ifdef IPCHW_HISI_V5
     case HISI_OT:
         ok = hisi_ot_get_die_id(buf, len);
         break;
+#endif
     default:
         return false;
     }

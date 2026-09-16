@@ -140,6 +140,31 @@ jobs:
         # tables are not there.
         run: |
           cmake -H. -Bbuild-trimmed -DCMAKE_BUILD_TYPE=Release \
-                -DIPCHW_VENDORS=none -DIPCHW_PADMUX=v1
+                -DIPCHW_VENDORS=none -DIPCHW_PADMUX=v1 -DIPCHW_HISI=v4
           cmake --build build-trimmed --target reginfo_test
           ./build-trimmed/reginfo_test
+
+      - name: Every IPCHW_HISI selection compiles
+        # Each generation guards a different set of arms -- a chip-ID case, a
+        # temperature formula, a sensor-bus back-end, a die-ID reader -- and a
+        # guard that swallows a #define or leaves a dangling else only shows up
+        # in the one selection that needs it. Three of these broke while the
+        # knob was being written, each in a different generation, so sweep all
+        # of them rather than trusting the two that a person happens to build.
+        # libipchw alone, natively: it is the target that carries the guards,
+        # and it keeps the sweep to a few seconds.
+        run: |
+          status=0
+          for gen in all none v1 v2 v2a "v2;v2a" v3 v3a v4 v4a v5 3536c 3536d; do
+            dir=build-hisi-$(echo "$gen" | tr -d ';')
+            if cmake -H. -B"$dir" -DCMAKE_BUILD_TYPE=Release \
+                     -DIPCHW_VENDORS=none -DIPCHW_HISI="$gen" > "$dir.log" 2>&1 \
+               && cmake --build "$dir" --target ipchw >> "$dir.log" 2>&1; then
+              echo "IPCHW_HISI=$gen ok"
+            else
+              echo "::error::IPCHW_HISI=$gen does not build"
+              tail -30 "$dir.log"
+              status=1
+            fi
+          done
+          exit $status
