@@ -352,6 +352,14 @@ static void ingenic_enable_sensor_clock() {
                        sizeof(buf))) {
         if (!strcmp(buf, "disabled")) {
             f = fopen("/proc/jz/clock/cgu_cim/enable", "w");
+            /* The file is readable at 0600 and we may not be root, or the
+             * kernel may not offer it for writing at all. Unchecked, this was
+             * a null fprintf() -- a segfault where the honest outcome is a
+             * probe that finds no sensor. It matters more since the probe path
+             * began re-arming the clock before every attempt rather than once
+             * per run: the same null is now reached up to seven times. */
+            if (!f)
+                return;
             fprintf(f, "%s", "1");
             uint32_t direct;
             mem_reg(0x10010030, &direct, OP_READ);
