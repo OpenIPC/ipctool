@@ -105,9 +105,17 @@ static bool generic_detect_cpu() {
      * compiled out for this architecture, so there is nothing the table can
      * match and the three /proc/cpuinfo reads below are pure cost -- they
      * bring in line_from_file() and with it the POSIX regex engine. The
-     * count is a compile-time constant, so the rest folds away. */
-    if (ARRCNT(manufacturers) == 1)
+     * count is a compile-time constant, so the rest folds away.
+     *
+     * Both buffers still have to be filled: getchipvendor() hands back
+     * chip_manufacturer whether detection succeeded or not, so returning
+     * early without it makes `ipcinfo -v` print an empty line where it used
+     * to print "unknown" -- and S70vendor runs load_"$vendor". */
+    if (ARRCNT(manufacturers) == 1) {
+        strcpy(chip_name, "unknown");
+        strcpy(chip_manufacturer, "unknown");
         return false;
+    }
 
     strcpy(chip_name, "unknown");
     bool res = line_from_file("/proc/cpuinfo", "Hardware.+:.(\\w+)",

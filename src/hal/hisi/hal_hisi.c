@@ -946,9 +946,11 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
             case 0:
             case 1:
                 return "3521DV100";
+#ifdef IPCHW_HISI_3536C
             case 2:
                 chip_generation = HISI_3536C;
                 return "3536CV100";
+#endif
             case 3:
                 return "3520DV400";
             default:
