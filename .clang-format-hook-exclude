@@ -1,2 +1,4 @@
 src/hal/sstar_padmux\.h
 src/hal/ingenic_padmux\.h
+src/padmux_names\.h
+src/padmux_names\.c

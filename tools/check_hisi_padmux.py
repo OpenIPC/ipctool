@@ -305,12 +305,48 @@ def pinout_registers(path, want=None):
     return out
 
 
+# A row's function names, in either spelling the tables have carried.
+#
+# They are PMX_ macros now -- interned offsets, see tools/gen_padmux_names.py
+# -- and were quoted strings before. Reading only the old spelling would not
+# fail here: every row would parse with an empty function list, every register
+# would read as "in the document but not in the table", and a --fix run would
+# have rewritten the lot. So both are accepted, and the selftest asserts both.
+PMXREF = re.compile(r"\bPMX_([A-Za-z0-9_]+)\b")
+
+
+def unmangle(ident):
+    """PMX_FFF_OUT__GGG_CLK -> FFF_OUT/GGG_CLK.
+
+    The inverse of the mangling in gen_padmux_names.py, whose selftest is
+    what holds that no pad function name contains a double underscore of its
+    own."""
+    if ident[0] == "_" and len(ident) > 1 and ident[1].isdigit():
+        ident = ident[1:]
+    return ident.replace("__", "/")
+
+
+def mangle(name):
+    """The spelling --fix has to write a repaired row back in."""
+    ident = re.sub(r"[^A-Za-z0-9_]", "__", name)
+    if not ident or ident[0].isdigit():
+        ident = "_" + ident
+    return "PMX_" + ident
+
+
+def row_funcs(args_src):
+    quoted = re.findall(r'"([^"]*)"', args_src)
+    if quoted:
+        return quoted
+    return [unmangle(i) for i in PMXREF.findall(args_src)]
+
+
 def table_rows(src, prefix):
     out = {}
     for m in MUX.finditer(src):
         if m.group(1).startswith(prefix):
             out[int(m.group(2), 16)] = (m.group(1), m.group(2),
-                                        re.findall(r'"([^"]*)"', m.group(3)),
+                                        row_funcs(m.group(3)),
                                         m.group(0))
     return out
 
@@ -374,12 +410,19 @@ muxctrl_reg0
 2.4 Software Multiplexed Pins
 """
 
+# The spelling the tables carried before the names were interned. Kept so
+# the parser is proven to read a fork or an old branch, not only master.
+SELFTEST_TABLE_QUOTED = '''
+MUXCTRL(BAR_0, 0x20000000, "GPIO0_0", "AAA")
+'''
+
 SELFTEST_TABLE = '''
-MUXCTRL(FOO_0, 0x10000000, "GPIO0_0", "AAA", "reserved", "BBB", "CCC")
-MUXCTRL(FOO_1, 0x10000004, "GPIO0_1", "DDD")
-MUXCTRL(FOO_2, 0x10000008, "GPIO0_2", "EEE", "FFF_OUT/GGG_CLK")
-MUXCTRL(FOO_22, 0x10000058, "GPIO2_2", "HHH",
-        "III");
+MUXCTRL(FOO_0, 0x10000000, PMX_GPIO0_0, PMX_AAA, PMX_reserved, PMX_BBB,
+        PMX_CCC)
+MUXCTRL(FOO_1, 0x10000004, PMX_GPIO0_1, PMX_DDD)
+MUXCTRL(FOO_2, 0x10000008, PMX_GPIO0_2, PMX_EEE, PMX_FFF_OUT__GGG_CLK)
+MUXCTRL(FOO_22, 0x10000058, PMX_GPIO2_2, PMX_HHH,
+        PMX_III);
 '''
 
 
@@ -451,6 +494,17 @@ def selftest():
     check(have.get(0x10000058, (None, None, []))[2] == ["GPIO2_2", "HHH", "III"],
           "table_rows wrapped/terminated row: %r"
           % (have.get(0x10000058),))
+    # a slashed name survives the PMX_ round trip rather than reading as two
+    check(have.get(0x10000008, (None, None, []))[2]
+          == ["GPIO0_2", "EEE", "FFF_OUT/GGG_CLK"],
+          "table_rows slashed name: %r" % (have.get(0x10000008),))
+    # the pre-interning spelling still parses
+    quoted = table_rows(SELFTEST_TABLE_QUOTED, "BAR_")
+    check(quoted.get(0x20000000, (None, None, []))[2] == ["GPIO0_0", "AAA"],
+          "table_rows quoted spelling: %r" % (quoted.get(0x20000000),))
+    # and --fix writes back in the spelling the tables now hold
+    check(mangle("FFF_OUT/GGG_CLK") == "PMX_FFF_OUT__GGG_CLK",
+          "mangle: %r" % mangle("FFF_OUT/GGG_CLK"))
 
     # 9. the workbook field descriptions, which say the same thing in a
     #    different shape: English or Chinese, decimal or 0x, ASCII or
@@ -665,7 +719,7 @@ def main():
         holes += 1
         if args.fix:
             new = "MUXCTRL(%s, %s, %s)" % (
-                name, addr_s, ", ".join('"%s"' % f for f in want))
+                name, addr_s, ", ".join(mangle(f) for f in want))
             assert src.count(whole) == 1, name
             src = src.replace(whole, new)
             fixed += 1
