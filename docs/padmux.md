@@ -173,18 +173,24 @@ function does not degrade, it misleads.
   the id is the thing to capture from the board. Until then this is left
   alone: changing `CV610regs` to the TFBGA map would break the three QFN SKUs
   and the CV608 it is currently right about.
-- **`DV500`** (Hi3519D V500 and Hi3516D V500) is merely partial, and worth
-  having as it is. 131 registers in the workbook against 102 rows, 29 of them
-  absent entirely, and 44 of the rows present carry `"reserved"` at selector 0
-  where the document names the GPIO. But 91 of the 96 differing rows are a
-  strict **subset** of the document: every function it does name sits at the
-  right selector value, so nothing it says is wrong and nothing is shifted the
-  way the V2 tables were. Filling it in from the workbook is additive and can
-  be done a register at a time. Two different releases of that workbook give
-  the same verdict, so it is the table that is short, not the document that is
-  stale. (The five rows that are not subsets are three spellings --
-  `PWM2`/`SVB_PWM2`, `MDCLK0`/`MDCK`, `MDIO0`/`MDIO` -- and two functions the
-  table marks `reserved`: `BOOT_PARA_SEL2` and `I2C2_SCL`.)
+- **`DV500`** is partial and nothing in it is wrong -- `--pinout` exits 2 on
+  it, not 1. It was entered against **Hi3519DV500**, which fits it far better
+  than Hi3516DV500 (the two parts differ on 26 of their 131 registers, the
+  same SKU split as CV610). 131 registers in the workbook against 102 rows,
+  29 absent entirely, and 44 of the rows present carry `"reserved"` at
+  selector 0 where the document names the GPIO. Every one of the 96 differing
+  rows is a strict **subset** of the document: each function it names sits at
+  the right selector value, so nothing is shifted the way the V2 tables were.
+  Filling it in is additive, a register at a time. Two different releases of
+  the workbook give the same verdict, so it is the table that is short and
+  not the document that is stale.
+
+  Five rows used to be genuinely wrong and are now fixed: the table called
+  `SVB_PWM0/1/2` plain `PWM0/1/2`, and spelled `MDCK` and `MDIO` as `MDCLK0`
+  and `MDIO0`. The document has **no** plain PWM on this part at all, so
+  those three were not a harmless abbreviation -- `ipchw_padmux_by_prefix
+  ("PWM")` matched them, which is exactly the `SVB_PWM` versus `PWM`
+  confusion this file warns about further down.
 `AV200` serves four SoCs and there are workbooks for all of them, in two
 places that do not look like each other:
 

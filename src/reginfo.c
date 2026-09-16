@@ -2353,8 +2353,10 @@ MUXCTRL(DV500_io0_cfg_reg2, 0x10260008, "GPIO2_2", "reserved", "reserved", "SPI2
 MUXCTRL(DV500_io0_cfg_reg3, 0x1026000C, "GPIO2_3", "reserved", "reserved", "SPI2_SDO", "I2S0_BCLK", "I2C2_SCL");
 MUXCTRL(DV500_io0_cfg_reg4, 0x10260010, "reserved", "reserved", "reserved", "reserved", "RGB_DATA15");
 MUXCTRL(DV500_io0_cfg_reg5, 0x10260014, "reserved", "reserved", "reserved", "reserved", "RGB_DATA16");
-MUXCTRL(DV500_io0_cfg_reg7, 0x1026001C, "GPIO2_6", "MDCLK0", "reserved", "reserved", "RGB_DATA17");
-MUXCTRL(DV500_io0_cfg_reg8, 0x10260020, "GPIO2_7", "MDIO0", "reserved", "I2S0_SD_RX", "RGB_DATA18");
+MUXCTRL(DV500_io0_cfg_reg7, 0x1026001C, "GPIO2_6", "MDCK", "reserved",
+        "reserved", "RGB_DATA17");
+MUXCTRL(DV500_io0_cfg_reg8, 0x10260020, "GPIO2_7", "MDIO", "reserved",
+        "I2S0_SD_RX", "RGB_DATA18");
 MUXCTRL(DV500_io0_cfg_reg10, 0x10260028, "reserved", "reserved", "SPI3_SDO", "reserved", "RGB_DATA4");
 MUXCTRL(DV500_io0_cfg_reg11, 0x1026002C, "reserved", "reserved", "SPI3_SDI", "reserved", "RGB_DATA3");
 MUXCTRL(DV500_io0_cfg_reg12, 0x10260030, "reserved", "reserved", "reserved", "reserved", "RGB_DATA12");
@@ -2374,7 +2376,7 @@ MUXCTRL(DV500_io0_cfg_reg25, 0x10260064, "reserved", "reserved", "I2S0_SD_TX", "
 MUXCTRL(DV500_io0_cfg_reg26, 0x10260068, "reserved", "reserved", "I2S0_BCLK", "SPI3_CSN1", "RGB_DATA1", "reserved", "reserved", "DMIC_SD3");
 MUXCTRL(DV500_io0_cfg_reg27, 0x1026006C, "GPIO5_1", "I2C0_SDA", "reserved", "reserved", "RGB_DE");
 MUXCTRL(DV500_io0_cfg_reg28, 0x10260070, "reserved", "I2C0_SCL", "VO_BT1120_DATA15", "reserved", "RGB_DATA2");
-MUXCTRL(DV500_io0_cfg_reg29, 0x10260074, "reserved", "PWM1");
+MUXCTRL(DV500_io0_cfg_reg29, 0x10260074, "reserved", "SVB_PWM1");
 MUXCTRL(DV500_io0_cfg_reg30, 0x10260078, "DSI_D3N", "reserved", "VO_BT656_CLK", "SPI3_CSN0", "VO_BT1120_DATA13", "reserved", "SPI_TFT_CSN");
 MUXCTRL(DV500_io0_cfg_reg31, 0x1026007C, "DSI_D3P", "reserved", "VO_BT1120_DATA7", "SPI3_SDI", "reserved", "reserved", "SPI_TFT_DATA");
 MUXCTRL(DV500_io0_cfg_reg32, 0x10260080, "DSI_D1N", "reserved", "VO_BT1120_DATA3", "reserved", "RGB_DATA20");
@@ -2437,9 +2439,9 @@ MUXCTRL(DV500_io3_cfg_reg1, 0x0EFF0004, "reserved", "SENSOR1_CLK");
 MUXCTRL(DV500_io3_cfg_reg2, 0x0EFF0008, "reserved", "SENSOR1_RSTN");
 MUXCTRL(DV500_io3_cfg_reg3, 0x0EFF000C, "reserved", "SENSOR1_HS", "reserved", "reserved", "reserved", "reserved", "reserved", "THERMO_SD2");
 MUXCTRL(DV500_io3_cfg_reg4, 0x0EFF0010, "reserved", "SENSOR1_VS", "reserved", "reserved", "reserved", "reserved", "reserved", "THERMO_SD3");
-MUXCTRL(DV500_io3_cfg_reg5, 0x0EFF0014, "reserved", "PWM2");
+MUXCTRL(DV500_io3_cfg_reg5, 0x0EFF0014, "reserved", "SVB_PWM2");
 MUXCTRL(DV500_io3_cfg_reg6, 0x0EFF0018, "reserved", "USB_OVRCUR");
-MUXCTRL(DV500_io3_cfg_reg8, 0x0EFF0020, "reserved", "PWM0");
+MUXCTRL(DV500_io3_cfg_reg8, 0x0EFF0020, "reserved", "SVB_PWM0");
 MUXCTRL(DV500_io3_cfg_reg9, 0x0EFF0024, "reserved", "SPI1_SCLK", "I2C5_SCL", "reserved", "reserved", "SPI_3WIRE_CLK");
 MUXCTRL(DV500_io3_cfg_reg10, 0x0EFF0028, "reserved", "SPI1_SDO", "I2C5_SDA", "reserved", "reserved", "SPI_3WIRE_DATA");
 MUXCTRL(DV500_io3_cfg_reg11, 0x0EFF002C, "reserved", "SPI1_SDI", "I2C6_SCL");
