@@ -241,8 +241,7 @@ set(IPCTOOL_SRC
     src/boards/xm.c
     src/boards/xm.h
     src/boards/sstar.c
-    src/boards/sstar.h
-    ${VERSION_SRC})
+    src/boards/sstar.h)
 
 set(CYAML_TEST_SRC
     src/cjson/cYAML_test.c
@@ -266,7 +265,24 @@ target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY ${IPCHW_VENDOR_DEFS}
 target_link_libraries(ipchw m Threads::Threads)
 
 if(NOT ONLY_LIBRARY)
-  add_executable(ipctool ${IPCTOOL_SRC} ${COMMON_LIB_SRC_ALL})
+  # version.c gets exactly one owner. Listing a generated file in the sources
+  # of both ipctool and ipcinfo put a copy of its rule in *each* target's
+  # build.make, and `make -jN` runs those two sub-makes independently and at
+  # the same time -- instrumented, the two version.cmake instances started
+  # 2ms apart. Each then rewrites version.c while the other target's compiler
+  # may be reading it, so a parallel build failed now and then with
+  # "version.c: No such file or directory"; -j1 was always clean, and CI
+  # builds without -j, so it only ever bit local builds. add_custom_command's
+  # own documentation says not to list an output in more than one independent
+  # target. An object library compiles it once and both executables link that.
+  if(SKIP_VERSION)
+    set(VERSION_OBJ "")
+  else()
+    add_library(ipctool_version OBJECT ${VERSION_SRC})
+    set(VERSION_OBJ $<TARGET_OBJECTS:ipctool_version>)
+  endif()
+
+  add_executable(ipctool ${IPCTOOL_SRC} ${COMMON_LIB_SRC_ALL} ${VERSION_OBJ})
   target_include_directories(ipctool PRIVATE include)
   target_compile_definitions(ipctool PRIVATE ${IPCHW_ALL_VENDOR_DEFS}
                              ${IPCHW_PADMUX_ALL_DEFS})
@@ -274,7 +290,7 @@ if(NOT ONLY_LIBRARY)
   target_link_libraries(ipctool m Threads::Threads)
   install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)
 
-  add_executable(ipcinfo example/ipcinfo.c src/tools.c ${VERSION_SRC})
+  add_executable(ipcinfo example/ipcinfo.c src/tools.c ${VERSION_OBJ})
   target_include_directories(ipcinfo PUBLIC include)
   target_link_libraries(ipcinfo ipchw)
   install(TARGETS ipcinfo RUNTIME DESTINATION /usr/bin/)
