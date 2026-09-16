@@ -29,10 +29,15 @@ static bool gather_anjoy_board(cJSON *j_inner) {
 static const board_vendors_t vendors[] = {
     {is_xm_board, gather_xm_board_info},
     {is_openwrt_board, gather_openwrt_board_info},
+    /* Ahead of the buildroot entry: dispatch stops at the first detector whose
+     * gatherer succeeds, and a vendor firmware that happens to identify its
+     * distribution as Buildroot would otherwise never reach its own parser.
+     * The detector is gated on /var/cfg/Ver.ini, so a plain Buildroot board is
+     * unaffected. */
+    {is_longse_board, gather_longse_board_info},
     {is_br_board, gather_br_board_info},
     {is_ruision_board, gather_ruision_board_info},
     {is_hankvision_board, gather_hankvision_board_info},
-    {is_longse_board, gather_longse_board_info},
     {is_anjoy_board, gather_anjoy_board},
     {is_sstar_board, gather_sstar_board_info},
 };
