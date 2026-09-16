@@ -169,6 +169,52 @@ message(STATUS "libipchw HiSilicon generations: ${_hisi_selected}")
 # it hands the archiver the same member order as before: --gc-sections keeps
 # whatever it keeps in link order, so appending the HAL instead of splicing it
 # back in place relaid the whole .text and made an unchanged build unprovable.
+# Which sensor families libipchw can probe for. sensors.c carries eleven
+# hand-written probes, 5388 bytes of them at -Os, and get_sensor_id_i2c()
+# walks the lot in a fixed order. A consumer that ships drivers for a handful
+# of parts still pays for every family ipctool has ever learned.
+#
+# Same shape as the knobs above. Unlike them this one costs capability: a
+# camera wearing a sensor whose family was compiled out reports nothing at
+# all, where a full build would still have named the part it cannot drive.
+# Leave it at "all" unless the image's driver set is genuinely known.
+set(IPCHW_SENSOR_FAMILIES sony smartsens soi onsemi omni galaxycore superpix
+    techpoint imagedesign visemi cvsens)
+set(IPCHW_SENSORS "all" CACHE STRING
+    "Sensor families to probe for in libipchw: 'all', 'none', or a \
+;-separated subset of: ${IPCHW_SENSOR_FAMILIES}")
+
+if(IPCHW_SENSORS STREQUAL "all")
+  set(_sensors_selected ${IPCHW_SENSOR_FAMILIES})
+elseif(IPCHW_SENSORS STREQUAL "none")
+  set(_sensors_selected "")
+else()
+  set(_sensors_selected ${IPCHW_SENSORS})
+endif()
+
+foreach(_s IN LISTS IPCHW_SENSOR_FAMILIES)
+  string(TOUPPER ${_s} _S)
+  list(APPEND IPCHW_SENSOR_ALL_DEFS IPCHW_SENSOR_${_S})
+endforeach()
+
+foreach(_s IN LISTS _sensors_selected)
+  if(NOT _s IN_LIST IPCHW_SENSOR_FAMILIES)
+    message(FATAL_ERROR
+            "IPCHW_SENSORS: unknown family '${_s}'; "
+            "expected 'all', 'none', or a subset of ${IPCHW_SENSOR_FAMILIES}")
+  endif()
+  string(TOUPPER ${_s} _S)
+  list(APPEND IPCHW_SENSOR_DEFS IPCHW_SENSOR_${_S})
+endforeach()
+
+# Whether any probe is left, so sensors.c can drop the machinery that walks
+# them rather than leave an unused helper behind.
+if(_sensors_selected)
+  list(APPEND IPCHW_SENSOR_DEFS IPCHW_SENSOR_ANY)
+endif()
+list(APPEND IPCHW_SENSOR_ALL_DEFS IPCHW_SENSOR_ANY)
+message(STATUS "libipchw sensor families: ${_sensors_selected}")
+
 set(_common_lib_src_head
     src/chipid.c
     src/chipid.h
@@ -316,7 +362,8 @@ target_include_directories(ipchw PUBLIC
 # missing macro at compile time rather than meet IPCHW_PADMUX_NO_TABLE on a
 # camera.
 target_compile_definitions(ipchw PUBLIC STANDALONE_LIBRARY ${IPCHW_VENDOR_DEFS}
-                           ${IPCHW_PADMUX_DEFS} ${IPCHW_HISI_DEFS})
+                           ${IPCHW_PADMUX_DEFS} ${IPCHW_HISI_DEFS}
+                           ${IPCHW_SENSOR_DEFS})
 # Threads is carried on the interface so anything linking this static library
 # (ipcinfo here, and external consumers of libipchw) pulls pthread in too.
 target_link_libraries(ipchw m Threads::Threads)
@@ -342,7 +389,8 @@ if(NOT ONLY_LIBRARY)
   add_executable(ipctool ${IPCTOOL_SRC} ${COMMON_LIB_SRC_ALL} ${VERSION_OBJ})
   target_include_directories(ipctool PRIVATE include)
   target_compile_definitions(ipctool PRIVATE ${IPCHW_ALL_VENDOR_DEFS}
-                             ${IPCHW_PADMUX_ALL_DEFS} ${IPCHW_HISI_ALL_DEFS})
+                             ${IPCHW_PADMUX_ALL_DEFS} ${IPCHW_HISI_ALL_DEFS}
+                             ${IPCHW_SENSOR_ALL_DEFS})
 
   target_link_libraries(ipctool m Threads::Threads)
   install(TARGETS ipctool RUNTIME DESTINATION /usr/bin/)

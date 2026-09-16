@@ -144,7 +144,7 @@ jobs:
           cmake --build build-trimmed --target reginfo_test
           ./build-trimmed/reginfo_test
 
-      - name: Every IPCHW_HISI selection compiles
+      - name: Every IPCHW_HISI and IPCHW_SENSORS selection compiles
         # Each generation guards a different set of arms -- a chip-ID case, a
         # temperature formula, a sensor-bus back-end, a die-ID reader -- and a
         # guard that swallows a #define or leaves a dangling else only shows up
@@ -155,16 +155,25 @@ jobs:
         # and it keeps the sweep to a few seconds.
         run: |
           status=0
-          for gen in all none v1 v2 v2a "v2;v2a" v3 v3a v4 v4a v5 3536c 3536d; do
-            dir=build-hisi-$(echo "$gen" | tr -d ';')
+          sweep() {
+            knob=$1 sel=$2
+            dir=build-$(echo "$knob-$sel" | tr -d ';' | tr '[:upper:]' '[:lower:]')
             if cmake -H. -B"$dir" -DCMAKE_BUILD_TYPE=Release \
-                     -DIPCHW_VENDORS=none -DIPCHW_HISI="$gen" > "$dir.log" 2>&1 \
+                     -DIPCHW_VENDORS=none -D$knob="$sel" > "$dir.log" 2>&1 \
                && cmake --build "$dir" --target ipchw >> "$dir.log" 2>&1; then
-              echo "IPCHW_HISI=$gen ok"
+              echo "$knob=$sel ok"
             else
-              echo "::error::IPCHW_HISI=$gen does not build"
+              echo "::error::$knob=$sel does not build"
               tail -30 "$dir.log"
               status=1
             fi
+          }
+          for gen in all none v1 v2 v2a "v2;v2a" v3 v3a v4 v4a v5 3536c 3536d; do
+            sweep IPCHW_HISI "$gen"
+          done
+          for fam in all none sony smartsens soi onsemi omni galaxycore \
+                     superpix techpoint imagedesign visemi cvsens \
+                     "sony;smartsens"; do
+            sweep IPCHW_SENSORS "$fam"
           done
           exit $status

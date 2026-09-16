@@ -19,9 +19,12 @@
 #include "sensors.h"
 #include "tools.h"
 
-
+#ifdef IPCHW_SENSOR_ANY
+/* Set per bus by get_sensor_id_i2c()/get_sensor_id_spi() and read through the
+ * READ macros below, so both go when the last family does. */
 static read_register_t sensor_read_register;
 static write_register_t sensor_write_register;
+#endif
 
 #define READ_0(addr) sensor_read_register(fd, i2c_addr, addr, 2, 1)
 #define READ(addr) READ_0((addr) + 0x3000)
@@ -153,6 +156,7 @@ static void sony_imx291_params(sensor_ctx_t *ctx, int fd,
 }
 #endif
 
+#ifdef IPCHW_SENSOR_SONY
 static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
                               unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -373,9 +377,11 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
 
     return false;
 }
+#endif /* IPCHW_SENSOR_SONY */
 
 // tested on H42, F22, F23, F37, H62, H65, K05
 // TODO(FlyRouter): test on H81
+#ifdef IPCHW_SENSOR_SOI
 static int detect_soi_sensor(sensor_ctx_t *ctx, int fd,
                              unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -427,8 +433,10 @@ static int detect_soi_sensor(sensor_ctx_t *ctx, int fd,
         return false;
     }
 }
+#endif /* IPCHW_SENSOR_SOI */
 
 // tested on AR0130
+#ifdef IPCHW_SENSOR_ONSEMI
 static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
                                 unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -467,7 +475,9 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
     }
     return sid;
 }
+#endif /* IPCHW_SENSOR_ONSEMI */
 
+#ifdef IPCHW_SENSOR_SMARTSENS
 static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
                                    unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -718,7 +728,9 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     sprintf(ctx->sensor_id, "SC%04x", res);
     return true;
 }
+#endif /* IPCHW_SENSOR_SMARTSENS */
 
+#ifdef IPCHW_SENSOR_OMNI
 static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
                               unsigned char i2c_addr) {
     int prod_msb;
@@ -816,7 +828,9 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
 
     return true;
 }
+#endif /* IPCHW_SENSOR_OMNI */
 
+#ifdef IPCHW_SENSOR_GALAXYCORE
 static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
                                     unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -883,7 +897,9 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
         return false;
     }
 }
+#endif /* IPCHW_SENSOR_GALAXYCORE */
 
+#ifdef IPCHW_SENSOR_SUPERPIX
 static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
                                   unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -984,7 +1000,9 @@ static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
 
     return res;
 }
+#endif /* IPCHW_SENSOR_SUPERPIX */
 
+#ifdef IPCHW_SENSOR_TECHPOINT
 static int detect_techpoint_adc(sensor_ctx_t *ctx, int fd,
                                 unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -1006,7 +1024,9 @@ static int detect_techpoint_adc(sensor_ctx_t *ctx, int fd,
 
     return res;
 }
+#endif /* IPCHW_SENSOR_TECHPOINT */
 
+#ifdef IPCHW_SENSOR_IMAGEDESIGN
 static int detect_imagedesign_sensor(sensor_ctx_t *ctx, int fd,
                                      unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -1036,7 +1056,9 @@ static int detect_imagedesign_sensor(sensor_ctx_t *ctx, int fd,
     }
     // MIS40C1 0xce4 @ 3107-3108 ?
 }
+#endif /* IPCHW_SENSOR_IMAGEDESIGN */
 
+#ifdef IPCHW_SENSOR_VISEMI
 static int detect_visemi_sensor(sensor_ctx_t *ctx, int fd,
                                 unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -1060,7 +1082,9 @@ static int detect_visemi_sensor(sensor_ctx_t *ctx, int fd,
 
     return true;
 }
+#endif /* IPCHW_SENSOR_VISEMI */
 
+#ifdef IPCHW_SENSOR_CVSENS
 static int detect_cvsens_sensor(sensor_ctx_t *ctx, int fd,
                                      unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -1088,7 +1112,9 @@ static int detect_cvsens_sensor(sensor_ctx_t *ctx, int fd,
         return false;
     }
 }
+#endif /* IPCHW_SENSOR_CVSENS */
 
+#ifdef IPCHW_SENSOR_ANY
 static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int (*detect_fn)(sensor_ctx_t *ctx, int,
                                                     unsigned char),
@@ -1113,8 +1139,14 @@ static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
     }
     return false;
 }
+#endif /* IPCHW_SENSOR_ANY */
 
 static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
+#ifndef IPCHW_SENSOR_ANY
+    (void)ctx;
+
+    return false;
+#else
     bool detected = false;
     int fd = open_i2c_sensor_fd(i2c_adapter_nr);
     if (fd == -1)
@@ -1122,64 +1154,105 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
 
     sensor_read_register = i2c_read_register;
     sensor_write_register = i2c_write_register;
-    if (detect_possible_sensors(ctx, fd, detect_soi_sensor, SENSOR_SOI)) {
+    /* Fixed order, first match wins -- the same order the else chain this
+     * replaced had. Independent statements short-circuited on `detected`
+     * rather than `else if`, so each family can carry its own guard: an
+     * #ifdef between an else and its if leaves the chain dangling when a
+     * family is compiled out. */
+#ifdef IPCHW_SENSOR_SOI
+    if (!detected &&
+        detect_possible_sensors(ctx, fd, detect_soi_sensor, SENSOR_SOI)) {
         strcpy(ctx->vendor, "Silicon Optronics");
         ctx->reg_width = 1;
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_onsemi_sensor,
-                                       SENSOR_ONSEMI)) {
+    }
+#endif
+#ifdef IPCHW_SENSOR_ONSEMI
+    if (!detected &&
+        detect_possible_sensors(ctx, fd, detect_onsemi_sensor, SENSOR_ONSEMI)) {
         strcpy(ctx->vendor, "ON Semiconductor");
         ctx->data_width = 2;
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_omni_sensor,
-                                       SENSOR_OMNIVISION)) {
+    }
+#endif
+#ifdef IPCHW_SENSOR_OMNI
+    if (!detected && detect_possible_sensors(ctx, fd, detect_omni_sensor,
+                                             SENSOR_OMNIVISION)) {
         strcpy(ctx->vendor, "OmniVision");
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_sony_sensor,
-                                       SENSOR_SONY)) {
+    }
+#endif
+#ifdef IPCHW_SENSOR_SONY
+    if (!detected &&
+        detect_possible_sensors(ctx, fd, detect_sony_sensor, SENSOR_SONY)) {
         strcpy(ctx->vendor, "Sony");
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_smartsens_sensor,
-                                       SENSOR_SMARTSENS)) {
+    }
+#endif
+#ifdef IPCHW_SENSOR_SMARTSENS
+    if (!detected && detect_possible_sensors(ctx, fd, detect_smartsens_sensor,
+                                             SENSOR_SMARTSENS)) {
         strcpy(ctx->vendor, "SmartSens");
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_galaxycore_sensor,
-                                       SENSOR_GALAXYCORE)) {
+    }
+#endif
+#ifdef IPCHW_SENSOR_GALAXYCORE
+    if (!detected && detect_possible_sensors(ctx, fd, detect_galaxycore_sensor,
+                                             SENSOR_GALAXYCORE)) {
         strcpy(ctx->vendor, "GalaxyCore");
         ctx->reg_width = 1;
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_superpix_sensor,
-                                       SENSOR_SUPERPIX)) {
+    }
+#endif
+#ifdef IPCHW_SENSOR_SUPERPIX
+    if (!detected && detect_possible_sensors(ctx, fd, detect_superpix_sensor,
+                                             SENSOR_SUPERPIX)) {
         // vendor is set by the probe itself: this register family carries both
         // SuperPix and OmniVision part numbers
         ctx->reg_width = 1;
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_techpoint_adc,
-                                       SENSOR_TECHPOINT)) {
+    }
+#endif
+#ifdef IPCHW_SENSOR_TECHPOINT
+    if (!detected && detect_possible_sensors(ctx, fd, detect_techpoint_adc,
+                                             SENSOR_TECHPOINT)) {
         strcpy(ctx->vendor, "TechPoint");
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_imagedesign_sensor,
-                                       SENSOR_IMAGEDESIGN)) {
+    }
+#endif
+#ifdef IPCHW_SENSOR_IMAGEDESIGN
+    if (!detected && detect_possible_sensors(ctx, fd, detect_imagedesign_sensor,
+                                             SENSOR_IMAGEDESIGN)) {
         strcpy(ctx->vendor, "ImageDesign");
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_visemi_sensor,
-                                       SENSOR_VISEMI)) {
+    }
+#endif
+#ifdef IPCHW_SENSOR_VISEMI
+    if (!detected &&
+        detect_possible_sensors(ctx, fd, detect_visemi_sensor, SENSOR_VISEMI)) {
         strcpy(ctx->vendor, "ViSemi");
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_cvsens_sensor,
-                                       SENSOR_CVSENS)) {
+    }
+#endif
+#ifdef IPCHW_SENSOR_CVSENS
+    if (!detected &&
+        detect_possible_sensors(ctx, fd, detect_cvsens_sensor, SENSOR_CVSENS)) {
         strcpy(ctx->vendor, "CVSENS");
         detected = true;
     }
-exit:
+#endif
     close_sensor_fd(fd);
     hal_cleanup();
+
     return detected;
+#endif /* IPCHW_SENSOR_ANY */
 }
 
+#ifdef IPCHW_SENSOR_SONY
 /* The do-nothing stand-in for chips whose bus needs no address change. It has
  * always been empty; returning explicitly is the difference between "no change
- * needed, fine" and whatever happened to be in the return register. */
+ * needed, fine" and whatever happened to be in the return register. Installed
+ * only by get_sensor_id_spi(), so it keeps that function's guard. */
 static int dummy_change_addr(int fd, unsigned char addr) {
     (void)fd;
     (void)addr;
@@ -1229,6 +1302,7 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
 
     return res;
 }
+#endif /* IPCHW_SENSOR_SONY */
 
 /* Is the bus there at all? A liveness check and nothing more: the probes below
  * (get_sensor_id_i2c) open the adapter again and close what they opened, so the
@@ -1293,13 +1367,16 @@ bool getsensorid(sensor_ctx_t *ctx) {
         return true;
     }
 
+#ifdef IPCHW_SENSOR_SONY
     /* SPI once, not once per i2c bus: open_spi_sensor_fd() takes no adapter
-     * number, so every call addresses the very same device. */
+     * number, so every call addresses the very same device. Sony is the only
+     * family probed over SPI, so the whole attempt goes when it does. */
     arm_sensor_clock();
     if (get_sensor_id_spi(ctx)) {
         strcpy(ctx->control, "spi");
         return true;
     }
+#endif
 
     /* Then the buses the HAL did not nominate. A bus that is not there is not
      * a reason to give up -- this used to `return false` on the first gap in
