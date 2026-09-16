@@ -1186,6 +1186,20 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
     if (fd < 0)
         return false;
 
+    /* Borrowed, not taken: both are process-global function pointers and the
+     * i2c sweep that runs after this probe needs them back the way the HAL
+     * left them. The dummy addr-setter is the one that bites. It reports
+     * success without issuing ioctl(I2C_SLAVE), and universal_i2c_read_register
+     * -- the reader every HAL but HiSilicon and XM leaves in place -- ignores
+     * the address argument entirely and plain read()s the descriptor, so it
+     * only ever addresses the slave that call selected. Leave the dummy in
+     * place and the i2c probes that follow a failed SPI attempt talk to slave
+     * 0 on a freshly opened bus. HiSilicon and XM pass the address per message
+     * (I2C_RDWR), which is why this never showed up on the boards that get
+     * tested most. */
+    read_register_t saved_read = sensor_read_register;
+    int (*saved_change_addr)(int, unsigned char) = i2c_change_addr;
+
     sensor_read_register = spi_read_register;
     i2c_change_addr = dummy_change_addr;
 
@@ -1194,6 +1208,10 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
         strcpy(ctx->vendor, "Sony");
     }
     close(fd);
+
+    sensor_read_register = saved_read;
+    i2c_change_addr = saved_change_addr;
+
     return res;
 }
 
@@ -1222,10 +1240,8 @@ static bool i2c_bus_openable(int adapter_nr) {
 }
 
 bool getsensorid(sensor_ctx_t *ctx) {
-
-int current_i2c_adapter_nr;
     if (!getchipname())
-        return NULL;
+        return false;
 
     /* Every probe, not just the first. getchipname() sets the HAL up once and
      * then returns its cached answer forever, so anything the setup did to
@@ -1237,59 +1253,52 @@ int current_i2c_adapter_nr;
     if (hal_enable_sensor_clock)
         hal_enable_sensor_clock();
 
-    // there is no platform specific i2c/spi access layer
-    if (!i2c_bus_openable(i2c_adapter_nr))
-        return false;
+    const int preferred_adapter = i2c_adapter_nr;
 
     // Use common settings as default
     ctx->data_width = 1;
     ctx->reg_width = 2;
 
-    bool i2c_detected = get_sensor_id_i2c(ctx);
-    if (i2c_detected) {
+    /* The bus the HAL nominated, first. A missing adapter is no longer the end
+     * of the probe: the sweep below can still find the sensor elsewhere. */
+    if (i2c_bus_openable(i2c_adapter_nr) && get_sensor_id_i2c(ctx)) {
         strcpy(ctx->control, "i2c");
         return true;
     }
 
-    bool spi_detected = get_sensor_id_spi(ctx);
-    if (spi_detected) {
+    /* SPI once, not once per i2c bus: open_spi_sensor_fd() takes no adapter
+     * number, so every call addresses the very same device. */
+    if (get_sensor_id_spi(ctx)) {
         strcpy(ctx->control, "spi");
-       return spi_detected;
-    }
-   // "try  sensor search  at not standart i2c buses"
-
-current_i2c_adapter_nr = i2c_adapter_nr; 
-
-for (int i = 0; i <= 5; i++) {
-    if (i == current_i2c_adapter_nr) {
-        continue; // Skip the current value
-    }
- 					
-i2c_adapter_nr = i;
-					
-   
-if (!i2c_bus_openable(i2c_adapter_nr))
-        return false;
-
-    // Use common settings as default
-    ctx->data_width = 1;
-    ctx->reg_width = 2;
-
-     i2c_detected = get_sensor_id_i2c(ctx);
-    if (i2c_detected) {
-        strcpy(ctx->control, "i2c");
         return true;
     }
 
-     spi_detected = get_sensor_id_spi(ctx);
-    if (spi_detected) {
-        strcpy(ctx->control, "spi");
-       return spi_detected;
+    /* Then the buses the HAL did not nominate. A bus that is not there is not
+     * a reason to give up -- this used to `return false` on the first gap in
+     * the numbering, and /dev/i2c-1 is missing on most single-bus boards, so
+     * the sweep died one iteration in and never reached the buses behind it.
+     * The fallback has been dead on that hardware since it was written. */
+    for (int i = 0; i <= 5; i++) {
+        if (i == preferred_adapter)
+            continue;
+
+        i2c_adapter_nr = i;
+        if (!i2c_bus_openable(i2c_adapter_nr))
+            continue;
+
+        // Use common settings as default
+        ctx->data_width = 1;
+        ctx->reg_width = 2;
+
+        if (get_sensor_id_i2c(ctx)) {
+            strcpy(ctx->control, "i2c");
+            return true;
+        }
     }
 
-
-
-}
+    /* Nothing answered anywhere. Put the adapter number back where the HAL set
+     * it: it is process-global and `ipctool i2cget` and friends read it. */
+    i2c_adapter_nr = preferred_adapter;
 
     /* All buses probed, nothing answered. Without this the function fell off
      * the end (UB): the bool came back indeterminate — often true — and the
