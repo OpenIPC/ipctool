@@ -3,3 +3,4 @@ build
 build-*
 compile_commands.json
 tools/dumps/
+tools/__pycache__/

@@ -173,3 +173,38 @@ jobs:
             fi
           done
           exit $status
+
+      - name: The interned pad names are current
+        # src/padmux_names.{h,c} are generated from the MUXCTRL tables, and
+        # nothing at build time regenerates them: a cross build must not need
+        # python3 in the toolchain container. So the staleness check is here.
+        # A row that names a function the table does not carry fails to
+        # compile, which is the loud half; a name left in the blob after its
+        # last row went is the quiet half, and this is what catches it.
+        run: python3 tools/gen_padmux_names.py --check
+
+      - name: Every IPCHW_PADMUX selection compiles, and its tables still read
+        # Same shape as the IPCHW_HISI sweep above and the same reason, only
+        # sharper since the names were interned: each family's entries in
+        # struct padmux_names sit behind that family's #if, so a guard that
+        # names the wrong family builds everywhere except the one selection
+        # that needs it. reginfo_test is built as well as ipchw because a
+        # table that compiles and reads back the wrong name is the failure
+        # this is really for.
+        run: |
+          status=0
+          for fam in all none v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d \
+                     sstar ingenic "v4;sstar"; do
+            dir=build-padmux-$(echo "$fam" | tr -d ';')
+            if cmake -H. -B"$dir" -DCMAKE_BUILD_TYPE=Release \
+                     -DIPCHW_PADMUX="$fam" > "$dir.log" 2>&1 \
+               && cmake --build "$dir" --target reginfo_test >> "$dir.log" 2>&1 \
+               && ./"$dir"/reginfo_test >> "$dir.log" 2>&1; then
+              echo "IPCHW_PADMUX=$fam ok"
+            else
+              echo "::error::IPCHW_PADMUX=$fam does not build or does not pass"
+              tail -30 "$dir.log"
+              status=1
+            fi
+          done
+          exit $status
