@@ -30,6 +30,14 @@ A data sheet may cover several SoCs back to back, each with its own chapter 2
 --soc picks one; without it, every chapter found is listed and the script
 exits non-zero so the choice is deliberate.
 
+Exit status is 0 only when the table and the chapter agree -- or, under
+--fix, when every disagreement was a missing hole and all of them were
+rewritten. Anything this tool will not repair on its own (a row the chapter
+does not describe, an address that is not base + 4n, a renamed function, a
+register with no row at all) stops --fix from writing at all: each of those
+is at least as likely to mean the wrong document, --soc or --base as a wrong
+table.
+
 Needs pdftotext (poppler) for a PDF. Data sheets are not in this repo, so CI
 cannot run this; it is for whoever has the document.
 """
@@ -163,44 +171,69 @@ def main():
     print("%s: %d registers in the data sheet, %d rows named %s*"
           % (who, len(ds), len(have), args.prefix))
 
-    bad = 0
+    # A missing hole is the one thing this tool knows how to repair. Anything
+    # else -- a row the data sheet does not describe, an address that is not
+    # base + 4n, a function whose NAME differs, a register with no row at all
+    # -- is kept apart, because each of those is at least as likely to mean
+    # the wrong document, the wrong --soc or the wrong --base as a wrong
+    # table, and "repairing" a table against the wrong document would wreck it.
+    holes, unfixable, fixed = 0, 0, 0
+    numbered = {}
     for addr in sorted(have):
         name, addr_s, funcs, whole = have[addr]
+        if addr < base or (addr - base) % 4:
+            print("  %-14s %s is not %s + 4n. The table's address is what gets"
+                  " read and written, so this is not a naming quibble."
+                  % (name, addr_s, args.base))
+            unfixable += 1
+            continue
         num = (addr - base) // 4
+        numbered[num] = name
         want = ds.get(num)
         if want is None:
             print("  %-14s %s -> muxctrl_reg%d is not in this data sheet"
                   % (name, addr_s, num))
-            bad += 1
+            unfixable += 1
             continue
         if funcs == want:
             continue
-        bad += 1
         print("  %-14s %s muxctrl_reg%d" % (name, addr_s, num))
-        print("      table    : %s" % " ".join(funcs))
+        print("      table     : %s" % " ".join(funcs))
         print("      data sheet: %s" % " ".join(want))
+        if [f for f in funcs if f != "reserved"] != \
+                [f for f in want if f != "reserved"]:
+            print("      ^ not just a missing hole; --fix will not touch this")
+            unfixable += 1
+            continue
+        holes += 1
         if args.fix:
-            # only ever insert holes: a rename here would mean the parse is
-            # wrong, and silently rewriting a function name would be worse
-            # than reporting it
-            if [f for f in funcs if f != "reserved"] != \
-                    [f for f in want if f != "reserved"]:
-                sys.exit("  refusing to --fix %s: this is not just a missing "
-                         "hole" % name)
             new = "MUXCTRL(%s, %s, %s)" % (
                 name, addr_s, ", ".join('"%s"' % f for f in want))
             assert src.count(whole) == 1, name
             src = src.replace(whole, new)
+            fixed += 1
 
-    missing = sorted(set(ds) - {(a - base) // 4 for a in have})
+    missing = sorted(set(ds) - set(numbered))
     if missing:
-        print("  in the data sheet but not in the table: %s" % missing)
+        # a pad with no row is absent from every lookup, which is a quieter
+        # wrong answer than a shifted selector, not a smaller one
+        print("  in the data sheet but not in the table: %s"
+              % ", ".join("muxctrl_reg%d" % n for n in missing))
+        unfixable += len(missing)
 
-    if args.fix and bad:
+    if args.fix and fixed and unfixable == 0:
         open(args.reginfo, "w", encoding="utf-8").write(src)
-        print("rewrote %d rows -- now run scripts/format-changed" % bad)
-    print("%d of %d rows disagree" % (bad, len(have)))
-    return 1 if bad and not args.fix else 0
+        print("rewrote %d rows -- now run scripts/format-changed" % fixed)
+    elif args.fix and unfixable:
+        print("NOT rewriting anything: %d problem(s) above are not missing "
+              "holes. Check --soc, --base and the document before assuming "
+              "the table is what is wrong." % unfixable)
+
+    print("%d of %d rows disagree (%d missing holes, %d this tool will not "
+          "touch)" % (holes + unfixable, len(have), holes, unfixable))
+    if unfixable:
+        return 1
+    return 0 if holes == 0 or (args.fix and fixed == holes) else 1
 
 
 if __name__ == "__main__":

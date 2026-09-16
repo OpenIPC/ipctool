@@ -31,11 +31,17 @@ static void as_chip(int generation, const char *name) {
     snprintf(chip_name, sizeof(chip_name), "%s", name);
 }
 
-/* The row for `func` on a given SoC, when there is exactly one. */
+/* The row for `func` on a given SoC, when there is exactly one.
+ *
+ * Not finding it is a failure, not a reason to skip the caller's assertions:
+ * every call site sits inside the #ifdef for that family's table, so the
+ * function is always supposed to be there. Returning a quiet false let a
+ * whole block of checks evaporate while the run still passed. */
 static bool one(const char *func, ipchw_padmux_t *row) {
     int n = ipchw_padmux_by_func(func, row, 1);
     if (n != 1) {
-        fprintf(stderr, "  (expected 1 pad for %s, got %d)\n", func, n);
+        fprintf(stderr, "  FAIL expected 1 pad for %s, got %d\n", func, n);
+        failures++;
         return false;
     }
     return true;
