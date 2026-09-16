@@ -8,8 +8,12 @@
  * straight across.
  *
  * Instead this sweeps every value the ID registers can hold, 0x0000 to 0xffff,
- * through the real probe, and prints each one that yields a name. The output
- * is committed as sensors_golden.txt. Regenerate it with
+ * through the real probe, and prints each one that yields a name. The unit is
+ * an identification path rather than a family: several probes try a second set
+ * of registers, at a different address width, when the first set says nothing,
+ * and a sweep that scripted only the primary path would leave every part
+ * reached through the fallback outside the fingerprint. The output is
+ * committed as sensors_golden.txt. Regenerate it with
  *
  *     ./build/sensors_test --dump > src/sensors_golden.txt
  *
@@ -47,6 +51,8 @@ static int failures;
 #define MAX_REGS 16
 static struct {
     uint32_t reg;
+    unsigned int reg_width;
+    unsigned int data_width;
     int val;
 } mock_regs[MAX_REGS];
 static int mock_nregs;
@@ -58,11 +64,20 @@ static void mock_clear(void) {
     mock_default = -1;
 }
 
-static void mock_set(uint32_t reg, int val) {
+/* A scripted transaction, not a scripted register: the widths are part of the
+ * match. A real bus builds the address from reg_width and decodes the value
+ * by data_width, so a probe that asked for the same register with a different
+ * shape would be talking to different silicon. Ignoring them let a refactor
+ * change either one and keep the fingerprint -- and the probes genuinely
+ * differ, from SOI's one-byte address to OnSemi's two-byte value. */
+static void mock_set(uint32_t reg, unsigned int reg_width,
+                     unsigned int data_width, int val) {
     CHECK(mock_nregs < MAX_REGS);
     if (mock_nregs >= MAX_REGS)
         return;
     mock_regs[mock_nregs].reg = reg;
+    mock_regs[mock_nregs].reg_width = reg_width;
+    mock_regs[mock_nregs].data_width = data_width;
     mock_regs[mock_nregs].val = val;
     mock_nregs++;
 }
@@ -70,13 +85,12 @@ static void mock_set(uint32_t reg, int val) {
 static int mock_read(int fd, unsigned char addr, uint32_t reg,
                      unsigned int reg_width, unsigned int data_width) {
     (void)fd;
-    (void)reg_width;
-    (void)data_width;
 
     if (addr != mock_addr)
         return -1;
     for (int i = 0; i < mock_nregs; i++)
-        if (mock_regs[i].reg == reg)
+        if (mock_regs[i].reg == reg && mock_regs[i].reg_width == reg_width &&
+            mock_regs[i].data_width == data_width)
             return mock_regs[i].val;
     return mock_default;
 }
@@ -108,70 +122,117 @@ static const char *mock_vendor = "HiSilicon";
 const char *getchipvendor() { return mock_vendor; }
 const char *getchipname() { return "mock"; }
 
-/* ---- sweeping one family ----------------------------------------------- */
+/* ---- one scenario per identification path ------------------------------ */
 
-typedef void (*set_id_fn)(uint32_t id);
-
-struct family {
+/* A family is not one path. Several probes try a second set of registers, at a
+ * different address width, when the first set says nothing -- and a sweep that
+ * only scripts the primary path leaves every part reached through the fallback
+ * outside the fingerprint, free to change unnoticed. So the unit here is the
+ * path, not the family, and each one scripts whatever it takes to get there. */
+struct scenario {
     const char *name;
     int (*probe)(sensor_ctx_t *ctx, int fd, unsigned char i2c_addr);
-    set_id_fn set_id;
-    int dflt; /* what an unmapped register reads as, for this family */
+    void (*script)(uint32_t id);
 };
 
-static void id_smartsens(uint32_t id) {
-    mock_set(0x3107, id >> 8);
-    mock_set(0x3108, id & 0xff);
+static void sc_smartsens(uint32_t id) {
+    mock_set(0x3107, 2, 1, id >> 8);
+    mock_set(0x3108, 2, 1, id & 0xff);
 }
-static void id_soi(uint32_t id) {
-    mock_set(0x0a, id >> 8);
-    mock_set(0x0b, id & 0xff);
+static void sc_soi(uint32_t id) {
+    mock_set(0x0a, 1, 1, id >> 8);
+    mock_set(0x0b, 1, 1, id & 0xff);
 }
-static void id_onsemi(uint32_t id) { mock_set(0x3000, id); }
-static void id_omni(uint32_t id) {
-    mock_set(0x300a, id >> 8);
-    mock_set(0x300b, id & 0xff);
+static void sc_onsemi(uint32_t id) { mock_set(0x3000, 2, 2, id); }
+
+static void sc_omni(uint32_t id) {
+    mock_set(0x300A, 2, 1, id >> 8);
+    mock_set(0x300B, 2, 1, id & 0xff);
 }
-static void id_galaxycore(uint32_t id) {
-    mock_set(0x3f0, id >> 8);
-    mock_set(0x3f1, id & 0xff);
-}
-static void id_superpix(uint32_t id) {
-    mock_set(0xfd, 0);
-    mock_set(0x02, id >> 8);
-    mock_set(0x03, id & 0xff);
-}
-static void id_techpoint(uint32_t id) {
-    mock_set(0xfe, id >> 8);
-    mock_set(0xff, id & 0xff);
-}
-static void id_imagedesign(uint32_t id) {
-    mock_set(0x3000, id >> 8);
-    mock_set(0x3001, id & 0xff);
-}
-static void id_visemi(uint32_t id) { mock_set(0x3000, id); }
-static void id_cvsens(uint32_t id) {
-    mock_set(0x3003, id >> 8);
-    mock_set(0x3002, id & 0xff);
+/* The manufacturer-gated path: the wide read has to say something the first
+ * switch does not know, then 0x301C/0x301D have to be OmniVision's 0x7f 0xa2
+ * before the product registers are read again a byte-address at a time. */
+static void sc_omni_mfg(uint32_t id) {
+    mock_set(0x300A, 2, 1, 0x00);
+    mock_set(0x300B, 2, 1, 0x00);
+    mock_set(0x301C, 1, 1, 0x7f);
+    mock_set(0x301D, 1, 1, 0xa2);
+    mock_set(0x300A, 1, 1, id >> 8);
+    mock_set(0x300B, 1, 1, id & 0xff);
 }
 
-static const struct family families[] = {
-    {"smartsens", detect_smartsens_sensor, id_smartsens, -1},
-    {"soi", detect_soi_sensor, id_soi, -1},
-    {"onsemi", detect_onsemi_sensor, id_onsemi, -1},
-    {"omni", detect_omni_sensor, id_omni, -1},
-    {"galaxycore", detect_galaxycore_sensor, id_galaxycore, -1},
-    {"superpix", detect_superpix_sensor, id_superpix, -1},
-    {"imagedesign", detect_imagedesign_sensor, id_imagedesign, -1},
-    {"visemi", detect_visemi_sensor, id_visemi, -1},
-    {"cvsens", detect_cvsens_sensor, id_cvsens, -1},
+static void sc_galaxycore(uint32_t id) {
+    mock_set(0x3f0, 2, 1, id >> 8);
+    mock_set(0x3f1, 2, 1, id & 0xff);
+}
+/* Leaving the wide registers unanswered is what sends the probe to the legacy
+ * pair, and that route reaches both of its switches rather than just the
+ * first. */
+static void sc_galaxycore_legacy(uint32_t id) {
+    mock_set(0xf0, 1, 1, id >> 8);
+    mock_set(0xf1, 1, 1, id & 0xff);
+}
+
+static void sc_superpix(uint32_t id) {
+    mock_set(0xFD, 1, 1, 0x00);
+    mock_set(0x02, 1, 1, id >> 8);
+    mock_set(0x03, 1, 1, id & 0xff);
+    mock_set(0x04, 1, 1, 0x00);
+}
+/* 0x04 is the third byte of the wider signature one part is known by, and it
+ * is only consulted once the two-byte switch has declined. */
+static void sc_superpix_mod(uint32_t id) {
+    mock_set(0xFD, 1, 1, 0x00);
+    mock_set(0x02, 1, 1, id >> 8);
+    mock_set(0x03, 1, 1, id & 0xff);
+    mock_set(0x04, 1, 1, 0x44);
+}
+/* And the second ID location, reached by answering the first with something
+ * non-zero that matches nothing. */
+static void sc_superpix_alt(uint32_t id) {
+    mock_set(0xFD, 1, 1, 0x00);
+    mock_set(0x02, 1, 1, 0x00);
+    mock_set(0x03, 1, 1, 0x01);
+    mock_set(0x04, 1, 1, 0x00);
+    mock_set(0xfa, 1, 1, id >> 8);
+    mock_set(0xfb, 1, 1, id & 0xff);
+}
+
+static void sc_imagedesign(uint32_t id) {
+    mock_set(0x3000, 2, 1, id >> 8);
+    mock_set(0x3001, 2, 1, id & 0xff);
+}
+static void sc_visemi(uint32_t id) { mock_set(0x3000, 2, 2, id); }
+static void sc_cvsens(uint32_t id) {
+    mock_set(0x3003, 2, 1, id >> 8);
+    mock_set(0x3002, 2, 1, id & 0xff);
+}
+static void sc_techpoint(uint32_t id) {
+    mock_set(0xfe, 1, 1, id >> 8);
+    mock_set(0xff, 1, 1, id & 0xff);
+}
+
+static const struct scenario scenarios[] = {
+    {"smartsens", detect_smartsens_sensor, sc_smartsens},
+    {"soi", detect_soi_sensor, sc_soi},
+    {"onsemi", detect_onsemi_sensor, sc_onsemi},
+    {"omni", detect_omni_sensor, sc_omni},
+    {"omni-mfg", detect_omni_sensor, sc_omni_mfg},
+    {"galaxycore", detect_galaxycore_sensor, sc_galaxycore},
+    {"galaxycore-legacy", detect_galaxycore_sensor, sc_galaxycore_legacy},
+    {"superpix", detect_superpix_sensor, sc_superpix},
+    {"superpix-mod", detect_superpix_sensor, sc_superpix_mod},
+    {"superpix-alt", detect_superpix_sensor, sc_superpix_alt},
+    {"imagedesign", detect_imagedesign_sensor, sc_imagedesign},
+    {"visemi", detect_visemi_sensor, sc_visemi},
+    {"cvsens", detect_cvsens_sensor, sc_cvsens},
 };
 
 /* Run one probe against one ID. Returns the name it produced, or NULL if it
  * declined. The context is scrubbed first: getsensorid() hands the probes an
  * uninitialised one, so anything the probe does not write is a reading of the
  * previous call, and that is exactly the kind of bug this should surface. */
-static const char *probe_once(const struct family *f, uint32_t id) {
+static const char *probe_once(const struct scenario *sc, uint32_t id) {
     static sensor_ctx_t ctx;
 
     memset(&ctx, 0xa5, sizeof(ctx));
@@ -181,10 +242,9 @@ static const char *probe_once(const struct family *f, uint32_t id) {
     ctx.data_width = 1;
 
     mock_clear();
-    mock_default = f->dflt;
-    f->set_id(id);
+    sc->script(id);
 
-    if (!f->probe(&ctx, 0, mock_addr))
+    if (!sc->probe(&ctx, 0, mock_addr))
         return NULL;
 
     /* A probe that reports success has to have written a name. Reading back
@@ -196,11 +256,11 @@ static const char *probe_once(const struct family *f, uint32_t id) {
     return ctx.sensor_id;
 }
 
-static void sweep(const struct family *f, FILE *out) {
+static void sweep(const struct scenario *sc, FILE *out) {
     for (uint32_t id = 0; id <= 0xffff; id++) {
-        const char *name = probe_once(f, id);
+        const char *name = probe_once(sc, id);
         if (name)
-            fprintf(out, "%s %04x %s\n", f->name, id, name);
+            fprintf(out, "%s %04x %s\n", sc->name, id, name);
     }
 }
 
@@ -209,15 +269,15 @@ static void sweep(const struct family *f, FILE *out) {
 static void compare(FILE *golden) {
     char want[256];
 
-    for (size_t i = 0; i < ARRCNT(families); i++) {
-        const struct family *f = &families[i];
+    for (size_t i = 0; i < ARRCNT(scenarios); i++) {
+        const struct scenario *sc = &scenarios[i];
         for (uint32_t id = 0; id <= 0xffff; id++) {
-            const char *name = probe_once(f, id);
+            const char *name = probe_once(sc, id);
             if (!name)
                 continue;
 
             char got[256];
-            snprintf(got, sizeof(got), "%s %04x %s\n", f->name, id, name);
+            snprintf(got, sizeof(got), "%s %04x %s\n", sc->name, id, name);
             if (!fgets(want, sizeof(want), golden)) {
                 fprintf(stderr, "  FAIL extra line, not in the fingerprint: %s",
                         got);
@@ -250,12 +310,12 @@ static void check_sony(void) {
      * defaults are what separate them. */
     memset(&ctx, 0, sizeof(ctx));
     mock_clear();
-    mock_set(0x3057, 0x06);
-    mock_set(0x3072, 0x28);
-    mock_set(0x3074, 0xb0);
-    mock_set(0x316a, 0x7e);
-    mock_set(0x3b00, 0x2e);
-    mock_set(0x300b, 0x00);
+    mock_set(0x3057, 2, 1, 0x06);
+    mock_set(0x3072, 2, 1, 0x28);
+    mock_set(0x3074, 2, 1, 0xb0);
+    mock_set(0x316a, 2, 1, 0x7e);
+    mock_set(0x3b00, 2, 1, 0x2e);
+    mock_set(0x300b, 2, 1, 0x00);
     sensor_read_register = mock_read;
     CHECK(detect_sony_sensor(&ctx, 0, mock_addr));
     CHECK(!strcmp(ctx.sensor_id, "IMX335"));
@@ -265,9 +325,9 @@ static void check_sony(void) {
 
     memset(&ctx, 0, sizeof(ctx));
     mock_clear();
-    mock_set(0x3057, 0x06);
-    mock_set(0x3072, 0x14);
-    mock_set(0x3074, 0x3c);
+    mock_set(0x3057, 2, 1, 0x06);
+    mock_set(0x3072, 2, 1, 0x14);
+    mock_set(0x3074, 2, 1, 0x3c);
     CHECK(detect_sony_sensor(&ctx, 0, mock_addr));
     CHECK(!strcmp(ctx.sensor_id, "IMX347"));
 
@@ -276,9 +336,9 @@ static void check_sony(void) {
      * power. 0x3b00 and 0x300b are what rule it out. */
     memset(&ctx, 0, sizeof(ctx));
     mock_clear();
-    mock_set(0x316a, 0x7e);
-    mock_set(0x3b00, 0x2e);
-    mock_set(0x300b, 0xa0);
+    mock_set(0x316a, 2, 1, 0x7e);
+    mock_set(0x3b00, 2, 1, 0x2e);
+    mock_set(0x300b, 2, 1, 0xa0);
     CHECK(detect_sony_sensor(&ctx, 0, mock_addr));
     CHECK(!strcmp(ctx.sensor_id, "IMX415"));
     if (strcmp(ctx.sensor_id, "IMX415"))
@@ -289,8 +349,8 @@ static void check_sony(void) {
      * the latch. -1 at either register means give up, not guess. */
     memset(&ctx, 0, sizeof(ctx));
     mock_clear();
-    mock_set(0x316a, 0x7e);
-    mock_set(0x3b00, -1);
+    mock_set(0x316a, 2, 1, 0x7e);
+    mock_set(0x3b00, 2, 1, -1);
     CHECK(!detect_sony_sensor(&ctx, 0, mock_addr));
 }
 
@@ -300,8 +360,8 @@ static void check_sony(void) {
  * instead -- including the zero that has to be refused, which is the only
  * thing separating "an ADC answered" from "nothing on the bus". */
 static void check_techpoint(void) {
-    static const struct family techpoint = {"techpoint", detect_techpoint_adc,
-                                            id_techpoint, -1};
+    static const struct scenario techpoint = {"techpoint", detect_techpoint_adc,
+                                              sc_techpoint};
     static const uint32_t ids[] = {0x0001, 0x2802, 0x2855, 0x9930, 0xffff};
 
     for (size_t i = 0; i < ARRCNT(ids); i++) {
@@ -329,8 +389,8 @@ static void check_vendor_dependent(void) {
         {0xcb1c, "SigmaStar", "SC200AI"},
         {0xcb1c, "HiSilicon", "SC337H"},
     };
-    static const struct family smartsens = {
-        "smartsens", detect_smartsens_sensor, id_smartsens, -1};
+    static const struct scenario smartsens = {
+        "smartsens", detect_smartsens_sensor, sc_smartsens};
 
     for (size_t i = 0; i < ARRCNT(cases); i++) {
         mock_vendor = cases[i].vendor;
@@ -352,8 +412,8 @@ int main(int argc, char **argv) {
     sensor_write_register = mock_write;
 
     if (argc > 1 && !strcmp(argv[1], "--dump")) {
-        for (size_t i = 0; i < ARRCNT(families); i++)
-            sweep(&families[i], stdout);
+        for (size_t i = 0; i < ARRCNT(scenarios); i++)
+            sweep(&scenarios[i], stdout);
         return 0;
     }
 
