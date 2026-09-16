@@ -82,8 +82,12 @@ Where it has been run:
 Hi3516CV300, `3. Pin Control Registers` after it, `3.管脚控制寄存器` in the
 Chinese editions, which for Hi3516DV200/EV200/EV300 and Hi3518EV300 are the
 only editions shipped -- and `3.管脚复用寄存器` in the older Chinese
-Hi3516CV300 and Hi3516EV100 workbooks, next to a `3.管脚驱动能力寄存器` that
-is the drive-strength list and not the mux. Pass a workbook with `--pinout` and a PDF with
+Hi3516CV300, Hi3516EV100 and Hi3536D workbooks, and `3.Pin MUX Registers` on
+Hi3536C. Two sheets sit next to it and are not the mux: the drive-strength
+list (`4. Pin Drive Registers`, `4. pad_ctrl_reg Description`,
+`4.管脚驱动能力寄存器`) and, on the Hi3536 parts, `5. Hardware MUX
+Relationship`. `pick_sheet()` refuses rather than choose when more than one
+name could be it, and `--sheet` settles it. Pass a workbook with `--pinout` and a PDF with
 `--datasheet`. The workbook is the better source: it states absolute
 addresses, so there is no `--base` to get wrong and a table spread over
 several banks needs no special handling.
@@ -101,6 +105,8 @@ several banks needs no special handling.
 | `DV200` | Hi3516D V200 | 99 | agrees | workbook, SPC011 + SPC012 |
 | `CV500` | Hi3516C V500 | 104 | agrees | workbook, EN + CN |
 | `DV300` | Hi3516D V300 | 113 | agrees | workbook, EN + CN |
+| `RCV100` | Hi3536C V100 | 77 | agrees | workbook, EN + CN |
+| `DV100` | Hi3536D V100 | 47 | agrees | workbook, EN + CN |
 
 Every one was run against two independent editions -- two data sheet
 revisions, or an English and a Chinese workbook, or two SDK releases -- and
@@ -119,8 +125,13 @@ Still open:
   sheet disagrees on 65 rows, the QFN sheet and the Hi3516CV608 sheet on 24
   each -- so which part the table was entered from has to be settled before
   any of it is rewritten.
-- **`AV200`** (Hi3519V101), **`DV500`** (Hi3519DV500), **`RCV100`**
-  (Hi3536C) and **`DV100`** (Hi3536D) have no document here in either form.
+- **`DV500`** (Hi3519D V500 and Hi3516D V500) is worse: 131 registers in the
+  workbook against 102 rows, and many of the rows it does have carry
+  `"reserved"` where the document names a real function, GPIO names included.
+  It needs re-entering from the document rather than patching.
+- **`AV200`** (Hi3519 V101, Hi3559 V100, Hi3556 V100, Hi3516A V200) has no
+  document here. Its user guide says to see `Hi3519V101_PINOUT_CN.xlsx`, and
+  that workbook is in neither SPC040 nor SPC050 nor the release archive.
 
 SDK source is no substitute for either: it shows the values a driver
 *writes*, and a hole is exactly the value nobody writes.

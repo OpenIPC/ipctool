@@ -177,11 +177,14 @@ def classify(addr, funcs, ds, base):
 # Registers" on everything after it, "3.管脚控制寄存器" in the Chinese
 # editions, which for Hi3516DV200/EV200/EV300 and Hi3518EV300 are the only
 # editions shipped.
-# Four spellings so far, and one near-miss to stay clear of: the sheet next
-# to this one is the DRIVE CAPABILITY register list (管脚驱动能力寄存器 /
-# "Pin Drive Capability Registers"), which is not the mux and must not match.
+# Five spellings so far, and two near-misses to stay clear of: the sheet next
+# to this one is always the DRIVE CAPABILITY register list (管脚驱动能力寄存器
+# / "Pin Drive Capability Registers" / "Pin Drive Registers" /
+# "pad_ctrl_reg Description"), and the Hi3536 workbooks also carry a
+# "Hardware MUX Relationship" sheet. Neither is the mux.
 PINOUT_SHEET = re.compile(
-    r"Pin Control Registers|muxctrl_reg Description|管脚(?:控制|复用)寄存器")
+    r"Pin Control Registers|Pin MUX Registers|muxctrl_reg Description"
+    r"|管脚(?:控制|复用)寄存器")
 # The mux is one field among pull-ups and drive strength; this names it.
 FUNC_FIELD = re.compile(r"Function sel|功能选择")
 # "0: EMMC_CLK", "0x1：UART0_RXD；". Anchored, so "Other value: reserved"
@@ -449,12 +452,18 @@ def selftest():
     OLD_CN = "3.管脚复用寄存器"
     NEW_CN = "3.管脚控制寄存器"
     DRIVE = "4.管脚驱动能力寄存器"
+    # the sheets that sit next to the real one and must never win
+    NEAR = [DRIVE, "4. Pin Drive Registers", "4. pad_ctrl_reg Description",
+            "5. Hardware MUX Relationship", "5.硬件复用关系"]
     for names, want, expect in (
             (["0.说明", OLD_CN, DRIVE], None, OLD_CN),
             (["0.说明", NEW_CN, DRIVE], None, NEW_CN),
             (["x", "3. Pin Control Registers"], None, "3. Pin Control Registers"),
             (["x", "3.muxctrl_reg Description"], None, "3.muxctrl_reg Description"),
-            ([DRIVE, "0.说明"], None, None),          # the near-miss alone
+            (["x", "3. muxctrl_reg Description"], None,
+             "3. muxctrl_reg Description"),
+            (NEAR + ["3.Pin MUX Registers"], None, "3.Pin MUX Registers"),
+            (NEAR, None, None),                       # only near-misses
             ([OLD_CN, NEW_CN], None, None),           # ambiguous -> refuse
             ([OLD_CN, NEW_CN], NEW_CN, NEW_CN),       # ...unless told which
             ([OLD_CN], "nope", None)):                # --sheet must exist
