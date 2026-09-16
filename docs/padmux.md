@@ -107,10 +107,12 @@ several banks needs no special handling.
 | `DV300` | Hi3516D V300 | 113 | agrees | workbook, EN + CN |
 | `RCV100` | Hi3536C V100 | 77 | agrees | workbook, EN + CN |
 | `DV100` | Hi3536D V100 | 47 | agrees | workbook, EN + CN |
+| `AV200` | Hi3519 V101, Hi3516A V200 (+Hi3559/Hi3556 V100) | 106 | agrees | workbook, 4 editions |
 
-Every one was run against two independent editions -- two data sheet
+Every one was run against at least two independent editions -- two data sheet
 revisions, or an English and a Chinese workbook, or two SDK releases -- and
-they agree on every selector value. The only difference anywhere is a name
+agrees on every selector value, with the checker exiting 0. The only
+difference anywhere is a name
 (`muxctrl_reg93` on AV100 is `RMII_CLK` in SPC050 and
 `RMII_CLK_OUT/MII_TX_CLK` in SPC080, and the table carries the newer
 spelling). `CV300`'s count is 66 against 65 registers because
@@ -128,10 +130,25 @@ Still open:
 - **`DV500`** (Hi3519D V500 and Hi3516D V500) is worse: 131 registers in the
   workbook against 102 rows, and many of the rows it does have carry
   `"reserved"` where the document names a real function, GPIO names included.
-  It needs re-entering from the document rather than patching.
-- **`AV200`** (Hi3519 V101, Hi3559 V100, Hi3556 V100, Hi3516A V200) has no
-  document here. Its user guide says to see `Hi3519V101_PINOUT_CN.xlsx`, and
-  that workbook is in neither SPC040 nor SPC050 nor the release archive.
+  It needs re-entering from the document rather than patching. Two different
+  releases of that workbook give the same verdict, so it is the table that is
+  short and not the document that is stale.
+`AV200` serves four SoCs and there are workbooks for all of them, in two
+places that do not look like each other:
+
+- `Hi3519 V101_PINOUT_*` and `Hi3516A V200_PINOUT_*` are in the Hi3519 V101
+  **SPC040** release -- and only there. SPC050, the newer one, ships no
+  workbook at all, so checking the latest release first finds nothing.
+- `Hi3559 V100／Hi3556 V100_PINOUT_*` is in the plain Hi3559 V100 release.
+
+**Hi3519 V101 and Hi3516A V200 have identical mux maps** -- all 106
+registers, every selector value, in both the English and Chinese editions of
+each -- and the table agrees with all four. Hi3559/Hi3556 V100 differ from
+them in exactly 15 registers, and only by lacking an Ethernet function
+(`RGMII_*`, `RMII_CLK`, `MDIO`, `EPHY_CLK`, `EPHY_RSTN`) where the others
+have one: they are *HD Mobile Camera* parts with no Ethernet brought out.
+One table serving all four is right, because the Ethernet-capable pair is a
+superset and nothing else differs.
 
 SDK source is no substitute for either: it shows the values a driver
 *writes*, and a hole is exactly the value nobody writes.

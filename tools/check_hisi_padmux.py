@@ -177,14 +177,17 @@ def classify(addr, funcs, ds, base):
 # Registers" on everything after it, "3.管脚控制寄存器" in the Chinese
 # editions, which for Hi3516DV200/EV200/EV300 and Hi3518EV300 are the only
 # editions shipped.
-# Five spellings so far, and two near-misses to stay clear of: the sheet next
-# to this one is always the DRIVE CAPABILITY register list (管脚驱动能力寄存器
-# / "Pin Drive Capability Registers" / "Pin Drive Registers" /
-# "pad_ctrl_reg Description"), and the Hi3536 workbooks also carry a
-# "Hardware MUX Relationship" sheet. Neither is the mux.
+# Five spellings so far, in either case, and several near-misses to stay
+# clear of: the sheet next to this one is always the DRIVE CAPABILITY
+# register list (管脚驱动能力寄存器 / "Pin Drive Capability Registers" /
+# "Pin Drive Registers" / "pad_ctrl_reg description"), and the Hi3536 and
+# Hi3559 workbooks also carry a hardware-multiplexing sheet. None is the mux.
+# Case-insensitive: the same vendor writes both "muxctrl_reg Description"
+# (Hi3516CV300) and "muxctrl_reg description" (Hi3559V100). None of the
+# near-misses collide under folding either.
 PINOUT_SHEET = re.compile(
     r"Pin Control Registers|Pin MUX Registers|muxctrl_reg Description"
-    r"|管脚(?:控制|复用)寄存器")
+    r"|管脚(?:控制|复用)寄存器", re.I)
 # The mux is one field among pull-ups and drive strength; this names it.
 FUNC_FIELD = re.compile(r"Function sel|功能选择")
 # "0: EMMC_CLK", "0x1：UART0_RXD；". Anchored, so "Other value: reserved"
@@ -454,7 +457,8 @@ def selftest():
     DRIVE = "4.管脚驱动能力寄存器"
     # the sheets that sit next to the real one and must never win
     NEAR = [DRIVE, "4. Pin Drive Registers", "4. pad_ctrl_reg Description",
-            "5. Hardware MUX Relationship", "5.硬件复用关系"]
+            "4.pad_ctrl_reg description", "5. Hardware MUX Relationship",
+            "5.Hardware multiplexing", "5.硬件复用关系"]
     for names, want, expect in (
             (["0.说明", OLD_CN, DRIVE], None, OLD_CN),
             (["0.说明", NEW_CN, DRIVE], None, NEW_CN),
@@ -462,6 +466,10 @@ def selftest():
             (["x", "3.muxctrl_reg Description"], None, "3.muxctrl_reg Description"),
             (["x", "3. muxctrl_reg Description"], None,
              "3. muxctrl_reg Description"),
+            # Hi3559V100 writes it lower-case, next to a pad_ctrl_reg sheet
+            # that differs from it only in the same way
+            (NEAR + ["3.muxctrl_reg description"], None,
+             "3.muxctrl_reg description"),
             (NEAR + ["3.Pin MUX Registers"], None, "3.Pin MUX Registers"),
             (NEAR, None, None),                       # only near-misses
             ([OLD_CN, NEW_CN], None, None),           # ambiguous -> refuse
