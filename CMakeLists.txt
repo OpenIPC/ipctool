@@ -150,17 +150,59 @@ set(IPCHW_HISI_GENERATIONS v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d)
 # worse than a large one.
 #
 # An explicit -DIPCHW_HISI wins -- this only fills in a value nobody gave.
+#
+# "Nobody gave" has to survive a SECOND configure of the same build directory,
+# which is the whole difficulty. A derived value goes in the cache, and on the
+# next run it is indistinguishable from one the user typed -- so a plain
+# `if(NOT DEFINED IPCHW_HISI)` would derive `none` for
+# `-DIPCHW_VENDORS=ingenic`, and then keep it when that same tree was
+# reconfigured with `-DIPCHW_VENDORS=all`. A build asking to identify any
+# camera would quietly fail to identify a HiSilicon one. Build directories are
+# reused across boards; this is not hypothetical.
+#
+# So remember what the derivation last wrote. If the cache still holds exactly
+# that, nobody has overridden it and it is ours to update; if it holds anything
+# else, the user said so and we leave it alone.
+#
+# The one case this cannot tell apart is an explicit -D that happens to match
+# what would have been derived anyway. CMake gives no way to distinguish that
+# from the cached derivation, and the cost is that changing IPCHW_VENDORS in
+# that tree also moves IPCHW_HISI -- re-pass -DIPCHW_HISI to pin it.
 set(_hisi_default "all")
-if(NOT DEFINED IPCHW_HISI
-   AND NOT IPCHW_VENDORS STREQUAL "all"
-   AND NOT IPCHW_VENDORS STREQUAL "none")
+if(NOT IPCHW_VENDORS STREQUAL "all" AND NOT IPCHW_VENDORS STREQUAL "none")
   set(_hisi_default "none")
-  set(_hisi_derived TRUE)
 endif()
 
-set(IPCHW_HISI ${_hisi_default} CACHE STRING
+if(NOT DEFINED IPCHW_HISI)
+  # Nobody has said anything yet.
+  set(_hisi_value ${_hisi_default})
+  set(_hisi_derived TRUE)
+elseif(DEFINED _IPCHW_HISI_AUTO AND IPCHW_HISI STREQUAL "${_IPCHW_HISI_AUTO}")
+  # Still carrying exactly what we derived last time, so it is ours to update
+  # and IPCHW_VENDORS may have moved under it.
+  set(_hisi_value ${_hisi_default})
+  set(_hisi_derived TRUE)
+else()
+  set(_hisi_value ${IPCHW_HISI})
+endif()
+
+# Unconditionally, and FORCE: in the explicit case the value is already the
+# user's, and this is what gives the entry its type and docstring. A bare -D
+# creates it UNINITIALIZED, and leaving it that way hides it from ccmake and
+# from anything that reads the cache by type.
+set(IPCHW_HISI ${_hisi_value} CACHE STRING
     "HiSilicon generations to compile into libipchw: 'all', 'none', or a \
-;-separated subset of: ${IPCHW_HISI_GENERATIONS}")
+;-separated subset of: ${IPCHW_HISI_GENERATIONS}" FORCE)
+
+if(_hisi_derived)
+  set(_IPCHW_HISI_AUTO ${_hisi_default} CACHE INTERNAL
+      "The IPCHW_HISI this project derived, so a later configure can tell it \
+from one the user set")
+else()
+  # Explicitly set: stop tracking, so it is never rewritten from under them.
+  unset(_IPCHW_HISI_AUTO CACHE)
+endif()
+unset(_hisi_value)
 unset(_hisi_default)
 
 if(IPCHW_HISI STREQUAL "all")

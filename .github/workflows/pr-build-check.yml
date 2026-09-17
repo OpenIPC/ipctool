@@ -246,4 +246,40 @@ jobs:
           check ingenic        all    all   # an explicit value always wins
           check ingenic        v4     v4
           check all            none   none
+
+          # And the same question asked of ONE build directory, reconfigured.
+          # This is where the first cut of this was wrong: the derived value
+          # lands in the cache, and on the next configure it is
+          # indistinguishable from one the user typed -- so a tree first
+          # configured with a narrowed vendor kept IPCHW_HISI=none when it was
+          # later broadened to `all`, and that build could not identify a
+          # HiSilicon camera. Build directories are reused across boards.
+          d=$(mktemp -d)
+          step() { # <cmake args...> <expected>
+            exp="${!#}"; set -- "${@:1:$#-1}"
+            if ! cmake -H. -B"$d" -DSKIP_VERSION=ON -DONLY_LIBRARY=ON "$@" \
+                 > "$d/log" 2>&1; then
+              echo "::error::reconfigure failed: $*"; tail -20 "$d/log"
+              status=1; return
+            fi
+            got=$(grep '^IPCHW_HISI:' "$d/CMakeCache.txt" | cut -d= -f2-)
+            if [ "$got" = "$exp" ]; then
+              printf 'ok    reconfigure %-38s -> %s\n' "$*" "$got"
+            else
+              echo "::error::reconfigure $* gave IPCHW_HISI=$got, wanted $exp"
+              status=1
+            fi
+          }
+          step -DIPCHW_VENDORS=ingenic none   # narrowed
+          step -DIPCHW_VENDORS=all     all    # broadened: must follow
+          step -DIPCHW_VENDORS=sstar   none   # narrowed again
+          step -DIPCHW_VENDORS=none    all    # a HiSilicon build
+          rm -rf "$d"; d=$(mktemp -d)
+          step -DIPCHW_VENDORS=all -DIPCHW_HISI=v4 v4  # explicit
+          step -DIPCHW_VENDORS=ingenic v4     # and it survives a vendor change
+          rm -rf "$d"; d=$(mktemp -d)
+          step -DIPCHW_VENDORS=ingenic none
+          step -DIPCHW_HISI=all        all    # explicit on a LATER configure
+          step -DIPCHW_VENDORS=sstar   all    # still theirs
+          rm -rf "$d"
           exit $status
