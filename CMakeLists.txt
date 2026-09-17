@@ -51,7 +51,7 @@ include_directories(./src/)
 # directly rather than through the table. Affects libipchw only; the ipctool
 # executable is a diagnostic tool and always carries every vendor.
 set(IPCHW_OPTIONAL_VENDORS
-    allwinner bcm fh gm ingenic novatek rockchip sstar tegra xilinx xm)
+    allwinner anyka bcm fh gm ingenic novatek rockchip sstar tegra xilinx xm)
 set(IPCHW_VENDORS "all" CACHE STRING
     "Vendor HALs to compile into libipchw: 'all', 'none', or a ;-separated \
 subset of: ${IPCHW_OPTIONAL_VENDORS}")
@@ -462,4 +462,13 @@ if(NOT ONLY_LIBRARY)
   add_executable(longse_test src/boards/longse_test.c src/boards/longse.c
                              src/tools.c ${VERSION_OBJ})
   target_include_directories(longse_test PRIVATE include src)
+
+  # Same reason as longse_test -- nobody here has an Anyka camera. Compiled
+  # the way ipctool compiles it, cJSON and all, so the report-building half of
+  # the HAL is covered by the link even though the test only calls the parsing.
+  add_executable(anyka_test src/hal/anyka_test.c src/hal/anyka.c
+                            src/hal/common.c src/tools.c src/cjson/cJSON.c
+                            ${VERSION_OBJ})
+  target_include_directories(anyka_test PRIVATE include src)
+  target_link_libraries(anyka_test m Threads::Threads)
 endif()

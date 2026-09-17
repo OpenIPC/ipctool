@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #define VENDOR_ALLWINNER "Allwinner"
+#define VENDOR_ANYKA "Anyka"
 #define VENDOR_BCM "Broadcom"
 #define VENDOR_FH "Fullhan"
 #define VENDOR_GM "GrainMedia"
@@ -22,6 +23,7 @@ extern char nor_chip_name[128];
 extern char nor_chip_id[128];
 
 const char *getchipname();
+const char *getchipfamily();
 
 #ifndef STANDALONE_LIBRARY
 #include "cjson/cJSON.h"
