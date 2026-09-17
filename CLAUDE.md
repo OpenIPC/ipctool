@@ -52,8 +52,29 @@ CMake knobs worth knowing:
   dynamic/ASAN build (use a glibc cross toolchain that ships libasan; musl
   toolchains do not).
 - `-DIPCHW_VENDORS=all|none|"sstar;ingenic"` selects which vendor HALs go into
-  `libipchw`. HiSilicon is always in. The `ipctool` executable always carries
-  every vendor.
+  `libipchw`. HiSilicon is always in — it is not in this knob's vocabulary,
+  because `chipid.c` reaches it directly rather than through the vendor table.
+  The `ipctool` executable always carries every vendor.
+- `-DIPCHW_HISI=all|none|"v4"` selects which HiSilicon *generations* `libipchw`
+  can identify — the chip-ID table, a sensor-bus back-end per generation, and
+  the temperature and die-ID readers. Roughly 8 KB on arm32 for the lot.
+
+  **Its default follows `IPCHW_VENDORS`**, because naming your silicon should
+  not have to be done twice. A narrowing — `-DIPCHW_VENDORS=ingenic` — says the
+  binary will never boot on a HiSilicon part, so `IPCHW_HISI` defaults to
+  `none`. The two spellings that are not a narrowing keep every generation:
+  `all` means "identify any camera this is dropped on", and `none` means only
+  the always-in vendors, which *is* HiSilicon. Both are how `ipcinfo` is built
+  (its own default and the firmware package's `none`), so neither moved when
+  this was added; a narrowed consumer lost 8.3 KB. An explicit `-DIPCHW_HISI`
+  always wins.
+
+  Do not reach for weak symbols or a section registry to replace this knob: it
+  was tried, and it works by *not* pulling `hal_hisi.c.o` from the archive,
+  which deletes HiSilicon detection from every static consumer including the
+  ones that want it. "Which silicon can this build identify" is a runtime
+  question the linker cannot answer — nothing here is dead code as far as it
+  knows.
 - `-DIPCHW_PADMUX=all|none|"v1;v4;sstar"` selects which SoC families' pad-mux
   tables go into `libipchw`. `sstar` and `ingenic` are families here too: the
   vendor knob answers "can this build detect the SoC", this one answers "does

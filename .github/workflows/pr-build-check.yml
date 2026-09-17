@@ -208,3 +208,42 @@ jobs:
             fi
           done
           exit $status
+
+      - name: IPCHW_HISI's default follows IPCHW_VENDORS
+        # A default is the kind of thing that drifts without anyone noticing,
+        # and the two spellings that must NOT move are the two ipcinfo is
+        # built as: its own "all", and the firmware package's "none", which
+        # means only the always-in vendors and so IS a HiSilicon build. A
+        # silently HiSi-blind ipcinfo would be worse than a large one.
+        #
+        # Configure only -- this asserts the cache value, not a binary.
+        run: |
+          status=0
+          check() { # <vendors|-> <hisi|-> <expected>
+            d=$(mktemp -d)
+            args=(-H. -B"$d" -DSKIP_VERSION=ON -DONLY_LIBRARY=ON)
+            [ "$1" != "-" ] && args+=(-DIPCHW_VENDORS="$1")
+            [ "$2" != "-" ] && args+=(-DIPCHW_HISI="$2")
+            if ! cmake "${args[@]}" > "$d/log" 2>&1; then
+              echo "::error::configure failed for VENDORS=$1 HISI=$2"
+              tail -20 "$d/log"; status=1; rm -rf "$d"; return
+            fi
+            got=$(grep '^IPCHW_HISI:STRING=' "$d/CMakeCache.txt" | cut -d= -f2-)
+            if [ "$got" = "$3" ]; then
+              printf 'ok    VENDORS=%-16s HISI=%-8s -> %s\n' "$1" "$2" "$got"
+            else
+              echo "::error::VENDORS=$1 HISI=$2 gave IPCHW_HISI=$got, wanted $3"
+              status=1
+            fi
+            rm -rf "$d"
+          }
+          check -              -      all   # ipctool's own default
+          check all            -      all   # ipcinfo's default: must not move
+          check none           -      all   # firmware's ipcinfo: a HiSi build
+          check ingenic        -      none  # a narrowing implies no HiSilicon
+          check sstar          -      none
+          check "ingenic;sstar" -     none
+          check ingenic        all    all   # an explicit value always wins
+          check ingenic        v4     v4
+          check all            none   none
+          exit $status

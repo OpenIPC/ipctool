@@ -114,20 +114,54 @@ foreach(_f sstar ingenic)
 endforeach()
 set(IPCHW_PADMUX_BACKENDS_ALL src/hal/sstar_padmux.c src/hal/ingenic_padmux.c)
 
-# Which HiSilicon generations libipchw can identify. IPCHW_VENDORS cannot
-# reach any of this: chipid.c dispatches to the HiSilicon HAL directly rather
-# than through the vendor table, so hal_hisi.c has always been compiled in
-# whole -- the chip-ID table for all ten generations, a sensor-bus back-end
-# per generation, and the temperature and die-ID readers for each. A consumer
+# Which HiSilicon generations libipchw can identify. IPCHW_VENDORS does not
+# reach the CODE: chipid.c dispatches to the HiSilicon HAL directly rather
+# than through the vendor table, so hal_hisi.c is compiled in whole whenever
+# any generation is selected -- the chip-ID table, a sensor-bus back-end per
+# generation, and the temperature and die-ID readers for each. A consumer
 # built against one vendor SDK runs on one generation of one family.
+#
+# It does reach the DEFAULT, though, and that is new. See below.
 #
 # Same shape and vocabulary as IPCHW_PADMUX above, and "none" is meaningful
 # here too: a SigmaStar or Ingenic consumer drops the HiSilicon HAL entirely.
 # The ipctool executable always carries every generation.
 set(IPCHW_HISI_GENERATIONS v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d)
-set(IPCHW_HISI "all" CACHE STRING
+
+# The default follows IPCHW_VENDORS, because a consumer that has named its
+# silicon has already answered this question and should not have to answer it
+# twice.
+#
+# HiSilicon is not in IPCHW_VENDORS' vocabulary -- it is the always-in vendor
+# -- so `-DIPCHW_VENDORS=ingenic` says, unambiguously, that this binary will
+# never boot on a HiSilicon part. It used to keep all ten generations anyway,
+# and majestic paid about 7 KB per board on every Ingenic, SigmaStar,
+# Rockchip, Novatek, Fullhan, GrainMedia, Xiongmai, Allwinner and v4l2 build
+# for it, purely for not knowing a second knob existed.
+#
+# The two spellings that are NOT a narrowing keep every generation:
+#
+#   all   "identify any camera this is dropped on" -- which includes HiSi.
+#   none  only the always-in vendors, which IS HiSilicon. A HiSilicon build.
+#
+# Both are what ipcinfo is built as (its own default, and the firmware
+# package's `IPCHW_VENDORS=none`), so neither moves. That matters: ipcinfo
+# exists to name an unknown camera, and a silently HiSi-blind ipcinfo would be
+# worse than a large one.
+#
+# An explicit -DIPCHW_HISI wins -- this only fills in a value nobody gave.
+set(_hisi_default "all")
+if(NOT DEFINED IPCHW_HISI
+   AND NOT IPCHW_VENDORS STREQUAL "all"
+   AND NOT IPCHW_VENDORS STREQUAL "none")
+  set(_hisi_default "none")
+  set(_hisi_derived TRUE)
+endif()
+
+set(IPCHW_HISI ${_hisi_default} CACHE STRING
     "HiSilicon generations to compile into libipchw: 'all', 'none', or a \
 ;-separated subset of: ${IPCHW_HISI_GENERATIONS}")
+unset(_hisi_default)
 
 if(IPCHW_HISI STREQUAL "all")
   set(_hisi_selected ${IPCHW_HISI_GENERATIONS})
@@ -163,7 +197,14 @@ if(_hisi_selected)
   list(APPEND IPCHW_HISI_DEFS IPCHW_HISI_ANY)
 endif()
 list(APPEND IPCHW_HISI_ALL_DEFS IPCHW_HISI_ANY)
-message(STATUS "libipchw HiSilicon generations: ${_hisi_selected}")
+if(_hisi_derived AND IPCHW_HISI STREQUAL "none")
+  message(STATUS "libipchw HiSilicon generations: none "
+                 "(derived from IPCHW_VENDORS=${IPCHW_VENDORS}; "
+                 "set IPCHW_HISI explicitly to override)")
+else()
+  message(STATUS "libipchw HiSilicon generations: ${_hisi_selected}")
+endif()
+unset(_hisi_derived)
 
 # Split either side of where the HiSilicon HAL sits so that a build carrying
 # it hands the archiver the same member order as before: --gc-sections keeps
