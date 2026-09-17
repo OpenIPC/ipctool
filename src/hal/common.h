@@ -8,6 +8,7 @@
 
 #include "cjson/cJSON.h"
 #include "hal/allwinner.h"
+#include "hal/anyka.h"
 #include "hal/bcm.h"
 #include "hal/fh.h"
 #include "hal/gm.h"

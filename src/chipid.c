@@ -70,6 +70,9 @@ static const manufacturers_t manufacturers[] = {
 #ifdef IPCHW_VENDOR_FH
     {"FH", fh_detect_cpu, VENDOR_FH, fh_setup_hal},
 #endif
+#ifdef IPCHW_VENDOR_ANYKA
+    {NULL /* Generic */, anyka_detect_cpu, VENDOR_ANYKA, anyka_setup_hal},
+#endif
 #ifdef IPCHW_VENDOR_ROCKCHIP
     {NULL /* Generic */, rockchip_detect_cpu, VENDOR_ROCKCHIP, rockchip_setup_hal},
 #endif
@@ -325,6 +328,22 @@ const char *getchipfamily() {
 #ifdef IPCHW_VENDOR_ROCKCHIP
     case RV1106:
         return "rv1106";
+#endif
+#ifdef IPCHW_VENDOR_ANYKA
+    case AK39_EV2:
+        return "ak3918ev200";
+    case AK39_EV3:
+        return "ak3918ev300";
+    case AK39_EV330:
+        return "ak39ev330";
+    case AK39_EV300L:
+        return "ak3918ev300l";
+    case AK39_AV100:
+        return "ak3918av100";
+    case AK37_D:
+        return "ak37d";
+    case AK37_E:
+        return "ak37e";
 #endif
 
     default:

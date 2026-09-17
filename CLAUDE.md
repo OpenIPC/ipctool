@@ -119,6 +119,12 @@ CMake knobs worth knowing:
   the project has a Longse camera. Note it uses a local `CHECK` macro rather
   than `assert()`: the release flags carry `-DNDEBUG`, so an `assert()`-based
   test compiles away to nothing and passes unconditionally.
+- `./build/anyka_test`: the Anyka HAL's three parsers -- the `/proc/cpuinfo`
+  machine string, the chip-ID table and the media-memory arithmetic -- fed
+  fixture files through the path arguments `src/hal/anyka.h` exposes for the
+  purpose. Same situation as `longse_test` and the same `CHECK` macro: nobody
+  on the project has an Anyka camera, so this is all the verification that
+  code gets until a reporter runs it.
 - `tools/test_pipeline.sh`: hardware-free end-to-end check of the sensor
   driver extraction pipeline (`trace_segment.py` -> `trace_to_driver.py` ->
   `gcc -fsyntax-only` -> `trace_diff.py`), plus the `--selftest` of every
@@ -194,6 +200,17 @@ Adding an SoC therefore means: a detect function that fills `chip_name` and
 per-generation tables in each subcommand that should support it. Adding a new
 vendor also needs an entry in `IPCHW_OPTIONAL_VENDORS` in `CMakeLists.txt`, an
 include in `hal/common.h`, and a guarded row in `manufacturers[]`.
+
+Anyka (`src/hal/anyka.c`) is the smallest worked example of that whole shape,
+and the one that shows what to do when the SoC hands you no clean key: its
+kernels have no device tree and register no UART with `/proc/iomem`, so the
+`/proc/cpuinfo` machine string is what names the part
+(`CLOUD39EV3_AK3918EV300_MNBD`), while the chip-ID word at `0x08000000` names
+only the generation -- one vendor kernel prints the same `0x20160100` as
+AK3916, AK3918 or AK3919 depending on which `CONFIG_CPU_AK39xx` it was built
+with. Reading the register is therefore a refinement and never the gate, which
+is also what lets detection survive a kernel that will not hand over
+`/dev/mem`.
 
 Sensor I2C addresses in tables are the 8-bit (write) form; the default
 `i2c_change_addr` shifts right by one for the kernel, and some HALs install
