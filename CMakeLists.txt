@@ -114,20 +114,96 @@ foreach(_f sstar ingenic)
 endforeach()
 set(IPCHW_PADMUX_BACKENDS_ALL src/hal/sstar_padmux.c src/hal/ingenic_padmux.c)
 
-# Which HiSilicon generations libipchw can identify. IPCHW_VENDORS cannot
-# reach any of this: chipid.c dispatches to the HiSilicon HAL directly rather
-# than through the vendor table, so hal_hisi.c has always been compiled in
-# whole -- the chip-ID table for all ten generations, a sensor-bus back-end
-# per generation, and the temperature and die-ID readers for each. A consumer
+# Which HiSilicon generations libipchw can identify. IPCHW_VENDORS does not
+# reach the CODE: chipid.c dispatches to the HiSilicon HAL directly rather
+# than through the vendor table, so hal_hisi.c is compiled in whole whenever
+# any generation is selected -- the chip-ID table, a sensor-bus back-end per
+# generation, and the temperature and die-ID readers for each. A consumer
 # built against one vendor SDK runs on one generation of one family.
+#
+# It does reach the DEFAULT, though, and that is new. See below.
 #
 # Same shape and vocabulary as IPCHW_PADMUX above, and "none" is meaningful
 # here too: a SigmaStar or Ingenic consumer drops the HiSilicon HAL entirely.
 # The ipctool executable always carries every generation.
 set(IPCHW_HISI_GENERATIONS v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d)
-set(IPCHW_HISI "all" CACHE STRING
+
+# The default follows IPCHW_VENDORS, because a consumer that has named its
+# silicon has already answered this question and should not have to answer it
+# twice.
+#
+# HiSilicon is not in IPCHW_VENDORS' vocabulary -- it is the always-in vendor
+# -- so `-DIPCHW_VENDORS=ingenic` says, unambiguously, that this binary will
+# never boot on a HiSilicon part. It used to keep all ten generations anyway,
+# and majestic paid about 7 KB per board on every Ingenic, SigmaStar,
+# Rockchip, Novatek, Fullhan, GrainMedia, Xiongmai, Allwinner and v4l2 build
+# for it, purely for not knowing a second knob existed.
+#
+# The two spellings that are NOT a narrowing keep every generation:
+#
+#   all   "identify any camera this is dropped on" -- which includes HiSi.
+#   none  only the always-in vendors, which IS HiSilicon. A HiSilicon build.
+#
+# Both are what ipcinfo is built as (its own default, and the firmware
+# package's `IPCHW_VENDORS=none`), so neither moves. That matters: ipcinfo
+# exists to name an unknown camera, and a silently HiSi-blind ipcinfo would be
+# worse than a large one.
+#
+# An explicit -DIPCHW_HISI wins -- this only fills in a value nobody gave.
+#
+# "Nobody gave" has to survive a SECOND configure of the same build directory,
+# which is the whole difficulty. A derived value goes in the cache, and on the
+# next run it is indistinguishable from one the user typed -- so a plain
+# `if(NOT DEFINED IPCHW_HISI)` would derive `none` for
+# `-DIPCHW_VENDORS=ingenic`, and then keep it when that same tree was
+# reconfigured with `-DIPCHW_VENDORS=all`. A build asking to identify any
+# camera would quietly fail to identify a HiSilicon one. Build directories are
+# reused across boards; this is not hypothetical.
+#
+# So remember what the derivation last wrote. If the cache still holds exactly
+# that, nobody has overridden it and it is ours to update; if it holds anything
+# else, the user said so and we leave it alone.
+#
+# The one case this cannot tell apart is an explicit -D that happens to match
+# what would have been derived anyway. CMake gives no way to distinguish that
+# from the cached derivation, and the cost is that changing IPCHW_VENDORS in
+# that tree also moves IPCHW_HISI -- re-pass -DIPCHW_HISI to pin it.
+set(_hisi_default "all")
+if(NOT IPCHW_VENDORS STREQUAL "all" AND NOT IPCHW_VENDORS STREQUAL "none")
+  set(_hisi_default "none")
+endif()
+
+if(NOT DEFINED IPCHW_HISI)
+  # Nobody has said anything yet.
+  set(_hisi_value ${_hisi_default})
+  set(_hisi_derived TRUE)
+elseif(DEFINED _IPCHW_HISI_AUTO AND IPCHW_HISI STREQUAL "${_IPCHW_HISI_AUTO}")
+  # Still carrying exactly what we derived last time, so it is ours to update
+  # and IPCHW_VENDORS may have moved under it.
+  set(_hisi_value ${_hisi_default})
+  set(_hisi_derived TRUE)
+else()
+  set(_hisi_value ${IPCHW_HISI})
+endif()
+
+# Unconditionally, and FORCE: in the explicit case the value is already the
+# user's, and this is what gives the entry its type and docstring. A bare -D
+# creates it UNINITIALIZED, and leaving it that way hides it from ccmake and
+# from anything that reads the cache by type.
+set(IPCHW_HISI ${_hisi_value} CACHE STRING
     "HiSilicon generations to compile into libipchw: 'all', 'none', or a \
-;-separated subset of: ${IPCHW_HISI_GENERATIONS}")
+;-separated subset of: ${IPCHW_HISI_GENERATIONS}" FORCE)
+
+if(_hisi_derived)
+  set(_IPCHW_HISI_AUTO ${_hisi_default} CACHE INTERNAL
+      "The IPCHW_HISI this project derived, so a later configure can tell it \
+from one the user set")
+else()
+  # Explicitly set: stop tracking, so it is never rewritten from under them.
+  unset(_IPCHW_HISI_AUTO CACHE)
+endif()
+unset(_hisi_value)
+unset(_hisi_default)
 
 if(IPCHW_HISI STREQUAL "all")
   set(_hisi_selected ${IPCHW_HISI_GENERATIONS})
@@ -163,7 +239,14 @@ if(_hisi_selected)
   list(APPEND IPCHW_HISI_DEFS IPCHW_HISI_ANY)
 endif()
 list(APPEND IPCHW_HISI_ALL_DEFS IPCHW_HISI_ANY)
-message(STATUS "libipchw HiSilicon generations: ${_hisi_selected}")
+if(_hisi_derived AND IPCHW_HISI STREQUAL "none")
+  message(STATUS "libipchw HiSilicon generations: none "
+                 "(derived from IPCHW_VENDORS=${IPCHW_VENDORS}; "
+                 "set IPCHW_HISI explicitly to override)")
+else()
+  message(STATUS "libipchw HiSilicon generations: ${_hisi_selected}")
+endif()
+unset(_hisi_derived)
 
 # Split either side of where the HiSilicon HAL sits so that a build carrying
 # it hands the archiver the same member order as before: --gc-sections keeps
