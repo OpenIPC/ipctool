@@ -108,6 +108,15 @@ jobs:
       - uses: actions/checkout@v5
       - name: Run end-to-end pipeline smoke test
         run: tools/test_pipeline.sh
+      - name: Check the HiSilicon sensor-clock suite is still wired in
+        # In this job and not in unit-tests, for the reason that job's own
+        # guard gives: a check that runs only once the thing it protects has
+        # run protects nothing. Anchored to a bare invocation line so this
+        # step's own text cannot satisfy it.
+        run: |
+          grep -qE '^[[:space:]]*\./build/hal_hisi_test[[:space:]]*$' \
+              .github/workflows/pr-build-check.yml \
+            || { echo "no job in this workflow runs hal_hisi_test"; exit 1; }
 
   unit-tests:
     name: Unit tests (native)
@@ -130,11 +139,12 @@ jobs:
         run: |
           cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release
           cmake --build build --target cYAML_test reginfo_test longse_test \
-                                      sensors_test anyka_test
+                                      sensors_test anyka_test hal_hisi_test
           ./build/cYAML_test
           ./build/reginfo_test
           ./build/longse_test
           ./build/anyka_test
+          ./build/hal_hisi_test
           # Run from the tree root: the fingerprint it compares against is
           # src/sensors_golden.txt, and a sensor that stopped being identified
           # has to fail here rather than be noticed on a camera in a ceiling.

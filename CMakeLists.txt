@@ -457,6 +457,19 @@ if(NOT ONLY_LIBRARY)
   target_compile_definitions(sensors_test PRIVATE STANDALONE_LIBRARY)
   target_link_libraries(sensors_test m Threads::Threads)
 
+  # Includes hal_hisi.c rather than linking it, to reach the sensor-clock
+  # entitlement in its file-statics, and supplies mem_reg() itself: there is
+  # no seam on /dev/mem and adding one would put an indirect call in every
+  # libipchw consumer for the benefit of one test. Independent of IPCHW_HISI,
+  # because it compiles the HAL directly -- so the generations it exercises
+  # are named here rather than inherited from the library's configuration.
+  add_executable(hal_hisi_test src/hal/hisi/hal_hisi_test.c src/hal/common.c)
+  target_include_directories(hal_hisi_test PRIVATE include src)
+  target_compile_definitions(hal_hisi_test PRIVATE STANDALONE_LIBRARY
+                             IPCHW_HISI_ANY IPCHW_HISI_V3 IPCHW_HISI_V4
+                             IPCHW_HISI_V5)
+  target_link_libraries(hal_hisi_test m Threads::Threads)
+
   # Parsing only: longse.c itself pulls in cJSON and the HAL, and the part
   # worth testing off a camera is the version extraction, which is standalone.
   add_executable(longse_test src/boards/longse_test.c src/boards/longse.c
