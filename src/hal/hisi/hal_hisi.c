@@ -474,13 +474,24 @@ static void sensor_crg_enable(
     sensor_crg_t *st, uint32_t addr, uint32_t cken, uint32_t srst) {
     uint32_t cur;
 
-    /* A read that failed taught us nothing, so it entitles nothing. */
-    if (!mem_reg(addr, &cur, OP_READ))
+    /* A read that failed taught us nothing. Drop any entitlement rather than
+     * carry it forward: we can no longer say what the register holds, and of
+     * the two ways to be wrong, leaving a clock running costs microamps while
+     * gating one takes a streaming camera off the air. */
+    if (!mem_reg(addr, &cur, OP_READ)) {
+        st->owed = false;
         return;
+    }
 
     const uint32_t want = (cur | cken) & ~srst;
     if (want == cur) {
-        st->owed = false; /* rule 3 */
+        /* Already fit for a probe -- but by whose hand? If the register still
+         * holds exactly the word WE left, this is our own ungate being re-armed
+         * mid-sweep (setup_hal_hisi() arms, then arm_sensor_clock() arms again
+         * before every bus), and the undo we owe is still owed. Anything else
+         * is somebody else's clock and rule 3 disowns it. */
+        if (!(st->owed && cur == st->wrote))
+            st->owed = false;
         return;
     }
 

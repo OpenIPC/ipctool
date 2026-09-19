@@ -218,6 +218,38 @@ int main(void) {
     hal_cleanup();
     CHECK(writes == before);
 
+    /* Qodo #2, under test before it is believed: setup ungates a gated clock,
+     * the sweep arms again before the first bus, and the cleanup must still
+     * put back what setup found. */
+    fresh(V4, 0x10, HISI_V4);
+    setup_hal_hisi();          /* arm 1: 0x10 -> 0x11, entitled */
+    hal_enable_sensor_clock(); /* arm 2: already fit */
+    hal_cleanup();
+    CHECK(peek(V4) == 0x10);
+    CHECK(illegal == NULL);
+
+    /* Same, on both OT registers. */
+    fresh(OT, 0x00, HISI_OT);
+    setup_hal_hisi();
+    hal_enable_sensor_clock();
+    hal_cleanup();
+    CHECK(peek(CV610_PERI_CRG8464_ADDR) == 0x00);
+    CHECK(peek(CV610_PERI_CRG8472_ADDR) == 0x00);
+
+    /* Qodo #1: a read we could not make must not leave an entitlement from an
+     * earlier arm lying about for the cleanup to spend. */
+    fresh(V4, 0x10, HISI_V4);
+    setup_hal_hisi();          /* entitled, wrote 0x11 */
+    read_fails = true;
+    hal_enable_sensor_clock(); /* learns nothing */
+    read_fails = false;
+    poke(V4, 0x11);            /* the consumer, writing the same word */
+    reset_counters();
+    hal_cleanup();
+    CHECK(writes == 0);
+    CHECK(peek(V4) == 0x11);
+    CHECK(illegal == NULL);
+
     /* A clock that was already running is not ours, however hard the sweep
      * arms and cleans up around it. */
     fresh(V4, 0x11, HISI_V4);
