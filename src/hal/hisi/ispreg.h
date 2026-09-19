@@ -17,6 +17,15 @@ struct EV300_PERI_CRG60 {
 
 #define EV300_PERI_CRG60_ADDR 0x120100F0
 
+/* The same two fields as bit masks, for the save/restore in hal_hisi.c.
+ *
+ * That code works on the raw word rather than the struct above: the struct
+ * names 7 of 32 bits, so a struct assignment carries 25 bits C does not
+ * promise to copy, and "is this register still exactly what I wrote" has to
+ * be asked of the whole word to mean anything. */
+#define EV300_PERI_CRG60_SENSOR0_CKEN 0x1u
+#define EV300_PERI_CRG60_SENSOR0_SRST 0x2u
+
 struct CV610_PERI_CRG8464 {
     unsigned int sensor0_srst_req : 1;        /* [0]   Soft reset request */
     unsigned int sensor0_ctrl_srst_req : 1;   /* [1]   Soft reset request of slave mode control */
@@ -30,6 +39,10 @@ struct CV610_PERI_CRG8464 {
 
 #define CV610_PERI_CRG8464_ADDR 0x11018440
 #define CV610_PERI_CRG8472_ADDR 0x11018460
+
+/* And the same for OT, where the two fields sit in different places. */
+#define CV610_PERI_CRG_SENSOR0_SRST 0x1u
+#define CV610_PERI_CRG_SENSOR0_CKEN 0x10u
 
 const char *hisi_detect_fmc();
 void hisi_chip_properties(cJSON *j_inner);

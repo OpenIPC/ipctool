@@ -1266,11 +1266,13 @@ static bool i2c_bus_openable(int adapter_nr) {
  * process got it right, which is what made it look like the hardware rather
  * than us.
  *
- * The same holds within a single probe. get_sensor_id_i2c() ends in
- * hal_cleanup(), and on HiSilicon V4 and OT that puts the sensor CRG back the
- * way it was found -- gating the clock off again. Every bus after the first in
- * the sweep below would otherwise read an unclocked sensor, which is the
- * failure the sweep exists to avoid. */
+ * The same used to hold within a single probe. get_sensor_id_i2c() ends in
+ * hal_cleanup(), and on HiSilicon V4 and OT that put the sensor CRG back the
+ * way it was found -- gating the clock off again, so every bus after the first
+ * in the sweep below read an unclocked sensor. That restore is now entitled
+ * rather than unconditional: it undoes an ungate this process performed and
+ * nothing else, so it no longer fights the sweep, nor a consumer whose
+ * pipeline is streaming while we probe (OpenIPC/firmware#2439). */
 static void arm_sensor_clock(void) {
     if (hal_enable_sensor_clock)
         hal_enable_sensor_clock();

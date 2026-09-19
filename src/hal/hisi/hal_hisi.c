@@ -428,74 +428,129 @@ static void v3_ensure_sensor_enabled() {
 
 #endif /* IPCHW_HISI_V3 */
 
-#ifdef IPCHW_HISI_V4
-static struct EV300_PERI_CRG60 peri_crg60;
-static bool crg60_changed;
-static void v4_ensure_sensor_enabled() {
-    struct EV300_PERI_CRG60 crg60;
-    if (mem_reg(EV300_PERI_CRG60_ADDR, (uint32_t *)&crg60, OP_READ)) {
-        if (!crg60.sensor0_cken) {
-            peri_crg60 = crg60;
-            // 1: clock enabled
-            crg60.sensor0_cken = true;
-            // 0: reset deasserted
-            crg60.sensor0_srst_req = false;
-            mem_reg(EV300_PERI_CRG60_ADDR, (uint32_t *)&crg60, OP_WRITE);
-            crg60_changed = true;
-        }
+#if defined(IPCHW_HISI_V4) || defined(IPCHW_HISI_V5)
+/* Ungating the sensor's clock for a probe, and putting it back afterwards.
+ *
+ * NOT a snapshot -- an ENTITLEMENT. What this used to keep was the register as
+ * some earlier probe found it, plus a bool that was set the first time a probe
+ * found the clock gated and was never cleared again. So a later probe that
+ * found the clock already RUNNING wrote nothing, took nothing, and still fired
+ * at hal_cleanup() -- restoring a word saved in a different era, from before
+ * the consumer started its pipeline.
+ *
+ * Measured, on a hi3516ev300 + IMX335 streaming 2592x1944: 0x120100F0 went
+ * 0x11 -> 0x10 underneath a live pipeline, and a sensor with no clock answers
+ * no i2c, so the kernel driver's register writes failed -- 908 of
+ * `[sensor_i2c_write 112] i2c_master_send error, ret=-5`. The picture froze
+ * with the OSD still drawn on it and only a full pipeline rebuild recovered
+ * it. Writing the single bit back stopped the errors dead and restored the
+ * picture (OpenIPC/firmware#2439).
+ *
+ * Three rules, and the third is the one that fixes it:
+ *
+ *   1. We write this register only to ungate a clock we found gated, or to
+ *      undo exactly that ungate while the register still holds the precise
+ *      word we left in it.
+ *   2. One arm entitles at most one undo, spent whether or not it wrote.
+ *   3. An arm that finds the register already fit for a probe takes no
+ *      entitlement at all. A clock we did not have to turn on is not ours to
+ *      turn off.
+ *
+ * Rule 3 is load-bearing and rule 1 cannot replace it: the word we write is
+ * 0x11, and 0x11 is also what the vendor SDK writes, so "the register still
+ * matches what I wrote" cannot by itself tell our own ungate from the SDK's.
+ *
+ * One race is left and cannot be closed from this register: if the consumer
+ * enables the clock BETWEEN our arm and our restore, writing the identical
+ * word, we still gate it. That window is one probe rather than the hours this
+ * replaces, and nothing readable here distinguishes the two. */
+typedef struct {
+    uint32_t found; /* the word before we touched it */
+    uint32_t wrote; /* the word we left, so we can tell if it still stands */
+    bool owed;      /* an undo is outstanding */
+} sensor_crg_t;
+
+static void sensor_crg_enable(
+    sensor_crg_t *st, uint32_t addr, uint32_t cken, uint32_t srst) {
+    uint32_t cur;
+
+    /* A read that failed taught us nothing, so it entitles nothing. */
+    if (!mem_reg(addr, &cur, OP_READ))
+        return;
+
+    const uint32_t want = (cur | cken) & ~srst;
+    if (want == cur) {
+        st->owed = false; /* rule 3 */
+        return;
     }
+
+    st->found = cur;
+    st->wrote = want;
+    /* Passing the saved word straight to mem_reg() is safe -- OP_WRITE only
+     * reads through the pointer -- and the entitlement is taken only if the
+     * write landed, because a write that failed changed nothing to undo. */
+    if (mem_reg(addr, &st->wrote, OP_WRITE))
+        st->owed = true;
+}
+
+static void sensor_crg_restore(sensor_crg_t *st, uint32_t addr) {
+    uint32_t cur;
+
+    if (!st->owed)
+        return;
+    st->owed = false; /* rule 2: spent even if the checks below decline */
+
+    /* rule 1: somebody else owns it now -- a reprogrammed clock select, a
+     * reset asserted, anything at all. Leave it to them. */
+    if (!mem_reg(addr, &cur, OP_READ) || cur != st->wrote)
+        return;
+
+    mem_reg(addr, &st->found, OP_WRITE);
+}
+#endif /* V4 || V5 */
+
+#ifdef IPCHW_HISI_V4
+static sensor_crg_t v4_crg;
+
+static void v4_ensure_sensor_enabled() {
+    sensor_crg_enable(&v4_crg, EV300_PERI_CRG60_ADDR,
+        EV300_PERI_CRG60_SENSOR0_CKEN, EV300_PERI_CRG60_SENSOR0_SRST);
 }
 
 static void v4_ensure_sensor_restored() {
-    if (crg60_changed) {
-        mem_reg(EV300_PERI_CRG60_ADDR, (uint32_t *)&peri_crg60, OP_WRITE);
-    }
+    sensor_crg_restore(&v4_crg, EV300_PERI_CRG60_ADDR);
 }
 
 #endif /* IPCHW_HISI_V4 */
 
 #ifdef IPCHW_HISI_V5
-static struct CV610_PERI_CRG8464 peri_crg8464;
-static struct CV610_PERI_CRG8464 peri_crg8472;
-static bool crg8464_changed;
-static bool crg8472_changed;
-static inline void enable_sensor_crg(uint32_t addr,
-                                     struct CV610_PERI_CRG8464 *shadow,
-                                     bool *changed) {
-    struct CV610_PERI_CRG8464 reg;
-
-    if (!mem_reg(addr, (uint32_t *)&reg, OP_READ))
-        return;
-
-    if (!reg.sensor0_cken || reg.sensor0_srst_req) {
-        *shadow = reg;                // Cache original value
-        reg.sensor0_cken = true;      // Enable clock
-        reg.sensor0_srst_req = false; // Deassert reset
-        mem_reg(addr, (uint32_t *)&reg, OP_WRITE);
-        *changed = true;
-    }
-}
+/* Two registers, one per sensor lane, each entitled independently. */
+static const uint32_t ot_crg_addr[2] = {
+    CV610_PERI_CRG8464_ADDR,
+    CV610_PERI_CRG8472_ADDR,
+};
+static sensor_crg_t ot_crg[2];
 
 static void ot_ensure_sensor_enabled(void) {
-    enable_sensor_crg(CV610_PERI_CRG8464_ADDR, &peri_crg8464, &crg8464_changed);
-    enable_sensor_crg(CV610_PERI_CRG8472_ADDR, &peri_crg8472, &crg8472_changed);
+    for (size_t i = 0; i < ARRCNT(ot_crg_addr); i++)
+        sensor_crg_enable(&ot_crg[i], ot_crg_addr[i],
+            CV610_PERI_CRG_SENSOR0_CKEN, CV610_PERI_CRG_SENSOR0_SRST);
 }
 
 static void ot_ensure_sensor_restored() {
-    if (crg8464_changed) {
-        mem_reg(CV610_PERI_CRG8464_ADDR, (uint32_t *)&peri_crg8464, OP_WRITE);
-    }
-    if (crg8472_changed) {
-        mem_reg(CV610_PERI_CRG8472_ADDR, (uint32_t *)&peri_crg8472, OP_WRITE);
-    }
+    for (size_t i = 0; i < ARRCNT(ot_crg_addr); i++)
+        sensor_crg_restore(&ot_crg[i], ot_crg_addr[i]);
 }
 
-/* hisi_hal_cleanup() puts the sensor CRG back the way it found it, so on V4
- * and OT the sensor clock is gated off again the moment a probe finishes. The
- * bus sweep in getsensorid() probes more than once, and everything after the
- * first attempt would read an unclocked sensor. Installed as
- * hal_enable_sensor_clock so the sweep can re-arm before each attempt; every
- * branch is idempotent and does nothing when the clock is already running. */
+/* Installed as hal_enable_sensor_clock so the bus sweep in getsensorid() can
+ * re-arm before each attempt.
+ *
+ * It used to need to. hisi_hal_cleanup() gated the clock off again the moment
+ * a probe finished, so everything after the first bus in the sweep would have
+ * read an unclocked sensor. Under the rules in sensor_crg_enable() the
+ * cleanup now only undoes an ungate it actually performed, so the re-arm is
+ * belt and braces on V4 and OT -- and still load-bearing on Ingenic, whose
+ * vendor SDK gates the clock from outside this process entirely. */
 #endif /* IPCHW_HISI_V5 */
 
 /* A switch, like hisi_get_temp() and hisi_get_die_id() below: it takes a
