@@ -485,13 +485,25 @@ static void sensor_crg_enable(
 
     const uint32_t want = (cur | cken) & ~srst;
     if (want == cur) {
-        /* Already fit for a probe -- but by whose hand? If the register still
-         * holds exactly the word WE left, this is our own ungate being re-armed
-         * mid-sweep (setup_hal_hisi() arms, then arm_sensor_clock() arms again
-         * before every bus), and the undo we owe is still owed. Anything else
-         * is somebody else's clock and rule 3 disowns it. */
-        if (!(st->owed && cur == st->wrote))
-            st->owed = false;
+        /* Already fit for a probe, so this arm takes nothing -- and drops
+         * anything an earlier one held.
+         *
+         * UNCONDITIONALLY, and that is the whole point. It is tempting to keep
+         * the entitlement when the register still holds the word we wrote, on
+         * the grounds that this is our own ungate being re-armed mid-sweep.
+         * That was tried and it put the original bug straight back: the word
+         * we write is 0x11 and 0x11 is also what the vendor SDK writes, so an
+         * arm at boot that ungated a gated clock, followed by the consumer
+         * starting its pipeline, followed by a probe half an hour later, looks
+         * from this register exactly like our own ungate still standing. The
+         * cleanup then handed a streaming camera's clock back to the gated
+         * state. It reached the field before it was caught.
+         *
+         * The cost is that a probe which ungated a gated clock and then armed
+         * again may leave it running. That is deliberate: of the two ways to
+         * be wrong, a clock left on costs microamps and a clock taken away
+         * costs the picture. */
+        st->owed = false;
         return;
     }
 
