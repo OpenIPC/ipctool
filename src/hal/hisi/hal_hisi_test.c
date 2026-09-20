@@ -218,23 +218,25 @@ int main(void) {
     hal_cleanup();
     CHECK(writes == before);
 
-    /* Qodo #2, under test before it is believed: setup ungates a gated clock,
-     * the sweep arms again before the first bus, and the cleanup must still
-     * put back what setup found. */
+    /* A second arm drops what the first held, and the clock is LEFT RUNNING.
+     * Pinned as the deliberate trade it is, not left to drift: keeping the
+     * entitlement across arms so the restore still fires is what reopened the
+     * field bug, because our own ungate and the consumer's are the same word.
+     * A clock left on costs microamps; one taken away costs the picture. */
     fresh(V4, 0x10, HISI_V4);
     setup_hal_hisi();          /* arm 1: 0x10 -> 0x11, entitled */
-    hal_enable_sensor_clock(); /* arm 2: already fit */
+    hal_enable_sensor_clock(); /* arm 2: already fit, disowns */
     hal_cleanup();
-    CHECK(peek(V4) == 0x10);
+    CHECK(peek(V4) == 0x11);
     CHECK(illegal == NULL);
 
-    /* Same, on both OT registers. */
+    /* Same on both OT registers. */
     fresh(OT, 0x00, HISI_OT);
     setup_hal_hisi();
     hal_enable_sensor_clock();
     hal_cleanup();
-    CHECK(peek(CV610_PERI_CRG8464_ADDR) == 0x00);
-    CHECK(peek(CV610_PERI_CRG8472_ADDR) == 0x00);
+    CHECK(peek(CV610_PERI_CRG8464_ADDR) & CV610_PERI_CRG_SENSOR0_CKEN);
+    CHECK(peek(CV610_PERI_CRG8472_ADDR) & CV610_PERI_CRG_SENSOR0_CKEN);
 
     /* Qodo #1: a read we could not make must not leave an entitlement from an
      * earlier arm lying about for the cleanup to spend. */
@@ -271,6 +273,22 @@ int main(void) {
     poke(V4, 0x11); /* the SDK starts streaming */
     reset_counters();
     sweep();
+    CHECK(writes == 0);
+    CHECK(peek(V4) == 0x11);
+    CHECK(illegal == NULL);
+
+    /* THE FIELD CASE, and the one that matters most: an arm happens while the
+     * clock is gated and no probe follows it, the consumer then starts its
+     * pipeline and writes the very same word we did, and a probe arrives half
+     * an hour later. The entitlement from that first arm must not still be
+     * live, or the cleanup hands the consumer's running clock back to the
+     * gated state. Reported from the field after an earlier fix to the
+     * mid-sweep case made the entitlement outlive the probe it belonged to. */
+    fresh(V4, 0x10, HISI_V4);
+    setup_hal_hisi();          /* boot-time arm: 0x10 -> 0x11, entitled */
+    poke(V4, 0x11);            /* the SDK brings the pipeline up: same word */
+    reset_counters();
+    sweep();                   /* the telemetry probe, 30 minutes later */
     CHECK(writes == 0);
     CHECK(peek(V4) == 0x11);
     CHECK(illegal == NULL);
