@@ -306,6 +306,7 @@ set(IPCTOOL_SRC
     src/bootrom.c
     src/bootrom.h
     src/clocks.c
+    src/sdcard.c
     src/clocks.h
     src/cpubench.c
     src/cpubench.h
