@@ -346,13 +346,28 @@ int sdcard_cmd(int argc, char *argv[]) {
             cJSON *j_outer = j_inner;
             j_inner = j_health;
 
+            const bool mine = cid_echoed(dev, buf);
+
             ADD_PARAM("vendor", lay->vendor);
             ADD_PARAM_NUM("life_used_percent", buf[lay->life_used]);
             /* Host bytes are the camera's business; this is the card's own
              * account of itself, and it is still only a percentage of a rated
-             * endurance the card never states. */
-            ADD_PARAM("note", "percentage of rated life the card reports as "
-                              "used; the rating itself is in no register");
+             * endurance the card never states.
+             *
+             * When the reply could not be tied to the card, that goes in the
+             * note rather than being left to a boolean further down that a
+             * reader skims past. The figure is still printed: the signature is
+             * this vendor's own magic, so the reply IS the register, and the
+             * only thing in doubt is whether it came from the card in the
+             * slot. Refusing to print it would lose a good reading on a layout
+             * that simply puts its CID somewhere else. */
+            ADD_PARAM("note",
+                      mine ? "percentage of rated life the card reports as "
+                             "used; the rating itself is in no register"
+                           : "percentage of rated life reported, BUT this "
+                             "reply does not carry this card's CID, so it "
+                             "could not be confirmed as coming from the card "
+                             "in the slot");
 
             char text[64];
             ascii_at(buf, 0, 8, text, sizeof(text));
@@ -364,7 +379,7 @@ int sdcard_cmd(int argc, char *argv[]) {
 
             /* Whether the reply can be tied to the card in the slot. */
             cJSON_AddItemToObject(j_inner, "cid_echoed",
-                                  cJSON_CreateBool(cid_echoed(dev, buf)));
+                                  cJSON_CreateBool(mine));
 
             j_inner = j_outer;
             cJSON_AddItemToObject(j_inner, "health", j_health);
