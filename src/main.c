@@ -31,6 +31,7 @@
 #include "ptrace.h"
 #include "ram.h"
 #include "reginfo.h"
+#include "sdcard.h"
 #include "sensors.h"
 #include "snstool.h"
 #include "tools.h"
@@ -214,6 +215,8 @@ int main(int argc, char *argv[]) {
             return membw_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "bootrom"))
             return bootrom_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "sdcard"))
+            return sdcard_cmd(argc - 1, argv + 1);
 #ifdef __arm__
         else if (!strcmp(argv[1], "trace"))
             return ptrace_cmd(argc - 1, argv + 1);
