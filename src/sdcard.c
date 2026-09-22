@@ -13,19 +13,26 @@
  * 4.9): the read costs about 5 ms, works while the camera is recording, and
  * does not disturb it.
  *
- * TWO THINGS THIS DELIBERATELY WILL NOT DO.
+ * THE READ IS OPT-IN, AND THAT IS THE WHOLE SAFETY STORY.
  *
- * It does not probe a card whose manufacturer id is not in the table below.
  * CMD56 with an argument a card does not implement is not free: measured on
  * that board, the card answers the data phase with a timeout and then raises
  * its ERROR status bit, and the NEXT command on the host fails once before
- * the card clears it. Harmless to a diagnostic run by hand, and not something
- * to hand a camera that is writing video.
+ * the card clears it. Harmless to a diagnostic run by hand; not something to
+ * spend on a camera that is writing video.
  *
- * And it does not decode a vendor it has not been read against. The layouts
- * below are the ones checked on real cards; a plausible guess at another
- * vendor's register would print a life figure nobody measured, which is worse
- * than printing nothing.
+ * A manufacturer id cannot decide that for you. 0x03 is SanDisk's, and
+ * Western Digital has shipped under it since buying them -- so it covers the
+ * WD Purple that does implement the register AND every consumer SanDisk that
+ * does not, which is most of the cards in these cameras. Gating on it would
+ * have looked like a safety rule while probing almost everything. So the
+ * identity is free and always printed, and the register is read only when
+ * asked for with --health.
+ *
+ * What the table below still decides is DECODING: a vendor it has not been
+ * read against is not decoded, because a plausible guess at another layout
+ * would print a life figure nobody measured, which is worse than printing
+ * nothing.
  */
 #include "sdcard.h"
 
@@ -34,6 +41,7 @@
 #include "tools.h"
 
 #include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/types.h>
@@ -123,21 +131,41 @@ static bool sysfs_str(const char *dev, const char *attr, char *out,
     return n > 0;
 }
 
-/* The whole-device node, which is what the ioctl needs: the kernel refuses
- * MMC_IOC_CMD on a partition with EPERM, to keep one partition's commands out
- * of its siblings. */
+/* The removable card, by name, as /sys/block actually lists it.
+ *
+ * Two things this has to get right. It walks the directory rather than
+ * counting from mmcblk0, because the numbering is assigned in probe order and
+ * a card can land anywhere. And it insists on type "SD": a board with eMMC
+ * usually has it as mmcblk0 with the card behind it, and reporting the
+ * soldered part -- let alone aiming a vendor command at it -- is the wrong
+ * answer to "what is in the slot".
+ *
+ * The name is the whole-device node, which is what the ioctl needs: the
+ * kernel refuses MMC_IOC_CMD on a partition with EPERM, to keep one
+ * partition's commands out of its siblings. */
 static bool find_card(char *dev, size_t cap) {
-    for (int i = 0; i < 4; i++) {
-        char name[8];
-        snprintf(name, sizeof(name), "mmcblk%d", i);
-        char probe[64];
-        if (sysfs_str(name, "type", probe, sizeof(probe)) ||
-            sysfs_str(name, "cid", probe, sizeof(probe))) {
-            snprintf(dev, cap, "%s", name);
-            return true;
-        }
+    DIR *d = opendir("/sys/block");
+    if (!d)
+        return false;
+
+    bool found = false;
+    struct dirent *e;
+    while (!found && (e = readdir(d))) {
+        if (strncmp(e->d_name, "mmcblk", 6))
+            continue;
+        /* mmcblk0p1 and mmcblk0boot0 are not the device. */
+        if (strpbrk(e->d_name + 6, "pb"))
+            continue;
+        char type[16];
+        if (!sysfs_str(e->d_name, "type", type, sizeof(type)))
+            continue;
+        if (strcmp(type, "SD"))
+            continue;
+        snprintf(dev, cap, "%s", e->d_name);
+        found = true;
     }
-    return false;
+    closedir(d);
+    return found;
 }
 
 static int read_health(const char *dev, const struct health_layout *lay,
@@ -169,6 +197,41 @@ static int read_health(const char *dev, const struct health_layout *lay,
     return rc;
 }
 
+/* Does the reply carry THIS card's CID?
+ *
+ * The signature is two bytes, which is not much of a claim. The register on
+ * the card this was read against embeds the card's own CID, and that matching
+ * /sys byte for byte is what says the 512 bytes belong to the card in the
+ * slot rather than being a stale buffer or another device's answer.
+ *
+ * Searched for rather than read at a fixed offset, and reported rather than
+ * enforced: it was confirmed at 0x195 on one card, and a layout that puts it
+ * elsewhere -- or omits it -- should not have its health refused on the
+ * strength of one sample. A reply that cannot be tied to the card says so. */
+static bool cid_echoed(const char *dev, const uint8_t buf[HEALTH_LEN]) {
+    char hex[64];
+    if (!sysfs_str(dev, "cid", hex, sizeof(hex)))
+        return false;
+
+    uint8_t cid[16];
+    size_t n = 0;
+    for (size_t i = 0; n < sizeof(cid) && hex[i] && hex[i + 1]; i += 2) {
+        char byte[3] = {hex[i], hex[i + 1], 0};
+        char *end = NULL;
+        unsigned long v = strtoul(byte, &end, 16);
+        if (end != byte + 2)
+            return false;
+        cid[n++] = (uint8_t)v;
+    }
+    if (n != sizeof(cid))
+        return false;
+
+    for (size_t i = 0; i + sizeof(cid) <= HEALTH_LEN; i++)
+        if (!memcmp(buf + i, cid, sizeof(cid)))
+            return true;
+    return false;
+}
+
 static bool sig_matches(const struct health_layout *lay,
                         const uint8_t buf[HEALTH_LEN]) {
     for (size_t i = 0; i < sizeof(lay->sig) / sizeof(lay->sig[0]); i++)
@@ -194,15 +257,23 @@ static void ascii_at(const uint8_t *buf, size_t off, size_t len, char *out,
 }
 
 static void usage(void) {
-    printf("Usage: ipctool sdcard [--raw] [--json]\n\n"
-           "What the SD card reports about itself, and its remaining life\n"
-           "where the card implements the vendor health register (CMD56).\n\n"
-           "  --raw     also dump the 512-byte register as hex\n"
-           "  --json    print JSON instead of YAML\n");
+    printf(
+        "Usage: ipctool sdcard [--health] [--raw] [--json]\n\n"
+        "What the SD card reports about itself. The identity is read from\n"
+        "sysfs and costs nothing.\n\n"
+        "  --health  also ask the card for its vendor health register\n"
+        "            (CMD56), which carries the percentage of rated life\n"
+        "            used on the few lines that implement it. Not free on a\n"
+        "            card that does not: the command times out, the card\n"
+        "            raises its error bit, and the next command on the host\n"
+        "            fails once before it clears. Fine by hand, worth not\n"
+        "            spending on a camera that is writing video.\n"
+        "  --raw     with --health, also dump the 512-byte register as hex\n"
+        "  --json    print JSON instead of YAML\n");
 }
 
 int sdcard_cmd(int argc, char *argv[]) {
-    bool raw = false, want_json = false;
+    bool raw = false, want_json = false, want_health = false;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
             usage();
@@ -212,6 +283,8 @@ int sdcard_cmd(int argc, char *argv[]) {
             raw = true;
         else if (!strcmp(argv[i], "--json"))
             want_json = true;
+        else if (!strcmp(argv[i], "--health"))
+            want_health = true;
     }
 
     char dev[16];
@@ -245,16 +318,21 @@ int sdcard_cmd(int argc, char *argv[]) {
         manfid = (unsigned)strtoul(val, NULL, 16);
 
     const struct health_layout *lay = layout_for(manfid);
-    if (!lay) {
+    if (!want_health) {
         /* Said out loud, because "no health section" and "this card has no
          * wear to report" are different facts and only the first is true. */
+        ADD_PARAM("health", "not asked for: pass --health to read the vendor "
+                            "register, and see --help for what that costs");
+    } else if (!lay) {
         ADD_PARAM("health",
                   "not read: this manufacturer's health register has not been "
-                  "verified, and guessing the command can upset the card");
+                  "read against a real card, so there is no layout to decode "
+                  "and guessing one would print a figure nobody measured");
     } else {
         uint8_t buf[HEALTH_LEN];
         memset(buf, 0, sizeof(buf));
         int err = 0;
+        bool got_register = false;
         if (read_health(dev, lay, buf, &err) < 0) {
             ADD_PARAM_FMT("health", "not read: %s", strerror(err));
         } else if (!sig_matches(lay, buf)) {
@@ -284,11 +362,18 @@ int sdcard_cmd(int argc, char *argv[]) {
             if (text[0])
                 ADD_PARAM("manufacturer", text);
 
+            /* Whether the reply can be tied to the card in the slot. */
+            cJSON_AddItemToObject(j_inner, "cid_echoed",
+                                  cJSON_CreateBool(cid_echoed(dev, buf)));
+
             j_inner = j_outer;
             cJSON_AddItemToObject(j_inner, "health", j_health);
+            got_register = true;
         }
 
-        if (raw) {
+        /* Only what actually came back. Printing the zeroed buffer after a
+         * failed read would be 512 bytes of made-up register. */
+        if (raw && got_register) {
             char hex[HEALTH_LEN * 2 + 1];
             for (int i = 0; i < HEALTH_LEN; i++)
                 snprintf(hex + i * 2, 3, "%02x", buf[i]);
