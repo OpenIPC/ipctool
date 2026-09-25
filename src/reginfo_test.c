@@ -13,8 +13,10 @@
 #include "hal/hisi/hal_hisi.h"
 #include "hal/ingenic.h"
 #include "hal/sstar.h"
+#include "hal/sstar_gpio.h"
 #include "ipchw.h"
 #include "padmux.h"
+#include "reginfo.h"
 
 static int failures;
 
@@ -1056,6 +1058,90 @@ static void test_table_integrity(void) {
     }
 }
 
+/* The per-pad register addresses of the Infinity6C GPIO block, as measured on
+ * a live board: pads 12 and 30 move their bytes at exactly these addresses
+ * when written through sysfs, and the idle levels of 10, 23 and 40/41 read
+ * back what their exporters left. This pins the table an address edit would
+ * silently move. */
+#ifdef IPCHW_VENDOR_SSTAR
+static void test_sstar_gpio_regs(void) {
+    puts("SigmaStar: per-pad GPIO registers (Infinity6C)");
+    as_chip(INFINITY6C, "SSC37X");
+
+    CHECK(sstar_gpio_supported());
+    CHECK(sstar_gpio_num_pads() == 82);
+    CHECK(sstar_gpio_pad_addr(0) == 0x1F207C00);
+    CHECK(sstar_gpio_pad_addr(12) == 0x1F207C30);
+    CHECK(sstar_gpio_pad_addr(23) == 0x1F207C5C);
+    CHECK(sstar_gpio_pad_addr(30) == 0x1F207C7C);
+    CHECK(sstar_gpio_pad_addr(41) == 0x1F207CA8);
+    CHECK(sstar_gpio_pad_addr(42) == 0x1F207CC4);
+    CHECK(sstar_gpio_pad_addr(81) == 0x1F207D60);
+
+    uint32_t prev = 0;
+    for (int pad = 0; pad < 82; pad++) {
+        uint32_t addr = sstar_gpio_pad_addr(pad);
+        CHECK(addr >= 0x1F207C00 && addr <= 0x1F207D60);
+        CHECK((addr & 3) == 0);
+        CHECK(addr > prev);
+        prev = addr;
+    }
+
+    /* The window the IR-cut hint asks the /proc walk about -- the call
+     * itself, not a stand-in for it: one page-aligned start, an end that is
+     * not. */
+    uint32_t base, len;
+    CHECK(sstar_gpio_window(&base, &len));
+    CHECK(base == 0x1F207000 && len == 0xD64);
+    CHECK(gpio_windows_in_mapping(0x1F000000, 0x400000, base, len, 1) == 0x1);
+    CHECK(gpio_windows_in_mapping(0x1F200000, 0x10000, base, len, 1) == 0x1);
+    CHECK(gpio_windows_in_mapping(0x1F207000, 0x1000, base, len, 1) == 0x1);
+    CHECK(gpio_windows_in_mapping(0x1F206000, 0x1000, base, len, 1) == 0x0);
+    CHECK(gpio_windows_in_mapping(0x1F208000, 0x1000, base, len, 1) == 0x0);
+
+    as_chip(0, "none");
+    CHECK(!sstar_gpio_supported());
+    CHECK(sstar_gpio_num_pads() == 0);
+    CHECK(sstar_gpio_pad_addr(31) == 0);
+    CHECK(!sstar_gpio_window(&base, &len));
+}
+#endif
+
+/* parse_gpio_level: 0 is a level the command really writes, so the string
+ * must be exactly the level, and every string strtoul reads as 0 is a
+ * refusal. The old bare strtoul made `gpio set 12 foo` drive the pad low. */
+static void test_gpio_level_parse(void) {
+    puts("gpio set: a level is the string, and only 0 or 1 is a level");
+    unsigned level;
+
+    CHECK(parse_gpio_level("0", &level) && level == 0);
+    CHECK(parse_gpio_level("1", &level) && level == 1);
+    CHECK(parse_gpio_level("01", &level) && level == 1);
+
+    CHECK(!parse_gpio_level("", &level));
+    CHECK(!parse_gpio_level("foo", &level));
+    CHECK(!parse_gpio_level("1x", &level));
+    CHECK(!parse_gpio_level("0x1", &level));
+    CHECK(!parse_gpio_level("2", &level));
+    CHECK(!parse_gpio_level("-1", &level));
+    CHECK(!parse_gpio_level("18446744073709551616", &level));
+}
+
+/* gpio_windows_in_mapping: a mapping covers what its length covers, not
+ * only what its start address falls inside -- a daemon holding one broad
+ * window from below the registers is holding them the same as one that
+ * mapped the exact page. */
+static void test_gpio_windows_in_mapping(void) {
+    puts("gpio reports: a mapping covers what its length covers");
+    uint32_t base = 0x1000, stride = 0x100;
+
+    CHECK(gpio_windows_in_mapping(0x1000, 0x100, base, stride, 3) == 0x1);
+    CHECK(gpio_windows_in_mapping(0x0, 0x1200, base, stride, 3) == 0x3);
+    CHECK(gpio_windows_in_mapping(0x1100, 0x200, base, stride, 3) == 0x6);
+    CHECK(gpio_windows_in_mapping(0x1300, 0x100, base, stride, 3) == 0x0);
+    CHECK(gpio_windows_in_mapping(0x1250, 0x20, base, stride, 3) == 0x4);
+}
+
 int main(void) {
     /* Every register the tests below touch is one of these, not a camera's. */
     padmux_set_io(&FAKE_IO);
@@ -1080,6 +1166,11 @@ int main(void) {
 #ifdef IPCHW_PADMUX_SSTAR
     test_sstar();
 #endif
+#ifdef IPCHW_VENDOR_SSTAR
+    test_sstar_gpio_regs();
+#endif
+    test_gpio_level_parse();
+    test_gpio_windows_in_mapping();
 #ifdef IPCHW_PADMUX_INGENIC
     test_ingenic();
 #endif

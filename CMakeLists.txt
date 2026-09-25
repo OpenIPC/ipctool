@@ -278,7 +278,8 @@ set(_common_lib_src_tail
 
 # Full set, used by the ipctool executable
 set(COMMON_LIB_SRC_ALL ${_common_lib_src_head} ${IPCHW_HISI_SRC_ALL}
-    ${_common_lib_src_tail} ${IPCHW_PADMUX_BACKENDS_ALL})
+    ${_common_lib_src_tail} ${IPCHW_PADMUX_BACKENDS_ALL}
+    src/hal/sstar_gpio.c src/hal/sstar_gpio.h)
 foreach(_v IN LISTS IPCHW_OPTIONAL_VENDORS)
   list(APPEND COMMON_LIB_SRC_ALL src/hal/${_v}.c src/hal/${_v}.h)
   string(TOUPPER ${_v} _V)
@@ -295,6 +296,9 @@ foreach(_v IN LISTS _ipchw_selected)
             "expected 'all', 'none', or a subset of ${IPCHW_OPTIONAL_VENDORS}")
   endif()
   list(APPEND COMMON_LIB_SRC src/hal/${_v}.c src/hal/${_v}.h)
+  if(_v STREQUAL "sstar")
+    list(APPEND COMMON_LIB_SRC src/hal/sstar_gpio.c src/hal/sstar_gpio.h)
+  endif()
   string(TOUPPER ${_v} _V)
   list(APPEND IPCHW_VENDOR_DEFS IPCHW_VENDOR_${_V})
 endforeach()

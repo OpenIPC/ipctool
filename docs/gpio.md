@@ -15,6 +15,14 @@ ipctool gpio set  <pad> <value>    # WRITES: drive the pad
 `<pad>` is accepted in either spelling, `5_6` (group 5, bit 6) or `46`
 (linear, = group * 8 + bit). Both appear in `gpio scan` output.
 
+On SigmaStar the two spellings are one: pads are already numbered linearly and
+there is no `group_bit` form. The pad number is the number the kernel's
+gpiochip uses, so `gpio get 23` and `/sys/class/gpio/gpio23` describe the same
+wire. The `gpio scan` baseline differs in shape as well — one `Pad:` line per
+GPIO pad, decoded from the pad's own one-byte register into what it reads
+(`in`), what the SoC is driving (`out`) and whether it drives at all (`oe_n`,
+1 meaning input/Hi-Z) — rather than the per-group data and direction words.
+
 ## `gpio scan`
 
 It prints a baseline table of every GPIO pad, then polls in a loop and reports
@@ -109,6 +117,11 @@ reported in that case. Only when no streamer group is known does it fall back
 to reporting every output currently sitting low, which is a much broader guess.
 So a short list means the first rule fired and is worth trusting; a long one
 means the second did.
+
+On SigmaStar the two rules survive with pads in place of groups: when the
+streamer maps the GPIO block, a board whose whole pad list holds only one or
+two driving pads gets exactly those, and without a streamer every pad
+currently driving low is reported.
 
 IR-cut is nearly always a *pair* of pads, driven in opposite directions to flip
 the filter between its two positions. To confirm a pair, run `gpio scan` and

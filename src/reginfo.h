@@ -1,6 +1,7 @@
 #ifndef REGINFO_H
 #define REGINFO_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -30,5 +31,20 @@ typedef const struct {
 int reginfo_cmd(int argc, char **argv);
 int gpio_cmd(int argc, char **argv);
 char *gpio_possible_ircut(char *outbuf, size_t outlen);
+
+/* The level a `gpio set` may write, parsed strictly. strtoul answers 0 for
+ * every string that is not a number, and 0 is a level the command really
+ * writes -- it switches the pad to an output and drives it low -- so a bare
+ * strtoul turned every typo into hardware. The number must end the string
+ * and be 0 or 1. */
+bool parse_gpio_level(const char *arg, unsigned *level);
+
+/* Which of nwin equal windows, the first at base and each stride wide, one
+ * /dev/mem mapping covers. A /dev/mem mapping's file offset is its physical
+ * address and its length is the vaddr span it names, so the interval under
+ * test is [off, off + len): a daemon mapping one broad window from well
+ * below is holding the windows the same as one mapped exactly. */
+uint32_t gpio_windows_in_mapping(unsigned long off, unsigned long len,
+                                 uint32_t base, uint32_t stride, int nwin);
 
 #endif /* REGINFO_H */
