@@ -9,8 +9,9 @@
 
 #include "ipchw.h"
 
-#include <dirent.h>
 #include <ctype.h>
+#include <dirent.h>
+#include <errno.h>
 #include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -3133,6 +3134,28 @@ const padmux_ops_t PADMUX_OPS_HISI = {
     .set = hisi_set,
 };
 
+bool parse_gpio_level(const char *arg, unsigned *level) {
+    char *tail;
+    errno = 0;
+    unsigned long val = strtoul(arg, &tail, 10);
+    if (errno || tail == arg || *tail || val > 1)
+        return false;
+    *level = (unsigned)val;
+    return true;
+}
+
+uint32_t gpio_windows_in_mapping(unsigned long off, unsigned long len,
+                                 uint32_t base, uint32_t stride, int nwin) {
+    uint32_t mask = 0;
+    for (int i = 0; i < nwin && i < 32; i++) {
+        uint32_t lo = base + (uint32_t)i * stride;
+        uint32_t hi = lo + stride;
+        if (off < hi && off + len > lo)
+            mask |= 1u << i;
+    }
+    return mask;
+}
+
 /* Everything below is the command-line half of ipctool: it prints, it parses
  * argv, and it calls print_usage() out of main.c. STANDALONE_LIBRARY builds
  * (libipchw) take the tables and the lookups above and stop here. */
@@ -3432,9 +3455,13 @@ static int gpio_manipulate(char **argv, bool set_op) {
     uint32_t val, address = GPIO_Base + (group * GPIO_Offset) + mask;
 
     if (set_op) {
-        unsigned val = strtoul(argv[2], NULL, 10);
-        if (val > 1)
+        /* Refused before any register is touched: the old parse made
+         * `gpio set 12 foo` into a real drive-low. */
+        unsigned level;
+        if (!parse_gpio_level(argv[2], &level)) {
+            fprintf(stderr, "Level '%s' is not 0 or 1\n", argv[2]);
             return EXIT_FAILURE;
+        }
 
         size_t daddress = GPIO_Base + (group * GPIO_Offset) + 0x400;
         uint32_t direct;
@@ -3451,7 +3478,7 @@ static int gpio_manipulate(char **argv, bool set_op) {
             }
         }
 
-        uint32_t cmd = val << num;
+        uint32_t cmd = level << num;
         if (!mem_reg(address, &cmd, OP_WRITE)) {
             printf("write reg %#x error\n", address);
             return EXIT_FAILURE;
@@ -3650,17 +3677,28 @@ static bool fill_enabled_gpios(size_t *enabled, size_t GPIO_Groups) {
     return true;
 }
 
-static uint32_t find_streamer_gpio_groups(size_t GPIO_Base, size_t GPIO_Offset,
-                                          int GPIO_Groups) {
-    uint32_t mapped = 0;
+/* A GPIO block's registers, found through a daemon's own /dev/mem mappings.
+ *
+ * One walk answers both vendors' question: HiSilicon asks which of its
+ * group-sized windows are visible and gets a mask; SigmaStar asks whether the
+ * single window its pads share is visible and reads bit 0. Any process whose
+ * /proc name is all digits is visited -- including init, which on a minimal
+ * firmware is the streamer. A mapping counts from its full interval: the
+ * file offset is its physical address and the vaddr span is its length, so a
+ * daemon holding one broad RIU window from well below is mapped here the
+ * same as one that mapped the registers exactly. */
+static uint32_t dev_mem_windows_marked(uint32_t base, uint32_t stride,
+                                       int nwin) {
+    uint32_t marked = 0;
     DIR *proc = opendir("/proc");
     if (!proc)
         return 0;
 
-    size_t GPIO_End = GPIO_Base + GPIO_Groups * GPIO_Offset;
     struct dirent *ent;
     while ((ent = readdir(proc))) {
-        if (ent->d_name[0] < '2' || ent->d_name[0] > '9')
+        /* Every digit-only name is a pid entry; "." and ".." and the
+         * non-numeric /proc files fail this test on their first character. */
+        if (ent->d_name[strspn(ent->d_name, "0123456789")])
             continue;
 
         char path[64];
@@ -3670,21 +3708,19 @@ static uint32_t find_streamer_gpio_groups(size_t GPIO_Base, size_t GPIO_Offset,
             continue;
 
         char line[256];
+        unsigned long start, end, off;
         while (fgets(line, sizeof(line), f)) {
             if (!strstr(line, "/dev/mem"))
                 continue;
-            unsigned long offset;
-            if (sscanf(line, "%*x-%*x %*s %lx", &offset) != 1)
+            if (sscanf(line, "%lx-%lx %*s %lx", &start, &end, &off) != 3)
                 continue;
-            if (offset >= GPIO_Base && offset < GPIO_End) {
-                int group = (offset - GPIO_Base) / GPIO_Offset;
-                mapped |= (1u << group);
-            }
+            marked |=
+                gpio_windows_in_mapping(off, end - start, base, stride, nwin);
         }
         fclose(f);
     }
     closedir(proc);
-    return mapped;
+    return marked;
 }
 
 char *gpio_possible_ircut(char *outbuf, size_t outlen) {
@@ -3699,7 +3735,7 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
         return NULL;
 
     uint32_t streamer_groups =
-        find_streamer_gpio_groups(GPIO_Base, GPIO_Offset, GPIO_Groups);
+        dev_mem_windows_marked(GPIO_Base, GPIO_Offset, GPIO_Groups);
 
     size_t enabled[GPIO_Groups];
     if (!fill_enabled_gpios(enabled, GPIO_Groups))
@@ -3772,39 +3808,7 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
 static bool sstar_gpio_streamer_mapped(void) {
     uint32_t base = sstar_gpio_pad_addr(0) & ~0xfffu;
     uint32_t end = sstar_gpio_pad_addr(sstar_gpio_num_pads() - 1) + 4;
-
-    DIR *proc = opendir("/proc");
-    if (!proc)
-        return false;
-
-    struct dirent *ent;
-    while ((ent = readdir(proc))) {
-        if (ent->d_name[0] < '2' || ent->d_name[0] > '9')
-            continue;
-
-        char path[64];
-        snprintf(path, sizeof(path), "/proc/%s/maps", ent->d_name);
-        FILE *f = fopen(path, "r");
-        if (!f)
-            continue;
-
-        char line[256];
-        while (fgets(line, sizeof(line), f)) {
-            if (!strstr(line, "/dev/mem"))
-                continue;
-            unsigned long offset;
-            if (sscanf(line, "%*x-%*x %*s %lx", &offset) != 1)
-                continue;
-            if (offset >= base && offset < end) {
-                fclose(f);
-                closedir(proc);
-                return true;
-            }
-        }
-        fclose(f);
-    }
-    closedir(proc);
-    return false;
+    return dev_mem_windows_marked(base, end - base, 1) != 0;
 }
 
 /* `gpio get/set <pad>` on SigmaStar: the pad number is a pad, its register is
@@ -3829,9 +3833,13 @@ static int sstar_gpio_getset(char **argv, bool set_op) {
     }
 
     if (set_op) {
-        unsigned level = strtoul(argv[2], NULL, 10);
-        if (level > 1)
+        /* Refused before the register changes: the old parse made
+         * `gpio set 12 foo` into a real drive-low. */
+        unsigned level;
+        if (!parse_gpio_level(argv[2], &level)) {
+            fprintf(stderr, "Level '%s' is not 0 or 1\n", argv[2]);
             return EXIT_FAILURE;
+        }
 
         if (val & SSTAR_GPIO_BIT_INPUT)
             val &= (uint8_t)~SSTAR_GPIO_BIT_INPUT;
@@ -3942,8 +3950,11 @@ static int sstar_gpio_scan_cmd(void) {
                 continue;
             uint8_t val;
             if (!sstar_gpio_read(pad, &val)) {
+                /* A /dev/mem that has stopped reading will not start again;
+                 * a blind watcher that retries every 100 ms and names the
+                 * same pad each time is worse than stopping. */
                 fprintf(stderr, "Error at %#x\n", sstar_gpio_pad_addr(pad));
-                break;
+                return EXIT_FAILURE;
             }
             if (val == state[pad])
                 continue;
@@ -4018,8 +4029,11 @@ static int gpio_scan_cmd() {
             size_t address = GPIO_Base + (group * GPIO_Offset) + mask;
             uint32_t value;
             if (!mem_reg(address, &value, OP_READ)) {
+                /* A /dev/mem that has stopped reading will not start again;
+                 * a blind watcher that retries every 100 ms and names the
+                 * same register each time is worse than stopping. */
                 fprintf(stderr, "Error at %#zx\n", address);
-                break;
+                return EXIT_FAILURE;
             }
             if (state[group] != value) {
                 bool HeaderByte = false;
