@@ -13,6 +13,7 @@
 #include "hal/hisi/hal_hisi.h"
 #include "hal/ingenic.h"
 #include "hal/sstar.h"
+#include "hal/sstar_gpio.h"
 #include "ipchw.h"
 #include "padmux.h"
 
@@ -1056,6 +1057,42 @@ static void test_table_integrity(void) {
     }
 }
 
+/* The per-pad register addresses of the Infinity6C GPIO block, as measured on
+ * a live board: pads 12 and 30 move their bytes at exactly these addresses
+ * when written through sysfs, and the idle levels of 10, 23 and 40/41 read
+ * back what their exporters left. This pins the table an address edit would
+ * silently move. */
+#ifdef IPCHW_VENDOR_SSTAR
+static void test_sstar_gpio_regs(void) {
+    puts("SigmaStar: per-pad GPIO registers (Infinity6C)");
+    as_chip(INFINITY6C, "SSC37X");
+
+    CHECK(sstar_gpio_supported());
+    CHECK(sstar_gpio_num_pads() == 82);
+    CHECK(sstar_gpio_pad_addr(0) == 0x1F207C00);
+    CHECK(sstar_gpio_pad_addr(12) == 0x1F207C30);
+    CHECK(sstar_gpio_pad_addr(23) == 0x1F207C5C);
+    CHECK(sstar_gpio_pad_addr(30) == 0x1F207C7C);
+    CHECK(sstar_gpio_pad_addr(41) == 0x1F207CA8);
+    CHECK(sstar_gpio_pad_addr(42) == 0x1F207CC4);
+    CHECK(sstar_gpio_pad_addr(81) == 0x1F207D60);
+
+    uint32_t prev = 0;
+    for (int pad = 0; pad < 82; pad++) {
+        uint32_t addr = sstar_gpio_pad_addr(pad);
+        CHECK(addr >= 0x1F207C00 && addr <= 0x1F207D60);
+        CHECK((addr & 3) == 0);
+        CHECK(addr > prev);
+        prev = addr;
+    }
+
+    as_chip(0, "none");
+    CHECK(!sstar_gpio_supported());
+    CHECK(sstar_gpio_num_pads() == 0);
+    CHECK(sstar_gpio_pad_addr(31) == 0);
+}
+#endif
+
 int main(void) {
     /* Every register the tests below touch is one of these, not a camera's. */
     padmux_set_io(&FAKE_IO);
@@ -1079,6 +1116,9 @@ int main(void) {
     test_parse_pad();
 #ifdef IPCHW_PADMUX_SSTAR
     test_sstar();
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
+    test_sstar_gpio_regs();
 #endif
 #ifdef IPCHW_PADMUX_INGENIC
     test_ingenic();

@@ -3,6 +3,7 @@
 #include "hal/hisi/hal_hisi.h"
 #include "hal/ingenic.h"
 #include "hal/sstar.h"
+#include "hal/sstar_gpio.h"
 #include "padmux.h"
 #include "tools.h"
 
@@ -3147,6 +3148,9 @@ const padmux_ops_t PADMUX_OPS_HISI = {
 static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func);
 static int padmux_refuse(int code, const char *pad_spec, const char *func);
+static int sstar_gpio_getset(char **argv, bool set_op);
+static int sstar_gpio_scan_cmd(void);
+static char *sstar_gpio_possible_ircut(char *outbuf, size_t outlen);
 
 static void show_function(const uint16_t *func, unsigned val) {
     for (size_t i = 0; func[i]; i++)
@@ -3405,6 +3409,8 @@ static int gpio_manipulate(char **argv, bool set_op) {
     size_t GPIO_Offset = 0;
 
     getchipname();
+    if (sstar_gpio_supported())
+        return sstar_gpio_getset(argv, set_op);
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups)) {
         fprintf(stderr, "Chip is not supported\n");
         return EXIT_FAILURE;
@@ -3687,6 +3693,8 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
     size_t GPIO_Offset = 0;
 
     *outbuf = 0;
+    if (sstar_gpio_supported())
+        return sstar_gpio_possible_ircut(outbuf, outlen);
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
         return NULL;
 
@@ -3757,6 +3765,205 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
         return NULL;
 }
 
+/* Whether a vendor daemon holds this SigmaStar's pad registers through a
+ * raw /dev/mem mapping of its own -- the same question the HiSilicon walk
+ * asks of its bank words. The pad registers of one chip share a single page,
+ * so the answer is one bit for every pad rather than a per-group mask. */
+static bool sstar_gpio_streamer_mapped(void) {
+    uint32_t base = sstar_gpio_pad_addr(0) & ~0xfffu;
+    uint32_t end = sstar_gpio_pad_addr(sstar_gpio_num_pads() - 1) + 4;
+
+    DIR *proc = opendir("/proc");
+    if (!proc)
+        return false;
+
+    struct dirent *ent;
+    while ((ent = readdir(proc))) {
+        if (ent->d_name[0] < '2' || ent->d_name[0] > '9')
+            continue;
+
+        char path[64];
+        snprintf(path, sizeof(path), "/proc/%s/maps", ent->d_name);
+        FILE *f = fopen(path, "r");
+        if (!f)
+            continue;
+
+        char line[256];
+        while (fgets(line, sizeof(line), f)) {
+            if (!strstr(line, "/dev/mem"))
+                continue;
+            unsigned long offset;
+            if (sscanf(line, "%*x-%*x %*s %lx", &offset) != 1)
+                continue;
+            if (offset >= base && offset < end) {
+                fclose(f);
+                closedir(proc);
+                return true;
+            }
+        }
+        fclose(f);
+    }
+    closedir(proc);
+    return false;
+}
+
+/* `gpio get/set <pad>` on SigmaStar: the pad number is a pad, its register is
+ * one byte, and there are no bank words and no group_pin syntax. The mux
+ * line is printed here, matching where the HiSilicon path prints it. */
+static int sstar_gpio_getset(char **argv, bool set_op) {
+    const char *gpio_num = argv[1];
+
+    gpio_mux_by(gpio_num, -1, NULL);
+
+    char *tail;
+    long pad = strtol(gpio_num, &tail, 10);
+    if (tail == gpio_num || *tail || pad < 0 || pad >= sstar_gpio_num_pads()) {
+        fprintf(stderr, "GPIO %s is out of range\n", gpio_num);
+        return EXIT_FAILURE;
+    }
+
+    uint8_t val;
+    if (!sstar_gpio_read((int)pad, &val)) {
+        fprintf(stderr, "read reg %#x error\n", sstar_gpio_pad_addr((int)pad));
+        return EXIT_FAILURE;
+    }
+
+    if (set_op) {
+        unsigned level = strtoul(argv[2], NULL, 10);
+        if (level > 1)
+            return EXIT_FAILURE;
+
+        if (val & SSTAR_GPIO_BIT_INPUT)
+            val &= (uint8_t)~SSTAR_GPIO_BIT_INPUT;
+        if (level)
+            val |= SSTAR_GPIO_BIT_OUT;
+        else
+            val &= (uint8_t)~SSTAR_GPIO_BIT_OUT;
+        if (!sstar_gpio_write((int)pad, val)) {
+            fprintf(stderr, "write reg %#x error\n",
+                    sstar_gpio_pad_addr((int)pad));
+            return EXIT_FAILURE;
+        }
+    } else {
+        bool is_input = val & SSTAR_GPIO_BIT_INPUT;
+        printf("%d\n", is_input ? !!(val & SSTAR_GPIO_BIT_IN)
+                                : !!(val & SSTAR_GPIO_BIT_OUT));
+    }
+
+    return EXIT_SUCCESS;
+}
+
+/* The IR-cut question on SigmaStar: the HiSilicon heuristic walks bank words
+ * and keeps the output pins of a lightly-loaded, streamer-held group; the
+ * same idea over pads keeps the output pads, pared back the same two ways --
+ * to the whole block when a daemon holds it and drives at most two pins, and
+ * otherwise to the outputs standing at zero. */
+static char *sstar_gpio_possible_ircut(char *outbuf, size_t outlen) {
+    int nr_pads = sstar_gpio_num_pads();
+    if (!nr_pads || ipchw_padmux_by_prefix("", NULL, 0) < 0)
+        return NULL;
+
+    uint8_t levels[nr_pads];
+    bool is_gpio[nr_pads];
+    memset(levels, 0, sizeof(levels));
+    memset(is_gpio, 0, sizeof(is_gpio));
+
+    int output_count = 0;
+    for (int pad = 0; pad < nr_pads; pad++) {
+        if (!padmux_pad_is_gpio(pad))
+            continue;
+        uint8_t val;
+        if (!sstar_gpio_read(pad, &val)) {
+            fprintf(stderr, "Error at %#x\n", sstar_gpio_pad_addr(pad));
+            return NULL;
+        }
+        is_gpio[pad] = true;
+        levels[pad] = val;
+        if (!(val & SSTAR_GPIO_BIT_INPUT))
+            output_count++;
+    }
+
+    bool streamer = sstar_gpio_streamer_mapped();
+    char *ptr = outbuf;
+
+    for (int pad = 0; pad < nr_pads; pad++) {
+        if (!is_gpio[pad])
+            continue;
+        uint8_t val = levels[pad];
+        if (val & SSTAR_GPIO_BIT_INPUT)
+            continue;
+        if (streamer && output_count > 2)
+            continue;
+        if (!streamer && (val & SSTAR_GPIO_BIT_OUT))
+            continue;
+
+        int nlen = snprintf(ptr, outlen, ",%d", pad);
+        outlen -= nlen;
+        ptr += nlen;
+    }
+
+    if (strlen(outbuf) > 0)
+        return outbuf + 1;
+    return NULL;
+}
+
+/* `gpio scan` on SigmaStar: watch every pad muxed to plain GPIO. The HiSilicon
+ * loop prints eight pins of a bank at a time; this one prints one line per
+ * pad, and only the three bits a pad register has. */
+static int sstar_gpio_scan_cmd(void) {
+    int nr_pads = sstar_gpio_num_pads();
+    if (!nr_pads || ipchw_padmux_by_prefix("", NULL, 0) < 0) {
+        fprintf(stderr, "Platform is not supported\n");
+        return EXIT_FAILURE;
+    }
+
+    uint8_t state[nr_pads];
+    memset(state, 0, sizeof(state));
+
+    for (int pad = 0; pad < nr_pads; pad++) {
+        if (!padmux_pad_is_gpio(pad))
+            continue;
+        uint8_t val;
+        if (!sstar_gpio_read(pad, &val)) {
+            fprintf(stderr, "Error at %#x\n", sstar_gpio_pad_addr(pad));
+            return EXIT_FAILURE;
+        }
+        state[pad] = val;
+        printf("Pad:%2d, Addr:0x%08x, Data:0x%02X = in:%d out:%d oe_n:%d\n",
+               pad, sstar_gpio_pad_addr(pad), val, val & 1, (val >> 1) & 1,
+               (val >> 2) & 1);
+    }
+
+    print_line(86);
+    printf("Waiting for while something changes...\n");
+    while (1) {
+        for (int pad = 0; pad < nr_pads; pad++) {
+            if (!padmux_pad_is_gpio(pad))
+                continue;
+            uint8_t val;
+            if (!sstar_gpio_read(pad, &val)) {
+                fprintf(stderr, "Error at %#x\n", sstar_gpio_pad_addr(pad));
+                break;
+            }
+            if (val == state[pad])
+                continue;
+
+            bool is_input = val & SSTAR_GPIO_BIT_INPUT;
+            printf("Pad:%d, Addr:0x%08x, 0x%02X --> 0x%02X = in:%d out:%d "
+                   "oe_n:%d, Dir:%s, Level:%d\n",
+                   pad, sstar_gpio_pad_addr(pad), state[pad], val, val & 1,
+                   (val >> 1) & 1, (val >> 2) & 1,
+                   is_input ? "Input" : "Output",
+                   is_input ? (val & SSTAR_GPIO_BIT_IN) != 0
+                            : (val & SSTAR_GPIO_BIT_OUT) != 0);
+            state[pad] = val;
+        }
+        usleep(100000);
+    }
+
+    return EXIT_SUCCESS;
+}
+
 static int gpio_scan_cmd() {
     int GPIO_Groups = 0;
     size_t GPIO_Base = 0;
@@ -3769,6 +3976,8 @@ static int gpio_scan_cmd() {
     setvbuf(stdout, NULL, _IOLBF, 0);
 
     getchipname();
+    if (sstar_gpio_supported())
+        return sstar_gpio_scan_cmd();
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
         return EXIT_FAILURE;
 
