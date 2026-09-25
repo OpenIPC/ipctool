@@ -3694,11 +3694,19 @@ static uint32_t dev_mem_windows_marked(uint32_t base, uint32_t stride,
     if (!proc)
         return 0;
 
+    char self[16];
+    snprintf(self, sizeof(self), "%d", (int)getpid());
+
     struct dirent *ent;
     while ((ent = readdir(proc))) {
         /* Every digit-only name is a pid entry; "." and ".." and the
          * non-numeric /proc files fail this test on their first character. */
         if (ent->d_name[strspn(ent->d_name, "0123456789")])
+            continue;
+        /* Not ourselves: mem_reg() keeps its last /dev/mem window mapped, so
+         * after any register read ipctool holds the very window it is asking
+         * about and would always find a "streamer" -- itself. */
+        if (!strcmp(ent->d_name, self))
             continue;
 
         char path[64];
@@ -3806,9 +3814,10 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
  * asks of its bank words. The pad registers of one chip share a single page,
  * so the answer is one bit for every pad rather than a per-group mask. */
 static bool sstar_gpio_streamer_mapped(void) {
-    uint32_t base = sstar_gpio_pad_addr(0) & ~0xfffu;
-    uint32_t end = sstar_gpio_pad_addr(sstar_gpio_num_pads() - 1) + 4;
-    return dev_mem_windows_marked(base, end - base, 1) != 0;
+    uint32_t base, len;
+    if (!sstar_gpio_window(&base, &len))
+        return false;
+    return dev_mem_windows_marked(base, len, 1) != 0;
 }
 
 /* `gpio get/set <pad>` on SigmaStar: the pad number is a pad, its register is

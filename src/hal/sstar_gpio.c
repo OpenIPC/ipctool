@@ -63,6 +63,15 @@ uint32_t sstar_gpio_pad_addr(int pad) {
     return i6c_gpio_regs[pad];
 }
 
+bool sstar_gpio_window(uint32_t *base, uint32_t *len) {
+    int nr_pads = sstar_gpio_num_pads();
+    if (!nr_pads)
+        return false;
+    *base = sstar_gpio_pad_addr(0) & ~0xfffu;
+    *len = sstar_gpio_pad_addr(nr_pads - 1) + 4 - *base;
+    return true;
+}
+
 bool sstar_gpio_read(int pad, uint8_t *val) {
     uint32_t addr = sstar_gpio_pad_addr(pad);
     if (!addr)

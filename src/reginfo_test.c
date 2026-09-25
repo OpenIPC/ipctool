@@ -1087,10 +1087,23 @@ static void test_sstar_gpio_regs(void) {
         prev = addr;
     }
 
+    /* The window the IR-cut hint asks the /proc walk about -- the call
+     * itself, not a stand-in for it: one page-aligned start, an end that is
+     * not. */
+    uint32_t base, len;
+    CHECK(sstar_gpio_window(&base, &len));
+    CHECK(base == 0x1F207000 && len == 0xD64);
+    CHECK(gpio_windows_in_mapping(0x1F000000, 0x400000, base, len, 1) == 0x1);
+    CHECK(gpio_windows_in_mapping(0x1F200000, 0x10000, base, len, 1) == 0x1);
+    CHECK(gpio_windows_in_mapping(0x1F207000, 0x1000, base, len, 1) == 0x1);
+    CHECK(gpio_windows_in_mapping(0x1F206000, 0x1000, base, len, 1) == 0x0);
+    CHECK(gpio_windows_in_mapping(0x1F208000, 0x1000, base, len, 1) == 0x0);
+
     as_chip(0, "none");
     CHECK(!sstar_gpio_supported());
     CHECK(sstar_gpio_num_pads() == 0);
     CHECK(sstar_gpio_pad_addr(31) == 0);
+    CHECK(!sstar_gpio_window(&base, &len));
 }
 #endif
 
@@ -1127,14 +1140,6 @@ static void test_gpio_windows_in_mapping(void) {
     CHECK(gpio_windows_in_mapping(0x1100, 0x200, base, stride, 3) == 0x6);
     CHECK(gpio_windows_in_mapping(0x1300, 0x100, base, stride, 3) == 0x0);
     CHECK(gpio_windows_in_mapping(0x1250, 0x20, base, stride, 3) == 0x4);
-
-    /* The SigmaStar call: one window, not page-aligned at either end. */
-    CHECK(gpio_windows_in_mapping(0x1F000000, 0x400000, 0x1F207C00, 0x1D64,
-                                  1) == 0x1);
-    CHECK(gpio_windows_in_mapping(0x1F207000, 0x1000, 0x1F207C00, 0x1D64, 1) ==
-          0x1);
-    CHECK(gpio_windows_in_mapping(0x1F20A000, 0x1000, 0x1F207C00, 0x1D64, 1) ==
-          0x0);
 }
 
 int main(void) {

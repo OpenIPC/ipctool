@@ -16,6 +16,11 @@ int sstar_gpio_num_pads(void);
  * current chip family or the pad is out of range. */
 uint32_t sstar_gpio_pad_addr(int pad);
 
+/* The one window every pad register of the chip sits in, from the page the
+ * first pad lives on to the end of the last pad's slot: what a daemon has to
+ * have mapped to be holding the pads. False when there is no table. */
+bool sstar_gpio_window(uint32_t *base, uint32_t *len);
+
 /* One pad's register through /dev/mem. Reads take the low byte of the 16-bit
  * slot; writes read-modify-write it and leave the upper byte alone, because a
  * wider store reaches RIU bytes that are not mapped. Serialise the callers:
