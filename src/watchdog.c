@@ -16,9 +16,6 @@
 
 #define DEFAULT_PING_RATE 1
 
-#define HISINEW_WDIOC_KEEPALIVE _IO(WATCHDOG_IOCTL_BASE, 5)
-#define HISINEW_WDIOC_SETOPTIONS _IOWR(WATCHDOG_IOCTL_BASE, 4, int)
-
 int fd;
 const char v = 'V';
 static const char sopts[] = "bdehp:t:Tn:NLf:i";

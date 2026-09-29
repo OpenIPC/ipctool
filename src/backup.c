@@ -4,10 +4,12 @@
 
 #include <arpa/inet.h>
 #include <assert.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <netdb.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -36,6 +38,7 @@
 #include "sha1.h"
 #include "tools.h"
 #include "uboot.h"
+#include "watchdog.h"
 
 static char mybackups[] = "camware.s3.eu-north-1.amazonaws.com";
 static const char *downcode = "reil9phiFahng8aiPh5Kooshag8eiVae";
@@ -374,15 +377,15 @@ static void umount_fs(const char *path) {
     if (!strcmp(path, "/"))
         return;
 
-    if (!try_umount(path)) {
-        fprintf(stderr, ", aborting...\n");
-        exit(1);
-    } else
+    // Only ever called once everything on flash is read-only, so a mount
+    // that will not detach is in the way of nothing
+    if (!try_umount(path))
+        fprintf(stderr, ", leaving it\n");
+    else
         printf("Unmounting %s\n", path);
 }
 
 static bool umount_all() {
-    sync();
 
     FILE *fp = fopen("/proc/mounts", "r");
     if (!fp)
@@ -404,7 +407,274 @@ static bool umount_all() {
     }
 
     fclose(fp);
+    return true;
+}
+
+/*
+ * Everything below runs while the system is still executing from the flash
+ * that is about to be rewritten. umount_all() only detaches mounts lazily and
+ * leaves "/" alone, so every running process keeps paging code and data in
+ * from the root squashfs, and a jffs2 kept alive by an overlay keeps its
+ * garbage collector writing. The first page fault that lands on an erased or
+ * already-rewritten block kills the system and leaves the flash half written
+ * (issue #223). isolate_from_flash() removes those readers and writers before
+ * the first erase.
+ */
+
+static int wdt_fd = -1;
+
+// Every keepalive there is: which one a driver honours is not knowable from
+// here, and the others are harmless (an unknown ioctl is ENOTTY). On a
+// Hi3516EV300 write() returns 0 and the board resets 10 s later.
+static void feed_watchdog() {
+    if (wdt_fd < 0)
+        return;
+    ioctl(wdt_fd, HISINEW_WDIOC_KEEPALIVE, 0);
+    ioctl(wdt_fd, WDIOC_KEEPALIVE, 0);
+    ssize_t unused = write(wdt_fd, "k", 1);
+    (void)unused;
+}
+
+// The processes that hold the watchdog open are the ones feeding it. A node
+// that reads " (deleted)" is a driver already unloaded, timer and all.
+static int watchdog_holders(pid_t *pids, int max) {
+    DIR *proc = opendir("/proc");
+    if (!proc)
+        return 0;
+
+    int n = 0;
+    pid_t self = getpid();
+    struct dirent *p;
+    while (n < max && (p = readdir(proc))) {
+        pid_t pid = atoi(p->d_name);
+        if (pid <= 0 || pid == self)
+            continue;
+
+        char path[64];
+        snprintf(path, sizeof(path), "/proc/%d/fd", pid);
+        DIR *fds = opendir(path);
+        if (!fds)
+            continue;
+        struct dirent *f;
+        while ((f = readdir(fds))) {
+            char link[64], target[64];
+            snprintf(link, sizeof(link), "%s/%s", path, f->d_name);
+            ssize_t len = readlink(link, target, sizeof(target) - 1);
+            if (len <= 0)
+                continue;
+            target[len] = '\0';
+            if (!strncmp(target, "/dev/watchdog", 13) &&
+                !strstr(target, "(deleted)")) {
+                pids[n++] = pid;
+                break;
+            }
+        }
+        closedir(fds);
+    }
+    closedir(proc);
+    return n;
+}
+
+// Kill the feeders and take the watchdog over at once: the timer runs from
+// their last keepalive, as little as 10 s. Their exit is what frees the
+// device, so the open is retried until it does.
+static bool take_over_watchdog(pid_t *pids, int n) {
+    for (int i = 0; i < n; i++)
+        kill(pids[i], SIGKILL);
+
+    for (int i = 0; i < 60 && wdt_fd < 0; i++) {
+        wdt_fd = open("/dev/watchdog", O_WRONLY);
+        if (wdt_fd < 0)
+            usleep(50 * 1000);
+    }
+    if (wdt_fd < 0) {
+        fprintf(stderr, "Cannot take over the watchdog: %s\n", strerror(errno));
+        return false;
+    }
+    feed_watchdog();
+    // Room for a slow erase; best effort, the default can be 10 s
+    int timeout = 60;
+    ioctl(wdt_fd, WDIOC_SETTIMEOUT, &timeout);
+    feed_watchdog();
+    printf("Took over the watchdog\n");
+    return true;
+}
+
+// SIGKILL to every userspace process but init and ourselves. Not kill(-1):
+// that also reaches the kernel threads which accept signals, such as a jffs2
+// garbage collector, and those are not ours to stop. A kernel thread has no
+// executable.
+static int kill_userspace() {
+    DIR *proc = opendir("/proc");
+    if (!proc)
+        return 0;
+
+    int killed = 0;
+    pid_t self = getpid();
+    struct dirent *p;
+    while ((p = readdir(proc))) {
+        pid_t pid = atoi(p->d_name);
+        if (pid <= 1 || pid == self)
+            continue;
+
+        char path[64], exe[16];
+        snprintf(path, sizeof(path), "/proc/%d/exe", pid);
+        if (readlink(path, exe, sizeof(exe)) <= 0)
+            continue;
+        if (!kill(pid, SIGKILL))
+            killed++;
+    }
+    closedir(proc);
+    return killed;
+}
+
+// init cannot be killed or stopped, and it wakes to reap everything
+// kill_userspace() leaves behind. Mapping its executable and libraries here,
+// under mlockall(MCL_FUTURE), locks their page-cache pages, which are the
+// very pages init faults on, so it never reads them from the flash again.
+static void pin_init_mappings() {
+    FILE *fp = fopen("/proc/1/maps", "r");
+    if (!fp)
+        return;
+
+    char seen[16][128];
+    int nseen = 0;
+    char line[256];
+    while (nseen < 16 && fgets(line, sizeof line, fp)) {
+        char *path = strchr(line, '/');
+        if (!path || strstr(path, "(deleted)"))
+            continue;
+        path[strcspn(path, "\n")] = '\0';
+
+        bool dup = false;
+        for (int i = 0; i < nseen && !dup; i++)
+            dup = !strcmp(seen[i], path);
+        if (dup)
+            continue;
+        snprintf(seen[nseen++], sizeof(seen[0]), "%s", path);
+
+        int fd = open(path, O_RDONLY);
+        struct stat st;
+        if (fd < 0 || fstat(fd, &st) || !st.st_size) {
+            if (fd >= 0)
+                close(fd);
+            continue;
+        }
+        // Deliberately never unmapped: the lock must outlive this function
+        if (mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0) == MAP_FAILED)
+            fprintf(stderr, "Cannot pin %s: %s\n", path, strerror(errno));
+        close(fd);
+    }
+    fclose(fp);
+}
+
+static bool is_flash_fs(const char *dev, const char *fs) {
+    return !strncmp(dev, "/dev/mtdblock", 13) || !strcmp(fs, "jffs2") ||
+           !strcmp(fs, "ubifs") || !strcmp(fs, "yaffs2") ||
+           !strcmp(fs, "overlay");
+}
+
+// Remount every writable flash-backed filesystem read-only, "/" included, in
+// reverse mount order so an overlay goes before its upper layer. A read-only
+// jffs2 stops its garbage collector. One that stays writable can write over
+// the image, so that is a failure.
+static bool remount_flash_ro() {
+    FILE *fp = fopen("/proc/mounts", "r");
+    if (!fp) {
+        fprintf(stderr, "Cannot read /proc/mounts: %s\n", strerror(errno));
+        return false;
+    }
+
+    char paths[32][80];
+    int n = 0;
+    char line[256];
+    while (n < 32 && fgets(line, sizeof line, fp)) {
+        char dev[80], path[80], fs[80], attrs[80];
+        if (sscanf(line, "%79s %79s %79s %79s", dev, path, fs, attrs) != 4)
+            continue;
+        if (strncmp(attrs, "rw", 2) || !is_flash_fs(dev, fs))
+            continue;
+        strcpy(paths[n++], path);
+    }
+    fclose(fp);
+
+    bool ok = true;
+    while (n--) {
+        feed_watchdog();
+        if (mount(NULL, paths[n], NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
+            fprintf(stderr, "Cannot remount '%s' read-only: %s\n", paths[n],
+                    strerror(errno));
+            ok = false;
+        } else
+            printf("Remounted %s read-only\n", paths[n]);
+    }
+    return ok;
+}
+
+// First half of the isolation, the part that can still back out: nothing has
+// been stopped yet when it fails.
+static bool pin_to_ram() {
+    // Nothing of ours may be paged in from the flash after this point
+    if (mlockall(MCL_CURRENT | MCL_FUTURE)) {
+        fprintf(stderr, "Cannot lock ipctool into memory: %s, aborting\n",
+                strerror(errno));
+        return false;
+    }
+    pin_init_mappings();
+    return true;
+}
+
+// Second half. From here on the system has no services left, so a failure
+// cannot return to the shell: the caller reboots, which on this path is safe
+// because nothing has been erased yet.
+static bool isolate_from_flash() {
+    printf("Stopping every other process before touching the flash.\n"
+           "A network session will drop here; flashing continues and the\n"
+           "device reboots when done. Progress goes to the serial console.\n");
+    fflush(stdout);
+
+    signal(SIGHUP, SIG_IGN);
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGINT, SIG_IGN);
+    signal(SIGTERM, SIG_IGN);
+
+    // A terminal (an ssh or telnet pty, most likely) is about to go away; a
+    // redirect to a file keeps working and is left alone
+    int con = open("/dev/console", O_WRONLY | O_NOCTTY);
+    if (con < 0)
+        con = open("/dev/null", O_WRONLY);
+    if (con >= 0) {
+        if (isatty(STDOUT_FILENO))
+            dup2(con, STDOUT_FILENO);
+        if (isatty(STDERR_FILENO))
+            dup2(con, STDERR_FILENO);
+        if (con > STDERR_FILENO)
+            close(con);
+    }
+
     sync();
+
+    pid_t feeders[8];
+    int nfeeders = watchdog_holders(feeders, 8);
+    if (nfeeders && !take_over_watchdog(feeders, nfeeders))
+        return false;
+
+    // SIGKILL and not SIGTERM, because a graceful exit is itself harmful here:
+    // `udhcpc -R` releases the lease and deconfigures the interface, which
+    // leaves a log on a network share, and every write to it, waiting on a
+    // timeout. Later passes catch what was forked or respawned meanwhile.
+    for (int pass = 0; pass < 3 && kill_userspace(); pass++) {
+        feed_watchdog();
+        sleep(1);
+    }
+    feed_watchdog();
+
+    // Remounting read-only has flushed the flash filesystems. No sync() after
+    // this point: it would also wait on network filesystems.
+    if (!remount_flash_ro())
+        return false;
+    umount_all();
+    feed_watchdog();
     return true;
 }
 
@@ -471,6 +741,7 @@ static bool ubi_restore_partition(int mtd_num, stored_mtd_t *vols, int nvols,
     struct mtd_info_user mtd_info;
     if (ioctl(mtd_fd, MEMGETINFO, &mtd_info) == 0) {
         for (uint32_t off = 0; off < mtd_info.size; off += mtd_info.erasesize) {
+            feed_watchdog();
             mtd_erase_block(mtd_fd, off, mtd_info.erasesize);
         }
     }
@@ -544,6 +815,7 @@ static bool ubi_restore_partition(int mtd_num, stored_mtd_t *vols, int nvols,
 
         size_t written = 0;
         while (written < vols[v].size) {
+            feed_watchdog();
             ssize_t n =
                 write(vol_fd, vols[v].data + written, vols[v].size - written);
             if (n <= 0) {
@@ -620,6 +892,7 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
                 mtd->env_offset == this_offset)
                 op = 's';
             if (!simulate) {
+                feed_watchdog();
                 print_flash_progress(c, cnt, op);
                 if (op != 's') {
 #if 0
@@ -646,6 +919,8 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
     return true;
 }
 
+// Filesystems stay mounted here: they are unmounted by isolate_from_flash()
+// once nothing can write to them any more.
 static bool free_resources(bool force) {
     if (is_xm_board()) {
         if (!xm_kill_stuff(force)) {
@@ -653,13 +928,38 @@ static bool free_resources(bool force) {
             return false;
         }
     }
-    umount_all();
+    sync();
     return true;
 }
 
 static void reboot_with_msg() {
     printf("System will be restarted...\n");
+    fflush(stdout);
+    fflush(stderr);
+    // reboot() does not flush: without this a log redirected to a network
+    // share loses its ending. Only the log, not a global sync(), and from a
+    // child given 5 s, as either could wait on an unreachable share forever.
+    pid_t child = fork();
+    if (child == 0) {
+        fsync(STDOUT_FILENO);
+        fsync(STDERR_FILENO);
+        _exit(0);
+    }
+    for (int i = 0; child > 0 && i < 50; i++) {
+        feed_watchdog();
+        if (waitpid(child, NULL, WNOHANG) == child)
+            break;
+        usleep(100 * 1000);
+    }
     reboot(RB_AUTOBOOT);
+}
+
+// After isolate_from_flash() there is nothing to return to: every service is
+// gone and the flash is read-only or partly rewritten. Rebooting is the one
+// way back, and when nothing was erased yet it is a clean one.
+static void reboot_after_failure(const char *what) {
+    fprintf(stderr, "%s failed after all processes were stopped\n", what);
+    reboot_with_msg();
 }
 
 static int restore_backup(const char *arg, bool skip_env, bool force) {
@@ -797,8 +1097,12 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
 
         if (!do_flash("Analyzing", mtdbackup, &mtd, skip_env, true))
             goto bailout;
-        if (!do_flash("Restoring", mtdbackup, &mtd, skip_env, false))
+        if (!pin_to_ram())
             goto bailout;
+        if (!isolate_from_flash())
+            reboot_after_failure("Preparing the flash");
+        if (!do_flash("Restoring", mtdbackup, &mtd, skip_env, false))
+            reboot_after_failure("Restoring");
 
         reboot_with_msg();
 
@@ -806,7 +1110,7 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
 
         free(backup);
     }
-    return 0;
+    return 1;
 }
 
 #define MAX_MTDPARTS 1024
@@ -1123,11 +1427,14 @@ static int do_upgrade(const char *filename, bool force) {
         ret = 4;
         goto bailout;
     }
-    if (!do_flash("Upgrading", mtdwrite, &mtd, false, false)) {
-        printf("Early exit, check the logs\n");
+    if (!pin_to_ram()) {
         ret = 4;
         goto bailout;
     }
+    if (!isolate_from_flash())
+        reboot_after_failure("Preparing the flash");
+    if (!do_flash("Upgrading", mtdwrite, &mtd, false, false))
+        reboot_after_failure("Upgrading");
 
     char value[1024];
 

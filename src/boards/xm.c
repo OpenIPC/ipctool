@@ -249,32 +249,37 @@ static uint32_t CV200_WDG_CONTROL = 0x20040000 + 0x0008;
 static uint32_t CV300_WDG_CONTROL = 0x12080000 + 0x0008;
 static uint32_t EV300_WDG_CONTROL = 0x12030000 + 0x0008;
 
+// A firmware ships one watchdog module or the other, so one that is not
+// loaded is not a failure: only one that is loaded and stays is.
+static bool unload_module(const char *name) {
+    if (delete_module(name, 0) == 0 || errno == ENOENT)
+        return true;
+    fprintf(stderr, "delete_module %s: %s\n", name, strerror(errno));
+    return false;
+}
+
 static bool xm_disable_watchdog() {
     getchipname();
     uint32_t zero = 0;
-    int ret = 0;
+    bool ok = true;
     switch (chip_generation) {
     case HISI_V1:
     case HISI_V2:
         mem_reg(CV200_WDG_CONTROL, &zero, OP_WRITE);
         break;
     case HISI_V3:
-        ret = delete_module("xm_watchdog", 0);
+        ok = unload_module("xm_watchdog");
         mem_reg(CV300_WDG_CONTROL, &zero, OP_WRITE);
         break;
     case HISI_V4:
-        ret = delete_module("hi3516ev200_wdt", 0);
-        ret |= delete_module("open_wdt", 0);
+        ok = unload_module("hi3516ev200_wdt");
+        ok &= unload_module("open_wdt");
         mem_reg(EV300_WDG_CONTROL, &zero, OP_WRITE);
         break;
     default:
         return false;
     }
-    if (ret == -1) {
-        fprintf(stderr, "delete_module, errno: %s\n", strerror(errno));
-        return false;
-    }
-    return true;
+    return ok;
 }
 
 bool xm_kill_stuff(bool force) {
