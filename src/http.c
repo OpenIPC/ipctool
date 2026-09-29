@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -28,122 +29,65 @@ static int get_http_respcode(const char *inpbuf) {
     return code;
 }
 
-static void get_http_date(const char *inpbuf, const char *end, char *buf) {
-    while (end - inpbuf >= 15) {
-        if (!strncmp(inpbuf, "Last-Modified: ", 15)) {
-            const char *ptr = inpbuf + 15;
-            for (int i = 0; i < DATE_BUF_LEN; i++) {
-                if (ptr[i] == '\n')
-                    break;
-                buf[i] = ptr[i];
-            }
-        }
-        for (;;) {
-            if (inpbuf == end)
-                return;
-            inpbuf++;
-            if (*(inpbuf - 1) == '\n')
-                break;
-        }
-    }
-}
-
-static int get_http_payload_len(const char *inpbuf, const char *end) {
-    while (end - inpbuf >= 16) {
-        if (!strncmp(inpbuf, "Content-Length: ", 16))
-            return strtol(inpbuf + 16, NULL, 10);
-        for (;;) {
-            if (inpbuf == end)
-                return 0;
-            inpbuf++;
-            if (*(inpbuf - 1) == '\n')
-                break;
-        }
-    }
-    return 0;
-}
-
+/* Connect within timeout_ms: 0 when connected, -1 otherwise (errno says
+ * why). A non-blocking connect nearly always completes through poll(); the
+ * old version returned poll()'s 1 for that case, which the caller read as a
+ * failure, so an upload reached the server only when connect() happened to
+ * finish at once. */
 int connect_with_timeout(int sockfd, const struct sockaddr *addr,
                          socklen_t addrlen, unsigned int timeout_ms) {
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    if (flags < 0 || fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
+        return -1;
+
     int rc = 0;
-    // Set O_NONBLOCK
-    int sockfd_flags_before;
-    if ((sockfd_flags_before = fcntl(sockfd, F_GETFL, 0) < 0))
-        return -1;
-    if (fcntl(sockfd, F_SETFL, sockfd_flags_before | O_NONBLOCK) < 0)
-        return -1;
-    // Start connecting (asynchronously)
-    do {
-        if (connect(sockfd, addr, addrlen) < 0) {
-            // Did connect return an error? If so, we'll fail.
-            if ((errno != EWOULDBLOCK) && (errno != EINPROGRESS)) {
-                rc = -1;
-            }
-            // Otherwise, we'll wait for it to complete.
-            else {
-                // Set a deadline timestamp 'timeout' ms from now (needed b/c
-                // poll can be interrupted)
-                struct timespec now;
-                if (clock_gettime(CLOCK_MONOTONIC, &now) < 0) {
+    if (connect(sockfd, addr, addrlen) < 0) {
+        if (errno != EINPROGRESS && errno != EWOULDBLOCK) {
+            rc = -1;
+        } else {
+            struct timespec start, now;
+            clock_gettime(CLOCK_MONOTONIC, &start);
+            for (;;) {
+                clock_gettime(CLOCK_MONOTONIC, &now);
+                long spent = (now.tv_sec - start.tv_sec) * 1000l +
+                             (now.tv_nsec - start.tv_nsec) / 1000000l;
+                if (spent >= (long)timeout_ms) {
+                    errno = ETIMEDOUT;
                     rc = -1;
                     break;
                 }
-                struct timespec deadline = {.tv_sec = now.tv_sec,
-                                            .tv_nsec = now.tv_nsec +
-                                                       timeout_ms * 1000000l};
-                // Wait for the connection to complete.
-                do {
-                    // Calculate how long until the deadline
-                    if (clock_gettime(CLOCK_MONOTONIC, &now) < 0) {
-                        rc = -1;
-                        break;
-                    }
-                    int ms_until_deadline =
-                        (int)((deadline.tv_sec - now.tv_sec) * 1000l +
-                              (deadline.tv_nsec - now.tv_nsec) / 1000000l);
-                    if (ms_until_deadline < 0) {
-                        rc = 0;
-                        break;
-                    }
-                    // Wait for connect to complete (or for the timeout
-                    // deadline)
-                    struct pollfd pfds[] = {{.fd = sockfd, .events = POLLOUT}};
-                    rc = poll(pfds, 1, ms_until_deadline);
-                    // If poll 'succeeded', make sure it *really* succeeded
-                    if (rc > 0) {
-                        int error = 0;
-                        socklen_t len = sizeof(error);
-                        int retval = getsockopt(sockfd, SOL_SOCKET, SO_ERROR,
-                                                &error, &len);
-                        if (retval == 0)
-                            errno = error;
-                        if (error != 0)
-                            rc = -1;
-                    }
+                struct pollfd pfd = {.fd = sockfd, .events = POLLOUT};
+                int n = poll(&pfd, 1, (int)(timeout_ms - spent));
+                if (n < 0 && errno == EINTR)
+                    continue;
+                if (n <= 0) {
+                    if (n == 0)
+                        errno = ETIMEDOUT;
+                    rc = -1;
+                    break;
                 }
-                // If poll was interrupted, try again.
-                while (rc == -1 && errno == EINTR);
-                // Did poll timeout? If so, fail.
-                if (rc == 0) {
-                    errno = ETIMEDOUT;
+                int error = 0;
+                socklen_t len = sizeof(error);
+                if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len) < 0 ||
+                    error != 0) {
+                    if (error)
+                        errno = error;
                     rc = -1;
                 }
+                break;
             }
         }
-    } while (0);
-    // Restore original O_NONBLOCK state
-    if (fcntl(sockfd, F_SETFL, sockfd_flags_before) < 0)
+    }
+    if (fcntl(sockfd, F_SETFL, flags) < 0)
         return -1;
-    // Success
     return rc;
 }
 
 #define CONNECT_TIMEOUT 3000 // milliseconds
 
-static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
+static int common_connect(const char *hostname, int port, nservers_t *ns,
                           int *s) {
     int ret = ERR_GENERAL;
-    (void)uri;
 
     a_records_t srv;
     if (!resolv_name(ns, hostname, &srv)) {
@@ -155,7 +99,7 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(80);
+    addr.sin_port = htons(port);
 
     for (size_t i = 0; i < srv.len; i++) {
         memcpy(&addr.sin_addr, &srv.ipv4_addr[i], sizeof(uint32_t));
@@ -167,8 +111,8 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
 #endif
 
         if (connect_with_timeout(*s, (struct sockaddr *)&addr, sizeof(addr),
-                                 CONNECT_TIMEOUT) != 1) {
-            ret = ERR_GENERAL;
+                                 CONNECT_TIMEOUT) == 0) {
+            ret = ERR_GENERAL; // connected: the caller's success value
             break;
         }
         close(*s);
@@ -178,131 +122,102 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
     return ret;
 }
 
-#define MAKE_ERROR(err) (char *)(-err)
-
-#define SNPRINTF(...)                                                          \
-    ptr += snprintf(ptr, sizeof(buf) - (ptr - buf), __VA_ARGS__)
-
-char *download(char *hostname, const char *uri, const char *useragent,
-               nservers_t *ns, size_t *len, char *date, bool progress) {
-    int s, ret;
-    if ((ret = common_connect(hostname, uri, ns, &s) != ERR_GENERAL)) {
-        return MAKE_ERROR(ret);
+// send(), not write(): a server that answers early (413, 429) and closes
+// must not kill ipctool with SIGPIPE before it can print the reason.
+static int write_all(int s, const char *data, size_t len) {
+    while (len) {
+        ssize_t n = send(s, data, len, MSG_NOSIGNAL);
+        if (n < 0 && errno == EINTR)
+            continue;
+        if (n <= 0)
+            return -1;
+        data += n;
+        len -= (size_t)n;
     }
-
-    char buf[4096] = "GET /";
-    char *ptr = buf + 5;
-    if (uri) {
-        SNPRINTF("%s", uri);
-    }
-    SNPRINTF(" HTTP/1.0\r\nHost: %s\r\n", hostname);
-    if (useragent)
-        SNPRINTF("User-Agent: %s\r\n", useragent);
-    SNPRINTF("\r\n");
-    int tosend = ptr - buf;
-    int nsent = send(s, buf, tosend, 0);
-    if (nsent != tosend)
-        return MAKE_ERROR(ERR_SEND);
-
-    int header = 1;
-    int nrecvd;
-    char *binbuf = NULL, *sptr;
-    int percent = 0;
-    while ((nrecvd = recv(s, buf, sizeof(buf), 0))) {
-        char *ptr = buf;
-        if (header) {
-            ptr = strstr(buf, "\r\n\r\n");
-            if (!ptr)
-                continue;
-
-            int rcode = get_http_respcode(buf);
-            if (rcode / 100 != 2) {
-                close(s);
-                return MAKE_ERROR(rcode / 100 * 10 + rcode % 10);
-            }
-            *len = get_http_payload_len(buf, ptr);
-            if (!*len) {
-                fprintf(stderr, "No length found, aborting...\n");
-                close(s);
-                return MAKE_ERROR(ERR_HTTP);
-            }
-            get_http_date(buf, ptr, date);
-            binbuf = malloc(*len);
-            if (!binbuf) {
-                close(s);
-                return MAKE_ERROR(ERR_MALLOC);
-            }
-            sptr = binbuf;
-
-            header = 0;
-            ptr += 4;
-            nrecvd -= ptr - buf;
-        }
-
-        if (!header) {
-            if (progress) {
-                int np = 100 * (sptr - binbuf) / *len;
-                if (np != percent) {
-                    printf("Downloading %d%%\r", np);
-                    fflush(stdout);
-                    percent = np;
-                }
-            }
-            // TODO: avoid copying?
-            memcpy(sptr, ptr, nrecvd);
-            sptr += nrecvd;
-        }
-    }
-
-    return binbuf;
+    return 0;
 }
 
-int upload(const char *hostname, const char *uri, nservers_t *ns,
-           span_t blocks[MAX_MTDBLOCKS + 1], size_t blocks_num) {
-    int s, ret;
-    if ((ret = common_connect(hostname, uri, ns, &s) != ERR_GENERAL)) {
-        return ret;
-    }
+int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
+              const char *content_type, const span_t *spans, size_t nspans,
+              size_t total, char *resp, size_t cap, int *status) {
+    int s;
+    int rc = common_connect(hostname, port, ns, &s);
+    /* common_connect() answers ERR_GENERAL when it is connected. */
+    if (rc != ERR_GENERAL)
+        return rc;
 
-    size_t len = 0;
-    for (size_t i = 0; i < blocks_num; i++) {
-        len += blocks[i].len;
-        // add len header
-        if (i)
-            len += sizeof(uint32_t);
-    }
+    struct timeval tv = {.tv_sec = 120};
+    setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    char buf[4096] = "PUT /";
-    if (uri) {
-        strncat(buf, uri, sizeof(buf) - strlen(buf) - 1);
-    }
-    strncat(buf, " HTTP/1.0\r\nHost: ", sizeof(buf) - strlen(buf) - 1);
-    strncat(buf, hostname, sizeof(buf) - strlen(buf) - 1);
-    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf) - 1,
-             "\r\n"
-             "Content-type: application/octet-stream\r\n"
-             "Connection: close\r\n"
-             "Content-Length: %zu\r\n"
-             "\r\n",
-             len);
-    int tosent = strlen(buf);
-    int nsent = send(s, buf, tosent, 0);
-    if (nsent != tosent)
+    char host[300];
+    if (port == 80)
+        snprintf(host, sizeof(host), "%s", hostname);
+    else
+        snprintf(host, sizeof(host), "%s:%d", hostname, port);
+    char head[1024];
+    int hl = snprintf(head, sizeof(head),
+                      "POST %s HTTP/1.0\r\n"
+                      "Host: %s\r\n"
+                      "User-Agent: ipctool\r\n"
+                      "Accept: application/json\r\n"
+                      "Content-Type: %s\r\n"
+                      "Content-Length: %zu\r\n"
+                      "Connection: close\r\n"
+                      "\r\n",
+                      path, host, content_type, total);
+    if (hl <= 0 || (size_t)hl >= sizeof(head) || write_all(s, head, hl)) {
+        close(s);
         return ERR_SEND;
-
-    for (size_t i = 0; i < blocks_num; i++) {
-        if (i) {
-            uint32_t len_header = blocks[i].len;
-            int ret = write(s, &len_header, sizeof(len_header));
-        }
-
-        int nbytes = write(s, blocks[i].data, blocks[i].len);
-        if (nbytes == -1)
-            break;
-#if 0
-	printf("[%d] sent %d bytes\n", i, nbytes);
-#endif
     }
 
+    size_t sent = 0;
+    int shown = -1;
+    for (size_t i = 0; i < nspans; i++) {
+        /* In 64 KB pieces, so a 16 MB partition shows its progress. */
+        for (size_t off = 0; off < spans[i].len;) {
+            size_t chunk = spans[i].len - off;
+            if (chunk > 65536)
+                chunk = 65536;
+            if (write_all(s, spans[i].data + off, chunk)) {
+                // The server may have answered and closed: read what it
+                // said, so a refusal reaches the user as a reason.
+                if (shown >= 0)
+                    fprintf(stderr, "\n");
+                goto answer;
+            }
+            off += chunk;
+            sent += chunk;
+            if (total > (1 << 20)) {
+                int pct = (int)(100.0 * sent / total);
+                if (pct != shown) {
+                    fprintf(stderr, "\rSending %d%%", pct);
+                    shown = pct;
+                }
+            }
+        }
+    }
+    if (shown >= 0)
+        fprintf(stderr, "\n");
+
+answer:;
+    size_t got = 0;
+    for (;;) {
+        ssize_t n = recv(s, resp + got, cap - 1 - got, 0);
+        if (n < 0 && errno == EINTR)
+            continue;
+        if (n <= 0)
+            break;
+        got += (size_t)n;
+        if (got == cap - 1)
+            break;
+    }
+    close(s);
+    resp[got] = '\0';
+    *status = get_http_respcode(resp);
+    char *body = strstr(resp, "\r\n\r\n");
+    if (*status < 0 || !body)
+        return got ? ERR_HTTP : ERR_SEND;
+    memmove(resp, body + 4, strlen(body + 4) + 1);
     return 0;
 }

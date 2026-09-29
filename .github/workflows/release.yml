@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: write
+  # the OIDC token openipc.org checks before it takes a build (below)
+  id-token: write
 
 jobs:
   # Create (or reuse) the GitHub release exactly once, before the build
@@ -205,3 +207,28 @@ jobs:
           TG_HEADER=$(echo -e "\r\nTarget: ${{ matrix.target }} \r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9C\x85 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendDocument \
             -F chat_id=$TG_CHANNEL -F document="@build/ipctool" -F caption="$TG_HEADER"
+
+      # openipc.org serves ipctool to cameras on stock firmware over plain HTTP
+      # (http://openipc.org/ipctool, for uget) and over NFS, since they have no
+      # curl and no TLS. It takes each master build once, over a GitHub OIDC
+      # token (website: service/internal/tools/PUSH.md). Off until the
+      # repository variable OPENIPC_ORG_TOOLS_PUSH is "true", which is set once
+      # openipc.org answers the endpoint in production.
+      #
+      # Last, and allowed to fail: the release, S3 and Telegram are done by
+      # now, and an openipc.org outage must not fail a good build. A failure
+      # still shows on the step.
+      - name: Push to openipc.org
+        if: steps.build.outcome == 'success' && env.HEAD_TAG == '' && github.ref == 'refs/heads/master' && vars.OPENIPC_ORG_TOOLS_PUSH == 'true'
+        continue-on-error: true
+        run: |
+          T=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://openipc.org" | jq -r .value)
+          if [ -z "$T" ] || [ "$T" = null ]; then
+            echo "::error::no OIDC token for openipc.org"; exit 1
+          fi
+          curl -fsS --retry 3 -X PUT -H "Authorization: Bearer $T" \
+            -H "X-Content-SHA256: $(sha256sum build/ipctool | cut -d' ' -f1)" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @build/ipctool \
+            "https://openipc.org/api/v1/tools/ipctool${{ matrix.asset_suffix }}?version=$GIT_HASH"
