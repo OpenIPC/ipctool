@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: write
+  # the OIDC token openipc.org checks before it takes a build (below)
+  id-token: write
 
 jobs:
   # Create (or reuse) the GitHub release exactly once, before the build
@@ -178,6 +180,23 @@ jobs:
           asset_name: ipcinfo${{ matrix.asset_suffix }}
           tag: ${{ env.TAG_NAME }}
           overwrite: true
+
+      # openipc.org serves ipctool to cameras on stock firmware over plain HTTP
+      # (http://openipc.org/ipctool, for uget) and over NFS, since they have no
+      # curl and no TLS. It takes each master build once, over a GitHub OIDC
+      # token (website: service/internal/tools/PUSH.md). Off until the
+      # repository variable OPENIPC_ORG_TOOLS_PUSH is "true", which is set once
+      # openipc.org answers the endpoint in production.
+      - name: Push to openipc.org
+        if: steps.build.outcome == 'success' && env.HEAD_TAG == '' && github.ref == 'refs/heads/master' && vars.OPENIPC_ORG_TOOLS_PUSH == 'true'
+        run: |
+          T=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://openipc.org" | jq -r .value)
+          curl -fsS --retry 3 -X PUT -H "Authorization: Bearer $T" \
+            -H "X-Content-SHA256: $(sha256sum build/ipctool | cut -d' ' -f1)" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @build/ipctool \
+            "https://openipc.org/api/v1/tools/ipctool${{ matrix.asset_suffix }}?version=$GIT_HASH"
 
       - name: Publish dev build on S3
         if: matrix.publish_s3 && steps.build.outcome == 'success' && env.HEAD_TAG == ''
