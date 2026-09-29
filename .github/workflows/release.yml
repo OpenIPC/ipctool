@@ -227,8 +227,15 @@ jobs:
           if [ -z "$T" ] || [ "$T" = null ]; then
             echo "::error::no OIDC token for openipc.org"; exit 1
           fi
-          curl -fsS --retry 3 -X PUT -H "Authorization: Bearer $T" \
+          # 200 and nothing else: curl -f passes a redirect, and a 302 to the
+          # home page once hid that the push reached nothing.
+          code=$(curl -sS --retry 3 -o /tmp/push.json -w '%{http_code}' -X PUT \
+            -H "Authorization: Bearer $T" \
             -H "X-Content-SHA256: $(sha256sum build/ipctool | cut -d' ' -f1)" \
             -H "Content-Type: application/octet-stream" \
             --data-binary @build/ipctool \
-            "https://openipc.org/api/v1/tools/ipctool${{ matrix.asset_suffix }}?version=$GIT_HASH"
+            "https://openipc.org/api/v1/tools/ipctool${{ matrix.asset_suffix }}?version=$GIT_HASH")
+          cat /tmp/push.json; echo
+          if [ "$code" != 200 ]; then
+            echo "::error::openipc.org answered $code to the push"; exit 1
+          fi
