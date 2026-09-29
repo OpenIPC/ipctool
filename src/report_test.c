@@ -57,10 +57,12 @@ int main(int argc, char **argv) {
     size_t n;
     char *body = flatten(b, &n);
     CHECK(n == b->total, "Content-Length %zu, body %zu", b->total, n);
-    CHECK(!strncmp(body, "--ipctool-test\r\n", 16), "does not open with the boundary");
+    CHECK(!strncmp(body, "--ipctool-test\r\n", 16),
+          "does not open with the boundary");
     CHECK(n > 20 && !memcmp(body + n - 18, "--ipctool-test--\r\n", 18),
           "does not close with the final boundary");
-    CHECK(FIND(body, n, "name=\"consent\"\r\n\r\nprivate\r\n") != NULL, "consent field");
+    CHECK(FIND(body, n, "name=\"consent\"\r\n\r\nprivate\r\n") != NULL,
+          "consent field");
 
     /* The backup part is the file format: YAML, NUL, then LE length + bytes
      * per partition, and nothing else before the CRLF and boundary. */
@@ -70,12 +72,15 @@ int main(int argc, char **argv) {
     CHECK(data != NULL, "backup part has no header end");
     if (data) {
         data += 4;
-        CHECK(!memcmp(data, yaml, sizeof(yaml)), "backup does not start with the YAML and its NUL");
+        CHECK(!memcmp(data, yaml, sizeof(yaml)),
+              "backup does not start with the YAML and its NUL");
         const unsigned char *l = (const unsigned char *)data + sizeof(yaml);
-        CHECK(l[0] == (70000 & 0xff) && l[1] == ((70000 >> 8) & 0xff) && l[2] == 1 && l[3] == 0,
+        CHECK(l[0] == (70000 & 0xff) && l[1] == ((70000 >> 8) & 0xff) &&
+                  l[2] == 1 && l[3] == 0,
               "first partition length is not little-endian 70000");
         const char *p = (const char *)l + 4 + 70000;
-        CHECK(!memcmp(p, "\x03\x00\x00\x00\x01\x02\x03\r\n--ipctool-test--\r\n", 25),
+        CHECK(!memcmp(p, "\x03\x00\x00\x00\x01\x02\x03\r\n--ipctool-test--\r\n",
+                      25),
               "second partition, or what follows it, is wrong");
     }
     if (argc > 1) {
@@ -91,16 +96,22 @@ int main(int argc, char **argv) {
     report_body_finish(b);
     body = flatten(b, &n);
     CHECK(n == b->total, "yaml-only length");
-    CHECK(FIND(body, n, "name=\"yaml\"; filename=\"ipctool.yml\"") != NULL, "yaml part");
+    CHECK(FIND(body, n, "name=\"yaml\"; filename=\"ipctool.yml\"") != NULL,
+          "yaml part");
     free(body);
     free(b);
 
     report_answer_t a;
-    report_parse_answer(201,
-                        "{\"id\":\"r-abcd2345\",\"receipt_url\":\"https://openipc.org/cameras/report/?id=r-abcd2345\","
-                        "\"identify\":{\"known\":true,\"matches\":[{\"manufacturer\":\"Xiongmai\",\"model\":\"50H20L\"}]}}",
-                        &a);
-    CHECK(!strcmp(a.id, "r-abcd2345") && a.known && !strcmp(a.match, "Xiongmai 50H20L"), "answer: %s %d %s", a.id, a.known, a.match);
+    report_parse_answer(
+        201,
+        "{\"id\":\"r-abcd2345\",\"receipt_url\":\"https://openipc.org/cameras/"
+        "report/?id=r-abcd2345\","
+        "\"identify\":{\"known\":true,\"matches\":[{\"manufacturer\":"
+        "\"Xiongmai\",\"model\":\"50H20L\"}]}}",
+        &a);
+    CHECK(!strcmp(a.id, "r-abcd2345") && a.known &&
+              !strcmp(a.match, "Xiongmai 50H20L"),
+          "answer: %s %d %s", a.id, a.known, a.match);
     report_parse_answer(429, "{\"error\":\"10 reports a day\"}", &a);
     CHECK(!strcmp(a.error, "10 reports a day") && !*a.id, "refusal");
     report_parse_answer(502, "<html>bad gateway</html>", &a);

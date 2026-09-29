@@ -299,13 +299,17 @@ catalogue](https://openipc.org/cameras/boards) this way:
 It prints the report, says where it goes, sends it, and answers with a
 receipt address. Nothing leaves the camera unless you run this. OpenIPC's
 maintainers review each report before any of it is published, and the public
-copy never shows the MAC, the chip's die ID or the cloud ID.
+copy of the report replaces the MAC, the chip's die ID and the cloud ID with
+hashes.
 
 To send the whole flash as well, for the people porting OpenIPC to the
 board, add `--backup`. The backup holds everything the camera stores:
 settings, Wi-Fi keys, passwords. It is kept private, readable only by the
-maintainers, unless you add `--public`. Either way ipctool asks you to type
-`yes` first; `--yes` skips the question, for scripts and agents.
+maintainers, unless you add `--public`. A public backup is the flash as it
+is: the MAC, die ID and cloud ID are in it in clear, along with everything
+else. Either way ipctool asks you to type `yes` before it reads anything;
+`--yes` skips the question, for scripts and agents. If any partition cannot
+be read, nothing is sent: a backup missing a partition is not the whole flash.
 
 ```console
 # ipctool upload --backup           # private: for the maintainers only

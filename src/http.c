@@ -29,78 +29,57 @@ static int get_http_respcode(const char *inpbuf) {
     return code;
 }
 
+/* Connect within timeout_ms: 0 when connected, -1 otherwise (errno says
+ * why). A non-blocking connect nearly always completes through poll(); the
+ * old version returned poll()'s 1 for that case, which the caller read as a
+ * failure, so an upload reached the server only when connect() happened to
+ * finish at once. */
 int connect_with_timeout(int sockfd, const struct sockaddr *addr,
                          socklen_t addrlen, unsigned int timeout_ms) {
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    if (flags < 0 || fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
+        return -1;
+
     int rc = 0;
-    // Set O_NONBLOCK
-    int sockfd_flags_before;
-    if ((sockfd_flags_before = fcntl(sockfd, F_GETFL, 0) < 0))
-        return -1;
-    if (fcntl(sockfd, F_SETFL, sockfd_flags_before | O_NONBLOCK) < 0)
-        return -1;
-    // Start connecting (asynchronously)
-    do {
-        if (connect(sockfd, addr, addrlen) < 0) {
-            // Did connect return an error? If so, we'll fail.
-            if ((errno != EWOULDBLOCK) && (errno != EINPROGRESS)) {
-                rc = -1;
-            }
-            // Otherwise, we'll wait for it to complete.
-            else {
-                // Set a deadline timestamp 'timeout' ms from now (needed b/c
-                // poll can be interrupted)
-                struct timespec now;
-                if (clock_gettime(CLOCK_MONOTONIC, &now) < 0) {
+    if (connect(sockfd, addr, addrlen) < 0) {
+        if (errno != EINPROGRESS && errno != EWOULDBLOCK) {
+            rc = -1;
+        } else {
+            struct timespec start, now;
+            clock_gettime(CLOCK_MONOTONIC, &start);
+            for (;;) {
+                clock_gettime(CLOCK_MONOTONIC, &now);
+                long spent = (now.tv_sec - start.tv_sec) * 1000l +
+                             (now.tv_nsec - start.tv_nsec) / 1000000l;
+                if (spent >= (long)timeout_ms) {
+                    errno = ETIMEDOUT;
                     rc = -1;
                     break;
                 }
-                struct timespec deadline = {.tv_sec = now.tv_sec,
-                                            .tv_nsec = now.tv_nsec +
-                                                       timeout_ms * 1000000l};
-                // Wait for the connection to complete.
-                do {
-                    // Calculate how long until the deadline
-                    if (clock_gettime(CLOCK_MONOTONIC, &now) < 0) {
-                        rc = -1;
-                        break;
-                    }
-                    int ms_until_deadline =
-                        (int)((deadline.tv_sec - now.tv_sec) * 1000l +
-                              (deadline.tv_nsec - now.tv_nsec) / 1000000l);
-                    if (ms_until_deadline < 0) {
-                        rc = 0;
-                        break;
-                    }
-                    // Wait for connect to complete (or for the timeout
-                    // deadline)
-                    struct pollfd pfds[] = {{.fd = sockfd, .events = POLLOUT}};
-                    rc = poll(pfds, 1, ms_until_deadline);
-                    // If poll 'succeeded', make sure it *really* succeeded
-                    if (rc > 0) {
-                        int error = 0;
-                        socklen_t len = sizeof(error);
-                        int retval = getsockopt(sockfd, SOL_SOCKET, SO_ERROR,
-                                                &error, &len);
-                        if (retval == 0)
-                            errno = error;
-                        if (error != 0)
-                            rc = -1;
-                    }
+                struct pollfd pfd = {.fd = sockfd, .events = POLLOUT};
+                int n = poll(&pfd, 1, (int)(timeout_ms - spent));
+                if (n < 0 && errno == EINTR)
+                    continue;
+                if (n <= 0) {
+                    if (n == 0)
+                        errno = ETIMEDOUT;
+                    rc = -1;
+                    break;
                 }
-                // If poll was interrupted, try again.
-                while (rc == -1 && errno == EINTR);
-                // Did poll timeout? If so, fail.
-                if (rc == 0) {
-                    errno = ETIMEDOUT;
+                int error = 0;
+                socklen_t len = sizeof(error);
+                if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len) < 0 ||
+                    error != 0) {
+                    if (error)
+                        errno = error;
                     rc = -1;
                 }
+                break;
             }
         }
-    } while (0);
-    // Restore original O_NONBLOCK state
-    if (fcntl(sockfd, F_SETFL, sockfd_flags_before) < 0)
+    }
+    if (fcntl(sockfd, F_SETFL, flags) < 0)
         return -1;
-    // Success
     return rc;
 }
 
@@ -132,8 +111,8 @@ static int common_connect(const char *hostname, int port, nservers_t *ns,
 #endif
 
         if (connect_with_timeout(*s, (struct sockaddr *)&addr, sizeof(addr),
-                                 CONNECT_TIMEOUT) != 1) {
-            ret = ERR_GENERAL;
+                                 CONNECT_TIMEOUT) == 0) {
+            ret = ERR_GENERAL; // connected: the caller's success value
             break;
         }
         close(*s);
@@ -143,9 +122,11 @@ static int common_connect(const char *hostname, int port, nservers_t *ns,
     return ret;
 }
 
+// send(), not write(): a server that answers early (413, 429) and closes
+// must not kill ipctool with SIGPIPE before it can print the reason.
 static int write_all(int s, const char *data, size_t len) {
     while (len) {
-        ssize_t n = write(s, data, len);
+        ssize_t n = send(s, data, len, MSG_NOSIGNAL);
         if (n < 0 && errno == EINTR)
             continue;
         if (n <= 0)
@@ -199,8 +180,11 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
             if (chunk > 65536)
                 chunk = 65536;
             if (write_all(s, spans[i].data + off, chunk)) {
-                close(s);
-                return ERR_SEND;
+                // The server may have answered and closed: read what it
+                // said, so a refusal reaches the user as a reason.
+                if (shown >= 0)
+                    fprintf(stderr, "\n");
+                goto answer;
             }
             off += chunk;
             sent += chunk;
@@ -216,6 +200,7 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
     if (shown >= 0)
         fprintf(stderr, "\n");
 
+answer:;
     size_t got = 0;
     for (;;) {
         ssize_t n = recv(s, resp + got, cap - 1 - got, 0);
@@ -232,7 +217,7 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
     *status = get_http_respcode(resp);
     char *body = strstr(resp, "\r\n\r\n");
     if (*status < 0 || !body)
-        return ERR_HTTP;
+        return got ? ERR_HTTP : ERR_SEND;
     memmove(resp, body + 4, strlen(body + 4) + 1);
     return 0;
 }

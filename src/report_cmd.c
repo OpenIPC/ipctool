@@ -55,11 +55,13 @@ static bool confirm(const char *what) {
 }
 
 int report_cmd(int argc, char **argv) {
-    const struct option opts[] = {
-        {"backup", no_argument, NULL, 'b'}, {"public", no_argument, NULL, 'p'},
-        {"yes", no_argument, NULL, 'y'},    {"note", required_argument, NULL, 'n'},
-        {"host", required_argument, NULL, 'H'}, {"help", no_argument, NULL, 'h'},
-        {NULL, 0, NULL, 0}};
+    const struct option opts[] = {{"backup", no_argument, NULL, 'b'},
+                                  {"public", no_argument, NULL, 'p'},
+                                  {"yes", no_argument, NULL, 'y'},
+                                  {"note", required_argument, NULL, 'n'},
+                                  {"host", required_argument, NULL, 'H'},
+                                  {"help", no_argument, NULL, 'h'},
+                                  {NULL, 0, NULL, 0}};
     bool with_backup = false, public_backup = false, yes = false;
     const char *note = NULL, *host = DEFAULT_HOST;
     int c;
@@ -101,31 +103,25 @@ int report_cmd(int argc, char **argv) {
             "\nThis sends the report above to http://%s%s, over plain HTTP "
             "(stock camera firmware has no TLS).\n"
             "It is reviewed before it is published, and the MAC, chip ID and "
-            "cloud ID in it are never shown.\n",
+            "cloud ID in the report are replaced with hashes.\n",
             host, REPORTS_PATH);
 
     span_t blocks[MAX_MTDBLOCKS + 1];
     size_t nblocks = 0;
     size_t flash = 0;
     if (with_backup) {
-        nblocks = backup_blocks(yaml, yaml_len, blocks);
-        for (size_t i = 1; i < nblocks; i++)
-            flash += blocks[i].len;
-        if (nblocks < 2) {
-            fprintf(stderr, "No flash partition could be read; nothing to back "
-                            "up.\n");
-            free(yaml);
-            return EXIT_FAILURE;
-        }
+        // Asked before anything is read: collecting the backup reads UBI
+        // volumes into memory, and a "no" should leave them untouched.
         fprintf(stderr,
-                "\nWith it goes a backup of the whole flash: %zu partitions, "
-                "%zu KB.\n"
-                "It holds everything the camera keeps: its settings, Wi-Fi "
-                "keys, passwords, cloud IDs.\n",
-                nblocks - 1, flash >> 10);
+                "\nWith it goes a backup of the whole flash. It holds "
+                "everything the camera keeps: its settings, Wi-Fi keys, "
+                "passwords, cloud IDs.\n");
         if (public_backup)
-            fprintf(stderr, "You chose --public: once reviewed, anyone can "
-                            "download this backup from openipc.org.\n");
+            fprintf(
+                stderr,
+                "You chose --public: once reviewed, anyone can download "
+                "this backup from openipc.org, and in it the MAC, chip ID, "
+                "cloud ID and everything else on the flash are in clear.\n");
         else
             fprintf(stderr, "It is kept private: only OpenIPC's maintainers "
                             "can read it. Add --public to share it.\n");
@@ -136,6 +132,21 @@ int report_cmd(int argc, char **argv) {
             free(yaml);
             return EXIT_FAILURE;
         }
+        size_t missed = 0;
+        nblocks = backup_blocks(yaml, yaml_len, blocks, &missed);
+        for (size_t i = 1; i < nblocks; i++)
+            flash += blocks[i].len;
+        if (missed || nblocks < 2) {
+            fprintf(stderr,
+                    "Not sent: %zu partition(s) of the flash could not be "
+                    "read, and a backup missing any of them is not the whole "
+                    "flash.\n",
+                    missed ? missed : (size_t)1);
+            free(yaml);
+            return EXIT_FAILURE;
+        }
+        fprintf(stderr, "Backing up %zu partitions, %zu KB.\n", nblocks - 1,
+                flash >> 10);
     }
 
     char boundary[48];

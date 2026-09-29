@@ -45,6 +45,7 @@ typedef struct {
     size_t count;
     span_t *blocks;
     size_t cap;
+    size_t missed; // partitions or UBI volumes that could not be read
 } mtd_backup_ctx;
 
 static bool cb_mtd_backup(int i, const char *name, struct mtd_info_user *mtd,
@@ -55,12 +56,18 @@ static bool cb_mtd_backup(int i, const char *name, struct mtd_info_user *mtd,
     if (ubi_num >= 0) {
         ubi_vol_info_t vols[MAX_UBI_VOLS];
         int nvols = enum_ubi_volumes(ubi_num, vols, MAX_UBI_VOLS);
-        for (int v = 0; v < nvols && c->count < c->cap; v++) {
+        for (int v = 0; v < nvols; v++) {
+            if (c->count == c->cap) {
+                c->missed++;
+                continue;
+            }
             size_t out_len = 0;
             char *buf = read_ubi_volume(ubi_num, vols[v].vol_id,
                                         vols[v].data_bytes, &out_len);
-            if (!buf)
+            if (!buf) {
+                c->missed++;
                 continue;
+            }
             c->blocks[c->count].data = buf;
             c->blocks[c->count].len = out_len;
             c->count++;
@@ -68,10 +75,16 @@ static bool cb_mtd_backup(int i, const char *name, struct mtd_info_user *mtd,
         return true;
     }
 
+    if (c->count == c->cap) {
+        c->missed++;
+        return true;
+    }
     int fd;
     char *addr = open_mtdblock(i, &fd, mtd->size, 0);
-    if (!addr)
+    if (!addr) {
+        c->missed++;
         return true;
+    }
 
     c->blocks[c->count].data = addr;
     c->blocks[c->count].len = mtd->size;
@@ -79,13 +92,16 @@ static bool cb_mtd_backup(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
-static int map_mtdblocks(span_t *blocks, size_t bl_len) {
+static int map_mtdblocks(span_t *blocks, size_t bl_len, size_t *missed) {
     mtd_backup_ctx mtd;
     mtd.blocks = blocks;
     mtd.cap = bl_len;
     mtd.count = 0;
+    mtd.missed = 0;
 
     enum_mtd_info(&mtd, cb_mtd_backup);
+    if (missed)
+        *missed = mtd.missed;
     return mtd.count;
 }
 
@@ -124,15 +140,20 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
     return 0;
 }
 
-size_t backup_blocks(const char *yaml, size_t yaml_len, span_t *blocks) {
+size_t backup_blocks(const char *yaml, size_t yaml_len, span_t *blocks,
+                     size_t *missed) {
     blocks[0].data = yaml;
     blocks[0].len = yaml_len + 1; // end string data with \0
-    return map_mtdblocks(blocks + 1, MAX_MTDBLOCKS) + 1;
+    return map_mtdblocks(blocks + 1, MAX_MTDBLOCKS, missed) + 1;
 }
 
 int do_backup(const char *yaml, size_t yaml_len, const char *filename) {
     span_t blocks[MAX_MTDBLOCKS + 1];
-    size_t bl_num = backup_blocks(yaml, yaml_len, blocks);
+    size_t missed = 0;
+    size_t bl_num = backup_blocks(yaml, yaml_len, blocks, &missed);
+    if (missed)
+        fprintf(stderr, "Warning: %zu partition(s) could not be read and are "
+                        "not in the backup\n", missed);
     return save_file(filename, blocks, bl_num);
 }
 
