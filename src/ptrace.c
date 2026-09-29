@@ -502,6 +502,192 @@ static void hisi_vi_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
     }
 }
 
+/*
+ * IVE built-in XNN engine (Hi3516EV200/EV300, Goke V4): these SoCs have no
+ * NNIE — CNN inference runs on the IVE's XNN unit through /dev/ive via the
+ * private mpi_ive_xnn_* API. Decoding the loadmodel ioctl recovers a model's
+ * input geometry and layer list straight off the wire — the configuration a
+ * source-less vendor detector (e.g. XiongMai Sofia's SSH face model,
+ * /usr/res/fd.bin) never spells out on disk. Buffer + OMS layout are from
+ * OpenIPC/openhisilicon kernel/ive_neo (ive_xnn_loadmodel) and
+ * docs of the XNN ioctl RE; the geometry lives in the OMS "Preproc" layer.
+ */
+#define IVE_XNN_LOADMODEL 0xc8a04636u
+
+/* OMS segment-header field offsets (bytes) */
+#define OMS_LAYER_NUM 50
+#define OMS_SRC_NUM 52
+#define OMS_DST_NUM 53
+
+static unsigned oms_layer_desc_size(unsigned char t) {
+    switch (t) {
+    case 0:
+        return 80; /* Conv    */
+    case 1:
+        return 48; /* Flatten */
+    case 2:
+        return 64; /* FC      */
+    case 3:
+        return 96; /* Eltwise */
+    case 4:
+        return 64; /* Unpack  */
+    case 5:
+        return 48; /* Preproc */
+    case 6:
+        return 32; /* DMA     */
+    default:
+        return 0;
+    }
+}
+
+static const char *oms_layer_name(unsigned char t) {
+    static const char *n[] = {"conv",   "flatten", "fc", "eltwise",
+                              "unpack", "preproc", "dma"};
+    return t < 7 ? n[t] : "?";
+}
+
+/* Layer descriptors begin at align16(2*(src+dst)) + 80 + 32*(src+dst). */
+static unsigned oms_layer_desc_off(unsigned src, unsigned dst) {
+    return (((2 * (src + dst) + 15) & ~15u) + 80) + 32 * (src + dst);
+}
+
+static void ive_xnn_loadmodel_decode(pid_t child, size_t arg) {
+    /* loadmodel arg: [0] u64 model_phys, [8] u64 model_virt, [16] u32 size */
+    unsigned char hdr[24];
+    if (!copy_from_process(child, arg, hdr, sizeof hdr))
+        return;
+    uint32_t model_virt = *(uint32_t *)(hdr + 8);
+    uint32_t model_size = *(uint32_t *)(hdr + 16);
+    if (!model_virt || model_size < 0x50 || model_size > 8u * 1024 * 1024)
+        return;
+
+    /* The descriptor region (header + per-layer descriptors) sits before the
+     * weight blob and is small; copy a bounded prefix that covers it for any
+     * src/dst<=16 (first descriptor is at most byte 1168) plus a long layer
+     * list. The multi-MB weights are not needed. Static: this runs single-
+     * threaded from the ptrace loop, and it is zeroed so any read that a
+     * bounds check below still admits is deterministic. */
+    static unsigned char oms[0x4000];
+    size_t n = model_size < sizeof oms ? model_size : sizeof oms;
+    if (!copy_from_process(child, model_virt, oms, n))
+        return;
+
+    uint16_t layer_num = *(uint16_t *)(oms + OMS_LAYER_NUM);
+    uint8_t src_num = oms[OMS_SRC_NUM], dst_num = oms[OMS_DST_NUM];
+    /* Sanity-gate: a plausible model has a handful of nodes and layers. */
+    if (src_num == 0 || src_num > 16 || dst_num == 0 || dst_num > 16 ||
+        layer_num == 0 || layer_num > 4096)
+        return;
+
+    printf("/* ===== IVE XNN loadmodel: %u bytes, %u layer(s), %u in / %u out "
+           "===== */\n",
+           model_size, layer_num, src_num, dst_num);
+
+    unsigned off = oms_layer_desc_off(src_num, dst_num);
+    if (off >= n) {
+        printf("  (descriptors start past the %zu-byte trace prefix)\n", n);
+        return;
+    }
+    unsigned i;
+    for (i = 0; i < layer_num; i++) {
+        unsigned char t = off < n ? oms[off] : 0;
+        unsigned sz = oms_layer_desc_size(t);
+        if (!sz || off + sz > n)
+            break;
+        if (t == 5) { /* Preproc carries the network input geometry */
+            uint16_t in_c = *(uint16_t *)(oms + off + 6);
+            uint16_t in_h = *(uint16_t *)(oms + off + 8);
+            uint16_t in_w = *(uint16_t *)(oms + off + 10);
+            printf("  input %ux%ux%u (WxHxC)\n", in_w, in_h, in_c);
+        } else if (t == 0) { /* Conv */
+            uint16_t ic = *(uint16_t *)(oms + off + 8);
+            uint16_t ih = *(uint16_t *)(oms + off + 10);
+            uint16_t iw = *(uint16_t *)(oms + off + 12);
+            uint16_t oc = *(uint16_t *)(oms + off + 14);
+            printf("  [%u] conv %ux%ux%u -> %uc  k=%u\n", i, iw, ih, ic, oc,
+                   oms[off + 61]);
+        } else {
+            printf("  [%u] %s\n", i, oms_layer_name(t));
+        }
+        off += sz;
+    }
+    if (i < layer_num)
+        printf("  ... (%u of %u layers; descriptor stream exceeds the %zu-byte "
+               "trace prefix)\n",
+               i, layer_num, n);
+}
+
+/* IVE ioctls all use magic 'F' (0x46); the op is the nr byte. Names for the
+ * classic pixel ops (motion detection uses SUB/THRESH/CCL) plus the XNN range,
+ * from OpenIPC/openhisilicon kernel/ive_neo IVE_IOC_* / IVE_IOC_XNN_*. */
+static const char *ive_op_name(unsigned nr) {
+    switch (nr) {
+    case 0x00:
+        return "DMA";
+    case 0x01:
+        return "FILTER";
+    case 0x06:
+        return "DILATE";
+    case 0x07:
+        return "ERODE";
+    case 0x08:
+        return "THRESH";
+    case 0x09:
+        return "AND";
+    case 0x0a:
+        return "SUB";
+    case 0x0b:
+        return "OR";
+    case 0x0c:
+        return "INTEG";
+    case 0x0d:
+        return "HIST";
+    case 0x0e:
+        return "THRESH_S16";
+    case 0x0f:
+        return "THRESH_U16";
+    case 0x11:
+        return "ORDSTAT";
+    case 0x13:
+        return "MAP";
+    case 0x14:
+        return "ADD";
+    case 0x17:
+        return "CCL";
+    case 0x2c:
+        return "QUERY";
+    case 0x36:
+        return "XNN_LOADMODEL";
+    case 0x37:
+        return "XNN_UNLOADMODEL";
+    case 0x38:
+        return "XNN_FWD_SLICE";
+    case 0x3a:
+        return "XNN_FORWARD";
+    case 0x3b:
+        return "SVP_INIT";
+    default:
+        return NULL;
+    }
+}
+
+static void ive_ioctl_exit_cb(process_t *proc, int fd, unsigned int cmd,
+                              size_t arg, ssize_t sysret) {
+    if (((cmd >> 8) & 0xff) != 0x46) /* not an IVE op */
+        return;
+    const char *op = ive_op_name(cmd & 0xff);
+    if (sysret < 0) {
+        /* The ioctl failed; show it, but don't decode its buffer as if it
+         * described a model the kernel actually loaded. */
+        printf("ive_op(%s) = %d [failed]; /* cmd=%#x */\n", op ? op : "?",
+               (int)sysret, cmd);
+        return;
+    }
+    printf("ive_op(%s); /* cmd=%#x */\n", op ? op : "?", cmd);
+    if (cmd == IVE_XNN_LOADMODEL)
+        ive_xnn_loadmodel_decode(proc->pid, arg);
+}
+
 static void hisi_gen2_read_exit_cb(process_t *proc, int fd, size_t remote_addr,
                                    size_t nbyte, ssize_t sysret) {
     // The previous version did `memset(&buf, 0, sizeof(nbyte))` here,
@@ -997,6 +1183,8 @@ static void syscall_open(process_t *proc, int fd, int offset) {
         proc->fds[fd].ioctl_exit = hisi_mipi_ioctl_exit_cb;
     } else if (!strcmp(filename, "/dev/vi")) {
         proc->fds[fd].ioctl_exit = hisi_vi_ioctl_exit_cb;
+    } else if (!strcmp(filename, "/dev/ive")) {
+        proc->fds[fd].ioctl_exit = ive_ioctl_exit_cb;
     }
 
 done:

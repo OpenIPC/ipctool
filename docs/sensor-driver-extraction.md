@@ -29,6 +29,12 @@ payloads on the fly:
 - `/dev/hi_mipi`, `/dev/vi` → pretty-printed `combo_dev_attr_t SENSOR_ATTR = {...}`
 - `/dev/xm_gpio`, `/sys/class/gpio/...` → GPIO request/direction/write events
 - `/dev/mtd*` → MTD ioctl dumps
+- `/dev/ive` → IVE **XNN** `loadmodel` decode: input geometry (`WxHxC` from the
+  OMS Preproc layer) and the layer list of an on-device CNN. On V4 parts
+  (Hi3516EV200/EV300, Goke) that have no NNIE, detectors like XiongMai Sofia's
+  SSH face model (`/usr/res/fd.bin`) run here; the blob on disk carries only
+  quantized weights, so the geometry is only visible on the wire. OMS layout
+  from OpenIPC/openhisilicon `kernel/ive_neo`.
 
 The output is a stream of C-pseudocode interleaved with bus-banner
 markers (`========================== i2c-29 ==========================`).
