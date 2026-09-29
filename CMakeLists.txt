@@ -357,6 +357,9 @@ set(IPCTOOL_SRC
     src/ptrace.h
     src/ram.c
     src/ram.h
+    src/report.c
+    src/report.h
+    src/report_cmd.c
     src/sha1.c
     src/sha1.h
     src/snstool.c
@@ -489,4 +492,10 @@ if(NOT ONLY_LIBRARY)
                             ${VERSION_OBJ})
   target_include_directories(anyka_test PRIVATE include src)
   target_link_libraries(anyka_test m Threads::Threads)
+
+  # The body `ipctool upload` sends: part framing, the backup's layout and
+  # the length that must match it, and openipc.org's answer. Off a camera,
+  # like the others.
+  add_executable(report_test src/report_test.c src/report.c src/cjson/cJSON.c)
+  target_include_directories(report_test PRIVATE include src)
 endif()

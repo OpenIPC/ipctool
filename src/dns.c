@@ -152,6 +152,13 @@ static bool parse_dns_resp(uint8_t *response, ssize_t rlen, a_records_t *srv) {
 #define DNS_TIMEOUT 5 // seconds
 
 bool resolv_name(nservers_t *ns, const char *hostname, a_records_t *srv) {
+    /* An address is its own answer: a bench server, an agent's receiver. */
+    struct in_addr literal;
+    if (inet_pton(AF_INET, hostname, &literal) == 1) {
+        srv->ipv4_addr[0] = literal.s_addr;
+        srv->len = 1;
+        return true;
+    }
     int socketfd = socket(AF_INET, SOCK_DGRAM, 0);
     struct timeval tv = {.tv_sec = DNS_TIMEOUT, .tv_usec = 0};
     setsockopt(socketfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));

@@ -1,6 +1,12 @@
 #ifndef HTTP_H
 #define HTTP_H
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "dns.h"
+
 #define MAX_MTDBLOCKS 20
 
 typedef struct {
@@ -19,11 +25,10 @@ typedef struct {
 #define ERR_MALLOC 7
 #define ERR_BUTT 10
 
-#define DATE_BUF_LEN 32
-
-char *download(char *hostname, const char *uri, const char *useragent,
-               nservers_t *ns, size_t *len, char *date, bool progress);
-int upload(const char *hostname, const char *uri, nservers_t *ns,
-           span_t blocks[MAX_MTDBLOCKS + 1], size_t len);
+/* POST spans as one body of total bytes; resp gets the answer's body, status
+ * its HTTP status. 0, or one of the ERR_ codes above. */
+int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
+              const char *content_type, const span_t *spans, size_t nspans,
+              size_t total, char *resp, size_t cap, int *status);
 
 #endif /* HTTP_H */

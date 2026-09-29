@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "backup.h"
+#include "report.h"
 #include "bootrom.h"
 #include "chipid.h"
 #include "cjson/cJSON.h"
@@ -79,9 +80,12 @@ void print_usage() {
         "  -t, --temp                read chip temperature (where supported)\n"
         "\n"
         "  backup <filename>         save backup into a file\n"
-        "  upload                    upload full backup to the OpenIPC cloud\n"
-        "  restore [mac|filename]    restore from backup (cloud-based or local "
-        "file)\n"
+        "  upload [--backup [--public]] [--yes]\n"
+        "                            send this report to openipc.org's board\n"
+        "                            catalogue; reviewed before publishing.\n"
+        "                            --backup adds the flash, kept private\n"
+        "                            unless --public (ipctool upload -h)\n"
+        "  restore <filename>        restore from a backup file\n"
         "     [-s, --skip-env]       skip environment\n"
         "     [-f, --force]          enforce\n"
         "  upgrade <bundle>          upgrade to OpenIPC firmware\n"
@@ -167,6 +171,15 @@ static cJSON *build_yaml() {
     return root;
 }
 
+char *build_report_yaml(void) {
+    cJSON *yaml = build_yaml();
+    if (!yaml)
+        return NULL;
+    char *string = cYAML_Print(yaml);
+    cJSON_Delete(yaml);
+    return string;
+}
+
 static int backup_with_yaml(const char *backup_file) {
     cJSON *yaml = build_yaml();
     if (!yaml) return EXIT_FAILURE;
@@ -193,6 +206,8 @@ int main(int argc, char *argv[]) {
             return watchdog_cmd(argc - 1, argv + 1);
         else if (!strncmp(argv[1], "i2c", 3) || !strncmp(argv[1], "spi", 3))
             return i2cspi_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "upload"))
+            return report_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "restore") || !strcmp(argv[1], "upgrade"))
             return upgrade_restore_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "printenv"))
@@ -293,9 +308,6 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
             }
             return backup_with_yaml(argv[optind + 1]);
-
-        } else if (!strcmp(argv[optind], "upload")) {
-            return backup_with_yaml(NULL);
 
         } else {
             printf("found unknown command: %s\n\n", argv[optind]);

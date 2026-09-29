@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -26,41 +27,6 @@ static int get_http_respcode(const char *inpbuf) {
     if (sscanf(inpbuf, "%31s %d %31s", proto, &code, descr) < 2)
         return -1;
     return code;
-}
-
-static void get_http_date(const char *inpbuf, const char *end, char *buf) {
-    while (end - inpbuf >= 15) {
-        if (!strncmp(inpbuf, "Last-Modified: ", 15)) {
-            const char *ptr = inpbuf + 15;
-            for (int i = 0; i < DATE_BUF_LEN; i++) {
-                if (ptr[i] == '\n')
-                    break;
-                buf[i] = ptr[i];
-            }
-        }
-        for (;;) {
-            if (inpbuf == end)
-                return;
-            inpbuf++;
-            if (*(inpbuf - 1) == '\n')
-                break;
-        }
-    }
-}
-
-static int get_http_payload_len(const char *inpbuf, const char *end) {
-    while (end - inpbuf >= 16) {
-        if (!strncmp(inpbuf, "Content-Length: ", 16))
-            return strtol(inpbuf + 16, NULL, 10);
-        for (;;) {
-            if (inpbuf == end)
-                return 0;
-            inpbuf++;
-            if (*(inpbuf - 1) == '\n')
-                break;
-        }
-    }
-    return 0;
 }
 
 int connect_with_timeout(int sockfd, const struct sockaddr *addr,
@@ -140,10 +106,9 @@ int connect_with_timeout(int sockfd, const struct sockaddr *addr,
 
 #define CONNECT_TIMEOUT 3000 // milliseconds
 
-static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
+static int common_connect(const char *hostname, int port, nservers_t *ns,
                           int *s) {
     int ret = ERR_GENERAL;
-    (void)uri;
 
     a_records_t srv;
     if (!resolv_name(ns, hostname, &srv)) {
@@ -155,7 +120,7 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(80);
+    addr.sin_port = htons(port);
 
     for (size_t i = 0; i < srv.len; i++) {
         memcpy(&addr.sin_addr, &srv.ipv4_addr[i], sizeof(uint32_t));
@@ -178,131 +143,96 @@ static int common_connect(const char *hostname, const char *uri, nservers_t *ns,
     return ret;
 }
 
-#define MAKE_ERROR(err) (char *)(-err)
-
-#define SNPRINTF(...)                                                          \
-    ptr += snprintf(ptr, sizeof(buf) - (ptr - buf), __VA_ARGS__)
-
-char *download(char *hostname, const char *uri, const char *useragent,
-               nservers_t *ns, size_t *len, char *date, bool progress) {
-    int s, ret;
-    if ((ret = common_connect(hostname, uri, ns, &s) != ERR_GENERAL)) {
-        return MAKE_ERROR(ret);
+static int write_all(int s, const char *data, size_t len) {
+    while (len) {
+        ssize_t n = write(s, data, len);
+        if (n < 0 && errno == EINTR)
+            continue;
+        if (n <= 0)
+            return -1;
+        data += n;
+        len -= (size_t)n;
     }
-
-    char buf[4096] = "GET /";
-    char *ptr = buf + 5;
-    if (uri) {
-        SNPRINTF("%s", uri);
-    }
-    SNPRINTF(" HTTP/1.0\r\nHost: %s\r\n", hostname);
-    if (useragent)
-        SNPRINTF("User-Agent: %s\r\n", useragent);
-    SNPRINTF("\r\n");
-    int tosend = ptr - buf;
-    int nsent = send(s, buf, tosend, 0);
-    if (nsent != tosend)
-        return MAKE_ERROR(ERR_SEND);
-
-    int header = 1;
-    int nrecvd;
-    char *binbuf = NULL, *sptr;
-    int percent = 0;
-    while ((nrecvd = recv(s, buf, sizeof(buf), 0))) {
-        char *ptr = buf;
-        if (header) {
-            ptr = strstr(buf, "\r\n\r\n");
-            if (!ptr)
-                continue;
-
-            int rcode = get_http_respcode(buf);
-            if (rcode / 100 != 2) {
-                close(s);
-                return MAKE_ERROR(rcode / 100 * 10 + rcode % 10);
-            }
-            *len = get_http_payload_len(buf, ptr);
-            if (!*len) {
-                fprintf(stderr, "No length found, aborting...\n");
-                close(s);
-                return MAKE_ERROR(ERR_HTTP);
-            }
-            get_http_date(buf, ptr, date);
-            binbuf = malloc(*len);
-            if (!binbuf) {
-                close(s);
-                return MAKE_ERROR(ERR_MALLOC);
-            }
-            sptr = binbuf;
-
-            header = 0;
-            ptr += 4;
-            nrecvd -= ptr - buf;
-        }
-
-        if (!header) {
-            if (progress) {
-                int np = 100 * (sptr - binbuf) / *len;
-                if (np != percent) {
-                    printf("Downloading %d%%\r", np);
-                    fflush(stdout);
-                    percent = np;
-                }
-            }
-            // TODO: avoid copying?
-            memcpy(sptr, ptr, nrecvd);
-            sptr += nrecvd;
-        }
-    }
-
-    return binbuf;
+    return 0;
 }
 
-int upload(const char *hostname, const char *uri, nservers_t *ns,
-           span_t blocks[MAX_MTDBLOCKS + 1], size_t blocks_num) {
-    int s, ret;
-    if ((ret = common_connect(hostname, uri, ns, &s) != ERR_GENERAL)) {
-        return ret;
-    }
+int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
+              const char *content_type, const span_t *spans, size_t nspans,
+              size_t total, char *resp, size_t cap, int *status) {
+    int s;
+    int rc = common_connect(hostname, port, ns, &s);
+    /* common_connect() answers ERR_GENERAL when it is connected. */
+    if (rc != ERR_GENERAL)
+        return rc;
 
-    size_t len = 0;
-    for (size_t i = 0; i < blocks_num; i++) {
-        len += blocks[i].len;
-        // add len header
-        if (i)
-            len += sizeof(uint32_t);
-    }
+    struct timeval tv = {.tv_sec = 120};
+    setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    char buf[4096] = "PUT /";
-    if (uri) {
-        strncat(buf, uri, sizeof(buf) - strlen(buf) - 1);
-    }
-    strncat(buf, " HTTP/1.0\r\nHost: ", sizeof(buf) - strlen(buf) - 1);
-    strncat(buf, hostname, sizeof(buf) - strlen(buf) - 1);
-    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf) - 1,
-             "\r\n"
-             "Content-type: application/octet-stream\r\n"
-             "Connection: close\r\n"
-             "Content-Length: %zu\r\n"
-             "\r\n",
-             len);
-    int tosent = strlen(buf);
-    int nsent = send(s, buf, tosent, 0);
-    if (nsent != tosent)
+    char host[300];
+    if (port == 80)
+        snprintf(host, sizeof(host), "%s", hostname);
+    else
+        snprintf(host, sizeof(host), "%s:%d", hostname, port);
+    char head[1024];
+    int hl = snprintf(head, sizeof(head),
+                      "POST %s HTTP/1.0\r\n"
+                      "Host: %s\r\n"
+                      "User-Agent: ipctool\r\n"
+                      "Accept: application/json\r\n"
+                      "Content-Type: %s\r\n"
+                      "Content-Length: %zu\r\n"
+                      "Connection: close\r\n"
+                      "\r\n",
+                      path, host, content_type, total);
+    if (hl <= 0 || (size_t)hl >= sizeof(head) || write_all(s, head, hl)) {
+        close(s);
         return ERR_SEND;
-
-    for (size_t i = 0; i < blocks_num; i++) {
-        if (i) {
-            uint32_t len_header = blocks[i].len;
-            int ret = write(s, &len_header, sizeof(len_header));
-        }
-
-        int nbytes = write(s, blocks[i].data, blocks[i].len);
-        if (nbytes == -1)
-            break;
-#if 0
-	printf("[%d] sent %d bytes\n", i, nbytes);
-#endif
     }
 
+    size_t sent = 0;
+    int shown = -1;
+    for (size_t i = 0; i < nspans; i++) {
+        /* In 64 KB pieces, so a 16 MB partition shows its progress. */
+        for (size_t off = 0; off < spans[i].len;) {
+            size_t chunk = spans[i].len - off;
+            if (chunk > 65536)
+                chunk = 65536;
+            if (write_all(s, spans[i].data + off, chunk)) {
+                close(s);
+                return ERR_SEND;
+            }
+            off += chunk;
+            sent += chunk;
+            if (total > (1 << 20)) {
+                int pct = (int)(100.0 * sent / total);
+                if (pct != shown) {
+                    fprintf(stderr, "\rSending %d%%", pct);
+                    shown = pct;
+                }
+            }
+        }
+    }
+    if (shown >= 0)
+        fprintf(stderr, "\n");
+
+    size_t got = 0;
+    for (;;) {
+        ssize_t n = recv(s, resp + got, cap - 1 - got, 0);
+        if (n < 0 && errno == EINTR)
+            continue;
+        if (n <= 0)
+            break;
+        got += (size_t)n;
+        if (got == cap - 1)
+            break;
+    }
+    close(s);
+    resp[got] = '\0';
+    *status = get_http_respcode(resp);
+    char *body = strstr(resp, "\r\n\r\n");
+    if (*status < 0 || !body)
+        return ERR_HTTP;
+    memmove(resp, body + 4, strlen(body + 4) + 1);
     return 0;
 }

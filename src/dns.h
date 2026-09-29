@@ -1,6 +1,10 @@
 #ifndef DNS_H
 #define DNS_H
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #define MAX_NSERVERS 16
 typedef struct {
     uint32_t ipv4_addr[MAX_NSERVERS];

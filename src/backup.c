@@ -40,8 +40,6 @@
 #include "uboot.h"
 #include "watchdog.h"
 
-static char mybackups[] = "camware.s3.eu-north-1.amazonaws.com";
-static const char *downcode = "reil9phiFahng8aiPh5Kooshag8eiVae";
 
 typedef struct {
     size_t count;
@@ -126,58 +124,16 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
     return 0;
 }
 
-#define FILL_NS                                                                \
-    nservers_t ns;                                                             \
-    ns.len = 0;                                                                \
-    parse_resolv_conf(&ns);                                                    \
-    add_predefined_ns(&ns, 0xd043dede /* 208.67.222.222 of OpenDNS */,         \
-                      0x01010101 /* 1.1.1.1 of Cloudflare */, 0);
-
-int do_backup(const char *yaml, size_t yaml_len, const char *filename) {
-    FILL_NS;
-
-    char mac[32];
-    if (!get_mac_address(mac, sizeof mac)) {
-        return 10;
-    };
-
-    span_t blocks[MAX_MTDBLOCKS + 1];
+size_t backup_blocks(const char *yaml, size_t yaml_len, span_t *blocks) {
     blocks[0].data = yaml;
     blocks[0].len = yaml_len + 1; // end string data with \0
-    size_t bl_num = map_mtdblocks(blocks + 1, MAX_MTDBLOCKS) + 1;
-
-    int ret;
-    if (filename)
-        ret = save_file(filename, blocks, bl_num);
-    else
-        ret = upload(mybackups, mac, &ns, blocks, bl_num);
-
-    return ret;
+    return map_mtdblocks(blocks + 1, MAX_MTDBLOCKS) + 1;
 }
 
-char *download_backup(const char *mac, size_t *size, char *date) {
-    FILL_NS;
-
-    printf("Downloading %s firmware\n", mac);
-
-    char *dwres = download(mybackups, mac, downcode, &ns, size, date, true);
-    int err = HTTP_ERR(dwres);
-    if (err) {
-        switch (err) {
-        case ERR_MALLOC:
-            printf(
-                "Tried to allocate %dMb\n"
-                "Not enough memory, consider increasing osmem U-Boot param\n",
-                *size / 1024 / 1024);
-            break;
-        default:
-            printf("Download error occured: %d\n", HTTP_ERR(dwres));
-        }
-        return NULL;
-    } else {
-        printf("Download is ok \n");
-        return dwres;
-    }
+int do_backup(const char *yaml, size_t yaml_len, const char *filename) {
+    span_t blocks[MAX_MTDBLOCKS + 1];
+    size_t bl_num = backup_blocks(yaml, yaml_len, blocks);
+    return save_file(filename, blocks, bl_num);
 }
 
 static int yaml_idlvl(char *from, char *start) {
@@ -963,6 +919,13 @@ static void reboot_after_failure(const char *what) {
 }
 
 static int restore_backup(const char *arg, bool skip_env, bool force) {
+    /* Backups are files: ipctool no longer keeps a copy of anyone's flash
+     * anywhere (#78). Refused before anything is stopped or unmounted. */
+    if (arg == NULL || access(arg, R_OK)) {
+        fprintf(stderr, "restore needs a backup file made by `ipctool backup "
+                        "<file>`: ipctool restore <file>\n");
+        return 1;
+    }
     const char *uboot_env = "  U-Boot env overwrite will be skipped";
     printf("Restoring the backup\n%s\n", skip_env ? uboot_env : "");
 
@@ -987,25 +950,8 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
     }
 
     size_t size;
-    char date[DATE_BUF_LEN] = {0};
-    char *backup;
-    if (arg == NULL) {
-        char mac[32];
-        if (!get_mac_address(mac, sizeof mac))
-            return 1;
-        fprintf(stderr, "Downloading latest backup from the cloud\n");
-        backup = download_backup(mac, &size, date);
-    } else {
-        if (access(arg, 0)) {
-            fprintf(stderr,
-                    "Downloading backup from the cloud by specified name\n");
-            backup = download_backup(arg, &size, date);
-        } else {
-            fprintf(stderr, "Loading backup from file %s...\n", arg);
-
-            backup = file_to_buf(arg, &size);
-        }
-    }
+    fprintf(stderr, "Loading backup from file %s...\n", arg);
+    char *backup = file_to_buf(arg, &size);
 
     if (backup) {
         char *pptr = backup + strnlen(backup, size) + 1;
@@ -1013,9 +959,6 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
             fprintf(stderr, "Broken description found, aborting...\n");
             goto bailout;
         }
-
-        if (*date)
-            printf("Found backup made on %s\n", date);
 
         if (!force) {
             char c;
