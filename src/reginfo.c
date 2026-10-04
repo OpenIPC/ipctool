@@ -2314,22 +2314,26 @@ MUXCTRL(V500_iocfg_reg98, 0x120C000C, PMX_GPIO1_3, PMX_LSADC_CH3)
         &V500_iocfg_reg76, &V500_iocfg_reg77, &V500_iocfg_reg78,               \
         &V500_iocfg_reg79, &V500_iocfg_reg80, &V500_iocfg_reg81,               \
         &V500_iocfg_reg82, &V500_iocfg_reg83, &V500_iocfg_reg84,               \
-        &V500_iocfg_reg85,
+        &V500_iocfg_reg85
 
 #define V500_REGS_TAIL                                                         \
     &V500_iocfg_reg87, &V500_iocfg_reg88, &V500_iocfg_reg89,                   \
         &V500_iocfg_reg90, &V500_iocfg_reg91, &V500_iocfg_reg92,               \
         &V500_iocfg_reg93, &V500_iocfg_reg94, &V500_iocfg_reg95,               \
-        &V500_iocfg_reg96, &V500_iocfg_reg97, &V500_iocfg_reg98,
+        &V500_iocfg_reg96, &V500_iocfg_reg97, &V500_iocfg_reg98
 
 static const muxctrl_reg_t *V500regs[] = {
-    V500_REGS_HEAD & V500_iocfg_reg86,
-    V500_REGS_TAIL 0,
+    V500_REGS_HEAD,
+    &V500_iocfg_reg86,
+    V500_REGS_TAIL,
+    0,
 };
 
 static const muxctrl_reg_t *V530regs[] = {
-    V500_REGS_HEAD & V530_iocfg_reg86,
-    V500_REGS_TAIL 0,
+    V500_REGS_HEAD,
+    &V530_iocfg_reg86,
+    V500_REGS_TAIL,
+    0,
 };
 
 #endif /* IPCHW_PADMUX_V4 */
