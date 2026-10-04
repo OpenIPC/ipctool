@@ -202,6 +202,13 @@ static void sc_imagedesign(uint32_t id) {
     mock_set(0x3000, 2, 1, id >> 8);
     mock_set(0x3001, 2, 1, id & 0xff);
 }
+/* The second ID location, reached by answering 0x3000 with nothing known. */
+static void sc_imagedesign_alt(uint32_t id) {
+    mock_set(0x3000, 2, 1, 0x00);
+    mock_set(0x3001, 2, 1, 0x00);
+    mock_set(0x541d, 2, 1, id >> 8);
+    mock_set(0x541e, 2, 1, id & 0xff);
+}
 static void sc_visemi(uint32_t id) { mock_set(0x3000, 2, 2, id); }
 static void sc_cvsens(uint32_t id) {
     mock_set(0x3003, 2, 1, id >> 8);
@@ -224,6 +231,7 @@ static const struct scenario scenarios[] = {
     {"superpix-mod", detect_superpix_sensor, sc_superpix_mod},
     {"superpix-alt", detect_superpix_sensor, sc_superpix_alt},
     {"imagedesign", detect_imagedesign_sensor, sc_imagedesign},
+    {"imagedesign-alt", detect_imagedesign_sensor, sc_imagedesign_alt},
     {"visemi", detect_visemi_sensor, sc_visemi},
     {"cvsens", detect_cvsens_sensor, sc_cvsens},
 };

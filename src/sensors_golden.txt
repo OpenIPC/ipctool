@@ -1149,9 +1149,13 @@ superpix-mod 5304 OS04D10
 superpix-mod 5602 OS02G10
 superpix-alt 2073 SP2305
 imagedesign 1311 MIS4001
+imagedesign 2003 MIS2003
 imagedesign 2006 MIS2006
 imagedesign 2008 MIS2008
-imagedesign 5001 MIS5001
+imagedesign 2009 MIS2031
+imagedesign 20e1 MIS20S1
+imagedesign 5003 MIS5011
+imagedesign-alt 03fc MIS40C1
 visemi 4388 VS4388
 cvsens 2004 CV2003
 cvsens 2005 CV2005
