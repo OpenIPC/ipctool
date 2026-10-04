@@ -2115,11 +2115,13 @@ static const muxctrl_reg_t *DV200regs[] = {
 /* GK7205V500 / V510 / V530 (XMedia XM720xxx). Not an ev200: the pads sit at
  * the same iocfg addresses but behind different selectors, and the block has
  * twelve PWM channels, not four. Generated from XMedia's PIN_OUT_V510.xlsx
- * (sheet 1, "Function Number" per pin; addresses from sheet 3), plus the one
- * selector PIN_OUT_V530.xlsx adds (FMC_STARTUP_DISABLE on UART0_TXD). The two
- * workbooks agree on every other row; the QFN V330/V230 pin-outs are strict
- * subsets of it. iocfg_reg0-5 are the power-sequencing pins, which have no
- * selector. */
+ * (sheet 1, "Function Number" per pin; addresses from sheet 3). The V530
+ * workbook agrees on every row but UART0_TXD, where it adds selector 2,
+ * FMC_STARTUP_DISABLE: that row is the one thing V530regs does not share,
+ * because the V510 sheet does not list the selector and a table that offered
+ * it there would let a caller write an undocumented value to the console's
+ * TX pad. The QFN V330/V230 pin-outs are strict subsets of V510.
+ * iocfg_reg0-5 are the power-sequencing pins, which have no selector. */
 MUXCTRL(V500_iocfg_reg6, 0x112C0074, PMX_GPIO6_4, PMX_reserved, PMX_UART1_TXD,
         PMX_I2C1_SCL, PMX_reserved, PMX_PWM11, PMX_reserved, PMX_SPI0_SCLK)
 MUXCTRL(V500_iocfg_reg7, 0x112C0070, PMX_GPIO6_5, PMX_VI_BT1120_DATA2,
@@ -2262,7 +2264,8 @@ MUXCTRL(V500_iocfg_reg83, 0x100C0018, PMX_EMMC_CMD, PMX_SFC_MOSI_IO0)
 MUXCTRL(V500_iocfg_reg84, 0x100C002C, PMX_SYS_RSTN_OUT, PMX_WDG_RSTN,
         PMX_SDIO0_CARD_POWER_EN_N, PMX_GPIO9_2)
 MUXCTRL(V500_iocfg_reg85, 0x100C0000, PMX_GPIO0_1, PMX_UART0_RXD)
-MUXCTRL(V500_iocfg_reg86, 0x100C0004, PMX_GPIO0_2, PMX_UART0_TXD,
+MUXCTRL(V500_iocfg_reg86, 0x100C0004, PMX_GPIO0_2, PMX_UART0_TXD)
+MUXCTRL(V530_iocfg_reg86, 0x100C0004, PMX_GPIO0_2, PMX_UART0_TXD,
         PMX_FMC_STARTUP_DISABLE)
 MUXCTRL(V500_iocfg_reg87, 0x100C0008, PMX_GPIO0_0, PMX_UPDATE_MODE, PMX_IR_IN)
 MUXCTRL(V500_iocfg_reg88, 0x100C000C, PMX_GPIO0_3, PMX_PWM0, PMX_UART1_TXD,
@@ -2284,54 +2287,49 @@ MUXCTRL(V500_iocfg_reg96, 0x120C0004, PMX_GPIO1_1, PMX_LSADC_CH1)
 MUXCTRL(V500_iocfg_reg97, 0x120C0008, PMX_GPIO1_2, PMX_LSADC_CH2)
 MUXCTRL(V500_iocfg_reg98, 0x120C000C, PMX_GPIO1_3, PMX_LSADC_CH3)
 
+#define V500_REGS_HEAD                                                         \
+    &V500_iocfg_reg6, &V500_iocfg_reg7, &V500_iocfg_reg8, &V500_iocfg_reg9,    \
+        &V500_iocfg_reg10, &V500_iocfg_reg11, &V500_iocfg_reg12,               \
+        &V500_iocfg_reg13, &V500_iocfg_reg14, &V500_iocfg_reg15,               \
+        &V500_iocfg_reg16, &V500_iocfg_reg17, &V500_iocfg_reg18,               \
+        &V500_iocfg_reg19, &V500_iocfg_reg20, &V500_iocfg_reg21,               \
+        &V500_iocfg_reg22, &V500_iocfg_reg23, &V500_iocfg_reg24,               \
+        &V500_iocfg_reg25, &V500_iocfg_reg26, &V500_iocfg_reg27,               \
+        &V500_iocfg_reg28, &V500_iocfg_reg29, &V500_iocfg_reg30,               \
+        &V500_iocfg_reg31, &V500_iocfg_reg32, &V500_iocfg_reg33,               \
+        &V500_iocfg_reg34, &V500_iocfg_reg35, &V500_iocfg_reg36,               \
+        &V500_iocfg_reg37, &V500_iocfg_reg38, &V500_iocfg_reg39,               \
+        &V500_iocfg_reg40, &V500_iocfg_reg41, &V500_iocfg_reg42,               \
+        &V500_iocfg_reg43, &V500_iocfg_reg44, &V500_iocfg_reg45,               \
+        &V500_iocfg_reg46, &V500_iocfg_reg47, &V500_iocfg_reg48,               \
+        &V500_iocfg_reg49, &V500_iocfg_reg50, &V500_iocfg_reg51,               \
+        &V500_iocfg_reg52, &V500_iocfg_reg53, &V500_iocfg_reg54,               \
+        &V500_iocfg_reg55, &V500_iocfg_reg56, &V500_iocfg_reg57,               \
+        &V500_iocfg_reg58, &V500_iocfg_reg59, &V500_iocfg_reg60,               \
+        &V500_iocfg_reg61, &V500_iocfg_reg62, &V500_iocfg_reg63,               \
+        &V500_iocfg_reg64, &V500_iocfg_reg65, &V500_iocfg_reg66,               \
+        &V500_iocfg_reg67, &V500_iocfg_reg68, &V500_iocfg_reg69,               \
+        &V500_iocfg_reg70, &V500_iocfg_reg71, &V500_iocfg_reg72,               \
+        &V500_iocfg_reg73, &V500_iocfg_reg74, &V500_iocfg_reg75,               \
+        &V500_iocfg_reg76, &V500_iocfg_reg77, &V500_iocfg_reg78,               \
+        &V500_iocfg_reg79, &V500_iocfg_reg80, &V500_iocfg_reg81,               \
+        &V500_iocfg_reg82, &V500_iocfg_reg83, &V500_iocfg_reg84,               \
+        &V500_iocfg_reg85,
+
+#define V500_REGS_TAIL                                                         \
+    &V500_iocfg_reg87, &V500_iocfg_reg88, &V500_iocfg_reg89,                   \
+        &V500_iocfg_reg90, &V500_iocfg_reg91, &V500_iocfg_reg92,               \
+        &V500_iocfg_reg93, &V500_iocfg_reg94, &V500_iocfg_reg95,               \
+        &V500_iocfg_reg96, &V500_iocfg_reg97, &V500_iocfg_reg98,
+
 static const muxctrl_reg_t *V500regs[] = {
-    &V500_iocfg_reg6,  &V500_iocfg_reg7,
-    &V500_iocfg_reg8,  &V500_iocfg_reg9,
-    &V500_iocfg_reg10, &V500_iocfg_reg11,
-    &V500_iocfg_reg12, &V500_iocfg_reg13,
-    &V500_iocfg_reg14, &V500_iocfg_reg15,
-    &V500_iocfg_reg16, &V500_iocfg_reg17,
-    &V500_iocfg_reg18, &V500_iocfg_reg19,
-    &V500_iocfg_reg20, &V500_iocfg_reg21,
-    &V500_iocfg_reg22, &V500_iocfg_reg23,
-    &V500_iocfg_reg24, &V500_iocfg_reg25,
-    &V500_iocfg_reg26, &V500_iocfg_reg27,
-    &V500_iocfg_reg28, &V500_iocfg_reg29,
-    &V500_iocfg_reg30, &V500_iocfg_reg31,
-    &V500_iocfg_reg32, &V500_iocfg_reg33,
-    &V500_iocfg_reg34, &V500_iocfg_reg35,
-    &V500_iocfg_reg36, &V500_iocfg_reg37,
-    &V500_iocfg_reg38, &V500_iocfg_reg39,
-    &V500_iocfg_reg40, &V500_iocfg_reg41,
-    &V500_iocfg_reg42, &V500_iocfg_reg43,
-    &V500_iocfg_reg44, &V500_iocfg_reg45,
-    &V500_iocfg_reg46, &V500_iocfg_reg47,
-    &V500_iocfg_reg48, &V500_iocfg_reg49,
-    &V500_iocfg_reg50, &V500_iocfg_reg51,
-    &V500_iocfg_reg52, &V500_iocfg_reg53,
-    &V500_iocfg_reg54, &V500_iocfg_reg55,
-    &V500_iocfg_reg56, &V500_iocfg_reg57,
-    &V500_iocfg_reg58, &V500_iocfg_reg59,
-    &V500_iocfg_reg60, &V500_iocfg_reg61,
-    &V500_iocfg_reg62, &V500_iocfg_reg63,
-    &V500_iocfg_reg64, &V500_iocfg_reg65,
-    &V500_iocfg_reg66, &V500_iocfg_reg67,
-    &V500_iocfg_reg68, &V500_iocfg_reg69,
-    &V500_iocfg_reg70, &V500_iocfg_reg71,
-    &V500_iocfg_reg72, &V500_iocfg_reg73,
-    &V500_iocfg_reg74, &V500_iocfg_reg75,
-    &V500_iocfg_reg76, &V500_iocfg_reg77,
-    &V500_iocfg_reg78, &V500_iocfg_reg79,
-    &V500_iocfg_reg80, &V500_iocfg_reg81,
-    &V500_iocfg_reg82, &V500_iocfg_reg83,
-    &V500_iocfg_reg84, &V500_iocfg_reg85,
-    &V500_iocfg_reg86, &V500_iocfg_reg87,
-    &V500_iocfg_reg88, &V500_iocfg_reg89,
-    &V500_iocfg_reg90, &V500_iocfg_reg91,
-    &V500_iocfg_reg92, &V500_iocfg_reg93,
-    &V500_iocfg_reg94, &V500_iocfg_reg95,
-    &V500_iocfg_reg96, &V500_iocfg_reg97,
-    &V500_iocfg_reg98, 0,
+    V500_REGS_HEAD & V500_iocfg_reg86,
+    V500_REGS_TAIL 0,
+};
+
+static const muxctrl_reg_t *V530regs[] = {
+    V500_REGS_HEAD & V530_iocfg_reg86,
+    V500_REGS_TAIL 0,
 };
 
 #endif /* IPCHW_PADMUX_V4 */
@@ -3097,6 +3095,8 @@ static const muxctrl_reg_t **regs_by_chip() {
             return _8EV300regs;
         else if (IS_16DV200)
             return DV200regs;
+        else if (IS_CHIP("7205V530"))
+            return V530regs;
         else if (IS_7205V500)
             return V500regs;
         break;

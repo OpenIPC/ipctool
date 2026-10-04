@@ -274,6 +274,18 @@ static void test_v500_pwm(void) {
     /* The core-voltage PWM is its own pad and its own function name, so a
      * PWMn lookup can never land on it. */
     CHECK(ipchw_padmux_by_func("SVB_PWM", rows, 8) == 1);
+
+    /* FMC_STARTUP_DISABLE on UART0_TXD is in the V530 pin-out only. Offering
+     * it on a V510 would let a caller write a selector its sheet does not
+     * list to the console's TX pad. */
+    CHECK(ipchw_padmux_by_func("FMC_STARTUP_DISABLE", rows, 8) == 0);
+    as_chip(HISI_V4, "7205V530");
+    if (one("FMC_STARTUP_DISABLE", &r)) {
+        CHECK(r.address == 0x100C0004);
+        CHECK(r.func == 2);
+    }
+    if (one("PWM8", &r))
+        CHECK(r.address == 0x112C0058 && r.func == 5);
 }
 #endif
 
@@ -1051,6 +1063,7 @@ static void test_table_integrity(void) {
         {HISI_V4, "3518EV300"},
         {HISI_V4, "3516DV200"},
         {HISI_V4, "7205V510"},
+        {HISI_V4, "7205V530"},
         {HISI_V4A, "3516CV500"},
         {HISI_V4A, "3516AV300"},
         {HISI_OT, "3516CV610"},
