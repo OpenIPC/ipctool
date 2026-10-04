@@ -364,6 +364,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .FLASH_TRIG = "FLASH_TRIG",
 #endif
+#if defined(IPCHW_PADMUX_V4)
+    .FMC_STARTUP_DISABLE = "FMC_STARTUP_DISABLE",
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .FUART_2W_MODE_1 = "FUART_2W_MODE_1",
 #endif
@@ -796,7 +799,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO9_1 = "GPIO9_1",
 #endif
-#if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO9_2 = "GPIO9_2",
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
@@ -1129,7 +1132,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     .I2S_WS_TX = "I2S_WS_TX",
 #endif
-#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
+#if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .IR_IN = "IR_IN",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
@@ -3670,6 +3673,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .PWM1 = "PWM1",
 #endif
+#if defined(IPCHW_PADMUX_V4)
+    .PWM10 = "PWM10",
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .PWM10_MODE_1 = "PWM10_MODE_1",
 #endif
@@ -3681,6 +3687,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .PWM10_MODE_4 = "PWM10_MODE_4",
+#endif
+#if defined(IPCHW_PADMUX_V4)
+    .PWM11 = "PWM11",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .PWM1_MODE_1 = "PWM1_MODE_1",
@@ -3775,7 +3784,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM3_PC = "PWM3_PC",
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
+#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM4 = "PWM4",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
@@ -3799,7 +3808,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM4_PC = "PWM4_PC",
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
+#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM5 = "PWM5",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
@@ -3823,7 +3832,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM5_PC = "PWM5_PC",
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
+#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM6 = "PWM6",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
@@ -3847,7 +3856,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM6_PD = "PWM6_PD",
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
+#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM7 = "PWM7",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
@@ -3870,6 +3879,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM7_PD = "PWM7_PD",
+#endif
+#if defined(IPCHW_PADMUX_V4)
+    .PWM8 = "PWM8",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .PWM8_MODE_1 = "PWM8_MODE_1",
@@ -3894,6 +3906,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .PWM8_MODE_8 = "PWM8_MODE_8",
+#endif
+#if defined(IPCHW_PADMUX_V4)
+    .PWM9 = "PWM9",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .PWM9_MODE_1 = "PWM9_MODE_1",
