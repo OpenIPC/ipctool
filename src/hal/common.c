@@ -9,6 +9,7 @@
 
 #include "chipid.h"
 #include "hal/common.h"
+#include "tools.h"
 
 int i2c_adapter_nr = 0;
 sensor_addr_t *possible_i2c_addrs;
@@ -23,6 +24,12 @@ int (*i2c_change_addr)(int fd, unsigned char addr);
 float (*hal_temperature)();
 void (*hal_cleanup)();
 void (*hal_enable_sensor_clock)();
+/* Set by a HAL whose sensor driver logs every failed transfer to the kernel
+ * console: a probe sweeps addresses where nothing answers. The console is
+ * quietened when a sensor descriptor is opened and given back by hal_cleanup()
+ * or the end of the probe -- never by setting the HAL up, which every
+ * getchipname() caller does and most never follow with a probe. */
+bool hal_quiet_sensor_io;
 
 #ifndef STANDALONE_LIBRARY
 void (*hal_detect_ethernet)(cJSON *root);
@@ -43,6 +50,8 @@ int universal_open_sensor_fd(const char *dev_name) {
         return -1;
     }
 
+    if (hal_quiet_sensor_io)
+        disable_printk();
     return fd;
 }
 
@@ -227,6 +236,7 @@ void setup_hal_fallback() {
     /* Cleared, not defaulted: most SoCs need nothing done to make the sensor
      * answer, and this runs before detection picks the one that does. */
     hal_enable_sensor_clock = NULL;
+    hal_quiet_sensor_io = false;
 #ifndef STANDALONE_LIBRARY
     hal_totalmem = default_totalmem;
 #endif

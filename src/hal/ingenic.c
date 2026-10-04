@@ -374,7 +374,8 @@ static void ingenic_enable_sensor_clock() {
 }
 
 void setup_hal_ingenic() {
-    disable_printk();
+    hal_quiet_sensor_io = true;
+    hal_cleanup = restore_printk;
     ingenic_enable_sensor_clock();
     possible_i2c_addrs = ingenic_possible_i2c_addrs;
     i2c_adapter_nr = !strncmp(chip_name, "T40", 3) ? 1 : 0;

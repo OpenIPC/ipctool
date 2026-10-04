@@ -73,7 +73,7 @@ int xm_sensor_write_register(int fd, unsigned char i2c_addr,
 static void xm_hal_cleanup() { restore_printk(); }
 
 void setup_hal_xm() {
-    disable_printk();
+    hal_quiet_sensor_io = true;
     open_i2c_sensor_fd = xm_open_sensor_fd;
     i2c_change_addr = dummy_sensor_i2c_change_addr;
     i2c_read_register = xm_sensor_read_register;

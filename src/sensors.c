@@ -1308,7 +1308,7 @@ static void arm_sensor_clock(void) {
         hal_enable_sensor_clock();
 }
 
-bool getsensorid(sensor_ctx_t *ctx) {
+static bool probe_sensor(sensor_ctx_t *ctx) {
     if (!getchipname())
         return false;
 
@@ -1366,6 +1366,17 @@ bool getsensorid(sensor_ctx_t *ctx) {
      * the end (UB): the bool came back indeterminate — often true — and the
      * caller then formatted an uninitialised ctx into a garbage name. */
     return false;
+}
+
+/* The probe opens sensor descriptors, which on some HALs quietens the kernel
+ * console (hal_quiet_sensor_io), and not every way out of it passes a
+ * hal_cleanup(): a bus that opens and then has no sensor on it, for one. The
+ * console comes back here, on every path, for a consumer that lives on after
+ * the probe -- majestic does, and it ran with the console off all along. */
+bool getsensorid(sensor_ctx_t *ctx) {
+    bool found = probe_sensor(ctx);
+    restore_printk();
+    return found;
 }
 
 #ifndef STANDALONE_LIBRARY

@@ -275,25 +275,46 @@ char *file_to_buf(const char *filename, size_t *len) {
     return fread_to_buf(filename, len, 0, NULL);
 }
 
+/* The console level found before a sensor probe quietened it, or empty while
+ * nothing is quietened. Cleared on restore, so a long-lived consumer can probe
+ * more than once: before, the first restore left it set and every later probe
+ * ran with the console fully on. */
 static char printk_state[16];
+/* Overridable so sensors_test can lend the probe a file of its own. */
+#ifndef PRINTK_FILE
 #define PRINTK_FILE "/proc/sys/kernel/printk"
+#endif
 void disable_printk() {
+    static bool restore_at_exit;
+
     if (*printk_state)
         return;
 
-    FILE *fp = fopen(PRINTK_FILE, "rw+");
+    FILE *fp = fopen(PRINTK_FILE, "r");
     if (!fp)
         return;
-    const char *ret;
-    ret = fgets(printk_state, sizeof(printk_state) - 1, fp);
-    // We cannot use rewind() here
+    const char *ret = fgets(printk_state, sizeof(printk_state) - 1, fp);
     fclose(fp);
-    if (!ret)
+    if (!ret) {
+        *printk_state = '\0';
         return;
+    }
 
     fp = fopen(PRINTK_FILE, "w");
+    if (!fp) {
+        *printk_state = '\0';
+        return;
+    }
     fprintf(fp, "0 0 0 0\n");
     fclose(fp);
+
+    /* A command-line run can leave by exit() from deep inside a probe, past
+     * every hal_cleanup(). Whatever path it takes, the console it found is the
+     * console it leaves. */
+    if (!restore_at_exit) {
+        atexit(restore_printk);
+        restore_at_exit = true;
+    }
 }
 
 void restore_printk() {
@@ -301,8 +322,11 @@ void restore_printk() {
         return;
 
     FILE *fp = fopen(PRINTK_FILE, "w");
-    fprintf(fp, "%s", printk_state);
-    fclose(fp);
+    if (fp) {
+        fprintf(fp, "%s", printk_state);
+        fclose(fp);
+    }
+    *printk_state = '\0';
 }
 
 bool get_pid_cmdline(pid_t godpid, char *cmdname) {
