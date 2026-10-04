@@ -275,34 +275,43 @@ char *file_to_buf(const char *filename, size_t *len) {
     return fread_to_buf(filename, len, 0, NULL);
 }
 
+/* The console level found before a sensor probe quietened it, or empty while
+ * nothing is quietened. Cleared on restore, so a long-lived consumer can probe
+ * more than once: before, the first restore left it set and every later probe
+ * ran with the console fully on. */
 static char printk_state[16];
+/* Overridable so sensors_test can lend the probe a file of its own. */
+#ifndef PRINTK_FILE
 #define PRINTK_FILE "/proc/sys/kernel/printk"
+#endif
 void disable_printk() {
     if (*printk_state)
         return;
 
-    FILE *fp = fopen(PRINTK_FILE, "rw+");
+    FILE *fp = fopen(PRINTK_FILE, "r");
     if (!fp)
         return;
-    const char *ret;
-    ret = fgets(printk_state, sizeof(printk_state) - 1, fp);
-    // We cannot use rewind() here
+    if (!fgets(printk_state, sizeof(printk_state) - 1, fp))
+        *printk_state = '\0';
     fclose(fp);
-    if (!ret)
-        return;
 
-    fp = fopen(PRINTK_FILE, "w");
-    fprintf(fp, "0 0 0 0\n");
-    fclose(fp);
+    /* A level saved but not overwritten is harmless: restoring it writes back
+     * what is already there. */
+    if (*printk_state && (fp = fopen(PRINTK_FILE, "w"))) {
+        fputs("0 0 0 0\n", fp);
+        fclose(fp);
+    }
 }
 
 void restore_printk() {
-    if (!*printk_state)
-        return;
+    FILE *fp;
 
-    FILE *fp = fopen(PRINTK_FILE, "w");
-    fprintf(fp, "%s", printk_state);
-    fclose(fp);
+    /* Kept on a failed write, so a later restore can still put it back. */
+    if (*printk_state && (fp = fopen(PRINTK_FILE, "w"))) {
+        fputs(printk_state, fp);
+        fclose(fp);
+        *printk_state = '\0';
+    }
 }
 
 bool get_pid_cmdline(pid_t godpid, char *cmdname) {

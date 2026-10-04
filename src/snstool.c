@@ -125,6 +125,10 @@ static int monitor_sensor(sensor_ctx_t *ctx, const Reg *reg, bool be) {
         read_register = spi_read_register;
         fd = prepare_spi_sensor();
     }
+    /* The open quietened the console, as it does for a probe. This is not
+     * one: the sensor was found already and answers every read, and the loop
+     * below never ends, so nothing else would give the console back. */
+    restore_printk();
 
     while (1) {
         const Reg *ptr = reg;

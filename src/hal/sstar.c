@@ -136,10 +136,6 @@ static int sstar_open_sensor_fd(int adapter_nr) {
     return universal_open_sensor_fd(adapter_name);
 }
 
-static void sstar_hal_cleanup() {
-    //
-}
-
 static float sstar_get_temp() {
     char buf[16];
 
@@ -193,7 +189,6 @@ void sstar_setup_hal() {
     i2c_adapter_nr = 1;
     open_i2c_sensor_fd = sstar_open_sensor_fd;
     possible_i2c_addrs = sstar_possible_i2c_addrs;
-    hal_cleanup = sstar_hal_cleanup;
     if (!access(TEMP_PATH, R_OK)) {
         hal_temperature = sstar_get_temp;
     }

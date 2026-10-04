@@ -9,6 +9,7 @@
 
 #include "chipid.h"
 #include "hal/common.h"
+#include "tools.h"
 
 int i2c_adapter_nr = 0;
 sensor_addr_t *possible_i2c_addrs;
@@ -43,6 +44,13 @@ int universal_open_sensor_fd(const char *dev_name) {
         return -1;
     }
 
+    /* A probe sweeps addresses where nothing answers, and sensor drivers log
+     * every failed transfer to the console. Quietened here, where a probe
+     * starts, and given back by hal_cleanup() or the end of getsensorid() --
+     * never by setting a HAL up, which every getchipname() caller does and
+     * most never follow with a probe. The kernel log keeps every line either
+     * way; only the console is spared them. */
+    disable_printk();
     return fd;
 }
 
@@ -207,7 +215,9 @@ static int fallback_open_sensor_fd(int i2c_adapter_nr) {
     return universal_open_sensor_fd(adapter_name);
 }
 
-static void universal_hal_cleanup() {}
+/* Gives back a console a probe quietened, for every HAL that has no cleanup
+ * of its own. A no-op when nothing was quietened. */
+static void universal_hal_cleanup() { restore_printk(); }
 
 static unsigned long default_totalmem(unsigned long *media_mem) {
     (void)media_mem;

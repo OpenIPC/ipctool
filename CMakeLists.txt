@@ -462,7 +462,8 @@ if(NOT ONLY_LIBRARY)
   add_executable(sensors_test src/sensors_test.c src/hal/common.c src/tools.c
                               ${VERSION_OBJ})
   target_include_directories(sensors_test PRIVATE include src)
-  target_compile_definitions(sensors_test PRIVATE STANDALONE_LIBRARY)
+  target_compile_definitions(sensors_test PRIVATE STANDALONE_LIBRARY
+    "PRINTK_FILE=\"${CMAKE_CURRENT_BINARY_DIR}/printk.mock\"")
   target_link_libraries(sensors_test m Threads::Threads)
 
   # Includes hal_hisi.c rather than linking it, to reach the sensor-clock

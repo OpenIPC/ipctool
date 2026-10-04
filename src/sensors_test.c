@@ -412,6 +412,94 @@ static void check_vendor_dependent(void) {
     mock_vendor = "HiSilicon";
 }
 
+/* ---- the console a probe borrows --------------------------------------- */
+
+/* A HAL whose driver logs every failed transfer quietens the kernel console
+ * for a probe. It used to do that when the HAL was set up, which every
+ * getchipname() caller does, and give it back only from hal_cleanup(), which
+ * most never reach: majestic on a gk7205v510 ran with the console at 0 from
+ * its first second, so a kernel panic printed nothing at all. The probe owns
+ * the quiet now, from its first descriptor to its last return. Driven through
+ * the real sweep, with the fallback HAL's cleanup -- which restores nothing --
+ * so what puts the console back is getsensorid() itself. */
+static int quiet_seen;
+
+static void printk_put(const char *s) {
+    FILE *f = fopen(PRINTK_FILE, "w");
+    CHECK(f != NULL);
+    if (f) {
+        fputs(s, f);
+        fclose(f);
+    }
+}
+
+static void printk_get(char *buf, size_t n) {
+    *buf = '\0';
+    FILE *f = fopen(PRINTK_FILE, "r");
+    if (f) {
+        if (!fgets(buf, n, f))
+            *buf = '\0';
+        fclose(f);
+    }
+}
+
+static int quiet_open(int adapter_nr) {
+    (void)adapter_nr;
+    return universal_open_sensor_fd("/dev/null");
+}
+
+static int quiet_read(int fd, unsigned char addr, uint32_t reg,
+                      unsigned int reg_width, unsigned int data_width) {
+    (void)fd;
+    (void)addr;
+    (void)reg;
+    (void)reg_width;
+    (void)data_width;
+
+    char now[16];
+    printk_get(now, sizeof(now));
+    if (!strcmp(now, "0 0 0 0\n"))
+        quiet_seen++;
+    return -1;
+}
+
+static void check_probe_restores_console(void) {
+    /* mock_addr: the one address the mock bus answers on. */
+    static unsigned char addrs[] = {0x60, 0};
+    static sensor_addr_t table[] = {{SENSOR_SONY, addrs}, {0, NULL}};
+    sensor_ctx_t ctx;
+
+    setup_hal_fallback();
+    open_i2c_sensor_fd = quiet_open;
+    i2c_read_register = quiet_read;
+    i2c_change_addr = mock_change_addr;
+    possible_i2c_addrs = table;
+
+    printk_put("7 4 1 7\n");
+    /* Twice: the first restore used to leave the saved level behind, and the
+     * second probe in a long-lived process then ran with the console on. */
+    for (int round = 0; round < 2; round++) {
+        memset(&ctx, 0, sizeof(ctx));
+        quiet_seen = 0;
+        CHECK(!getsensorid(&ctx));
+        CHECK(quiet_seen > 0);
+
+        char after[16];
+        printk_get(after, sizeof(after));
+        CHECK(!strcmp(after, "7 4 1 7\n"));
+    }
+
+    /* Setting a HAL up is not a probe. */
+    printk_put("7 4 1 7\n");
+    setup_hal_fallback();
+    char after[16];
+    printk_get(after, sizeof(after));
+    CHECK(!strcmp(after, "7 4 1 7\n"));
+
+    possible_i2c_addrs = NULL;
+    i2c_read_register = mock_read;
+}
+
 int main(int argc, char **argv) {
     i2c_read_register = mock_read;
     i2c_write_register = mock_write;
@@ -437,6 +525,7 @@ int main(int argc, char **argv) {
     check_sony();
     check_techpoint();
     check_vendor_dependent();
+    check_probe_restores_console();
 
     if (failures)
         fprintf(stderr, "sensors_test: %d failure(s)\n", failures);
