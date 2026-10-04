@@ -474,7 +474,6 @@ static void check_probe_restores_console(void) {
     i2c_read_register = quiet_read;
     i2c_change_addr = mock_change_addr;
     possible_i2c_addrs = table;
-    hal_quiet_sensor_io = true;
 
     printk_put("7 4 1 7\n");
     /* Twice: the first restore used to leave the saved level behind, and the
@@ -493,12 +492,10 @@ static void check_probe_restores_console(void) {
     /* Setting a HAL up is not a probe. */
     printk_put("7 4 1 7\n");
     setup_hal_fallback();
-    hal_quiet_sensor_io = true;
     char after[16];
     printk_get(after, sizeof(after));
     CHECK(!strcmp(after, "7 4 1 7\n"));
 
-    hal_quiet_sensor_io = false;
     possible_i2c_addrs = NULL;
     i2c_read_register = mock_read;
 }

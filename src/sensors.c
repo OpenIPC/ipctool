@@ -1368,8 +1368,8 @@ static bool probe_sensor(sensor_ctx_t *ctx) {
     return false;
 }
 
-/* The probe opens sensor descriptors, which on some HALs quietens the kernel
- * console (hal_quiet_sensor_io), and not every way out of it passes a
+/* The probe opens sensor descriptors, which quietens the kernel
+ * console, and not every way out of it passes a
  * hal_cleanup(): a bus that opens and then has no sensor on it, for one. The
  * console comes back here, on every path, for a consumer that lives on after
  * the probe -- majestic does, and it ran with the console off all along. */

@@ -645,7 +645,6 @@ static void get_hisi_sdk(cJSON *j_inner) {
 #endif
 
 void setup_hal_hisi() {
-    hal_quiet_sensor_io = true;
     hal_enable_sensor_clock = hisi_ensure_sensor_enabled;
     hisi_ensure_sensor_enabled();
 

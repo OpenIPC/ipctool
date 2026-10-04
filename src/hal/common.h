@@ -81,7 +81,6 @@ typedef int (*write_register_t)(int fd, unsigned char i2c_addr,
                                 unsigned int reg_addr, unsigned int reg_width,
                                 unsigned int data, unsigned int data_width);
 
-extern bool hal_quiet_sensor_io;
 extern int (*open_i2c_sensor_fd)();
 extern int (*open_spi_sensor_fd)();
 extern bool (*close_sensor_fd)(int fd);

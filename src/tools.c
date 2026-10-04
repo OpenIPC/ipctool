@@ -285,45 +285,29 @@ static char printk_state[16];
 #define PRINTK_FILE "/proc/sys/kernel/printk"
 #endif
 void disable_printk() {
-    static bool restore_at_exit;
-
     if (*printk_state)
         return;
 
     FILE *fp = fopen(PRINTK_FILE, "r");
     if (!fp)
         return;
-    const char *ret = fgets(printk_state, sizeof(printk_state) - 1, fp);
-    fclose(fp);
-    if (!ret) {
+    if (!fgets(printk_state, sizeof(printk_state) - 1, fp))
         *printk_state = '\0';
-        return;
-    }
-
-    fp = fopen(PRINTK_FILE, "w");
-    if (!fp) {
-        *printk_state = '\0';
-        return;
-    }
-    fprintf(fp, "0 0 0 0\n");
     fclose(fp);
 
-    /* A command-line run can leave by exit() from deep inside a probe, past
-     * every hal_cleanup(). Whatever path it takes, the console it found is the
-     * console it leaves. */
-    if (!restore_at_exit) {
-        atexit(restore_printk);
-        restore_at_exit = true;
+    /* A level saved but not overwritten is harmless: restoring it writes back
+     * what is already there. */
+    if (*printk_state && (fp = fopen(PRINTK_FILE, "w"))) {
+        fputs("0 0 0 0\n", fp);
+        fclose(fp);
     }
 }
 
 void restore_printk() {
-    if (!*printk_state)
-        return;
+    FILE *fp;
 
-    FILE *fp = fopen(PRINTK_FILE, "w");
-    if (fp) {
-        fprintf(fp, "%s", printk_state);
+    if (*printk_state && (fp = fopen(PRINTK_FILE, "w"))) {
+        fputs(printk_state, fp);
         fclose(fp);
     }
     *printk_state = '\0';

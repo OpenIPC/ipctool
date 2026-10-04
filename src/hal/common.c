@@ -24,12 +24,6 @@ int (*i2c_change_addr)(int fd, unsigned char addr);
 float (*hal_temperature)();
 void (*hal_cleanup)();
 void (*hal_enable_sensor_clock)();
-/* Set by a HAL whose sensor driver logs every failed transfer to the kernel
- * console: a probe sweeps addresses where nothing answers. The console is
- * quietened when a sensor descriptor is opened and given back by hal_cleanup()
- * or the end of the probe -- never by setting the HAL up, which every
- * getchipname() caller does and most never follow with a probe. */
-bool hal_quiet_sensor_io;
 
 #ifndef STANDALONE_LIBRARY
 void (*hal_detect_ethernet)(cJSON *root);
@@ -50,8 +44,13 @@ int universal_open_sensor_fd(const char *dev_name) {
         return -1;
     }
 
-    if (hal_quiet_sensor_io)
-        disable_printk();
+    /* A probe sweeps addresses where nothing answers, and sensor drivers log
+     * every failed transfer to the console. Quietened here, where a probe
+     * starts, and given back by hal_cleanup() or the end of getsensorid() --
+     * never by setting a HAL up, which every getchipname() caller does and
+     * most never follow with a probe. The kernel log keeps every line either
+     * way; only the console is spared them. */
+    disable_printk();
     return fd;
 }
 
@@ -216,7 +215,9 @@ static int fallback_open_sensor_fd(int i2c_adapter_nr) {
     return universal_open_sensor_fd(adapter_name);
 }
 
-static void universal_hal_cleanup() {}
+/* Gives back a console a probe quietened, for every HAL that has no cleanup
+ * of its own. A no-op when nothing was quietened. */
+static void universal_hal_cleanup() { restore_printk(); }
 
 static unsigned long default_totalmem(unsigned long *media_mem) {
     (void)media_mem;
@@ -236,7 +237,6 @@ void setup_hal_fallback() {
     /* Cleared, not defaulted: most SoCs need nothing done to make the sensor
      * answer, and this runs before detection picks the one that does. */
     hal_enable_sensor_clock = NULL;
-    hal_quiet_sensor_io = false;
 #ifndef STANDALONE_LIBRARY
     hal_totalmem = default_totalmem;
 #endif
