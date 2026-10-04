@@ -2111,6 +2111,229 @@ static const muxctrl_reg_t *DV200regs[] = {
     &DV200_iocfg_reg96, &DV200_iocfg_reg97,
     &DV200_iocfg_reg98, 0,
 };
+
+/* GK7205V500 / V510 / V530 (XMedia XM720xxx). Not an ev200: the pads sit at
+ * the same iocfg addresses but behind different selectors, and the block has
+ * twelve PWM channels, not four. Generated from XMedia's PIN_OUT_V510.xlsx
+ * (sheet 1, "Function Number" per pin; addresses from sheet 3), plus the one
+ * selector PIN_OUT_V530.xlsx adds (FMC_STARTUP_DISABLE on UART0_TXD). The two
+ * workbooks agree on every other row; the QFN V330/V230 pin-outs are strict
+ * subsets of it. iocfg_reg0-5 are the power-sequencing pins, which have no
+ * selector. */
+MUXCTRL(V500_iocfg_reg6, 0x112C0074, PMX_GPIO6_4, PMX_reserved, PMX_UART1_TXD,
+        PMX_I2C1_SCL, PMX_reserved, PMX_PWM11, PMX_reserved, PMX_SPI0_SCLK)
+MUXCTRL(V500_iocfg_reg7, 0x112C0070, PMX_GPIO6_5, PMX_VI_BT1120_DATA2,
+        PMX_UART1_RXD, PMX_I2C1_SDA, PMX_reserved, PMX_PWM10, PMX_reserved,
+        PMX_SPI0_SDI)
+MUXCTRL(V500_iocfg_reg8, 0x112C006C, PMX_GPIO6_6, PMX_SFC_BOOT_MODE, PMX_PWM3,
+        PMX_reserved, PMX_reserved, PMX_UART2_TXD, PMX_reserved, PMX_SPI0_SDO)
+MUXCTRL(V500_iocfg_reg9, 0x112C0068, PMX_GPIO6_7, PMX_VI_BT1120_DATA3, PMX_PWM9,
+        PMX_reserved, PMX_reserved, PMX_UART2_RXD, PMX_reserved, PMX_SPI0_CSN)
+MUXCTRL(V500_iocfg_reg10, 0x112C0058, PMX_GPIO7_0, PMX_VI_BT1120_DATA4,
+        PMX_I2C2_SCL, PMX_reserved, PMX_SDIO1_CDATA3, PMX_PWM8, PMX_reserved,
+        PMX_SPI1_CSN1)
+MUXCTRL(V500_iocfg_reg11, 0x112C005C, PMX_GPIO7_1, PMX_VI_BT1120_DATA5,
+        PMX_I2C2_SDA, PMX_reserved, PMX_SDIO1_CDATA2, PMX_PWM7, PMX_reserved,
+        PMX_VI_DATA0)
+MUXCTRL(V500_iocfg_reg12, 0x112C0060, PMX_GPIO7_2, PMX_VI_BT1120_CLK,
+        PMX_I2C0_SDA, PMX_reserved, PMX_SDIO1_CDATA1, PMX_PWM6, PMX_reserved,
+        PMX_VI_DATA1)
+MUXCTRL(V500_iocfg_reg13, 0x112C0064, PMX_GPIO7_3, PMX_reserved, PMX_I2C0_SCL,
+        PMX_reserved, PMX_SDIO1_CDATA0, PMX_PWM5, PMX_reserved, PMX_VI_DATA2)
+MUXCTRL(V500_iocfg_reg14, 0x112C0078, PMX_GPIO7_4, PMX_UART1_TXD)
+MUXCTRL(V500_iocfg_reg15, 0x112C007C, PMX_GPIO7_5, PMX_UART1_RXD)
+MUXCTRL(V500_iocfg_reg16, 0x112C0080, PMX_GPIO7_6, PMX_UART1_CTSN)
+MUXCTRL(V500_iocfg_reg17, 0x112C0084, PMX_GPIO7_7, PMX_UART1_RTSN)
+MUXCTRL(V500_iocfg_reg18, 0x112C0088, PMX_GPIO8_0)
+MUXCTRL(V500_iocfg_reg19, 0x112C008C, PMX_GPIO8_1)
+MUXCTRL(V500_iocfg_reg20, 0x112C0090, PMX_GPIO8_2)
+MUXCTRL(V500_iocfg_reg21, 0x112C0094, PMX_GPIO8_3)
+MUXCTRL(V500_iocfg_reg22, 0x112C0054, PMX_GPIO8_4, PMX_BOOT_SEL0,
+        PMX_SENSOR_CLK, PMX_PWM2, PMX_reserved, PMX_reserved, PMX_reserved,
+        PMX_SPI1_CSN0)
+MUXCTRL(V500_iocfg_reg23, 0x112C004C, PMX_GPIO8_5, PMX_VI_BT1120_DATA0,
+        PMX_VI_HS, PMX_reserved, PMX_SDIO1_CCMD, PMX_PWM4, PMX_reserved,
+        PMX_SPI1_SDI)
+MUXCTRL(V500_iocfg_reg24, 0x112C0050, PMX_GPIO8_6, PMX_VI_BT1120_DATA1,
+        PMX_VI_VS, PMX_reserved, PMX_reserved, PMX_reserved, PMX_reserved,
+        PMX_SPI1_SDO)
+MUXCTRL(V500_iocfg_reg25, 0x112C0048, PMX_GPIO8_7, PMX_BOOT_SEL1,
+        PMX_SENSOR_RSTN, PMX_reserved, PMX_SDIO1_CCLK_OUT, PMX_reserved,
+        PMX_reserved, PMX_SPI1_SCLK)
+MUXCTRL(V500_iocfg_reg26, 0x112C0098, PMX_GPIO5_2, PMX_FLASH_TRIG,
+        PMX_SENSOR_HS)
+MUXCTRL(V500_iocfg_reg27, 0x112C009C, PMX_GPIO5_3, PMX_SHUTTER_TRIG,
+        PMX_SENSOR_VS, PMX_reserved, PMX_SPI0_CSN)
+MUXCTRL(V500_iocfg_reg28, 0x112C00A0, PMX_GPIO6_0, PMX_I2C1_SDA, PMX_reserved,
+        PMX_reserved, PMX_SPI0_SDO)
+MUXCTRL(V500_iocfg_reg29, 0x112C00A4, PMX_GPIO6_1, PMX_I2C1_SCL, PMX_reserved,
+        PMX_reserved, PMX_SPI0_SCLK)
+MUXCTRL(V500_iocfg_reg30, 0x112C0040, PMX_GPIO5_0, PMX_ETH_LINK_STA_LED,
+        PMX_VI_DATA0, PMX_VI_DATA2, PMX_reserved, PMX_reserved, PMX_reserved,
+        PMX_SPI0_CSN)
+MUXCTRL(V500_iocfg_reg31, 0x112C0044, PMX_GPIO5_1, PMX_ETH_LINK_ACT_LED,
+        PMX_TEST_MODE)
+MUXCTRL(V500_iocfg_reg32, 0x112C0028, PMX_TEST_CLK, PMX_SENSOR_CLK,
+        PMX_VI_DATA6, PMX_reserved, PMX_GPIO5_4)
+MUXCTRL(V500_iocfg_reg33, 0x112C002C, PMX_GPIO5_5, PMX_SENSOR_RSTN,
+        PMX_VI_DATA4)
+MUXCTRL(V500_iocfg_reg34, 0x112C0030, PMX_GPIO5_6, PMX_I2C0_SDA, PMX_VI_DATA3)
+MUXCTRL(V500_iocfg_reg35, 0x112C0034, PMX_GPIO5_7, PMX_I2C0_SCL, PMX_VI_DATA5)
+MUXCTRL(V500_iocfg_reg36, 0x112C0038, PMX_GPIO6_2, PMX_I2C2_SDA, PMX_VI_DATA2,
+        PMX_VI_HS, PMX_reserved, PMX_reserved, PMX_reserved, PMX_SPI0_SDO)
+MUXCTRL(V500_iocfg_reg37, 0x112C003C, PMX_GPIO6_3, PMX_I2C2_SCL, PMX_VI_DATA1,
+        PMX_VI_VS, PMX_reserved, PMX_reserved, PMX_reserved, PMX_SPI0_SCLK)
+MUXCTRL(V500_iocfg_reg38, 0x112C0014, PMX_MIPI_RX_D2P, PMX_VI_BT1120_DATA15,
+        PMX_VI_DATA10, PMX_VI_DATA11)
+MUXCTRL(V500_iocfg_reg39, 0x112C0010, PMX_MIPI_RX_D2N, PMX_VI_BT1120_DATA14,
+        PMX_VI_DATA11, PMX_VI_DATA10)
+MUXCTRL(V500_iocfg_reg40, 0x112C000C, PMX_MIPI_RX_D0P, PMX_VI_BT1120_DATA13,
+        PMX_VI_DATA9, PMX_VI_DATA8)
+MUXCTRL(V500_iocfg_reg41, 0x112C0008, PMX_MIPI_RX_D0N, PMX_VI_BT1120_DATA12,
+        PMX_VI_DATA8, PMX_VI_DATA9)
+MUXCTRL(V500_iocfg_reg42, 0x112C0004, PMX_MIPI_RX_CK0P, PMX_VI_BT1120_DATA11,
+        PMX_VI_DATA7)
+MUXCTRL(V500_iocfg_reg43, 0x112C0000, PMX_MIPI_RX_CK0N, PMX_VI_BT1120_DATA10,
+        PMX_VI_CLK)
+MUXCTRL(V500_iocfg_reg44, 0x112C0024, PMX_MIPI_RX_D3P, PMX_VI_BT1120_DATA9,
+        PMX_reserved, PMX_VI_DATA5)
+MUXCTRL(V500_iocfg_reg45, 0x112C0020, PMX_MIPI_RX_D3N, PMX_VI_BT1120_DATA8,
+        PMX_reserved, PMX_VI_DATA3)
+MUXCTRL(V500_iocfg_reg46, 0x112C001C, PMX_MIPI_RX_D1P, PMX_VI_BT1120_DATA7,
+        PMX_reserved, PMX_VI_DATA4)
+MUXCTRL(V500_iocfg_reg47, 0x112C0018, PMX_MIPI_RX_D1N, PMX_VI_BT1120_DATA6,
+        PMX_reserved, PMX_VI_DATA6)
+MUXCTRL(V500_iocfg_reg48, 0x100C0084, PMX_GPIO2_4, PMX_SPI1_SCLK)
+MUXCTRL(V500_iocfg_reg49, 0x100C0088, PMX_GPIO2_5, PMX_SPI1_SDO)
+MUXCTRL(V500_iocfg_reg50, 0x100C008C, PMX_GPIO2_6, PMX_SPI1_CSN0)
+MUXCTRL(V500_iocfg_reg51, 0x100C0090, PMX_GPIO2_7, PMX_SPI1_SDI)
+MUXCTRL(V500_iocfg_reg52, 0x100C0078, PMX_GPIO0_5, PMX_USB_OVRCUR)
+MUXCTRL(V500_iocfg_reg53, 0x100C007C, PMX_GPIO0_6, PMX_USB_VBUS)
+MUXCTRL(V500_iocfg_reg54, 0x100C0080, PMX_GPIO0_7, PMX_USB_PWREN)
+MUXCTRL(V500_iocfg_reg55, 0x100C009C, PMX_GPIO9_0, PMX_PWM2)
+MUXCTRL(V500_iocfg_reg56, 0x100C00A0, PMX_GPIO9_1, PMX_PWM3)
+MUXCTRL(V500_iocfg_reg57, 0x100C00A4, PMX_GPIO2_3, PMX_SVB_PWM)
+MUXCTRL(V500_iocfg_reg58, 0x100C0098, PMX_POR_SEL)
+MUXCTRL(V500_iocfg_reg59, 0x100C0094, PMX_RST_N)
+MUXCTRL(V500_iocfg_reg60, 0x100C0060, PMX_GPIO2_1, PMX_SFC_CLK, PMX_reserved,
+        PMX_reserved, PMX_SDIO1_CCLK_OUT)
+MUXCTRL(V500_iocfg_reg61, 0x100C0064, PMX_GPIO2_2, PMX_SFC_WP_IO2, PMX_reserved,
+        PMX_reserved, PMX_SDIO1_CCMD)
+MUXCTRL(V500_iocfg_reg62, 0x100C0068, PMX_GPIO3_0, PMX_SFC_MOSI_IO0,
+        PMX_reserved, PMX_reserved, PMX_SDIO1_CDATA0)
+MUXCTRL(V500_iocfg_reg63, 0x100C006C, PMX_GPIO3_1, PMX_SFC_HOLD_IO3,
+        PMX_reserved, PMX_reserved, PMX_SDIO1_CDATA1)
+MUXCTRL(V500_iocfg_reg64, 0x100C0070, PMX_GPIO3_2, PMX_SFC_CSN, PMX_reserved,
+        PMX_reserved, PMX_SDIO1_CDATA2)
+MUXCTRL(V500_iocfg_reg65, 0x100C0074, PMX_GPIO3_3, PMX_SFC_MISO_IO1,
+        PMX_reserved, PMX_reserved, PMX_SDIO1_CDATA3)
+MUXCTRL(V500_iocfg_reg66, 0x100C0030, PMX_GPIO3_4, PMX_reserved, PMX_reserved,
+        PMX_EMMC_DATA4)
+MUXCTRL(V500_iocfg_reg67, 0x100C0034, PMX_GPIO3_5, PMX_reserved, PMX_reserved,
+        PMX_EMMC_DATA5)
+MUXCTRL(V500_iocfg_reg68, 0x100C0038, PMX_GPIO3_6, PMX_reserved, PMX_reserved,
+        PMX_EMMC_DATA6)
+MUXCTRL(V500_iocfg_reg69, 0x100C003C, PMX_GPIO3_7, PMX_reserved, PMX_reserved,
+        PMX_EMMC_DATA7)
+MUXCTRL(V500_iocfg_reg70, 0x100C0040, PMX_GPIO4_0, PMX_SDIO0_CCLK_OUT,
+        PMX_JTAG_TCK, PMX_EMMC_CLK, PMX_SDIO1_CCLK_OUT, PMX_reserved,
+        PMX_reserved, PMX_SFC_INPUT_SEL)
+MUXCTRL(V500_iocfg_reg71, 0x100C0044, PMX_GPIO4_1, PMX_SDIO0_CCMD, PMX_reserved,
+        PMX_EMMC_CMD, PMX_SDIO1_CCMD)
+MUXCTRL(V500_iocfg_reg72, 0x100C0048, PMX_GPIO4_2, PMX_SDIO0_CDATA0,
+        PMX_JTAG_TMS, PMX_EMMC_DATA1, PMX_SDIO1_CDATA3)
+MUXCTRL(V500_iocfg_reg73, 0x100C004C, PMX_GPIO4_3, PMX_SDIO0_CDATA1,
+        PMX_JTAG_TDO, PMX_EMMC_DATA2, PMX_SDIO1_CDATA2)
+MUXCTRL(V500_iocfg_reg74, 0x100C0050, PMX_GPIO4_4, PMX_SDIO0_CDATA2,
+        PMX_JTAG_TDI, PMX_EMMC_DATA3, PMX_SDIO1_CDATA1)
+MUXCTRL(V500_iocfg_reg75, 0x100C0054, PMX_GPIO4_5, PMX_SDIO0_CDATA3,
+        PMX_JTAG_TRSTN, PMX_EMMC_DATA0, PMX_SDIO1_CDATA0)
+MUXCTRL(V500_iocfg_reg76, 0x100C0058, PMX_GPIO4_6, PMX_SDIO0_CARD_POWER_EN_N,
+        PMX_reserved, PMX_EMMC_DS)
+MUXCTRL(V500_iocfg_reg77, 0x100C005C, PMX_GPIO4_7, PMX_SDIO0_CARD_DETECT,
+        PMX_reserved, PMX_EMMC_RST_N)
+MUXCTRL(V500_iocfg_reg78, 0x100C001C, PMX_EMMC_DATA0, PMX_SFC_MISO_IO1)
+MUXCTRL(V500_iocfg_reg79, 0x100C0020, PMX_EMMC_DATA3, PMX_SFC_WP_IO2)
+MUXCTRL(V500_iocfg_reg80, 0x100C0028, PMX_EMMC_DATA1, PMX_SFC_CSN)
+MUXCTRL(V500_iocfg_reg81, 0x100C0024, PMX_EMMC_DATA2, PMX_SFC_HOLD_IO3)
+MUXCTRL(V500_iocfg_reg82, 0x100C0014, PMX_EMMC_CLK, PMX_SFC_CLK,
+        PMX_SFC_DEVICE_MODE)
+MUXCTRL(V500_iocfg_reg83, 0x100C0018, PMX_EMMC_CMD, PMX_SFC_MOSI_IO0)
+MUXCTRL(V500_iocfg_reg84, 0x100C002C, PMX_SYS_RSTN_OUT, PMX_WDG_RSTN,
+        PMX_SDIO0_CARD_POWER_EN_N, PMX_GPIO9_2)
+MUXCTRL(V500_iocfg_reg85, 0x100C0000, PMX_GPIO0_1, PMX_UART0_RXD)
+MUXCTRL(V500_iocfg_reg86, 0x100C0004, PMX_GPIO0_2, PMX_UART0_TXD,
+        PMX_FMC_STARTUP_DISABLE)
+MUXCTRL(V500_iocfg_reg87, 0x100C0008, PMX_GPIO0_0, PMX_UPDATE_MODE, PMX_IR_IN)
+MUXCTRL(V500_iocfg_reg88, 0x100C000C, PMX_GPIO0_3, PMX_PWM0, PMX_UART1_TXD,
+        PMX_I2C1_SCL)
+MUXCTRL(V500_iocfg_reg89, 0x100C0010, PMX_GPIO0_4, PMX_PWM1, PMX_UART1_RXD,
+        PMX_I2C1_SDA)
+MUXCTRL(V500_iocfg_reg90, 0x120C0010, PMX_JTAG_TRSTN, PMX_SPI1_CSN0,
+        PMX_GPIO1_4, PMX_reserved, PMX_UART2_RXD, PMX_I2S_MCLK)
+MUXCTRL(V500_iocfg_reg91, 0x120C0014, PMX_JTAG_TCK, PMX_SPI1_SCLK, PMX_GPIO1_5,
+        PMX_reserved, PMX_UART2_TXD, PMX_I2S_BCLK)
+MUXCTRL(V500_iocfg_reg92, 0x120C0018, PMX_JTAG_TMS, PMX_SPI1_SDI, PMX_GPIO1_6,
+        PMX_PWM2, PMX_UART2_CTSN, PMX_I2S_WS)
+MUXCTRL(V500_iocfg_reg93, 0x120C001C, PMX_JTAG_TDO, PMX_SPI1_SDO, PMX_GPIO1_7,
+        PMX_reserved, PMX_UART2_RTSN, PMX_I2S_SD_RX)
+MUXCTRL(V500_iocfg_reg94, 0x120C0020, PMX_JTAG_TDI, PMX_SPI1_CSN1, PMX_GPIO2_0,
+        PMX_SDIO0_CARD_POWER_EN_N, PMX_PWM3, PMX_I2S_SD_TX)
+MUXCTRL(V500_iocfg_reg95, 0x120C0000, PMX_GPIO1_0, PMX_LSADC_CH0)
+MUXCTRL(V500_iocfg_reg96, 0x120C0004, PMX_GPIO1_1, PMX_LSADC_CH1)
+MUXCTRL(V500_iocfg_reg97, 0x120C0008, PMX_GPIO1_2, PMX_LSADC_CH2)
+MUXCTRL(V500_iocfg_reg98, 0x120C000C, PMX_GPIO1_3, PMX_LSADC_CH3)
+
+static const muxctrl_reg_t *V500regs[] = {
+    &V500_iocfg_reg6,  &V500_iocfg_reg7,
+    &V500_iocfg_reg8,  &V500_iocfg_reg9,
+    &V500_iocfg_reg10, &V500_iocfg_reg11,
+    &V500_iocfg_reg12, &V500_iocfg_reg13,
+    &V500_iocfg_reg14, &V500_iocfg_reg15,
+    &V500_iocfg_reg16, &V500_iocfg_reg17,
+    &V500_iocfg_reg18, &V500_iocfg_reg19,
+    &V500_iocfg_reg20, &V500_iocfg_reg21,
+    &V500_iocfg_reg22, &V500_iocfg_reg23,
+    &V500_iocfg_reg24, &V500_iocfg_reg25,
+    &V500_iocfg_reg26, &V500_iocfg_reg27,
+    &V500_iocfg_reg28, &V500_iocfg_reg29,
+    &V500_iocfg_reg30, &V500_iocfg_reg31,
+    &V500_iocfg_reg32, &V500_iocfg_reg33,
+    &V500_iocfg_reg34, &V500_iocfg_reg35,
+    &V500_iocfg_reg36, &V500_iocfg_reg37,
+    &V500_iocfg_reg38, &V500_iocfg_reg39,
+    &V500_iocfg_reg40, &V500_iocfg_reg41,
+    &V500_iocfg_reg42, &V500_iocfg_reg43,
+    &V500_iocfg_reg44, &V500_iocfg_reg45,
+    &V500_iocfg_reg46, &V500_iocfg_reg47,
+    &V500_iocfg_reg48, &V500_iocfg_reg49,
+    &V500_iocfg_reg50, &V500_iocfg_reg51,
+    &V500_iocfg_reg52, &V500_iocfg_reg53,
+    &V500_iocfg_reg54, &V500_iocfg_reg55,
+    &V500_iocfg_reg56, &V500_iocfg_reg57,
+    &V500_iocfg_reg58, &V500_iocfg_reg59,
+    &V500_iocfg_reg60, &V500_iocfg_reg61,
+    &V500_iocfg_reg62, &V500_iocfg_reg63,
+    &V500_iocfg_reg64, &V500_iocfg_reg65,
+    &V500_iocfg_reg66, &V500_iocfg_reg67,
+    &V500_iocfg_reg68, &V500_iocfg_reg69,
+    &V500_iocfg_reg70, &V500_iocfg_reg71,
+    &V500_iocfg_reg72, &V500_iocfg_reg73,
+    &V500_iocfg_reg74, &V500_iocfg_reg75,
+    &V500_iocfg_reg76, &V500_iocfg_reg77,
+    &V500_iocfg_reg78, &V500_iocfg_reg79,
+    &V500_iocfg_reg80, &V500_iocfg_reg81,
+    &V500_iocfg_reg82, &V500_iocfg_reg83,
+    &V500_iocfg_reg84, &V500_iocfg_reg85,
+    &V500_iocfg_reg86, &V500_iocfg_reg87,
+    &V500_iocfg_reg88, &V500_iocfg_reg89,
+    &V500_iocfg_reg90, &V500_iocfg_reg91,
+    &V500_iocfg_reg92, &V500_iocfg_reg93,
+    &V500_iocfg_reg94, &V500_iocfg_reg95,
+    &V500_iocfg_reg96, &V500_iocfg_reg97,
+    &V500_iocfg_reg98, 0,
+};
+
 #endif /* IPCHW_PADMUX_V4 */
 
 #if defined(IPCHW_PADMUX_3536D) /* hi3536dv100 */
@@ -2875,7 +3098,7 @@ static const muxctrl_reg_t **regs_by_chip() {
         else if (IS_16DV200)
             return DV200regs;
         else if (IS_7205V500)
-            return EV200regs;
+            return V500regs;
         break;
 #endif
 #ifdef IPCHW_PADMUX_V5

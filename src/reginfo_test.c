@@ -240,6 +240,43 @@ static void test_v4_pwm(void) {
 }
 #endif
 
+#ifdef IPCHW_PADMUX_V4
+static void test_v500_pwm(void) {
+    puts("V4 (gk7205v510): twelve PWM channels, its own pad table");
+    as_chip(HISI_V4, "7205V510");
+
+    /* The IR lamps of the Zenointel SD-2N-4G: PWM8 on GPIO7_0 at selector 5
+     * and PWM9 on GPIO6_7 at selector 2, per XMedia's PIN_OUT_V510 and the
+     * stock firmware's own pwm.ko. These chips used to get the ev200 table,
+     * which calls the first of those pads LCD_DATA4 and knows no PWM8. */
+    ipchw_padmux_t r;
+    if (one("PWM8", &r)) {
+        CHECK(r.address == 0x112C0058);
+        CHECK(r.func == 5);
+        CHECK(r.gpio_pad == 56);
+    }
+    if (one("PWM9", &r)) {
+        CHECK(r.address == 0x112C0068);
+        CHECK(r.func == 2);
+        CHECK(r.gpio_pad == 55);
+    }
+    if (one("PWM11", &r)) {
+        CHECK(r.address == 0x112C0074);
+        CHECK(r.func == 5);
+    }
+
+    ipchw_padmux_t rows[8];
+    int n = ipchw_padmux_by_pad(56, rows, 8);
+    CHECK(n >= 2);
+    for (int i = 0; i < n && i < 8; i++)
+        CHECK(strcmp(rows[i].func_name, "LCD_DATA4") != 0);
+
+    /* The core-voltage PWM is its own pad and its own function name, so a
+     * PWMn lookup can never land on it. */
+    CHECK(ipchw_padmux_by_func("SVB_PWM", rows, 8) == 1);
+}
+#endif
+
 #ifdef IPCHW_PADMUX_V1
 static void test_prefix_is_not_substring(void) {
     puts("a PWM prefix must not catch SVB_PWM");
@@ -1013,6 +1050,7 @@ static void test_table_integrity(void) {
         {HISI_V4, "3516EV300"},
         {HISI_V4, "3518EV300"},
         {HISI_V4, "3516DV200"},
+        {HISI_V4, "7205V510"},
         {HISI_V4A, "3516CV500"},
         {HISI_V4A, "3516AV300"},
         {HISI_OT, "3516CV610"},
@@ -1159,6 +1197,7 @@ int main(void) {
 #endif
 #ifdef IPCHW_PADMUX_V4
     test_v4_pwm();
+    test_v500_pwm();
     test_counts_past_max();
     test_get_set();
 #endif
