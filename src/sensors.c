@@ -1023,19 +1023,49 @@ static int detect_imagedesign_sensor(sensor_ctx_t *ctx, int fd,
 
     int res = msb << 8 | lsb;
     switch (res) {
+    case 0x2003:
     case 0x2006:
-    case 0x2008: // XM states 0x2008 is MIS2009, not going to believe that yet
-    case 0x5001:
         sprintf(ctx->sensor_id, "MIS%04x", res);
         return true;
-    case 0x1311:
-        sprintf(ctx->sensor_id, "MIS4001");
+    // MIS2008 and MIS2009 both read 0x2008: Ingenic's mis2008 driver and its
+    // t23/t41 mis2009 drivers all check for it, and the two are the same
+    // 1936x1096 2.79um die (the 2009 adds DVP). Nothing read-only is known to
+    // separate them. The MIS2008 datasheet (2021, p.39) gives DEVICE_ID 0x2009
+    // instead, but no MIS2008 driver accepts that.
+    case 0x2008:
+        strcpy(ctx->sensor_id, "MIS2008");
         return true;
-    default:
-        // SENSOR_ERR("ImageDesign", res);
-        return false;
+    // MIS2031 (Rockchip SDK driver) and MIS2032 (Sophgo and Ingenic drivers)
+    // share 0x2009 -- the 90fps HDR successors of the 0x2008 die.
+    case 0x2009:
+        strcpy(ctx->sensor_id, "MIS2031");
+        return true;
+    case 0x20e1:
+        strcpy(ctx->sensor_id, "MIS20S1");
+        return true;
+    // MIS4001 and MIS5001 both read 0x1311: every MIS5001 driver checks for it
+    // (Ingenic, Sophgo cvi_sensor, Rockchip RV1106 -- which even logs
+    // "Detected mis4001"). Nothing read-only is known to separate them.
+    case 0x1311:
+        strcpy(ctx->sensor_id, "MIS4001");
+        return true;
+    case 0x5003:
+        strcpy(ctx->sensor_id, "MIS5011");
+        return true;
     }
-    // MIS40C1 0xce4 @ 3107-3108 ?
+
+    // MIS40C1 is not identified at 0x3000; its Sophgo driver reads 0x03fc from
+    // 0x541d/0x541e. (Ingenic's checks 0x0004 at 0x3004/0x3005, but on MIS2008
+    // that is BROADCAST_ID, read-write with reset default 0x0004, so it would
+    // match any MIS part.)
+    msb = i2c_read_register(fd, i2c_addr, 0x541d, 2, 1);
+    lsb = i2c_read_register(fd, i2c_addr, 0x541e, 2, 1);
+    if (msb == 0x03 && lsb == 0xfc) {
+        strcpy(ctx->sensor_id, "MIS40C1");
+        return true;
+    }
+
+    return false;
 }
 
 static int detect_visemi_sensor(sensor_ctx_t *ctx, int fd,
