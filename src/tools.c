@@ -306,11 +306,12 @@ void disable_printk() {
 void restore_printk() {
     FILE *fp;
 
+    /* Kept on a failed write, so a later restore can still put it back. */
     if (*printk_state && (fp = fopen(PRINTK_FILE, "w"))) {
         fputs(printk_state, fp);
         fclose(fp);
+        *printk_state = '\0';
     }
-    *printk_state = '\0';
 }
 
 bool get_pid_cmdline(pid_t godpid, char *cmdname) {
