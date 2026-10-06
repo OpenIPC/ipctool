@@ -111,11 +111,11 @@ Where:
   -t, --temp                read chip temperature (where supported)
 
   backup <filename>         save backup into a file
-  upload [--backup [--public]] [--yes]
+  upload [--backup [--public] | --no-backup] [--yes]
                             send this report to openipc.org's board
                             catalogue; reviewed before publishing.
-                            --backup adds the flash, kept private
-                            unless --public (ipctool upload -h)
+                            Asks whether to add a flash backup,
+                            private or public (ipctool upload -h)
   restore <filename>        restore from a backup file
      [-s, --skip-env]       skip environment
      [-f, --force]          enforce
@@ -296,24 +296,28 @@ catalogue](https://openipc.org/cameras/boards) this way:
 # ipctool upload
 ```
 
-It prints the report, says where it goes, sends it, and answers with a
-receipt address. Nothing leaves the camera unless you run this. OpenIPC's
-maintainers review each report before any of it is published, and the public
-copy of the report replaces the MAC, the chip's die ID and the cloud ID with
-hashes.
+It prints the report, says where it goes, asks whether to send a backup of
+the flash with it, sends it, and answers with a receipt address. Nothing
+leaves the camera unless you run this. OpenIPC's maintainers review each
+report before any of it is published, and the public copy of the report
+replaces the MAC, the chip's die ID and the cloud ID with hashes.
 
-To send the whole flash as well, for the people porting OpenIPC to the
-board, add `--backup`. The backup holds everything the camera stores:
-settings, Wi-Fi keys, passwords. It is kept private, readable only by the
-maintainers, unless you add `--public`. A public backup is the flash as it
-is: the MAC, die ID and cloud ID are in it in clear, along with everything
-else. Either way ipctool asks you to type `yes` before it reads anything;
-`--yes` skips the question, for scripts and agents. If any partition cannot
-be read, nothing is sent: a backup missing a partition is not the whole flash.
+The backup is what the people porting OpenIPC to the board start from. It
+holds everything the camera stores: settings, Wi-Fi keys, passwords. Answer
+`no` (or just Enter) to send the report alone, `private` to send the backup
+for the maintainers only, or `public` to let it be published with the report.
+A public backup is the flash as it is: the MAC, die ID and cloud ID are in it
+in clear, along with everything else. The flash is read only after you answer.
+If any partition cannot be read, nothing is sent: a backup missing a partition
+is not the whole flash.
+
+Without a terminal, or with `--yes`, nothing is asked and only the report is
+sent. Scripts and agents choose up front:
 
 ```console
-# ipctool upload --backup           # private: for the maintainers only
-# ipctool upload --backup --public  # published with the report once reviewed
+# ipctool upload --no-backup              # the report only, no question
+# ipctool upload --backup                 # private: asks you to type yes
+# ipctool upload --backup --public --yes  # public, without asking
 ```
 
 ### As reverse engineering tool

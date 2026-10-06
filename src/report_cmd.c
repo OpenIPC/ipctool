@@ -16,8 +16,9 @@
  * Nothing leaves the camera unless this command is run, and it says what it
  * sends before it sends it (#78). By default that is the YAML ipctool prints
  * -- which openipc.org publishes with the MAC, die ID and cloud ID replaced
- * by hashes. A flash backup goes only with --backup, only after the owner
- * confirms, and is published only with --public.
+ * by hashes. A flash backup goes only when the owner chooses it: asked at
+ * the terminal after the report is shown, or with --backup, which needs a
+ * yes too. It is published only when they say so (public, or --public).
  */
 
 #define DEFAULT_HOST "openipc.org"
@@ -25,18 +26,29 @@
 
 static void usage(void) {
     fprintf(stderr,
-            "Usage: ipctool upload [--backup [--public]] [--yes] "
-            "[--note TEXT] [--host NAME]\n"
-            "  (none)       send the hardware report ipctool prints\n"
+            "Usage: ipctool upload [--backup [--public] | --no-backup] "
+            "[--yes] [--note TEXT] [--host NAME]\n"
+            "  (none)       send the hardware report ipctool prints, and ask "
+            "whether\n"
+            "               to send a backup of the flash with it\n"
             "  --backup     also send a backup of the whole flash, kept "
             "private:\n"
             "               only OpenIPC's maintainers can read it\n"
             "  --public     let the backup be published with the report\n"
+            "  --no-backup  send the report only, without asking\n"
             "  --yes        do not ask (for scripts and agents)\n"
             "  --note TEXT  where the camera came from, what it is sold as\n"
             "  --host NAME[:PORT]\n"
             "               another openipc.org (dev.openipc.org), or a "
             "bench server\n");
+}
+
+/* A line from the terminal, without its line end: telnet sends \r\n. */
+static bool read_answer(char *line, size_t size) {
+    if (!fgets(line, size, stdin))
+        return false;
+    line[strcspn(line, "\r\n")] = '\0';
+    return true;
 }
 
 static bool confirm(const char *what) {
@@ -49,30 +61,64 @@ static bool confirm(const char *what) {
     }
     fprintf(stderr, "Type yes to send %s: ", what);
     char line[16] = "";
-    if (!fgets(line, sizeof(line), stdin))
-        return false;
-    return !strcmp(line, "yes\n") || !strcmp(line, "yes");
+    return read_answer(line, sizeof(line)) && !strcmp(line, "yes");
+}
+
+/*
+ * Offered once the report is on the screen, so the owner decides with it in
+ * front of them. Anything but "private" or "public" is a no: the report goes
+ * alone.
+ */
+static void ask_backup(bool *with_backup, bool *public_backup) {
+    fprintf(stderr,
+            "\nA backup of the whole flash, sent with the report, is what "
+            "porting OpenIPC\n"
+            "to this board starts from. It holds everything the camera "
+            "keeps: its\n"
+            "settings, Wi-Fi keys, passwords, cloud IDs.\n"
+            "  no       send the report only\n"
+            "  private  send the backup too; only OpenIPC's maintainers can "
+            "read it\n"
+            "  public   send the backup too, and let anyone download it once "
+            "the\n"
+            "           report is reviewed, with the MAC, chip ID and cloud "
+            "ID in clear\n"
+            "Send a backup? [no/private/public]: ");
+    char line[16] = "";
+    if (!read_answer(line, sizeof(line)))
+        line[0] = '\0';
+    if (!strcmp(line, "private") || !strcmp(line, "public")) {
+        *with_backup = true;
+        *public_backup = !strcmp(line, "public");
+    } else {
+        fprintf(stderr, "No backup: sending the report only.\n");
+    }
 }
 
 int report_cmd(int argc, char **argv) {
     const struct option opts[] = {{"backup", no_argument, NULL, 'b'},
                                   {"public", no_argument, NULL, 'p'},
+                                  {"no-backup", no_argument, NULL, 'N'},
                                   {"yes", no_argument, NULL, 'y'},
                                   {"note", required_argument, NULL, 'n'},
                                   {"host", required_argument, NULL, 'H'},
                                   {"help", no_argument, NULL, 'h'},
                                   {NULL, 0, NULL, 0}};
-    bool with_backup = false, public_backup = false, yes = false;
+    bool with_backup = false, public_backup = false, no_backup = false;
+    bool yes = false, chosen = false;
     const char *note = NULL, *host = DEFAULT_HOST;
     int c;
     optind = 1;
-    while ((c = getopt_long(argc, argv, "bpyn:H:h", opts, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "bpNyn:H:h", opts, NULL)) != -1) {
         switch (c) {
         case 'b':
             with_backup = true;
             break;
         case 'p':
             public_backup = true;
+            break;
+        case 'N':
+            no_backup = true;
             break;
         case 'y':
             yes = true;
@@ -92,6 +138,10 @@ int report_cmd(int argc, char **argv) {
         fprintf(stderr, "--public is about the backup: use it with --backup\n");
         return EXIT_FAILURE;
     }
+    if (with_backup && no_backup) {
+        fprintf(stderr, "--backup and --no-backup: choose one\n");
+        return EXIT_FAILURE;
+    }
 
     char *yaml = build_report_yaml();
     if (!yaml)
@@ -106,12 +156,21 @@ int report_cmd(int argc, char **argv) {
             "cloud ID in the report are replaced with hashes.\n",
             host, REPORTS_PATH);
 
+    // Asked only of someone at a terminal who has not decided already: a
+    // script or an agent (--yes, or no terminal) sends the report alone
+    // unless it said --backup.
+    if (!with_backup && !no_backup && !yes && isatty(STDIN_FILENO)) {
+        ask_backup(&with_backup, &public_backup);
+        chosen = with_backup;
+    }
+
     span_t blocks[MAX_MTDBLOCKS + 1];
     size_t nblocks = 0;
     size_t flash = 0;
-    if (with_backup) {
+    if (with_backup && !chosen) {
         // Asked before anything is read: collecting the backup reads UBI
-        // volumes into memory, and a "no" should leave them untouched.
+        // volumes into memory, and a "no" should leave them untouched. The
+        // owner who answered ask_backup() has read this already.
         fprintf(stderr,
                 "\nWith it goes a backup of the whole flash. It holds "
                 "everything the camera keeps: its settings, Wi-Fi keys, "
@@ -132,6 +191,8 @@ int report_cmd(int argc, char **argv) {
             free(yaml);
             return EXIT_FAILURE;
         }
+    }
+    if (with_backup) {
         size_t missed = 0;
         nblocks = backup_blocks(yaml, yaml_len, blocks, &missed);
         for (size_t i = 1; i < nblocks; i++)
