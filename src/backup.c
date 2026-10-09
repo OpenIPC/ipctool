@@ -58,36 +58,56 @@ static bool cb_mtd_backup(int i, const char *name, struct mtd_info_user *mtd,
         int nvols = enum_ubi_volumes(ubi_num, vols, MAX_UBI_VOLS);
         for (int v = 0; v < nvols; v++) {
             if (c->count == c->cap) {
+                fprintf(stderr, "  %s: more partitions than ipctool backs up\n",
+                        name);
                 c->missed++;
                 continue;
             }
-            size_t out_len = 0;
-            char *buf = read_ubi_volume(ubi_num, vols[v].vol_id,
-                                        vols[v].data_bytes, &out_len);
-            if (!buf) {
+            /* Streamed from the volume as it is sent, not read into RAM: a
+             * NAND camera's rootfs volume is tens of MB, more than such a
+             * camera has free, and malloc() failing on it was the whole
+             * backup refused as "1 partition could not be read". */
+            char devpath[64];
+            snprintf(devpath, sizeof(devpath), "/dev/ubi%d_%d", ubi_num,
+                     vols[v].vol_id);
+            int fd = open(devpath, O_RDONLY);
+            if (fd < 0) {
+                fprintf(stderr, "  %s (UBI volume %s, %s): %s\n", name,
+                        vols[v].name, devpath, strerror(errno));
                 c->missed++;
                 continue;
             }
-            c->blocks[c->count].data = buf;
-            c->blocks[c->count].len = out_len;
+            close(fd);
+            char *path = strdup(devpath);
+            if (!path) {
+                c->missed++;
+                continue;
+            }
+            c->blocks[c->count].data = NULL;
+            c->blocks[c->count].len = vols[v].data_bytes;
+            c->blocks[c->count].path = path;
             c->count++;
         }
         return true;
     }
 
     if (c->count == c->cap) {
+        fprintf(stderr, "  %s: more partitions than ipctool backs up\n", name);
         c->missed++;
         return true;
     }
     int fd;
     char *addr = open_mtdblock(i, &fd, mtd->size, 0);
     if (!addr) {
+        fprintf(stderr, "  %s (/dev/mtdblock%d): %s\n", name, i,
+                strerror(errno));
         c->missed++;
         return true;
     }
 
     c->blocks[c->count].data = addr;
     c->blocks[c->count].len = mtd->size;
+    c->blocks[c->count].path = NULL;
     c->count++;
     return true;
 }
@@ -127,6 +147,35 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
             fwrite(&len_header, 1, sizeof(len_header), fp);
         }
 
+        if (blocks[i].path) {
+            // A UBI volume, streamed as the upload streams it.
+            static char piece[65536];
+            FILE *src = fopen(blocks[i].path, "rb");
+            size_t left = blocks[i].len;
+            const char *failed = src ? NULL : blocks[i].path;
+            while (src && left) {
+                size_t n = fread(
+                    piece, 1, left < sizeof(piece) ? left : sizeof(piece), src);
+                if (!n) {
+                    failed = blocks[i].path;
+                    break;
+                }
+                if (fwrite(piece, 1, n, fp) != n) {
+                    failed = filename;
+                    break;
+                }
+                left -= n;
+            }
+            if (src)
+                fclose(src);
+            if (failed) {
+                fprintf(stderr, "Error %s '%s', aborting\n",
+                        failed == filename ? "writing" : "reading", failed);
+                fclose(fp);
+                return 1;
+            }
+            continue;
+        }
         int nbytes = fwrite(blocks[i].data, 1, blocks[i].len, fp);
         if (nbytes == -1)
             break;
@@ -144,6 +193,7 @@ size_t backup_blocks(const char *yaml, size_t yaml_len, span_t *blocks,
                      size_t *missed) {
     blocks[0].data = yaml;
     blocks[0].len = yaml_len + 1; // end string data with \0
+    blocks[0].path = NULL;
     return map_mtdblocks(blocks + 1, MAX_MTDBLOCKS, missed) + 1;
 }
 

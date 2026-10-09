@@ -173,6 +173,34 @@ int main(void) {
           status);
     CHECK(reaped(cont) == 16, "after a 100 the body did not arrive whole");
 
+    // A span read from a file as it is sent -- a UBI volume too big for RAM
+    // -- arrives whole, between spans held in memory.
+    char tmpl[] = "/tmp/http_test.XXXXXX";
+    int tf = mkstemp(tmpl);
+    CHECK(tf >= 0 && write(tf, big, total) == (ssize_t)total, "temp file");
+    close(tf);
+    span_t mixed[3] = {
+        {big, 1u << 20, NULL}, {NULL, total, tmpl}, {big, 1u << 20, NULL}};
+    int file_port;
+    pid_t fil = spawn(ACCEPT, &file_port, 0);
+    err = http_post("127.0.0.1", file_port, "/", &ns,
+                    "application/octet-stream", mixed, 3, total + (2u << 20),
+                    resp, sizeof(resp), &status, loc, sizeof(loc));
+    CHECK(!err && status == 201, "file span: err %d, status %d", err, status);
+    CHECK(reaped(fil) == 18, "the file span did not arrive whole");
+
+    // A file shorter than its span promised stops the upload: the
+    // Content-Length is already sent, and a short body is a broken one.
+    span_t longer = {NULL, total + 1, tmpl};
+    int short_port;
+    pid_t sho = spawn(ACCEPT, &short_port, 0);
+    err = http_post("127.0.0.1", short_port, "/", &ns,
+                    "application/octet-stream", &longer, 1, total + 1, resp,
+                    sizeof(resp), &status, loc, sizeof(loc));
+    CHECK(err == ERR_SOURCE, "a short file: err %d", err);
+    reaped(sho);
+    unlink(tmpl);
+
     // A server that never reads: a stall, in the stall timeout plus the late
     // answer's, not the minutes it used to take.
     int freeze_port;

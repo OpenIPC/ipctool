@@ -251,13 +251,46 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
 
     size_t sent = 0;
     int shown = -1;
+    static char piece[65536];
     for (size_t i = 0; i < nspans; i++) {
+        int src = -1;
+        if (spans[i].path && (src = open(spans[i].path, O_RDONLY)) < 0) {
+            fprintf(stderr, "\nCould not open %s: %s\n", spans[i].path,
+                    strerror(errno));
+            close(s);
+            return ERR_SOURCE;
+        }
         /* In 64 KB pieces, so a 16 MB partition shows its progress. */
         for (size_t off = 0; off < spans[i].len;) {
             size_t chunk = spans[i].len - off;
-            if (chunk > 65536)
-                chunk = 65536;
-            if (write_all(s, spans[i].data + off, chunk)) {
+            if (chunk > sizeof(piece))
+                chunk = sizeof(piece);
+            const char *from = piece;
+            if (src < 0) {
+                from = spans[i].data + off;
+            } else {
+                size_t got = 0;
+                while (got < chunk) {
+                    ssize_t n = read(src, piece + got, chunk - got);
+                    if (n < 0 && errno == EINTR)
+                        continue;
+                    if (n <= 0) {
+                        // The length was promised in Content-Length: a
+                        // short body is a broken one, so stop here.
+                        fprintf(stderr, "\n%s ended at %zu of %zu bytes%s%s\n",
+                                spans[i].path, (size_t)(off + got),
+                                spans[i].len, n < 0 ? ": " : "",
+                                n < 0 ? strerror(errno) : "");
+                        close(src);
+                        close(s);
+                        return ERR_SOURCE;
+                    }
+                    got += (size_t)n;
+                }
+            }
+            if (write_all(s, from, chunk)) {
+                if (src >= 0)
+                    close(src);
                 // The server may have answered and closed: read what it
                 // said, so a refusal reaches the user as a reason. Or the
                 // body stopped moving, and nothing is coming back either.
@@ -278,6 +311,8 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
                 }
             }
         }
+        if (src >= 0)
+            close(src);
     }
     if (shown >= 0)
         fprintf(stderr, "\n");

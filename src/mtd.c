@@ -18,7 +18,9 @@
 #include "chipid.h"
 #include "hal/common.h"
 #include "hal/hisi/hal_hisi.h"
+#include "http.h" // MAX_MTDBLOCKS
 #include "mtd.h"
+#include "mtd_alias.h"
 #include "sha1.h"
 #include "tools.h"
 #include "uboot.h"
@@ -29,6 +31,9 @@
 
 #define MTD_NORFLASH 3
 #define MTD_NANDFLASH 4
+// A UBI volume shown as an MTD device by gluebi: not flash, a second view of
+// what its UBI partition holds.
+#define MTD_UBIVOLUME 7
 
 #define MAX_MPOINTS 10
 #define MPOINT_LEN 90
@@ -201,34 +206,6 @@ int enum_ubi_volumes(int ubi_num, ubi_vol_info_t *vols, int max_vols) {
     }
     closedir(d);
     return count;
-}
-
-char *read_ubi_volume(int ubi_num, int vol_id, size_t data_bytes,
-                      size_t *out_len) {
-    char devpath[64];
-    snprintf(devpath, sizeof(devpath), "/dev/ubi%d_%d", ubi_num, vol_id);
-
-    int fd = open(devpath, O_RDONLY);
-    if (fd == -1)
-        return NULL;
-
-    char *buf = malloc(data_bytes);
-    if (!buf) {
-        close(fd);
-        return NULL;
-    }
-
-    size_t total = 0;
-    while (total < data_bytes) {
-        ssize_t n = read(fd, buf + total, data_bytes - total);
-        if (n <= 0)
-            break;
-        total += n;
-    }
-    close(fd);
-
-    *out_len = total;
-    return buf;
 }
 
 bool sha1_ubi_volume(int ubi_num, int vol_id, size_t data_bytes,
@@ -415,7 +392,9 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
-#define MAX_MTD 10
+/* Novatek has twelve partitions (ipctool#234); 10 dropped the last two
+ * without a word. No more than MAX_MTDBLOCKS: restore indexes by number. */
+#define MAX_MTD MAX_MTDBLOCKS
 
 struct mtd_entry {
     int i;
@@ -439,7 +418,12 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
                 if (devfd < 0)
                     goto skip;
 
-                if (ioctl(devfd, MEMGETINFO, &mtds[n].mtd) >= 0)
+                /* gluebi's devices are skipped: listing them showed a
+                 * volume twice in the report and put it twice in a backup
+                 * -- only the volumes not mounted, since a mounted one
+                 * refuses O_RDWR here (gk7205v510 NAND, 2026-10). */
+                if (ioctl(devfd, MEMGETINFO, &mtds[n].mtd) >= 0 &&
+                    mtds[n].mtd.type != MTD_UBIVOLUME)
                     mtds[n].valid = true;
 
                 close(devfd);
@@ -474,6 +458,29 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
         mtds[2] = mtds[1];
         mtds[1] = tmp;
     }
+
+    // A partition that is another name for others -- "all" -- is left out.
+    uint64_t offs[MAX_MTD], sizes[MAX_MTD];
+    bool has_off[MAX_MTD], alias[MAX_MTD];
+    int idx[MAX_MTD], m = 0;
+    for (int i = 0; i < n; i++) {
+        if (!mtds[i].valid)
+            continue;
+        char path[64];
+        snprintf(path, sizeof(path), "/sys/class/mtd/mtd%d/offset", mtds[i].i);
+        FILE *f = fopen(path, "r");
+        unsigned long long o = 0;
+        has_off[m] = f && fscanf(f, "%llu", &o) == 1;
+        if (f)
+            fclose(f);
+        offs[m] = o;
+        sizes[m] = mtds[i].mtd.size;
+        idx[m++] = i;
+    }
+    mtd_mark_aliases(m, offs, has_off, sizes, alias);
+    for (int k = 0; k < m; k++)
+        if (alias[k])
+            mtds[idx[k]].valid = false;
 
     for (int i = 0; i < n; i++) {
         if (mtds[i].valid && !cb(mtds[i].i, mtds[i].name, &mtds[i].mtd, ctx))

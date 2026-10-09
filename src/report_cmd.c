@@ -195,15 +195,22 @@ int report_cmd(int argc, char **argv) {
     }
     if (with_backup) {
         size_t missed = 0;
+        // Each partition that cannot be read is named, with why, as it is met.
         nblocks = backup_blocks(yaml, yaml_len, blocks, &missed);
         for (size_t i = 1; i < nblocks; i++)
             flash += blocks[i].len;
-        if (missed || nblocks < 2) {
+        if (nblocks < 2 && !missed) {
+            fprintf(stderr, "Not sent: no partition of the flash was found to "
+                            "back up.\n");
+            free(yaml);
+            return EXIT_FAILURE;
+        }
+        if (missed) {
             fprintf(stderr,
                     "Not sent: %zu partition(s) of the flash could not be "
                     "read, and a backup missing any of them is not the whole "
                     "flash.\n",
-                    missed ? missed : (size_t)1);
+                    missed);
             free(yaml);
             return EXIT_FAILURE;
         }
@@ -306,6 +313,10 @@ int report_cmd(int argc, char **argv) {
     }
     free(body);
     free(yaml);
+    if (err == ERR_SOURCE) {
+        fprintf(stderr, "Not sent whole, so nothing was stored.\n");
+        return EXIT_FAILURE;
+    }
     if (err == ERR_STALLED) {
         fprintf(stderr,
                 "The upload to %s stopped moving and no answer came. Nothing "
