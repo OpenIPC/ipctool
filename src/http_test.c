@@ -73,7 +73,8 @@ static void serve(int ls, enum mode mode, int peer_port) {
         const char *cont = "HTTP/1.1 100 Continue\r\n\r\n";
         send(c, cont, strlen(cont), 0);
     }
-    const char *cl = strcasestr(buf, "Content-Length:");
+    // http_post() spells it so; strcasestr() is a GNU extension.
+    const char *cl = strstr(buf, "Content-Length:");
     size_t want = cl ? strtoul(cl + 15, NULL, 10) : 0;
     while (body < want) {
         ssize_t n = recv(c, buf, sizeof(buf), 0);
