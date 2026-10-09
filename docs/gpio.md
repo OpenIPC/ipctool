@@ -23,6 +23,13 @@ GPIO pad, decoded from the pad's own one-byte register into what it reads
 (`in`), what the SoC is driving (`out`) and whether it drives at all (`oe_n`,
 1 meaning input/Hi-Z) — rather than the per-group data and direction words.
 
+On Novatek (NT98562/NT98566) the pad is the kernel's GPIO number as well, and
+its name is accepted too: `gpio get P_GPIO22`, `gpio get 54` and
+`/sys/class/gpio/gpio54` are one wire (`P_GPIO(n)` is `0x20 + n`, and so on in
+steps of `0x20` through C, P, S, L, D, H, A and DSI). The `5_6` form is refused
+there, because it would name a different pad. `gpio scan` prints one `Pad:`
+line per GPIO pad with its name, data word and direction.
+
 ## `gpio scan`
 
 It prints a baseline table of every GPIO pad, then polls in a loop and reports
@@ -123,6 +130,9 @@ streamer maps the GPIO block, a board whose whole pad list holds only one or
 two driving pads gets exactly those, and without a streamer every pad
 currently driving low is reported.
 
+Novatek does the same over its GPIO numbers: the controller is one page, so
+"the streamer has it mapped" is one answer for every pad.
+
 IR-cut is nearly always a *pair* of pads, driven in opposite directions to flip
 the filter between its two positions. To confirm a pair, run `gpio scan` and
 switch the camera between day and night mode in the web UI. Both pads change in
@@ -183,6 +193,12 @@ Read the function's current field first. On HiSilicon and Goke the mapping is
 one register per pad and this particular trap does not apply, but the general
 rule does: a pad on a working board is carrying something, and taking it away
 stops whatever that was. `docs/padmux.md` has the mechanisms per vendor.
+
+Novatek has the SigmaStar trap and one of its own. Muxing I2C3 onto a new pad
+moves the peripheral's location field, so the pads it was on are left handed
+over to nothing (`gpio mux` reports them as `?`). And on a board with a
+parallel sensor, `gpio mux H_GPIO4 GPIO` cannot take one data line back without
+switching the sensor mode off, so it switches it off.
 
 If you do re-mux something by accident, `gpio mux <pad> <original function>`
 puts it back; on SigmaStar restoring a pad to "idle but not GPIO-asserted" also

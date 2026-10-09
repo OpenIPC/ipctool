@@ -12,6 +12,8 @@
 #include "chipid.h"
 #include "hal/hisi/hal_hisi.h"
 #include "hal/ingenic.h"
+#include "hal/novatek.h"
+#include "hal/novatek_gpio.h"
 #include "hal/sstar.h"
 #include "hal/sstar_gpio.h"
 #include "ipchw.h"
@@ -892,6 +894,164 @@ static void test_ingenic(void) {
 }
 #endif
 
+#ifdef IPCHW_PADMUX_NOVATEK
+/* The NA51089 TOP block, as the vendor's top_reg.h lays it out. */
+#define NVT_REG3 0xF001000Cu  /* SENSOR[2:0] */
+#define NVT_REG5 0xF0010014u  /* I2C3[7:6], ETH_MDIO[3:2], ETH[31:30] */
+#define NVT_REG9 0xF0010024u  /* UART2[3:2], UART2_CTSRTS[9:8] */
+#define NVT_CGPIO 0xF00100A0u /* gate bits: 1 keeps the pad a GPIO */
+#define NVT_HGPIO 0xF00100D8u
+#define NVT_DSIGPIO 0xF00100E8u
+
+/* Every pad a GPIO and every field 0: what pinmux_init() starts from. */
+static void nvt_boot_state(void) {
+    regs_reset();
+    for (uint32_t r = 0xF00100A0u; r <= 0xF00100E8u; r += 8)
+        fake_write(r, 0xFFFFFFFFu, 32);
+}
+
+static void test_novatek(void) {
+    puts("Novatek: a location field per peripheral and a gate bit per pad");
+    as_chip(CHIP_NA51089, "NT98566");
+
+    /* The kernel's own numbers and names; "5_2" is HiSilicon's banking and
+     * would land on a different pad. */
+    CHECK(padmux_parse_pad("P_GPIO22") == 0x20 + 22);
+    CHECK(padmux_parse_pad("MC17") == 17);
+    CHECK(padmux_parse_pad("hsi_gpio9") == 0xA0 + 9);
+    CHECK(padmux_parse_pad("DSI_GPIO9") == 0xE0 + 9);
+    CHECK(padmux_parse_pad("54") == 54);
+    CHECK(padmux_parse_pad("5_2") == -1);
+    CHECK(padmux_parse_pad("P_GPIO") == -1);
+    CHECK(padmux_parse_pad("P_GPIO22x") == -1);
+
+    /* P_GPIO22 is I2C3's SCL on its first location, REG5 I2C3 = 1. */
+    ipchw_padmux_t rows[16];
+    int n = ipchw_padmux_by_pad(54, rows, 16);
+    CHECK(n >= 2);
+    CHECK((rows[0].flags & IPCHW_PADMUX_F_GPIO) != 0);
+    CHECK(rows[0].gpio_name && !strcmp(rows[0].gpio_name, "P_GPIO22"));
+    CHECK(rows[0].address == 0xF00100A8u && rows[0].func_mask == 1u << 22);
+    bool found = false;
+    for (int i = 1; i < n && i < 16; i++) {
+        if (strcmp(rows[i].func_name, "I2C3_1_SCL") != 0)
+            continue;
+        found = true;
+        CHECK(rows[i].address == NVT_REG5);
+        CHECK(rows[i].func_mask == 0xC0);
+        CHECK(rows[i].func == 0x40);
+        /* A field and a gate: never one write. */
+        CHECK((rows[i].flags & IPCHW_PADMUX_F_RMW) == 0);
+    }
+    CHECK(found);
+
+    /* A pad the package does not bond out is not a pad. */
+    ipchw_padmux_t r;
+    CHECK(ipchw_padmux_get(23, &r) == IPCHW_PADMUX_NO_PAD); /* C_GPIO23 */
+    CHECK(ipchw_padmux_get(0x80 + 8, &r) == IPCHW_PADMUX_NO_PAD);
+
+    puts("Novatek: the field, then the gate, and a moved field orphans");
+    nvt_boot_state();
+    CHECK(ipchw_padmux_get(11, &r) == 1 && (r.flags & IPCHW_PADMUX_F_GPIO));
+    /* pinmux_config_i2c(), PIN_I2C_CFG_CH3_2ND_PINMUX: CGPIO_11 and 12 to
+     * function, I2C3 = I2C_3_ENUM_I2C_2ND. */
+    CHECK(ipchw_padmux_set(11, "I2C3_2_SCL") == 0);
+    CHECK((reg_of(NVT_REG5) & 0xC0) == 0x80);
+    CHECK(reg_of(NVT_CGPIO) == ~(1u << 11));
+    CHECK(ipchw_padmux_get(11, &r) == 1 && !strcmp(r.func_name, "I2C3_2_SCL"));
+    /* Only the pad asked about: SDA's gate is its own business. */
+    CHECK(ipchw_padmux_get(12, &r) == 1 && (r.flags & IPCHW_PADMUX_F_GPIO));
+
+    /* Moving I2C3 to P_GPIO21 leaves C_GPIO11 handed over to nothing. */
+    CHECK(ipchw_padmux_set(0x20 + 21, "I2C3_1_SDA") == 0);
+    CHECK((reg_of(NVT_REG5) & 0xC0) == 0x40);
+    CHECK(ipchw_padmux_get(11, &r) == 0);
+
+    /* Back to GPIO is the gate bit and nothing else. */
+    uint32_t reg5 = reg_of(NVT_REG5);
+    CHECK(ipchw_padmux_set(11, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(NVT_CGPIO) == 0xFFFFFFFFu);
+    CHECK(reg_of(NVT_REG5) == reg5);
+
+    puts("Novatek: a modifier needs its location too");
+    nvt_boot_state();
+    /* pinmux_config_uart(), CH2 | CH2_2ND | CH2_CTSRTS: CGPIO_13 and 14,
+     * UART2_CTSRTS = UART_CTSRTS_PINMUX, UART2 = UART2_ENUM_2ND_PINMUX. */
+    CHECK(ipchw_padmux_set(13, "UART2_2_CTS") == 0);
+    CHECK(reg_of(NVT_REG9) == ((2u << 2) | (1u << 8)));
+    CHECK(ipchw_padmux_get(13, &r) == 1 && !strcmp(r.func_name, "UART2_2_CTS"));
+
+    puts("Novatek: parallel sensor data holds through the gate");
+    nvt_boot_state();
+    fake_write(NVT_REG3, 1, 32); /* SENSOR_ENUM_12BITS_1ST */
+    CHECK(ipchw_padmux_get(0xA0 + 4, &r) == 1);
+    CHECK(!strcmp(r.func_name, "SENSOR_12BITS"));
+    /* MIPI lane: the gate cleared and no field. */
+    nvt_boot_state();
+    fake_write(NVT_HGPIO, ~(3u << 4), 32);
+    CHECK(ipchw_padmux_get(0xA0 + 4, &r) == 1);
+    CHECK(!strcmp(r.func_name, "MIPI_LVDS_CLK0"));
+    /* GPIO on a parallel data pad has to take the sensor mode down with it:
+     * the gate alone does not stop the bus. */
+    nvt_boot_state();
+    fake_write(NVT_REG3, 1, 32);
+    CHECK(ipchw_padmux_set(0xA0 + 4, IPCHW_PADMUX_GPIO) == 0);
+    CHECK((reg_of(NVT_REG3) & 7) == 0);
+    CHECK(ipchw_padmux_get(0xA0 + 4, &r) == 1 &&
+          (r.flags & IPCHW_PADMUX_F_GPIO));
+
+    puts("Novatek: RMII and MDIO overlap on DSI_GPIO9 and RMII wins");
+    nvt_boot_state();
+    fake_write(NVT_DSIGPIO, ~(1u << 9), 32);
+    fake_write(NVT_REG5, (1u << 30) | (1u << 2), 32); /* ETH RMII, ETH_MDIO */
+    CHECK(ipchw_padmux_get(0xE0 + 9, &r) == 1 &&
+          !strcmp(r.func_name, "ETH_RMII"));
+    /* The internal PHY's MDIO there means RMII has to go. */
+    CHECK(ipchw_padmux_set(0xE0 + 9, "ETH_MDIO") == 0);
+    CHECK(reg_of(NVT_REG5) == (1u << 2));
+    CHECK(ipchw_padmux_get(0xE0 + 9, &r) == 1 &&
+          !strcmp(r.func_name, "ETH_MDIO"));
+    /* And back: of RMII's two claims the one that changes least, leaving
+     * ETH_MDIO where it is. */
+    CHECK(ipchw_padmux_set(0xE0 + 9, "ETH_RMII") == 0);
+    CHECK(reg_of(NVT_REG5) == ((1u << 30) | (1u << 2)));
+    CHECK(ipchw_padmux_get(0xE0 + 9, &r) == 1 &&
+          !strcmp(r.func_name, "ETH_RMII"));
+
+    CHECK(ipchw_padmux_set(54, "UART2_2_TX") == IPCHW_PADMUX_NO_FUNC);
+    as_chip(T31, "T31");
+}
+#endif
+
+#ifdef IPCHW_VENDOR_NOVATEK
+/* The controller's four banks, one word per pad group, as the vendor's
+ * gpio-nvt-na51089.c addresses them. */
+static void test_novatek_gpio_regs(void) {
+    puts("Novatek: GPIO controller registers");
+    as_chip(CHIP_NA51089, "NT98566");
+
+    CHECK(novatek_gpio_supported());
+    CHECK(novatek_gpio_reg(0, NVT_GPIO_DATA) == 0xF0070000u);
+    CHECK(novatek_gpio_reg(0x20 + 22, NVT_GPIO_DATA) == 0xF0070004u);
+    CHECK(novatek_gpio_reg(0x20 + 22, NVT_GPIO_DIR) == 0xF0070024u);
+    CHECK(novatek_gpio_reg(0xE0 + 10, NVT_GPIO_SET) == 0xF007005Cu);
+    CHECK(novatek_gpio_reg(0xE0 + 10, NVT_GPIO_CLR) == 0xF007007Cu);
+    CHECK(novatek_gpio_valid(22) && !novatek_gpio_valid(23));
+    CHECK(novatek_gpio_valid(0x80 + 7) && !novatek_gpio_valid(0x80 + 8));
+    CHECK(!novatek_gpio_valid(0xE0 + 11) && !novatek_gpio_valid(-1));
+    CHECK(novatek_gpio_reg(23, NVT_GPIO_DATA) == 0);
+    CHECK(novatek_gpio_reg(0, 0x10) == 0);
+
+    uint32_t base, len;
+    CHECK(novatek_gpio_window(&base, &len));
+    CHECK(base == 0xF0070000u && len == 0x80);
+
+    as_chip(0, "none");
+    CHECK(!novatek_gpio_supported());
+    CHECK(novatek_gpio_reg(0, NVT_GPIO_DATA) == 0);
+}
+#endif
+
 /* Everything the table says a pad can be, put on it and read back.
  *
  * This is the whole self-consistency proof, and the only one the families
@@ -1082,6 +1242,9 @@ static void test_table_integrity(void) {
         {T31, "T31"},
         {T40, "T40"},
 #endif
+#ifdef IPCHW_PADMUX_NOVATEK
+        {CHIP_NA51089, "NT98566"},
+#endif
     };
 
     for (size_t c = 0; c < sizeof(chips) / sizeof(*chips); c++) {
@@ -1225,6 +1388,12 @@ int main(void) {
     test_gpio_windows_in_mapping();
 #ifdef IPCHW_PADMUX_INGENIC
     test_ingenic();
+#endif
+#ifdef IPCHW_PADMUX_NOVATEK
+    test_novatek();
+#endif
+#ifdef IPCHW_VENDOR_NOVATEK
+    test_novatek_gpio_regs();
 #endif
     test_refusals_do_not_exit();
     test_table_integrity();

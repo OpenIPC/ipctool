@@ -10,7 +10,7 @@
  * The inside of the pad-mux API. include/ipchw.h has the contract a consumer
  * sees; this is the seam the three vendors meet at.
  *
- * They select a pad's function three different ways, and only the first of
+ * They select a pad's function four different ways, and only the first of
  * them is one register per pad:
  *
  *   HiSilicon/Goke  one register per pad, a selector nibble indexing the list
@@ -22,6 +22,10 @@
  *   Ingenic         four bits at the pin's own position in four different
  *                   registers (INT, MSK, PAT1, PAT0), so no single write
  *                   selects a function at all.
+ *   Novatek         SigmaStar's per-peripheral fields, plus a gate bit per
+ *                   pad that has to be cleared before any of them reaches
+ *                   it. One pad's function is a field in one register and a
+ *                   bit in another.
  *
  * What a caller sees is a flat ipchw_padmux_t in every case.
  * ---------------------------------------------------------------------- */
@@ -49,7 +53,7 @@ const padmux_io_t *padmux_set_io(const padmux_io_t *io);
 typedef bool (*padmux_match_fn)(const char *func_name, const void *arg);
 
 typedef struct {
-    const char *name; /* "hisi", "sstar", "ingenic" */
+    const char *name; /* "hisi", "sstar", "ingenic", "novatek" */
 
     /* The same counting contract as the public lookups: the return value is
      * the number of MATCHES, which may exceed `max`; at most `max` rows are
@@ -63,6 +67,10 @@ typedef struct {
 
     /* Put `func_name` on `pad`: 0, or IPCHW_PADMUX_*. */
     int (*set)(int pad, const char *func_name, const padmux_io_t *io);
+
+    /* The vendor's own spellings of a pad, to its number, or -1. NULL where
+     * the two generic ones in padmux_parse_pad() are all there is. */
+    int (*parse_pad)(const char *spec);
 } padmux_ops_t;
 
 /* Always present: reginfo.c is compiled into every configuration, and its
@@ -75,6 +83,9 @@ extern const padmux_ops_t PADMUX_OPS_SSTAR;
 #ifdef IPCHW_PADMUX_INGENIC
 extern const padmux_ops_t PADMUX_OPS_INGENIC;
 #endif
+#ifdef IPCHW_PADMUX_NOVATEK
+extern const padmux_ops_t PADMUX_OPS_NOVATEK;
+#endif
 
 /* The backend for the SoC that has been detected, or NULL when this build
  * carries no pad-mux table that could serve it. */
@@ -85,8 +96,9 @@ const padmux_ops_t *padmux_ops(void);
  * wants: "not known to be free" rather than "free". */
 bool padmux_pad_is_gpio(int pad);
 
-/* "5_2" or "42" -> 42, the two spellings every gpio subcommand accepts.
- * -1 for anything else. */
+/* "5_2" or "42" -> 42, the two spellings every gpio subcommand accepts, or
+ * the detected SoC's own: "P_GPIO22" on Novatek, where "5_2" is refused
+ * because the bank-of-eight numbering is HiSilicon's. -1 for anything else. */
 int padmux_parse_pad(const char *spec);
 
 #endif /* PADMUX_H */

@@ -23,10 +23,10 @@ puts the pad back.
 > pad to GPIO. A pad that a MISC-style table drop hides from `reginfo --pads`
 > still answers here, which is the one place to see it.
 
-## Three vendors, three mechanisms
+## Four vendors, four mechanisms
 
 This is the thing to understand before touching any of it. The API looks like
-one question, and underneath it is three different pieces of silicon.
+one question, and underneath it is four different pieces of silicon.
 
 ### HiSilicon and Goke -- a selector per pad
 
@@ -285,6 +285,53 @@ Direction is part of the same nibble as the mux, so "make this GPIO" has to
 pick one: a pad already held as GPIO keeps what it had, one coming off a
 peripheral becomes an input.
 
+### Novatek -- a field per peripheral, and a gate per pad
+
+NA51089 (NT98562, NT98566) is SigmaStar's arrangement with a second lock on
+it. In the TOP block at `0xF0010000` each peripheral has a location field --
+`REG5[7:6]` is I2C3, and 1, 2 and 3 put it on `P_GPIO21/22`, `C_GPIO11/12`
+or `DSI_GPIO8/9` -- and each pad has a **gate bit** in one of eight bitmaps
+at `TOP + 0xA0..0xE8`, where 1 keeps the pad a GPIO whatever any field says.
+The vendor's `pinmux_config_*()` sets both, every time: the field, then
+`GPIO_ID_EMUM_FUNC` into the gate of each pad it uses.
+
+So a pad's alternatives are **claims**: a name and the field values under
+which the pad carries it. `get()` takes the first claim that holds, with the
+table sorted most specific first; `set()` writes a claim's fields and clears
+the gate. Consequences:
+
+- No row carries `IPCHW_PADMUX_F_RMW` except a GPIO row. A function is a field
+  in one register and a bit in another, and a consumer that writes only the
+  field leaves the pad a GPIO -- harmless, which is why the row's
+  `address`/`func_mask`/`func` still describe the field.
+- **Moving a peripheral orphans its old pads.** Put I2C3 on `P_GPIO21` while
+  `C_GPIO11` had it and `C_GPIO11` keeps its gate cleared with nothing
+  claiming it: `get()` says it cannot name it, which is the truth. The vendor
+  code does the same and never gives those gates back.
+- `set()` changes as little as it can. Several claims can spell one name --
+  `ETH_RMII` on `DSI_GPIO9` is one claim alone and another when `ETH_MDIO` is
+  also set -- and the one needing the fewest field changes from what is there
+  now wins. A competitor that still wins afterwards is dropped by zeroing a
+  field the target does not need: `ETH_MDIO` on `DSI_GPIO9`, the internal
+  PHY's management pin, clears `ETH` and so ends RMII.
+- **The parallel and CCIR sensor modes ignore the gate.** They put pixel data
+  on the HSI pads while the vendor writes those gates to GPIO, so those claims
+  hold through it (`NVT_UNGATED` in the table). `gpio mux H_GPIO4 GPIO` on such
+  a board has to zero `SENSOR` to mean anything, and does -- the whole parallel
+  bus goes with it. The MIPI lanes on the same pads are the opposite: the gate
+  cleared and no field at all.
+- Pads are the kernel's GPIO numbers and names: `C_GPIO(n)` is `n`,
+  `P_GPIO(n)` is `0x20 + n`, and so on through S, L, D, H, A and DSI. `gpio`
+  takes the number or the name (`P_GPIO22`, and the vendor's `MC17` and
+  `HSI_GPIO9` as well); the HiSilicon `5_2` form is refused, because it would
+  land on a different pad.
+
+Function names are the vendor's, from the `@PAD[NAME]` annotations in
+`plat-na51089/top.h` and then `top.csv`: `I2C3_2_SCL`, `UART2_2_RTS`, `SB_CK`
+for SIF. Where neither names a pad the name is the option's own -- `SENSOR_12BITS`,
+`MIPI_LVDS_CLK0`, `ETH_RMII` -- which, like SigmaStar's `I2C1_MODE_3`, names a
+bus and not a wire.
+
 ## Pad numbers and names
 
 `gpio_pad` is the number the kernel uses, and it is the number to speak to
@@ -295,6 +342,7 @@ every consumer:
 | HiSilicon/Goke | `bank * 8 + pin`, parsed out of the `GPIO<b>_<p>` entry | `"GPIO5_2"` |
 | SigmaStar | the vendor pad id, which is the gpiochip index (base 0) | `"PAD_SR_IO03"` |
 | Ingenic | `port * 32 + pin` | `"PB25"` |
+| Novatek | the Linux GPIO number, `group * 32 + pin` | `"P_GPIO22"` |
 
 Function names are the vendor's own and are **not portable**, not even within
 HiSilicon: `PWM_OUT0` on V1, `PWM0` from V2, `PWM0_OUT1` on V5. `"PWM"` also
@@ -331,6 +379,41 @@ tools/gen_ingenic_padmux.py \
 
 Each generated header carries the exact command that made it, so the recipe
 above is only the shape; the header is the record.
+
+Novatek is generated differently, because its source is code and not a table:
+
+```sh
+# Novatek: the SDK root, which has BSP/linux-kernel and build/nvt-tools
+tools/gen_novatek_padmux.py --sdk /path/to/na51089_linux_sdk \
+    > src/hal/novatek_padmux.h
+```
+
+There is no datasheet and no pin list in the NA51089 SDK, and
+`na51089_pinmux_host.c` is 2200 lines of nested `if`/`else if`/`switch` with
+the conflict checks interleaved. So the generator **runs** it: it cuts the
+`pinmux_config_*()` functions out, wraps every `top_regN.bit.FIELD = value`
+in a macro that logs the write, compiles that on the host against the SDK's
+own `top_reg.h`/`top.h`, and calls every function with every combination of
+up to four of its options (96,550 calls, about half a minute). A combination the
+vendor refuses is retried after one option of another group, which is the
+only way MIPI data lanes 1-3 appear at all: `pinmux_config_mipi_lvds()`
+refuses them until the sensor group is in CSI mode.
+
+The source is read for one thing: which braces enclose each write. A gate
+write's conditions are the field writes the same call made in the blocks
+around it -- `SEN_MCLK=1` for `S_GPIO0`, not the sensor mode a sibling block
+of the same call selected. Every state the vendor code produced is then
+replayed against the table, and three answers are acceptable: the pad reads
+as what the code meant; it reads as nothing because a later write of the same
+call moved its field away; or two claims hold, and the table carries a more
+specific claim for the one the code meant. Anything else is fatal.
+
+`top.h` and `top.csv` disagree with the code in three places, and
+`ANNOTATION_ERRATA` in the generator says which side wins and why: the csv's
+`P_GPIO29` for SIF CH2_2 (no such pad, the code uses `P_GPIO19`), `top.h`'s
+`P_GPIO14` for PICNT2_1 (the code and the csv use `L_GPIO1`), and
+`PIN_MISC_CFG_SP2CLK_3RD`, which does nothing at all, because
+`pinmux_config_misc()` tests `PIN_SENSOR_CFG_SP2CLK_3RD` in its place.
 
 Both generators take `--verify <header>`, which re-derives and diffs instead
 of writing. That needs the SDK, so CI cannot run it;
@@ -389,11 +472,23 @@ in.
 - **Other Ingenic parts.** T21, T23, T31 and T40 have tables. T10, T20, T30 and
   T41 do not, and would each need a source of one of the three kinds above --
   which, for the parts checked so far, does not exist in the vendor releases.
+- **Other Novatek parts, and NA51089's display.** NA51055, NA51084, NA51090
+  and NA51103 have no table: their chip IDs are recognised and get none.
+  LCD, TV and HDMI on NA51089 are muxed by `pinmux_select_primary_lcd()`
+  from state the config functions only stash, and are not modelled; a pad
+  given to the display reads as cleared with nothing claiming it.
+- **Novatek states two options create at once.** In 19,185 of the replayed
+  calls some pad is claimed twice -- a 12-bit sensor's pixel clock and MCLK2
+  both on `S_GPIO1`, say. The vendor code checks for neither and no board
+  does it. The table answers by the vendor's last write, which is the best
+  evidence there is and not a measurement.
 - **Hardware.** Every claim here is verified against vendor source and on a
   host. On top of that, HiSilicon, SigmaStar infinity6/6b0/6c, and Ingenic
   T21, T23, T31 and SigmaStar infinity6e have been run on real cameras and
   checked against an independent decode of their live registers. Ingenic T40
-  has not: nobody has had one.
+  and Novatek NA51089 have not: nobody here has had one. On a NA51089,
+  `/proc/nvt_info/nvt_pinmux/pinmux_summary` is the kernel's own decode of the
+  same registers and is the thing to compare `reginfo --pads` against.
 
 ## Adding a family
 

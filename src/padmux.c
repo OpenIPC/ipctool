@@ -13,6 +13,7 @@
 
 #include "chipid.h"
 #include "hal/ingenic.h"
+#include "hal/novatek.h"
 #include "hal/sstar.h"
 #include "tools.h"
 
@@ -61,6 +62,10 @@ const padmux_ops_t *padmux_ops(void) {
     case T31:
     case T40:
         return &PADMUX_OPS_INGENIC;
+#endif
+#ifdef IPCHW_PADMUX_NOVATEK
+    case CHIP_NA51089:
+        return &PADMUX_OPS_NOVATEK;
 #endif
     default:
         break;
@@ -181,6 +186,13 @@ bool padmux_pad_is_gpio(int pad) {
 int padmux_parse_pad(const char *spec) {
     if (spec == NULL || !*spec)
         return -1;
+
+    /* Only once the SoC is known: before that every spelling is the
+     * generic one, which is what a caller that has not detected anything
+     * has always had. */
+    const padmux_ops_t *ops = chip_generation ? padmux_ops() : NULL;
+    if (ops != NULL && ops->parse_pad != NULL)
+        return ops->parse_pad(spec);
 
     int bank, pin, end = 0;
     if (sscanf(spec, "%d_%d%n", &bank, &pin, &end) == 2) {
