@@ -29,6 +29,9 @@
 
 #define MTD_NORFLASH 3
 #define MTD_NANDFLASH 4
+// A UBI volume shown as an MTD device by gluebi: not flash, a second view of
+// what its UBI partition holds.
+#define MTD_UBIVOLUME 7
 
 #define MAX_MPOINTS 10
 #define MPOINT_LEN 90
@@ -411,7 +414,12 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
                 if (devfd < 0)
                     goto skip;
 
-                if (ioctl(devfd, MEMGETINFO, &mtds[n].mtd) >= 0)
+                /* gluebi's devices are skipped: listing them showed a
+                 * volume twice in the report and put it twice in a backup
+                 * -- only the volumes not mounted, since a mounted one
+                 * refuses O_RDWR here (gk7205v510 NAND, 2026-10). */
+                if (ioctl(devfd, MEMGETINFO, &mtds[n].mtd) >= 0 &&
+                    mtds[n].mtd.type != MTD_UBIVOLUME)
                     mtds[n].valid = true;
 
                 close(devfd);
