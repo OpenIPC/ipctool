@@ -140,10 +140,11 @@ jobs:
           cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release
           cmake --build build --target cYAML_test reginfo_test longse_test \
                                       sensors_test anyka_test hal_hisi_test \
-                                      report_test http_test
+                                      report_test http_test mtd_alias_test
           ./build/cYAML_test
           ./build/report_test
           ./build/http_test
+          ./build/mtd_alias_test
           ./build/reginfo_test
           ./build/longse_test
           ./build/anyka_test

@@ -351,6 +351,8 @@ set(IPCTOOL_SRC
     src/membw.h
     src/mtd.c
     src/mtd.h
+    src/mtd_alias.c
+    src/mtd_alias.h
     src/network.c
     src/network.h
     src/ptrace.c
@@ -506,4 +508,8 @@ if(NOT ONLY_LIBRARY)
   add_executable(http_test src/http_test.c src/http.c src/dns.c src/report.c
                            src/cjson/cJSON.c)
   target_include_directories(http_test PRIVATE include src)
+
+  # Which partitions are another name for the chip ("all" on Novatek).
+  add_executable(mtd_alias_test src/mtd_alias_test.c src/mtd_alias.c)
+  target_include_directories(mtd_alias_test PRIVATE include src)
 endif()

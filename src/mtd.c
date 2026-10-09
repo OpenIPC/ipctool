@@ -18,7 +18,9 @@
 #include "chipid.h"
 #include "hal/common.h"
 #include "hal/hisi/hal_hisi.h"
+#include "http.h" // MAX_MTDBLOCKS
 #include "mtd.h"
+#include "mtd_alias.h"
 #include "sha1.h"
 #include "tools.h"
 #include "uboot.h"
@@ -390,7 +392,9 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     return true;
 }
 
-#define MAX_MTD 10
+/* Novatek has twelve partitions (ipctool#234); 10 dropped the last two
+ * without a word. No more than MAX_MTDBLOCKS: restore indexes by number. */
+#define MAX_MTD MAX_MTDBLOCKS
 
 struct mtd_entry {
     int i;
@@ -454,6 +458,29 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
         mtds[2] = mtds[1];
         mtds[1] = tmp;
     }
+
+    // A partition that is another name for others -- "all" -- is left out.
+    uint64_t offs[MAX_MTD], sizes[MAX_MTD];
+    bool has_off[MAX_MTD], alias[MAX_MTD];
+    int idx[MAX_MTD], m = 0;
+    for (int i = 0; i < n; i++) {
+        if (!mtds[i].valid)
+            continue;
+        char path[64];
+        snprintf(path, sizeof(path), "/sys/class/mtd/mtd%d/offset", mtds[i].i);
+        FILE *f = fopen(path, "r");
+        unsigned long long o = 0;
+        has_off[m] = f && fscanf(f, "%llu", &o) == 1;
+        if (f)
+            fclose(f);
+        offs[m] = o;
+        sizes[m] = mtds[i].mtd.size;
+        idx[m++] = i;
+    }
+    mtd_mark_aliases(m, offs, has_off, sizes, alias);
+    for (int k = 0; k < m; k++)
+        if (alias[k])
+            mtds[idx[k]].valid = false;
 
     for (int i = 0; i < n; i++) {
         if (mtds[i].valid && !cb(mtds[i].i, mtds[i].name, &mtds[i].mtd, ctx))
