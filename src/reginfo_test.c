@@ -1021,6 +1021,74 @@ static void test_novatek(void) {
     CHECK(ipchw_padmux_set(54, "UART2_2_TX") == IPCHW_PADMUX_NO_FUNC);
     as_chip(T31, "T31");
 }
+
+/* set() from every state the table knows, not only from zeroed registers:
+ * each claim's own conditions, with its pad handed over, and from there every
+ * function that pad offers. A set that succeeds has to read back; one that
+ * refuses has to leave every register as it found it, because a location
+ * field moved half-way unmuxes the peripheral from its other pads. */
+#include "hal/novatek_padmux.h"
+
+static void test_novatek_set_from_every_state(void) {
+    puts("Novatek: set() from every claim's state reads back or undoes");
+    as_chip(CHIP_NA51089, "NT98566");
+    const novatek_soc_t *soc = &NA51089_padmux;
+    int done = 0, refused = 0;
+
+    for (int i = 0; i < soc->nclaims; i++) {
+        const novatek_claim_t *c = &soc->claims[i];
+        for (int j = 0; j < soc->nsels; j++) {
+            if (soc->sels[j].pad != c->pad)
+                continue;
+            const char *want = padmux_name(soc->sels[j].name);
+
+            nvt_boot_state();
+            for (int k = 0; k < c->ncond; k++) {
+                const novatek_cond_t *f = &soc->conds[c->cond + k];
+                uint32_t a = 0xF0010000u + f->reg;
+                uint32_t m = ((1u << f->width) - 1) << f->shift;
+                fake_write(
+                    a, (reg_of(a) & ~m) | ((uint32_t)f->value << f->shift), 32);
+            }
+            uint32_t gate = 0xF00100A0u + (uint32_t)((c->pad >> 5) * 8);
+            if (c->pad >> 5 >= 4)
+                gate += 0x10; /* D, H, A, DSI sit after a gap at 0xC0 */
+            fake_write(gate, reg_of(gate) & ~(1u << (c->pad & 31)), 32);
+
+            uint32_t before[256];
+            int nbefore = NREGS;
+            for (int r = 0; r < NREGS; r++)
+                before[r] = REGS[r].val;
+
+            int res = ipchw_padmux_set(c->pad, want);
+            ipchw_padmux_t got;
+            if (res == 0) {
+                done++;
+                if (ipchw_padmux_get(c->pad, &got) != 1 ||
+                    strcmp(got.func_name, want) != 0) {
+                    fprintf(stderr, "  FAIL pad %d from %s: set %s reads %s\n",
+                            c->pad, padmux_name(c->name), want, got.func_name);
+                    failures++;
+                }
+            } else {
+                refused++;
+                bool same = true;
+                for (int r = 0; r < nbefore; r++)
+                    same = same && REGS[r].val == before[r];
+                if (!same) {
+                    fprintf(stderr,
+                            "  FAIL pad %d from %s: refused %s (%d) "
+                            "and left registers changed\n",
+                            c->pad, padmux_name(c->name), want, res);
+                    failures++;
+                }
+            }
+        }
+    }
+    printf("  (%d set, %d refused and undone)\n", done, refused);
+    CHECK(done > 0);
+    as_chip(T31, "T31");
+}
 #endif
 
 #ifdef IPCHW_VENDOR_NOVATEK
@@ -1391,6 +1459,7 @@ int main(void) {
 #endif
 #ifdef IPCHW_PADMUX_NOVATEK
     test_novatek();
+    test_novatek_set_from_every_state();
 #endif
 #ifdef IPCHW_VENDOR_NOVATEK
     test_novatek_gpio_regs();

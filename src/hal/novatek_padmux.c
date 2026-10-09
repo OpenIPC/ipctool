@@ -57,6 +57,8 @@ typedef struct {
     const padmux_io_t *io;
     uint32_t val[TOP_WORDS];
     uint8_t have[TOP_WORDS];
+    uint32_t orig[TOP_WORDS]; /* what a written word held before, to undo */
+    uint8_t dirty[TOP_WORDS];
 } top_t;
 
 static const novatek_soc_t *nvt_soc(void) {
@@ -100,11 +102,26 @@ static bool top_write_field(top_t *t, unsigned reg, uint32_t mask,
     uint32_t val;
     if (!top_read(t, reg, &val))
         return false;
+    if (!t->dirty[reg / 4]) {
+        t->orig[reg / 4] = val;
+        t->dirty[reg / 4] = 1;
+    }
     val = (val & ~mask) | (bits & mask);
     if (!t->io->write(TOP_BASE + reg, val, 32))
         return false;
     t->val[reg / 4] = val;
     return true;
+}
+
+/* Put back every word this call wrote, for a set() that is refusing: having
+ * moved a peripheral's location field half-way to a function it then says it
+ * cannot put on the pad would unmux that peripheral from every other pad it
+ * was on. Best effort -- an I/O error that stopped the set may stop this. */
+static int top_undo(top_t *t, int res) {
+    for (unsigned w = 0; w < TOP_WORDS; w++)
+        if (t->dirty[w])
+            t->io->write(TOP_BASE + w * 4, t->orig[w], 32);
+    return res;
 }
 
 /* 1 when every condition of `c` holds, 0 when one does not, or
@@ -180,6 +197,7 @@ static bool has_ungated(const novatek_soc_t *soc, int pad) {
 static ipchw_padmux_t gpio_row(const novatek_soc_t *soc,
                                const novatek_pad_t *pd) {
     uint32_t bit = gate_bit(pd->pad);
+    bool ungated = has_ungated(soc, pd->pad);
 
     return (ipchw_padmux_t){
         .address = gate_addr(pd->pad),
@@ -188,11 +206,11 @@ static ipchw_padmux_t gpio_row(const novatek_soc_t *soc,
         .func_name = IPCHW_PADMUX_GPIO,
         .gpio_name = padmux_name(pd->name),
         .gpio_pad = pd->pad,
-        .gpio_func = (int)bit,
         /* Setting the gate is the whole operation -- unless a sensor mode
-         * can hold the pad through it, and then it is not. */
-        .flags = IPCHW_PADMUX_F_GPIO |
-                 (has_ungated(soc, pd->pad) ? 0 : IPCHW_PADMUX_F_RMW),
+         * can hold the pad through it, and then it is not, and a consumer
+         * has to go through ipchw_padmux_set(). */
+        .gpio_func = ungated ? -1 : (int)bit,
+        .flags = IPCHW_PADMUX_F_GPIO | (ungated ? 0 : IPCHW_PADMUX_F_RMW),
     };
 }
 
@@ -369,8 +387,9 @@ static int nvt_set(int pad, const char *func_name, const padmux_io_t *io) {
     if (!strcmp(func_name, IPCHW_PADMUX_GPIO) ||
         !strcmp(func_name, padmux_name(pd->name))) {
         if (!top_write_field(&t, gr, gate_bit(pad), gate_bit(pad)))
-            return IPCHW_PADMUX_IO;
-        return drop_competitors(soc, pad, &t, NULL);
+            return top_undo(&t, IPCHW_PADMUX_IO);
+        int res = drop_competitors(soc, pad, &t, NULL);
+        return res ? top_undo(&t, res) : 0;
     }
 
     /* Of the claims that spell this name, the one that changes least: on a
@@ -399,13 +418,14 @@ static int nvt_set(int pad, const char *func_name, const padmux_io_t *io) {
         const novatek_cond_t *k = &soc->conds[best->cond + i];
         if (!top_write_field(&t, k->reg, field_mask(k->shift, k->width),
                              (uint32_t)k->value << k->shift))
-            return IPCHW_PADMUX_IO;
+            return top_undo(&t, IPCHW_PADMUX_IO);
     }
     if (!(best->flags & NVT_UNGATED) &&
         !top_write_field(&t, gr, gate_bit(pad), 0))
-        return IPCHW_PADMUX_IO;
+        return top_undo(&t, IPCHW_PADMUX_IO);
 
-    return drop_competitors(soc, pad, &t, best);
+    int res = drop_competitors(soc, pad, &t, best);
+    return res ? top_undo(&t, res) : 0;
 }
 
 /* "P_GPIO22", "C_GPIO17" or the vendor's other spellings of it, "MC17" and

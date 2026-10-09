@@ -3740,8 +3740,10 @@ static int gpio_manipulate(char **argv, bool set_op) {
 
 static int gpio_get_cmd(int argc, char **argv) {
     if (argc != 2) {
-        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "get", "",
-               "where: <gpio number> either number in 5_6 or 46 format\n");
+        printf(
+            "Usage: ipctool gpio %s <gpio number>%s\n%s", "get", "",
+            "where: <gpio number> is 46, 5_6 on HiSilicon, or the pad's name "
+            "(P_GPIO22 on Novatek)\n");
         return EXIT_FAILURE;
     }
 
@@ -3750,8 +3752,10 @@ static int gpio_get_cmd(int argc, char **argv) {
 
 static int gpio_set_cmd(int argc, char **argv) {
     if (argc != 3) {
-        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "set", " <value>",
-               "where: <gpio number> either number in 5_6 or 46 format\n");
+        printf(
+            "Usage: ipctool gpio %s <gpio number>%s\n%s", "set", " <value>",
+            "where: <gpio number> is 46, 5_6 on HiSilicon, or the pad's name "
+            "(P_GPIO22 on Novatek)\n");
         return EXIT_FAILURE;
     }
 
@@ -3886,11 +3890,13 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
 
 static int gpio_mux_cmd(int argc, char **argv) {
     if (argc < 2 || argc > 3) {
-        printf("Usage: ipctool gpio %s <gpio number>%s\n%s%s", "mux",
-               " [function name or number]",
-               "where: <gpio number> either number in 5_6 or 46 format\n",
-               "       with no function, reports what the pad carries;\n"
-               "       pass GPIO to mux it back to plain GPIO\n");
+        printf(
+            "Usage: ipctool gpio %s <gpio number>%s\n%s%s", "mux",
+            " [function name or number]",
+            "where: <gpio number> is 46, 5_6 on HiSilicon, or the pad's name "
+            "(P_GPIO22 on Novatek)\n",
+            "       with no function, reports what the pad carries;\n"
+            "       pass GPIO to mux it back to plain GPIO\n");
         return EXIT_FAILURE;
     }
 
