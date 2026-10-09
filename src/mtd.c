@@ -203,34 +203,6 @@ int enum_ubi_volumes(int ubi_num, ubi_vol_info_t *vols, int max_vols) {
     return count;
 }
 
-char *read_ubi_volume(int ubi_num, int vol_id, size_t data_bytes,
-                      size_t *out_len) {
-    char devpath[64];
-    snprintf(devpath, sizeof(devpath), "/dev/ubi%d_%d", ubi_num, vol_id);
-
-    int fd = open(devpath, O_RDONLY);
-    if (fd == -1)
-        return NULL;
-
-    char *buf = malloc(data_bytes);
-    if (!buf) {
-        close(fd);
-        return NULL;
-    }
-
-    size_t total = 0;
-    while (total < data_bytes) {
-        ssize_t n = read(fd, buf + total, data_bytes - total);
-        if (n <= 0)
-            break;
-        total += n;
-    }
-    close(fd);
-
-    *out_len = total;
-    return buf;
-}
-
 bool sha1_ubi_volume(int ubi_num, int vol_id, size_t data_bytes,
                      unsigned char digest[20], size_t *out_len) {
     char devpath[64];

@@ -13,6 +13,7 @@ static void add_span(report_body_t *b, const char *data, size_t len) {
     }
     b->spans[b->nspans].data = data;
     b->spans[b->nspans].len = len;
+    b->spans[b->nspans].path = NULL;
     b->nspans++;
     b->total += len;
 }
@@ -74,6 +75,8 @@ void report_add_backup(report_body_t *b, const span_t *blocks, size_t n) {
             add_span(b, (const char *)le, 4);
         }
         add_span(b, blocks[i].data, blocks[i].len);
+        if (!b->overflow)
+            b->spans[b->nspans - 1].path = blocks[i].path;
     }
     add_span(b, crlf, 2);
 }
