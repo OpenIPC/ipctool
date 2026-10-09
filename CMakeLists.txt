@@ -499,4 +499,11 @@ if(NOT ONLY_LIBRARY)
   # like the others.
   add_executable(report_test src/report_test.c src/report.c src/cjson/cJSON.c)
   target_include_directories(report_test PRIVATE include src)
+
+  # How the upload meets a server: a redirect on the headers, an interim
+  # 100, a body taken whole, and a connection that stops draining -- against
+  # servers forked on the loopback.
+  add_executable(http_test src/http_test.c src/http.c src/dns.c src/report.c
+                           src/cjson/cJSON.c)
+  target_include_directories(http_test PRIVATE include src)
 endif()

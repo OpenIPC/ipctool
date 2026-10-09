@@ -26,6 +26,14 @@ typedef struct {
 #define ERR_STALLED 8
 #define ERR_BUTT 10
 
+/* The upload's timing, variables so http_test can shorten them: how long a
+ * server has to answer the headers alone, how long a send may wait for
+ * buffer space before the body counts as stalled, and how long an answer may
+ * take after a stall or a refusal mid-body. */
+extern int http_early_answer_ms;
+extern int http_stall_timeout_s;
+extern int http_late_answer_s;
+
 /* POST spans as one body of total bytes; resp gets the answer's body, status
  * its HTTP status, location its Location header ("" without one). 0, or one
  * of the ERR_ codes above: ERR_STALLED when the body stopped moving and no

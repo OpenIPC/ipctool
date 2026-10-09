@@ -126,18 +126,18 @@ static int common_connect(const char *hostname, int port, nservers_t *ns,
 
 /* A send that cannot place a byte for this long means the body has stopped
  * moving; nothing on a working connection waits that long for buffer space. */
-#define STALL_TIMEOUT 30 // seconds
+int http_stall_timeout_s = 30;
 
 // send(), not write(): a server that answers early (413, 429) and closes
 // must not kill ipctool with SIGPIPE before it can print the reason. Each
 // send waits for buffer space through poll(), so a connection that stops
-// draining fails after STALL_TIMEOUT with EAGAIN -- SO_SNDTIMEO would restart
-// its clock whenever a few bytes squeeze in, and a frozen upload took minutes
-// to give up.
+// draining fails after http_stall_timeout_s with EAGAIN -- SO_SNDTIMEO would
+// restart its clock whenever a few bytes squeeze in, and a frozen upload took
+// minutes to give up.
 static int write_all(int s, const char *data, size_t len) {
     while (len) {
         struct pollfd pfd = {.fd = s, .events = POLLOUT};
-        int ready = poll(&pfd, 1, STALL_TIMEOUT * 1000);
+        int ready = poll(&pfd, 1, http_stall_timeout_s * 1000);
         if (ready < 0 && errno == EINTR)
             continue;
         if (ready == 0)
@@ -187,9 +187,9 @@ static void find_header(const char *head, const char *name, char *out,
  * after its first few kilobytes, the answer to the headers still gets back,
  * and the body would not. A server that wants the body says nothing, and
  * this is what it costs. */
-#define EARLY_ANSWER_MS 2000
+int http_early_answer_ms = 2000;
 /* After a stall or a refusal mid-body, how long an answer may take. */
-#define LATE_ANSWER_TIMEOUT 10 // seconds
+int http_late_answer_s = 10;
 
 int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
               const char *content_type, const span_t *spans, size_t nspans,
@@ -233,10 +233,21 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
     struct pollfd early = {.fd = s, .events = POLLIN};
     int ready;
     do
-        ready = poll(&early, 1, EARLY_ANSWER_MS);
+        ready = poll(&early, 1, http_early_answer_ms);
     while (ready < 0 && errno == EINTR);
-    if (ready > 0)
-        goto answer;
+    if (ready > 0) {
+        // An interim 1xx asks for the body (no server should send one to
+        // HTTP/1.0, but it costs nothing to allow): send it, and the 1xx is
+        // skipped with the final answer below. Anything else is the answer.
+        char peek[64];
+        ssize_t n = recv(s, peek, sizeof(peek) - 1, MSG_PEEK);
+        if (n <= 0)
+            goto answer;
+        peek[n] = '\0';
+        int code = get_http_respcode(peek);
+        if (code < 100 || code > 199)
+            goto answer;
+    }
 
     size_t sent = 0;
     int shown = -1;
@@ -253,7 +264,7 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
                 stalled = errno == EAGAIN;
                 if (shown >= 0)
                     fprintf(stderr, "\n");
-                tv.tv_sec = LATE_ANSWER_TIMEOUT;
+                tv.tv_sec = http_late_answer_s;
                 setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
                 goto answer;
             }
@@ -287,6 +298,11 @@ answer:;
     resp[got] = '\0';
     *status = get_http_respcode(resp);
     char *body = strstr(resp, "\r\n\r\n");
+    while (*status >= 100 && *status <= 199 && body) {
+        memmove(resp, body + 4, strlen(body + 4) + 1);
+        *status = get_http_respcode(resp);
+        body = strstr(resp, "\r\n\r\n");
+    }
     if (*status < 0 || !body)
         return got ? ERR_HTTP : stalled ? ERR_STALLED : ERR_SEND;
     if (loccap)

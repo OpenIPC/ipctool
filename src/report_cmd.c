@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -273,18 +274,32 @@ int report_cmd(int argc, char **argv) {
     int status = 0, err;
     /* A server may send the report elsewhere with a 307 or 308 -- openipc.org
      * does, for a network that cannot reach it -- and says so before the body
-     * is sent (http_post), so following costs nothing but the hop. */
+     * is sent (http_post), so following costs nothing but the hop.
+     *
+     * To another host only from openipc.org itself: the owner agreed to
+     * send this report, maybe with the whole flash in it, to the host named
+     * above, and where openipc.org forwards its own reports is part of that.
+     * Any other server may move it only within its own name. */
     for (int hops = 0;; hops++) {
         err = http_post(hostname, port, path, &ns, ctype, body->spans,
                         body->nspans, body->total, resp, sizeof(resp), &status,
                         location, sizeof(location));
         if (err || (status != 307 && status != 308) || hops == 3)
             break;
-        char next[256];
+        char next[256], nextpath[256];
         int nport;
-        if (!report_redirect(location, next, sizeof(next), &nport, path,
-                             sizeof(path)))
+        if (!report_redirect(location, next, sizeof(next), &nport, nextpath,
+                             sizeof(nextpath)))
             break;
+        if (strcasecmp(next, hostname) && strcasecmp(hostname, DEFAULT_HOST)) {
+            fprintf(stderr,
+                    "%s sends the report to %s, another host. It goes only "
+                    "where it was asked to: --host %s sends it there.\n",
+                    hostname, location, next);
+            *location = '\0';
+            break;
+        }
+        snprintf(path, sizeof(path), "%s", nextpath);
         fprintf(stderr, "%s sends the report to %s.\n", hostname, location);
         snprintf(hostname, sizeof(hostname), "%s", next);
         port = nport;

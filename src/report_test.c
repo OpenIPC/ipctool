@@ -136,6 +136,14 @@ int main(int argc, char **argv) {
                           sizeof(path)) &&
               !strcmp(path, "/"),
           "no path");
+    CHECK(report_redirect("http://m.example?t=1", host, sizeof(host), &port,
+                          path, sizeof(path)) &&
+              !strcmp(host, "m.example") && !strcmp(path, "/?t=1"),
+          "a query with no path: %s %s", host, path);
+    CHECK(report_redirect("http://m.example:81/r?a=b#frag", host, sizeof(host),
+                          &port, path, sizeof(path)) &&
+              port == 81 && !strcmp(path, "/r?a=b"),
+          "the fragment stays behind: %d %s", port, path);
     CHECK(!report_redirect("https://openipc.org/api/v1/reports", host,
                            sizeof(host), &port, path, sizeof(path)),
           "https cannot be followed by stock firmware");

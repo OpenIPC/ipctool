@@ -124,7 +124,7 @@ bool report_redirect(const char *location, char *host, size_t hostcap,
     if (strncasecmp(location, scheme, sizeof(scheme) - 1))
         return false;
     const char *h = location + sizeof(scheme) - 1;
-    const char *p = strchr(h, '/');
+    const char *p = strpbrk(h, "/?#");
     if (!p)
         p = h + strlen(h);
     size_t hl = (size_t)(p - h);
@@ -140,12 +140,16 @@ bool report_redirect(const char *location, char *host, size_t hostcap,
             return false;
         prt = (int)v;
     }
-    const char *pathv = *p ? p : "/";
-    if (strlen(pathv) >= pathcap || strpbrk(pathv, " \r\n"))
+    // The fragment is the client's alone; a query with no path before it
+    // still asks for "/".
+    size_t pl = strcspn(p, "#");
+    const char *lead = *p == '/' ? "" : "/";
+    if (strlen(lead) + pl >= pathcap || memchr(p, ' ', pl) ||
+        memchr(p, '\r', pl) || memchr(p, '\n', pl))
         return false;
     memcpy(host, h, namelen);
     host[namelen] = '\0';
     *port = prt;
-    snprintf(path, pathcap, "%s", pathv);
+    snprintf(path, pathcap, "%s%.*s", lead, (int)pl, p);
     return true;
 }
