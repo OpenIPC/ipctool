@@ -500,6 +500,89 @@ static void check_probe_restores_console(void) {
     i2c_read_register = mock_read;
 }
 
+/* ---- a streaming SP2305 shares its address with a GalaxyCore probe ------ */
+
+/* On HiSilicon the GalaxyCore probe runs at 0x78 and the SuperPix one at 0x79:
+ * one 7-bit address, so both reach an SP2305 / OV2735. That part has one-byte
+ * register addresses, and a two-byte address is a write as far as it is
+ * concerned -- the GalaxyCore read of 0x3f0 stored 0xf0 in its register 0x03,
+ * which is the exposure, and a camera streaming at the time went white until
+ * its streamer restarted. So: named without a single two-byte address reaching
+ * it, and left on the register page it was found on. */
+static int sp_page;
+static int sp_wide;
+static int sp_wide_writes;
+static int sp_bad_page_writes;
+
+static int sp_read(int fd, unsigned char addr, uint32_t reg,
+                   unsigned int reg_width, unsigned int data_width) {
+    (void)fd;
+    (void)data_width;
+    if (addr != mock_addr)
+        return -1;
+    if (reg_width != 1) {
+        sp_wide++;
+        return -1;
+    }
+    if (reg == 0xFD)
+        return sp_page;
+    if (sp_page == 0 && reg == 0x02)
+        return 0x27;
+    if (sp_page == 0 && reg == 0x03)
+        return 0x35;
+    return 0x40; /* what this part answers at 0xf0/0xf1 on page 1 */
+}
+
+static int sp_write(int fd, unsigned char addr, uint32_t reg,
+                    unsigned int reg_width, uint32_t data,
+                    unsigned int data_width) {
+    (void)fd;
+    if (addr != mock_addr)
+        return -1;
+    if (reg_width != 1)
+        sp_wide_writes++;
+    if (reg == 0xFD) {
+        if (data_width != 1)
+            sp_bad_page_writes++;
+        sp_page = (int)data;
+    }
+    return 0;
+}
+
+static void check_superpix_spared_by_galaxycore(void) {
+    static unsigned char addrs[] = {0x60, 0};
+    static sensor_addr_t table[] = {{SENSOR_GALAXYCORE, addrs},
+                                    {SENSOR_SUPERPIX, addrs},
+                                    {0, NULL}};
+    sensor_ctx_t ctx;
+
+    setup_hal_fallback();
+    open_i2c_sensor_fd = quiet_open;
+    i2c_read_register = sp_read;
+    i2c_write_register = sp_write;
+    i2c_change_addr = mock_change_addr;
+    possible_i2c_addrs = table;
+
+    memset(&ctx, 0, sizeof(ctx));
+    sp_page = 1; /* where the streamer keeps it */
+    sp_wide = sp_wide_writes = sp_bad_page_writes = 0;
+    CHECK(getsensorid(&ctx));
+    CHECK(!strcmp(ctx.sensor_id, "OV2735"));
+    CHECK(sp_wide == 0);
+    CHECK(sp_wide_writes == 0);
+    CHECK(sp_bad_page_writes == 0);
+    CHECK(sp_page == 1);
+    if (strcmp(ctx.sensor_id, "OV2735") || sp_wide || sp_page != 1)
+        fprintf(stderr,
+                "    (SP2305 at a GalaxyCore address: got \"%s\", %d two-byte "
+                "reads, left on page %d)\n",
+                ctx.sensor_id, sp_wide, sp_page);
+
+    possible_i2c_addrs = NULL;
+    i2c_read_register = mock_read;
+    i2c_write_register = mock_write;
+}
+
 int main(int argc, char **argv) {
     i2c_read_register = mock_read;
     i2c_write_register = mock_write;
@@ -526,6 +609,7 @@ int main(int argc, char **argv) {
     check_techpoint();
     check_vendor_dependent();
     check_probe_restores_console();
+    check_superpix_spared_by_galaxycore();
 
     if (failures)
         fprintf(stderr, "sensors_test: %d failure(s)\n", failures);
