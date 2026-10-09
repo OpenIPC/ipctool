@@ -152,17 +152,25 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
             static char piece[65536];
             FILE *src = fopen(blocks[i].path, "rb");
             size_t left = blocks[i].len;
+            const char *failed = src ? NULL : blocks[i].path;
             while (src && left) {
                 size_t n = fread(
                     piece, 1, left < sizeof(piece) ? left : sizeof(piece), src);
-                if (!n || fwrite(piece, 1, n, fp) != n)
+                if (!n) {
+                    failed = blocks[i].path;
                     break;
+                }
+                if (fwrite(piece, 1, n, fp) != n) {
+                    failed = filename;
+                    break;
+                }
                 left -= n;
             }
             if (src)
                 fclose(src);
-            if (left) {
-                fprintf(stderr, "Error reading %s, aborting\n", blocks[i].path);
+            if (failed) {
+                fprintf(stderr, "Error %s '%s', aborting\n",
+                        failed == filename ? "writing" : "reading", failed);
                 fclose(fp);
                 return 1;
             }

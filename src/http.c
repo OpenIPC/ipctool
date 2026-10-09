@@ -265,8 +265,10 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
             size_t chunk = spans[i].len - off;
             if (chunk > sizeof(piece))
                 chunk = sizeof(piece);
-            const char *from = spans[i].data + off;
-            if (src >= 0) {
+            const char *from = piece;
+            if (src < 0) {
+                from = spans[i].data + off;
+            } else {
                 size_t got = 0;
                 while (got < chunk) {
                     ssize_t n = read(src, piece + got, chunk - got);
@@ -285,7 +287,6 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
                     }
                     got += (size_t)n;
                 }
-                from = piece;
             }
             if (write_all(s, from, chunk)) {
                 if (src >= 0)
