@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <poll.h>
@@ -122,12 +124,29 @@ static int common_connect(const char *hostname, int port, nservers_t *ns,
     return ret;
 }
 
+/* A send that cannot place a byte for this long means the body has stopped
+ * moving; nothing on a working connection waits that long for buffer space. */
+int http_stall_timeout_s = 30;
+
 // send(), not write(): a server that answers early (413, 429) and closes
-// must not kill ipctool with SIGPIPE before it can print the reason.
+// must not kill ipctool with SIGPIPE before it can print the reason. Each
+// send waits for buffer space through poll(), so a connection that stops
+// draining fails after http_stall_timeout_s with EAGAIN -- SO_SNDTIMEO would
+// restart its clock whenever a few bytes squeeze in, and a frozen upload took
+// minutes to give up.
 static int write_all(int s, const char *data, size_t len) {
     while (len) {
-        ssize_t n = send(s, data, len, MSG_NOSIGNAL);
-        if (n < 0 && errno == EINTR)
+        struct pollfd pfd = {.fd = s, .events = POLLOUT};
+        int ready = poll(&pfd, 1, http_stall_timeout_s * 1000);
+        if (ready < 0 && errno == EINTR)
+            continue;
+        if (ready == 0)
+            errno = EAGAIN;
+        if (ready <= 0)
+            return -1;
+        ssize_t n = send(s, data, len, MSG_NOSIGNAL | MSG_DONTWAIT);
+        if (n < 0 &&
+            (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK))
             continue;
         if (n <= 0)
             return -1;
@@ -137,9 +156,47 @@ static int write_all(int s, const char *data, size_t len) {
     return 0;
 }
 
+/* The value of header name in the head of an answer (up to its blank line),
+ * into out; "" when there is none. */
+static void find_header(const char *head, const char *name, char *out,
+                        size_t cap) {
+    size_t nl = strlen(name);
+    *out = '\0';
+    for (const char *line = strstr(head, "\r\n"); line && line[2] != '\r';
+         line = strstr(line + 2, "\r\n")) {
+        const char *h = line + 2;
+        if (strncasecmp(h, name, nl) || h[nl] != ':')
+            continue;
+        h += nl + 1;
+        while (*h == ' ' || *h == '\t')
+            h++;
+        size_t n = strcspn(h, "\r\n");
+        if (n >= cap)
+            n = cap - 1;
+        memcpy(out, h, n);
+        out[n] = '\0';
+        while (n && isspace((unsigned char)out[n - 1]))
+            out[--n] = '\0';
+        return;
+    }
+}
+
+/* How long the server has to answer the headers alone, before the body
+ * goes. A server that redirects or refuses says so at once, and a body it
+ * will not read is never sent: through a filter that freezes a connection
+ * after its first few kilobytes, the answer to the headers still gets back,
+ * and the body would not. A server that wants the body says nothing, and
+ * this is what it costs. */
+int http_early_answer_ms = 2000;
+/* After a stall or a refusal mid-body, how long an answer may take. */
+int http_late_answer_s = 10;
+
 int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
               const char *content_type, const span_t *spans, size_t nspans,
-              size_t total, char *resp, size_t cap, int *status) {
+              size_t total, char *resp, size_t cap, int *status, char *location,
+              size_t loccap) {
+    if (loccap)
+        *location = '\0';
     int s;
     int rc = common_connect(hostname, port, ns, &s);
     /* common_connect() answers ERR_GENERAL when it is connected. */
@@ -148,7 +205,9 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
 
     struct timeval tv = {.tv_sec = 120};
     setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    // The whole body is in: the server stores it, then answers.
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    bool stalled = false;
 
     char host[300];
     if (port == 80)
@@ -171,6 +230,25 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
         return ERR_SEND;
     }
 
+    struct pollfd early = {.fd = s, .events = POLLIN};
+    int ready;
+    do
+        ready = poll(&early, 1, http_early_answer_ms);
+    while (ready < 0 && errno == EINTR);
+    if (ready > 0) {
+        // An interim 1xx asks for the body (no server should send one to
+        // HTTP/1.0, but it costs nothing to allow): send it, and the 1xx is
+        // skipped with the final answer below. Anything else is the answer.
+        char peek[64];
+        ssize_t n = recv(s, peek, sizeof(peek) - 1, MSG_PEEK);
+        if (n <= 0)
+            goto answer;
+        peek[n] = '\0';
+        int code = get_http_respcode(peek);
+        if (code < 100 || code > 199)
+            goto answer;
+    }
+
     size_t sent = 0;
     int shown = -1;
     for (size_t i = 0; i < nspans; i++) {
@@ -181,9 +259,13 @@ int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
                 chunk = 65536;
             if (write_all(s, spans[i].data + off, chunk)) {
                 // The server may have answered and closed: read what it
-                // said, so a refusal reaches the user as a reason.
+                // said, so a refusal reaches the user as a reason. Or the
+                // body stopped moving, and nothing is coming back either.
+                stalled = errno == EAGAIN;
                 if (shown >= 0)
                     fprintf(stderr, "\n");
+                tv.tv_sec = http_late_answer_s;
+                setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
                 goto answer;
             }
             off += chunk;
@@ -216,8 +298,15 @@ answer:;
     resp[got] = '\0';
     *status = get_http_respcode(resp);
     char *body = strstr(resp, "\r\n\r\n");
+    while (*status >= 100 && *status <= 199 && body) {
+        memmove(resp, body + 4, strlen(body + 4) + 1);
+        *status = get_http_respcode(resp);
+        body = strstr(resp, "\r\n\r\n");
+    }
     if (*status < 0 || !body)
-        return got ? ERR_HTTP : ERR_SEND;
+        return got ? ERR_HTTP : stalled ? ERR_STALLED : ERR_SEND;
+    if (loccap)
+        find_header(resp, "Location", location, loccap);
     memmove(resp, body + 4, strlen(body + 4) + 1);
     return 0;
 }

@@ -53,6 +53,13 @@ typedef struct {
 
 void report_parse_answer(int status, const char *body, report_answer_t *a);
 
+/* Where a redirect sends the report: location must be plain http://, which
+ * is all stock firmware speaks, with a host, an optional port and a path.
+ * false for anything else -- https://, a relative address, credentials --
+ * and the report is not followed there. */
+bool report_redirect(const char *location, char *host, size_t hostcap,
+                     int *port, char *path, size_t pathcap);
+
 /* ipctool's report as the no-argument run prints it; malloc'ed (main.c). */
 char *build_report_yaml(void);
 
