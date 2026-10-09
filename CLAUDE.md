@@ -76,9 +76,10 @@ CMake knobs worth knowing:
   question the linker cannot answer — nothing here is dead code as far as it
   knows.
 - `-DIPCHW_PADMUX=all|none|"v1;v4;sstar"` selects which SoC families' pad-mux
-  tables go into `libipchw`. `sstar` and `ingenic` are families here too: the
-  vendor knob answers "can this build detect the SoC", this one answers "does
-  it carry the SoC's pad table", and they are deliberately separate. All of it
+  tables go into `libipchw`. `sstar`, `ingenic` and `novatek` are families
+  here too: the vendor knob answers "can this build detect the SoC", this one
+  answers "does it carry the SoC's pad table", and they are deliberately
+  separate. All of it
   is ~75 KB on arm32 and nothing is dropped by `--gc-sections`, because
   `regs_by_chip()` and `padmux_ops()` name every family from a single switch:
   a consumer that wants one family has to say so. `v4` is the expensive
@@ -252,8 +253,8 @@ cJSON or prints diagnostics in those shared files must sit inside
   window in four file-statics, no lock -- so serialise every caller yourself.
 - Pad multiplexing spans `src/padmux.c` (the public entry points and the
   backend dispatch), `src/reginfo.c` (1333 hand-entered HiSilicon/Goke rows
-  plus their backend), `src/hal/sstar_padmux.*` and
-  `src/hal/ingenic_padmux.*`. The three vendors select a pad's function three
+  plus their backend), `src/hal/sstar_padmux.*`, `src/hal/ingenic_padmux.*`
+  and `src/hal/novatek_padmux.*`. The four vendors select a pad's function four
   different ways and only HiSilicon's is one register per pad, which is why
   there is a `padmux_ops_t` seam rather than one table format. `docs/padmux.md`
   has the mechanisms, the generators, and the traps -- read it before touching
@@ -266,12 +267,21 @@ cJSON or prints diagnostics in those shared files must sit inside
   (hi3516ev300 has PWM2 and PWM3 on three pads each), and the spelling is not
   portable (`PWM_OUT0` on V1, `PWM0` from V2, `PWM0_OUT1` on V5, `PWM0_MODE_4`
   on SigmaStar; `SVB_PWM` and `PMC_PWM` are *different* controllers, so match
-  the prefix anchored, never anywhere in the string). The SigmaStar and
-  Ingenic tables are generated from vendor sources by `tools/gen_*_padmux.py`
-  and are in `.clang-format-hook-exclude`. `ipchw_padmux_by_func/_by_prefix/
-  _by_pad` are safe to call concurrently once the SoC has been detected;
+  the prefix anchored, never anywhere in the string). The SigmaStar,
+  Ingenic and Novatek tables are generated from vendor sources by
+  `tools/gen_*_padmux.py` and are in `.clang-format-hook-exclude`. Novatek's
+  generator is the odd one: the NA51089 SDK has no pin table, only the
+  driver's `pinmux_config_*()` code, so it compiles that code on the host with
+  every register write logged and runs it -- it needs a C compiler and the
+  SDK, and its `--selftest` needs only the compiler.
+  `ipchw_padmux_by_func/_by_prefix/_by_pad` are safe to call concurrently once the SoC has been detected;
   detection itself is not, so call `getchipname()` once at startup.
   `ipchw_padmux_get/_set` touch `/dev/mem` and must stay on one thread.
+- `gpio get/set/scan` reach a GPIO controller per vendor: HiSilicon's bank
+  words in `src/reginfo.c` (`get_chip_gpio_adress()`), SigmaStar Infinity6C's
+  per-pad registers in `src/hal/sstar_gpio.c`, and the NA51089's four
+  DATA/DIR/SET/CLR banks in `src/hal/novatek_gpio.c`. Ingenic has none, so
+  only `gpio mux` and `reginfo --pads` work there.
 - `src/fake_symbols.c` holds empty definitions of HiSilicon SDK audio symbols,
   added when the Hi3518EV100 SDK was linked in; nothing in the current tree
   references them. `src/stack.c` is a stack-protector shim and is not in the

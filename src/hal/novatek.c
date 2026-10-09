@@ -32,6 +32,11 @@ static bool nvt_get_chip_id() {
                        sizeof(buf))) {
 
         reg = (uint16_t)strtol(buf, &endptr, 16);
+        /* The TOP block's chip-ID word, which is what tells the pad-mux
+         * table and the GPIO controller which SoC this is. Set for every ID
+         * the kernel hands over, named or not: a part with no table gets no
+         * table, which padmux_ops() says rather than guessing one. */
+        chip_generation = reg;
         switch (reg) {
         case 0x5021:
             strcpy(chip_name, "NT98562");

@@ -72,7 +72,7 @@ endif()
 # Same shape as IPCHW_VENDORS above, and for the same reason -- set(... CACHE)
 # here means a parent project has to FORCE it.
 set(IPCHW_PADMUX_FAMILIES v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d sstar
-    ingenic)
+    ingenic novatek)
 set(IPCHW_PADMUX "all" CACHE STRING
     "Pad-mux tables compiled into libipchw: 'all', 'none', or a subset of ${IPCHW_PADMUX_FAMILIES}")
 
@@ -100,19 +100,20 @@ foreach(_f IN LISTS _padmux_selected)
 endforeach()
 message(STATUS "libipchw pad-mux tables: ${_padmux_selected}")
 
-# The two vendors whose pad-mux is its own backend rather than a table in
+# The vendors whose pad-mux is its own backend rather than a table in
 # reginfo.c. Selecting the family is what compiles the backend in; selecting
 # the vendor HAL is what makes chip_generation reach it. They are separate
 # questions, which is why they are separate knobs -- a consumer can carry the
 # SigmaStar tables in a build that detects nothing else, which is exactly what
 # reginfo_test does.
 set(IPCHW_PADMUX_BACKENDS "")
-foreach(_f sstar ingenic)
+foreach(_f sstar ingenic novatek)
   if(_f IN_LIST _padmux_selected)
     list(APPEND IPCHW_PADMUX_BACKENDS src/hal/${_f}_padmux.c)
   endif()
 endforeach()
-set(IPCHW_PADMUX_BACKENDS_ALL src/hal/sstar_padmux.c src/hal/ingenic_padmux.c)
+set(IPCHW_PADMUX_BACKENDS_ALL src/hal/sstar_padmux.c src/hal/ingenic_padmux.c
+    src/hal/novatek_padmux.c)
 
 # Which HiSilicon generations libipchw can identify. IPCHW_VENDORS does not
 # reach the CODE: chipid.c dispatches to the HiSilicon HAL directly rather
@@ -279,7 +280,8 @@ set(_common_lib_src_tail
 # Full set, used by the ipctool executable
 set(COMMON_LIB_SRC_ALL ${_common_lib_src_head} ${IPCHW_HISI_SRC_ALL}
     ${_common_lib_src_tail} ${IPCHW_PADMUX_BACKENDS_ALL}
-    src/hal/sstar_gpio.c src/hal/sstar_gpio.h)
+    src/hal/sstar_gpio.c src/hal/sstar_gpio.h
+    src/hal/novatek_gpio.c src/hal/novatek_gpio.h)
 foreach(_v IN LISTS IPCHW_OPTIONAL_VENDORS)
   list(APPEND COMMON_LIB_SRC_ALL src/hal/${_v}.c src/hal/${_v}.h)
   string(TOUPPER ${_v} _V)
@@ -298,6 +300,9 @@ foreach(_v IN LISTS _ipchw_selected)
   list(APPEND COMMON_LIB_SRC src/hal/${_v}.c src/hal/${_v}.h)
   if(_v STREQUAL "sstar")
     list(APPEND COMMON_LIB_SRC src/hal/sstar_gpio.c src/hal/sstar_gpio.h)
+  endif()
+  if(_v STREQUAL "novatek")
+    list(APPEND COMMON_LIB_SRC src/hal/novatek_gpio.c src/hal/novatek_gpio.h)
   endif()
   string(TOUPPER ${_v} _V)
   list(APPEND IPCHW_VENDOR_DEFS IPCHW_VENDOR_${_V})

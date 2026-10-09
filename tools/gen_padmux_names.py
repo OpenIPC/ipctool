@@ -49,8 +49,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Each table file, and the condition under which its rows are compiled.
 #
 # reginfo.c is split into per-family `#if defined(IPCHW_PADMUX_Vx)` blocks and
-# is parsed for them. The other two are pad-free register dumps for the
-# `reginfo` subcommand: they carry no family blocks, and the whole file is
+# is parsed for them. The *_reginfo.h files are pad-free register dumps for
+# the `reginfo` subcommand: they carry no family blocks, and the whole file is
 # behind one condition -- including `!STANDALONE_LIBRARY`, because libipchw
 # does not include them at all and must not pay for their names.
 # The third field is how names are spelled in the file.
@@ -58,7 +58,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #   "muxctrl" -- MUXCTRL(name, addr, ...) rows, one per line or wrapped.
 #   "table"   -- a generated C initialiser where EVERY string literal is a
 #                pad or function name. Comments are stripped first, because
-#                the banner in both of those files quotes example names and
+#                the banners in those files quote example names and
 #                interning a name nothing indexes would be a silent leak
 #                into the blob.
 SOURCES = [
@@ -75,6 +75,12 @@ SOURCES = [
     ),
     ("src/hal/ingenic_padmux.h", "defined(IPCHW_PADMUX_INGENIC)", "table"),
     ("src/hal/sstar_padmux.h", "defined(IPCHW_PADMUX_SSTAR)", "table"),
+    ("src/hal/novatek_padmux.h", "defined(IPCHW_PADMUX_NOVATEK)", "table"),
+    (
+        "src/hal/novatek_reginfo.h",
+        "defined(IPCHW_VENDOR_NOVATEK) && !defined(STANDALONE_LIBRARY)",
+        "muxctrl",
+    ),
 ]
 
 FAMILY_OPEN = re.compile(r"^#if defined\((IPCHW_PADMUX_[A-Z0-9_]+)\)")
@@ -132,7 +138,7 @@ def map_code(line, in_block, fn):
     identity the line comes back byte for byte, which is what makes it safe
     to run over a whole file.
 
-    Only good enough for these five files -- it does not know about a `/*`
+    Only good enough for these files -- it does not know about a `/*`
     inside a string literal, and none of them has one. It exists because a
     name quoted in a banner comment ("PB25", the spelling the datasheet uses)
     must not reach the blob, and because the generated SigmaStar table ends

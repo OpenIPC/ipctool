@@ -2,6 +2,8 @@
 #include "chipid.h"
 #include "hal/hisi/hal_hisi.h"
 #include "hal/ingenic.h"
+#include "hal/novatek.h"
+#include "hal/novatek_gpio.h"
 #include "hal/sstar.h"
 #include "hal/sstar_gpio.h"
 #include "padmux.h"
@@ -3394,6 +3396,9 @@ uint32_t gpio_windows_in_mapping(unsigned long off, unsigned long len,
 #ifdef IPCHW_VENDOR_SSTAR
 #include "hal/sstar_reginfo.h"
 #endif
+#ifdef IPCHW_VENDOR_NOVATEK
+#include "hal/novatek_reginfo.h"
+#endif
 
 static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func);
@@ -3401,6 +3406,9 @@ static int padmux_refuse(int code, const char *pad_spec, const char *func);
 static int sstar_gpio_getset(char **argv, bool set_op);
 static int sstar_gpio_scan_cmd(void);
 static char *sstar_gpio_possible_ircut(char *outbuf, size_t outlen);
+static int novatek_gpio_getset(char **argv, bool set_op);
+static int novatek_gpio_scan_cmd(void);
+static char *novatek_gpio_possible_ircut(char *outbuf, size_t outlen);
 
 static void show_function(const uint16_t *func, unsigned val) {
     for (size_t i = 0; func[i]; i++)
@@ -3412,7 +3420,9 @@ static void show_function(const uint16_t *func, unsigned val) {
  * On SigmaStar and Ingenic it is the GPIO controller's own registers, which is
  * what those two lists have always been -- per-pad direction and level on one,
  * the port INT/MSK/PAT/pull/drive registers on the other. Useful, and not
- * pin-mux: `reginfo --pads` is the pin-mux view on every family. */
+ * pin-mux: `reginfo --pads` is the pin-mux view on every family. On Novatek
+ * it is the TOP block's pad-mux registers whole, the raw form of what
+ * `--pads` decodes. */
 static const muxctrl_reg_t **dump_regs_by_chip(void) {
     switch (chip_generation) {
 #ifdef IPCHW_VENDOR_SSTAR
@@ -3433,6 +3443,10 @@ static const muxctrl_reg_t **dump_regs_by_chip(void) {
     case T31:
         /* Three, and the list these two have always dumped. */
         return T31_regs;
+#endif
+#ifdef IPCHW_VENDOR_NOVATEK
+    case CHIP_NA51089:
+        return NA51089_regs;
 #endif
     default:
         break;
@@ -3459,8 +3473,9 @@ static uint32_t dump_mask(void) {
     case T23:
     case T31:
     case T40:
-        /* Not a selector at all: these are whole 32-bit controller registers
-         * and every bit of them is worth printing. */
+    case CHIP_NA51089:
+        /* Not a selector at all: these are whole 32-bit registers and every
+         * bit of them is worth printing. */
         return 0xffffffff;
     default:
         return padmux_func_mask();
@@ -3661,6 +3676,8 @@ static int gpio_manipulate(char **argv, bool set_op) {
     getchipname();
     if (sstar_gpio_supported())
         return sstar_gpio_getset(argv, set_op);
+    if (novatek_gpio_supported())
+        return novatek_gpio_getset(argv, set_op);
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups)) {
         fprintf(stderr, "Chip is not supported\n");
         return EXIT_FAILURE;
@@ -3723,8 +3740,10 @@ static int gpio_manipulate(char **argv, bool set_op) {
 
 static int gpio_get_cmd(int argc, char **argv) {
     if (argc != 2) {
-        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "get", "",
-               "where: <gpio number> either number in 5_6 or 46 format\n");
+        printf(
+            "Usage: ipctool gpio %s <gpio number>%s\n%s", "get", "",
+            "where: <gpio number> is 46, 5_6 on HiSilicon, or the pad's name "
+            "(P_GPIO22 on Novatek)\n");
         return EXIT_FAILURE;
     }
 
@@ -3733,8 +3752,10 @@ static int gpio_get_cmd(int argc, char **argv) {
 
 static int gpio_set_cmd(int argc, char **argv) {
     if (argc != 3) {
-        printf("Usage: ipctool gpio %s <gpio number>%s\n%s", "set", " <value>",
-               "where: <gpio number> either number in 5_6 or 46 format\n");
+        printf(
+            "Usage: ipctool gpio %s <gpio number>%s\n%s", "set", " <value>",
+            "where: <gpio number> is 46, 5_6 on HiSilicon, or the pad's name "
+            "(P_GPIO22 on Novatek)\n");
         return EXIT_FAILURE;
     }
 
@@ -3779,13 +3800,14 @@ static int padmux_refuse(int code, const char *pad_spec, const char *func) {
  * the two other vendors have. */
 static int gpio_mux_by(const char *gpio_number, int func_num,
                        const char *set_func) {
+    /* Detection first: how a pad may be spelled is the SoC's to say. */
+    getchipname();
+
     int pad = padmux_parse_pad(gpio_number);
     if (pad < 0) {
         fprintf(stderr, "Not a GPIO number: %s\n", gpio_number);
         return EXIT_FAILURE;
     }
-
-    getchipname();
 
     const char *want = set_func;
     if (func_num >= 0) {
@@ -3868,11 +3890,13 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
 
 static int gpio_mux_cmd(int argc, char **argv) {
     if (argc < 2 || argc > 3) {
-        printf("Usage: ipctool gpio %s <gpio number>%s\n%s%s", "mux",
-               " [function name or number]",
-               "where: <gpio number> either number in 5_6 or 46 format\n",
-               "       with no function, reports what the pad carries;\n"
-               "       pass GPIO to mux it back to plain GPIO\n");
+        printf(
+            "Usage: ipctool gpio %s <gpio number>%s\n%s%s", "mux",
+            " [function name or number]",
+            "where: <gpio number> is 46, 5_6 on HiSilicon, or the pad's name "
+            "(P_GPIO22 on Novatek)\n",
+            "       with no function, reports what the pad carries;\n"
+            "       pass GPIO to mux it back to plain GPIO\n");
         return EXIT_FAILURE;
     }
 
@@ -3966,6 +3990,8 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
     *outbuf = 0;
     if (sstar_gpio_supported())
         return sstar_gpio_possible_ircut(outbuf, outlen);
+    if (novatek_gpio_supported())
+        return novatek_gpio_possible_ircut(outbuf, outlen);
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
         return NULL;
 
@@ -4211,6 +4237,158 @@ static int sstar_gpio_scan_cmd(void) {
     return EXIT_SUCCESS;
 }
 
+/* `gpio get/set <pad>` on Novatek: the pad is the Linux GPIO number or its
+ * kernel name, and its bit sits in one word of each of the controller's four
+ * banks. The mux line is printed first, as on the other vendors. */
+static int novatek_gpio_getset(char **argv, bool set_op) {
+    const char *gpio_num = argv[1];
+
+    gpio_mux_by(gpio_num, -1, NULL);
+
+    int pad = padmux_parse_pad(gpio_num);
+    if (!novatek_gpio_valid(pad)) {
+        fprintf(stderr, "GPIO %s is out of range\n", gpio_num);
+        return EXIT_FAILURE;
+    }
+
+    if (set_op) {
+        /* Refused before any register changes. */
+        unsigned level;
+        if (!parse_gpio_level(argv[2], &level)) {
+            fprintf(stderr, "Level '%s' is not 0 or 1\n", argv[2]);
+            return EXIT_FAILURE;
+        }
+        if (!novatek_gpio_write(pad, level)) {
+            fprintf(stderr, "write reg %#x error\n",
+                    novatek_gpio_reg(pad, NVT_GPIO_DIR));
+            return EXIT_FAILURE;
+        }
+        return EXIT_SUCCESS;
+    }
+
+    bool output, level;
+    if (!novatek_gpio_read(pad, &output, &level)) {
+        fprintf(stderr, "read reg %#x error\n",
+                novatek_gpio_reg(pad, NVT_GPIO_DATA));
+        return EXIT_FAILURE;
+    }
+    printf("%d\n", level);
+    return EXIT_SUCCESS;
+}
+
+/* Whether a daemon holds the GPIO controller in a /dev/mem mapping of its
+ * own. The four banks share one page. */
+static bool novatek_gpio_streamer_mapped(void) {
+    uint32_t base, len;
+    if (!novatek_gpio_window(&base, &len))
+        return false;
+    return dev_mem_windows_marked(base, len, 1) != 0;
+}
+
+/* The IR-cut question on Novatek, the SigmaStar heuristic over Linux GPIO
+ * numbers: output pads muxed to GPIO, all of them when a daemon holds the
+ * controller and drives at most two, otherwise the ones standing low. */
+static char *novatek_gpio_possible_ircut(char *outbuf, size_t outlen) {
+    if (ipchw_padmux_by_prefix("", NULL, 0) < 0)
+        return NULL;
+
+    bool level[NVT_GPIO_NPADS], is_out[NVT_GPIO_NPADS];
+    memset(is_out, 0, sizeof(is_out));
+
+    int output_count = 0;
+    for (int pad = 0; pad < NVT_GPIO_NPADS; pad++) {
+        if (!novatek_gpio_valid(pad) || !padmux_pad_is_gpio(pad))
+            continue;
+        bool output;
+        if (!novatek_gpio_read(pad, &output, &level[pad])) {
+            fprintf(stderr, "Error at %#x\n",
+                    novatek_gpio_reg(pad, NVT_GPIO_DATA));
+            return NULL;
+        }
+        is_out[pad] = output;
+        if (output)
+            output_count++;
+    }
+
+    bool streamer = novatek_gpio_streamer_mapped();
+    char *ptr = outbuf;
+
+    for (int pad = 0; pad < NVT_GPIO_NPADS; pad++) {
+        if (!is_out[pad])
+            continue;
+        if (streamer && output_count > 2)
+            continue;
+        if (!streamer && level[pad])
+            continue;
+
+        int nlen = snprintf(ptr, outlen, ",%d", pad);
+        outlen -= nlen;
+        ptr += nlen;
+    }
+
+    if (strlen(outbuf) > 0)
+        return outbuf + 1;
+    return NULL;
+}
+
+/* `gpio scan` on Novatek: watch every pad muxed to plain GPIO, one line per
+ * pad, by its kernel name and number. */
+static int novatek_gpio_scan_cmd(void) {
+    ipchw_padmux_t rows[NVT_GPIO_NPADS];
+    int n = ipchw_padmux_by_func(IPCHW_PADMUX_GPIO, rows, NVT_GPIO_NPADS);
+    if (n < 0) {
+        fprintf(stderr, "Platform is not supported\n");
+        return EXIT_FAILURE;
+    }
+    if (n > NVT_GPIO_NPADS)
+        n = NVT_GPIO_NPADS;
+
+    bool watch[NVT_GPIO_NPADS], state[NVT_GPIO_NPADS];
+    const char *names[NVT_GPIO_NPADS];
+    memset(watch, 0, sizeof(watch));
+
+    for (int i = 0; i < n; i++) {
+        int pad = rows[i].gpio_pad;
+        if (!novatek_gpio_valid(pad) || !padmux_pad_is_gpio(pad))
+            continue;
+        bool output;
+        if (!novatek_gpio_read(pad, &output, &state[pad])) {
+            fprintf(stderr, "Error at %#x\n",
+                    novatek_gpio_reg(pad, NVT_GPIO_DATA));
+            return EXIT_FAILURE;
+        }
+        watch[pad] = true;
+        names[pad] = rows[i].gpio_name;
+        printf("Pad:%3d %-11s Data:0x%08x bit %2d = %d, Dir:%s\n", pad,
+               names[pad], novatek_gpio_reg(pad, NVT_GPIO_DATA), pad & 31,
+               state[pad], output ? "Output" : "Input");
+    }
+
+    print_line(86);
+    printf("Waiting for while something changes...\n");
+    while (1) {
+        for (int pad = 0; pad < NVT_GPIO_NPADS; pad++) {
+            if (!watch[pad])
+                continue;
+            bool output, level;
+            if (!novatek_gpio_read(pad, &output, &level)) {
+                /* A /dev/mem that has stopped reading will not start again. */
+                fprintf(stderr, "Error at %#x\n",
+                        novatek_gpio_reg(pad, NVT_GPIO_DATA));
+                return EXIT_FAILURE;
+            }
+            if (level == state[pad])
+                continue;
+            printf("Pad:%d %s, %d --> %d, Dir:%s\n", pad, names[pad],
+                   state[pad], level, output ? "Output" : "Input");
+            state[pad] = level;
+        }
+        usleep(100000);
+    }
+
+    return EXIT_SUCCESS;
+}
+
 static int gpio_scan_cmd() {
     int GPIO_Groups = 0;
     size_t GPIO_Base = 0;
@@ -4225,6 +4403,8 @@ static int gpio_scan_cmd() {
     getchipname();
     if (sstar_gpio_supported())
         return sstar_gpio_scan_cmd();
+    if (novatek_gpio_supported())
+        return novatek_gpio_scan_cmd();
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
         return EXIT_FAILURE;
 
