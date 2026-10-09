@@ -116,6 +116,44 @@ int main(int argc, char **argv) {
     CHECK(!strcmp(a.error, "10 reports a day") && !*a.id, "refusal");
     report_parse_answer(502, "<html>bad gateway</html>", &a);
     CHECK(*a.error, "a non-JSON failure has no explanation");
+    // The answer may be from any --host, or a proxy in front of one: it must
+    // not be put in openipc.org's mouth (#232, "openipc.ru did not take the
+    // report (502): openipc.org answered 502").
+    CHECK(!strstr(a.error, "openipc.org"), "names a host: %s", a.error);
+
+    char host[64], path[64];
+    int port = 0;
+    CHECK(report_redirect("http://mirror.example/api/v1/reports", host,
+                          sizeof(host), &port, path, sizeof(path)) &&
+              !strcmp(host, "mirror.example") && port == 80 &&
+              !strcmp(path, "/api/v1/reports"),
+          "plain redirect: %s %d %s", host, port, path);
+    CHECK(report_redirect("HTTP://bench:8080/r", host, sizeof(host), &port,
+                          path, sizeof(path)) &&
+              !strcmp(host, "bench") && port == 8080 && !strcmp(path, "/r"),
+          "with a port: %s %d %s", host, port, path);
+    CHECK(report_redirect("http://bare", host, sizeof(host), &port, path,
+                          sizeof(path)) &&
+              !strcmp(path, "/"),
+          "no path");
+    CHECK(!report_redirect("https://openipc.org/api/v1/reports", host,
+                           sizeof(host), &port, path, sizeof(path)),
+          "https cannot be followed by stock firmware");
+    CHECK(!report_redirect("/api/v1/reports", host, sizeof(host), &port, path,
+                           sizeof(path)),
+          "relative");
+    CHECK(!report_redirect("http://u:p@evil/x", host, sizeof(host), &port, path,
+                           sizeof(path)),
+          "credentials");
+    CHECK(!report_redirect("http://h:0/x", host, sizeof(host), &port, path,
+                           sizeof(path)) &&
+              !report_redirect("http://h:99999/x", host, sizeof(host), &port,
+                               path, sizeof(path)) &&
+              !report_redirect("http://h:8a/x", host, sizeof(host), &port, path,
+                               sizeof(path)) &&
+              !report_redirect("http:///x", host, sizeof(host), &port, path,
+                               sizeof(path)),
+          "bad port or host");
 
     if (!failed)
         printf("report_test: ok\n");

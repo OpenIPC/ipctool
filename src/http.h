@@ -23,12 +23,17 @@ typedef struct {
 #define ERR_SEND 5
 #define ERR_HTTP 6
 #define ERR_MALLOC 7
+#define ERR_STALLED 8
 #define ERR_BUTT 10
 
 /* POST spans as one body of total bytes; resp gets the answer's body, status
- * its HTTP status. 0, or one of the ERR_ codes above. */
+ * its HTTP status, location its Location header ("" without one). 0, or one
+ * of the ERR_ codes above: ERR_STALLED when the body stopped moving and no
+ * answer came. An answer that arrives before the body is sent -- a redirect
+ * or a refusal on the headers alone -- is taken without sending the body. */
 int http_post(const char *hostname, int port, const char *path, nservers_t *ns,
               const char *content_type, const span_t *spans, size_t nspans,
-              size_t total, char *resp, size_t cap, int *status);
+              size_t total, char *resp, size_t cap, int *status, char *location,
+              size_t loccap);
 
 #endif /* HTTP_H */

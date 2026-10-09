@@ -269,21 +269,51 @@ int report_cmd(int argc, char **argv) {
     snprintf(ctype, sizeof(ctype), "multipart/form-data; boundary=%s",
              boundary);
     static char resp[16384];
-    int status = 0;
-    int err = http_post(hostname, port, REPORTS_PATH, &ns, ctype, body->spans,
-                        body->nspans, body->total, resp, sizeof(resp), &status);
+    char path[256] = REPORTS_PATH, location[512];
+    int status = 0, err;
+    /* A server may send the report elsewhere with a 307 or 308 -- openipc.org
+     * does, for a network that cannot reach it -- and says so before the body
+     * is sent (http_post), so following costs nothing but the hop. */
+    for (int hops = 0;; hops++) {
+        err = http_post(hostname, port, path, &ns, ctype, body->spans,
+                        body->nspans, body->total, resp, sizeof(resp), &status,
+                        location, sizeof(location));
+        if (err || (status != 307 && status != 308) || hops == 3)
+            break;
+        char next[256];
+        int nport;
+        if (!report_redirect(location, next, sizeof(next), &nport, path,
+                             sizeof(path)))
+            break;
+        fprintf(stderr, "%s sends the report to %s.\n", hostname, location);
+        snprintf(hostname, sizeof(hostname), "%s", next);
+        port = nport;
+    }
     free(body);
     free(yaml);
+    if (err == ERR_STALLED) {
+        fprintf(stderr,
+                "The upload to %s stopped moving and no answer came. Nothing "
+                "was stored. Something between this camera and %s holds the "
+                "connection; --host can send the report another way.\n",
+                hostname, hostname);
+        return EXIT_FAILURE;
+    }
     if (err) {
         fprintf(stderr, "Could not reach %s (error %d). Nothing was stored.\n",
-                host, err);
+                hostname, err);
         return EXIT_FAILURE;
     }
     report_answer_t a;
     report_parse_answer(status, resp, &a);
     if (status != 201 || !*a.id) {
-        fprintf(stderr, "%s did not take the report (%d): %s\n", host, status,
-                *a.error ? a.error : "no reason given");
+        if ((status == 307 || status == 308) && *location)
+            fprintf(stderr,
+                    "%s sends the report to %s, which ipctool cannot "
+                    "follow.\n",
+                    hostname, location);
+        fprintf(stderr, "%s did not take the report (%d): %s\n", hostname,
+                status, *a.error ? a.error : "no reason given");
         return EXIT_FAILURE;
     }
     printf("\nReceived as %s. Its state: %s\n", a.id, a.receipt_url);
