@@ -818,46 +818,31 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
     return true;
 }
 
+/* A GalaxyCore ID read a byte-address at a time, 0 when it is not one. */
+static int galaxycore_narrow_id(int fd, unsigned char i2c_addr) {
+    int prod_msb = i2c_read_register(fd, i2c_addr, 0xf0, 1, 1);
+    if (prod_msb == -1)
+        return 0;
+    int prod_lsb = i2c_read_register(fd, i2c_addr, 0xf1, 1, 1);
+    if (prod_lsb == -1)
+        return 0;
+    return prod_msb << 8 | prod_lsb;
+}
+
 static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
                                     unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    int prod_msb = i2c_read_register(fd, i2c_addr, 0x3f0, 2, 1);
-    int prod_lsb = i2c_read_register(fd, i2c_addr, 0x3f1, 2, 1);
-
-    if (prod_msb == -1 || prod_lsb == -1) {
-        prod_msb = i2c_read_register(fd, i2c_addr, 0xf0, 1, 1);
-        prod_lsb = i2c_read_register(fd, i2c_addr, 0xf1, 1, 1);
-    }
-
-    if (prod_msb == -1 || prod_lsb == -1)
-        return false;
-
-    int res = prod_msb << 8 | prod_lsb;
-
-    switch (res) {
-    case 0x2053:
-    case 0x2083:
-    case 0x2093:
-    case 0x4023:
-    case 0x4653:
-        sprintf(ctx->sensor_id, "GC%04x", res);
-        return true;
-    }
-
-    prod_msb = i2c_read_register(fd, i2c_addr, 0xf0, 1, 1);
-    if (prod_msb == -1)
-        return false;
-
-    prod_lsb = i2c_read_register(fd, i2c_addr, 0xf1, 1, 1);
-    if (prod_lsb == -1)
-        return false;
-    res = prod_msb << 8 | prod_lsb;
-
-    if (!res)
-        return false;
-
+    /* The byte-address ID first. A two-byte address is a write as far as a
+     * part with one-byte addresses is concerned: reading 0x3f0 sends 0x03,
+     * 0xf0, and such a part stores 0xf0 in its register 0x03. On an SP2305 /
+     * OV2735 that is the exposure, and a camera that was streaming went white
+     * and stayed white until its streamer restarted -- the GC1004 this
+     * address was added for has its exposure at 0x03 too. Every part this
+     * probe has ever named by its byte-address ID is named here before
+     * anything is written to it. */
+    int res = galaxycore_narrow_id(fd, i2c_addr);
     switch (res) {
     case 0x1004:
     case 0x1024:
@@ -868,6 +853,7 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2053:
     case 0x2063:
     case 0x2083:
+    case 0x2093:
     case 0x3003:
     case 0x4023:
     case 0x4653:
@@ -876,25 +862,55 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     case 0x5603:
         sprintf(ctx->sensor_id, "GC%04x", res);
         return true;
+    }
+
+    int prod_msb = i2c_read_register(fd, i2c_addr, 0x3f0, 2, 1);
+    int prod_lsb = i2c_read_register(fd, i2c_addr, 0x3f1, 2, 1);
+    if (prod_msb == -1 || prod_lsb == -1)
+        return false;
+
+    int wide = prod_msb << 8 | prod_lsb;
+    switch (wide) {
+    case 0x2053:
+    case 0x2083:
+    case 0x2093:
+    case 0x4023:
+    case 0x4653:
+        sprintf(ctx->sensor_id, "GC%04x", wide);
+        return true;
     case 0xffff:
         // no response
         return false;
-    default:
-        SENSOR_ERR("GalaxyCore", res);
-        return false;
     }
+    if (res && res != 0xffff)
+        SENSOR_ERR("GalaxyCore", res);
+    return false;
 }
+
+static int detect_superpix_on_page0(sensor_ctx_t *ctx, int fd,
+                                    unsigned char i2c_addr);
 
 static int detect_superpix_sensor(sensor_ctx_t *ctx, int fd,
                                   unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-    // Set page 0
+    /* The ID is on page 0, and the page is left as it was found. A streamer
+     * driving this sensor writes its exposure to page 1 and does not select
+     * the page again before every write, so a probe that leaves page 0
+     * selected sends the next exposure to the wrong page. One data byte: two
+     * wrote 0x00 on into 0xFE as well. */
     int page = i2c_read_register(fd, i2c_addr, 0xFD, 1, 1);
     if (page > 0)
-        i2c_write_register(fd, i2c_addr, 0xFD, 1, 0x00, 2);
+        i2c_write_register(fd, i2c_addr, 0xFD, 1, 0x00, 1);
+    int res = detect_superpix_on_page0(ctx, fd, i2c_addr);
+    if (page > 0)
+        i2c_write_register(fd, i2c_addr, 0xFD, 1, page, 1);
+    return res;
+}
 
+static int detect_superpix_on_page0(sensor_ctx_t *ctx, int fd,
+                                    unsigned char i2c_addr) {
     int prod_msb = i2c_read_register(fd, i2c_addr, 0x02, 1, 1);
     if (prod_msb == -1)
         return false;
@@ -1174,15 +1190,20 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
                                        SENSOR_SMARTSENS)) {
         strcpy(ctx->vendor, "SmartSens");
         detected = true;
-    } else if (detect_possible_sensors(ctx, fd, detect_galaxycore_sensor,
-                                       SENSOR_GALAXYCORE)) {
-        strcpy(ctx->vendor, "GalaxyCore");
-        ctx->reg_width = 1;
-        detected = true;
+    /* SuperPix before GalaxyCore. On HiSilicon both are probed at the same
+     * device (0x78 and 0x79 are one 7-bit address), and the SuperPix probe
+     * only ever reads and writes a byte-address at a time, so a sensor of
+     * that family is named before any two-byte address reaches it -- which on
+     * a one-byte-address part is a register write. */
     } else if (detect_possible_sensors(ctx, fd, detect_superpix_sensor,
                                        SENSOR_SUPERPIX)) {
         // vendor is set by the probe itself: this register family carries both
         // SuperPix and OmniVision part numbers
+        ctx->reg_width = 1;
+        detected = true;
+    } else if (detect_possible_sensors(ctx, fd, detect_galaxycore_sensor,
+                                       SENSOR_GALAXYCORE)) {
+        strcpy(ctx->vendor, "GalaxyCore");
         ctx->reg_width = 1;
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_techpoint_adc,
