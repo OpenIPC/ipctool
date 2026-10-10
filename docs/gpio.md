@@ -23,7 +23,8 @@ GPIO pad, decoded from the pad's own one-byte register into what it reads
 (`in`), what the SoC is driving (`out`) and whether it drives at all (`oe_n`,
 1 meaning input/Hi-Z) — rather than the per-group data and direction words.
 
-On Novatek (NT98562/NT98566) the pad is the kernel's GPIO number as well, and
+On Novatek (NT98562/NT98566, NT9852x, NT98528/NT98529) the pad is the
+kernel's GPIO number as well, and
 its name is accepted too: `gpio get P_GPIO22`, `gpio get 54` and
 `/sys/class/gpio/gpio54` are one wire (`P_GPIO(n)` is `0x20 + n`, and so on in
 steps of `0x20` through C, P, S, L, D, H, A and DSI). The `5_6` form is refused

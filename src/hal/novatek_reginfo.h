@@ -3,9 +3,9 @@
 
 #include "reginfo.h"
 
-/* What plain `reginfo` dumps on a NA51089: the TOP block's pad-mux state,
- * whole. The first eleven are the per-peripheral location fields -- REG5
- * holds I2C, SPI, SIF and ETH, REG9 the UARTs, and so on; the vendor's
+/* What plain `reginfo` dumps on a NA51089, NA51055 or NA51084: the TOP block's
+ * pad-mux state, whole. The first eleven are the per-peripheral location fields
+ * -- REG5 holds I2C, SPI, SIF and ETH, REG9 the UARTs, and so on; the vendor's
  * plat-na51089/top_reg.h has the bit layout. The last eight are the per-pad
  * gate bitmaps, one per pad group, where a set bit keeps the pad a GPIO.
  * `reginfo --pads` is the same state read pad by pad. */
@@ -35,5 +35,26 @@ static const muxctrl_reg_t *NA51089_regs[] = {
     &NA51089_reg8,  &NA51089_reg9,  &NA51089_reg10, &NA51089_reg11,
     &NA51089_reg12, &NA51089_reg13, &NA51089_reg14, &NA51089_reg15,
     &NA51089_reg16, &NA51089_reg17, &NA51089_reg18, 0};
+
+/* NA51055 and NA51084: the same block with no DSI pad group. */
+static const muxctrl_reg_t *NA51055_regs[] = {&NA51089_reg0,
+                                              &NA51089_reg1,
+                                              &NA51089_reg2,
+                                              &NA51089_reg3,
+                                              &NA51089_reg4,
+                                              &NA51089_reg5,
+                                              &NA51089_reg6,
+                                              &NA51089_reg7,
+                                              &NA51089_reg8,
+                                              &NA51089_reg9,
+                                              &NA51089_reg10,
+                                              &NA51089_reg11,
+                                              &NA51089_reg12,
+                                              &NA51089_reg13,
+                                              &NA51089_reg14,
+                                              &NA51089_reg15,
+                                              &NA51089_reg16,
+                                              &NA51089_reg17,
+                                              0};
 
 #endif /* HAL_NOVATEK_REGINFO_H */

@@ -287,13 +287,24 @@ peripheral becomes an input.
 
 ### Novatek -- a field per peripheral, and a gate per pad
 
-NA51089 (NT98562, NT98566) is SigmaStar's arrangement with a second lock on
-it. In the TOP block at `0xF0010000` each peripheral has a location field --
+NA51089 (NT98562, NT98566), NA51055 (NT9852x) and NA51084 (NT98528,
+NT98529) are SigmaStar's arrangement with a second lock on it. In the TOP block at `0xF0010000` each peripheral has a location field --
 `REG5[7:6]` is I2C3, and 1, 2 and 3 put it on `P_GPIO21/22`, `C_GPIO11/12`
 or `DSI_GPIO8/9` -- and each pad has a **gate bit** in one of eight bitmaps
 at `TOP + 0xA0..0xE8`, where 1 keeps the pad a GPIO whatever any field says.
 The vendor's `pinmux_config_*()` sets both, every time: the field, then
-`GPIO_ID_EMUM_FUNC` into the gate of each pad it uses.
+`GPIO_ID_EMUM_FUNC` into the gate of each pad it uses. NA51055 and NA51084
+have the same TOP layout without the DSI group, and more S, L and D pads.
+
+Which die it is comes from the TOP chip-ID word (`/proc/nvt_info/nvt_pinmux/
+chip_id`), and it names the die rather than the part. NT98562 and NT98566 are
+both `0x7021` and differ in an eFuse package word whose decoding the SDK
+ships as a binary, so both report as NT98566; `0x5021` is NA51084, which
+u-boot's clock code shows to be the NT98528/NT98529 die (the 529 told apart
+by OTP), and reports as NT98528. `0x4821` (NA51055, under which the SDK
+mentions both NT98520 and NT98525) and `0xBC21` (NA51090, NT98636) take their
+name from the device tree, as before; NA51103 (`0x8B20`) is NT98332G. The
+last two have no table: see below.
 
 So a pad's alternatives are **claims**: a name and the field values under
 which the pad carries it. `get()` takes the first claim that holds, with the
@@ -316,10 +327,17 @@ the gate. Consequences:
   PHY's management pin, clears `ETH` and so ends RMII.
 - **The parallel and CCIR sensor modes ignore the gate.** They put pixel data
   on the HSI pads while the vendor writes those gates to GPIO, so those claims
-  hold through it (`NVT_UNGATED` in the table). `gpio mux H_GPIO4 GPIO` on such
+  hold through it (`NVT_UNGATED` in the table), and `set()` writes the gate to
+  GPIO for them as the vendor does -- otherwise a gated claim under the same
+  fields would win, CCIR8 sync over CCIR8 data on NA51055's `P_GPIO9`. `gpio mux H_GPIO4 GPIO` on such
   a board has to zero `SENSOR` to mean anything, and does -- the whole parallel
   bus goes with it. The MIPI lanes on the same pads are the opposite: the gate
   cleared and no field at all.
+- **The primary LCD** is muxed by `pinmux_select_primary_lcd()`, which the
+  display driver reaches through `pinmux_set_host()`: `REG2` `LCD_TYPE` and
+  the L and DSI gates. Its claims are named by type -- `LCD_PARALLE_RGB565`
+  on the colour pins, `LCD_DE_ENABLE` on the DE pin. TV and HDMI have no pads
+  to mux on these parts; `pinmux_set_host()` answers `E_ID` for both.
 - Pads are the kernel's GPIO numbers and names: `C_GPIO(n)` is `n`,
   `P_GPIO(n)` is `0x20 + n`, and so on through S, L, D, H, A and DSI. `gpio`
   takes the number or the name (`P_GPIO22`, and the vendor's `MC17` and
@@ -391,29 +409,44 @@ tools/gen_novatek_padmux.py --sdk /path/to/na51089_linux_sdk \
 There is no datasheet and no pin list in the NA51089 SDK, and
 `na51089_pinmux_host.c` is 2200 lines of nested `if`/`else if`/`switch` with
 the conflict checks interleaved. So the generator **runs** it: it cuts the
-`pinmux_config_*()` functions out, wraps every `top_regN.bit.FIELD = value`
-in a macro that logs the write, compiles that on the host against the SDK's
-own `top_reg.h`/`top.h`, and calls every function with every combination of
-up to four of its options (96,550 calls, about half a minute). A combination the
-vendor refuses is retried after one option of another group, which is the
-only way MIPI data lanes 1-3 appear at all: `pinmux_config_mipi_lvds()`
-refuses them until the sensor group is in CSI mode.
+`pinmux_config_*()` functions and `pinmux_select_primary_lcd()` out, wraps
+every `top_regN.bit.FIELD = value` in a macro that logs the write, compiles
+that on the host against the SDK's own `top_reg.h`/`top.h`, and calls every
+function with every combination of up to four of its options -- the LCD as
+each type with every set of feature flags. A combination the vendor refuses
+is retried after one option of another group, which is the only way MIPI data
+lanes 1-3 appear at all: `pinmux_config_mipi_lvds()` refuses them until the
+sensor group is in CSI mode.
 
-The source is read for one thing: which braces enclose each write. A gate
+The same SDK carries the NA51055 driver, which serves NA51055 and NA51084 and
+branches on `nvt_get_chip_id()` -- NA51084 alone has I2C4/5, SPI4/5 and an
+RGMII. The harness answers that call with a constant, so the driver is run
+once as each die and each gets its own table: about 260,000 calls for the
+three, a minute and a half.
+
+The source is read for one thing: which braces enclose each write, and which
+options the `& PIN_...` test or `case` opening each brace names. A gate
 write's conditions are the field writes the same call made in the blocks
 around it -- `SEN_MCLK=1` for `S_GPIO0`, not the sensor mode a sibling block
-of the same call selected. Every state the vendor code produced is then
+of the same call selected. A field an enclosing block wrote and a nested
+block overwrote before the gate write takes the nested value:
+`pinmux_select_primary_lcd()` resets `LCD_TYPE` at its top and sets it per
+type in a `switch` before handing the pads over. Every state the vendor code produced is then
 replayed against the table, and three answers are acceptable: the pad reads
 as what the code meant; it reads as nothing because a later write of the same
 call moved its field away; or two claims hold, and the table carries a more
 specific claim for the one the code meant. Anything else is fatal.
 
-`top.h` and `top.csv` disagree with the code in three places, and
-`ANNOTATION_ERRATA` in the generator says which side wins and why: the csv's
+`top.h` and `top.csv` disagree with the code, and `ANNOTATION_ERRATA` in the
+generator says, per driver, which side wins and why. On NA51089: the csv's
 `P_GPIO29` for SIF CH2_2 (no such pad, the code uses `P_GPIO19`), `top.h`'s
 `P_GPIO14` for PICNT2_1 (the code and the csv use `L_GPIO1`), and
 `PIN_MISC_CFG_SP2CLK_3RD`, which does nothing at all, because
-`pinmux_config_misc()` tests `PIN_SENSOR_CFG_SP2CLK_3RD` in its place.
+`pinmux_config_misc()` tests `PIN_SENSOR_CFG_SP2CLK_3RD` in its place. On
+NA51055 the MISC annotations are NA51089's, copied, and name pads its code
+does not use; PWM8..11's HSI location is commented out of the driver ("52x
+compatible - donot support this function"); and `P_GPIO14` for PICNT2_1 is
+right there, which is why the errata are per driver.
 
 Both generators take `--verify <header>`, which re-derives and diffs instead
 of writing. That needs the SDK, so CI cannot run it;
@@ -472,21 +505,27 @@ in.
 - **Other Ingenic parts.** T21, T23, T31 and T40 have tables. T10, T20, T30 and
   T41 do not, and would each need a source of one of the three kinds above --
   which, for the parts checked so far, does not exist in the vendor releases.
-- **Other Novatek parts, and NA51089's display.** NA51055, NA51084, NA51090
-  and NA51103 have no table: their chip IDs are recognised and get none.
-  LCD, TV and HDMI on NA51089 are muxed by `pinmux_select_primary_lcd()`
-  from state the config functions only stash, and are not modelled; a pad
-  given to the display reads as cleared with nothing claiming it.
-- **Novatek states two options create at once.** In 19,185 of the replayed
-  calls some pad is claimed twice -- a 12-bit sensor's pixel clock and MCLK2
-  both on `S_GPIO1`, say. The vendor code checks for neither and no board
-  does it. The table answers by the vendor's last write, which is the best
-  evidence there is and not a measurement.
+- **NA51090 (NT98636) and NA51103 (NT98332G).** Recognised, no table. Neither
+  driver is in the NA51089 SDK nor anywhere public that was found; u-boot
+  carries NA51090's sensor pinmux and nothing else, and its registers sit at
+  `0x2F0000000`, past what a 32-bit `mem_reg()` reaches. NA51068 (NT98321,
+  an NVR part) is in the SDK and is a per-pad selector like HiSilicon's,
+  which this backend is not; it has no chip ID in this tree and gets no
+  table.
+- **NT98562 against NT98566, NT98528 against NT98529.** One die each, told
+  apart by eFuse or OTP words the SDK decodes only in binaries. The pad
+  tables are per die, so they are not affected; only the reported name is.
+- **Novatek states two options create at once.** In about a fifth of the
+  replayed calls some pad is claimed twice -- a 12-bit sensor's pixel clock
+  and MCLK2 both on `S_GPIO1`, say. The vendor code checks for neither and no
+  board does it. The table answers by the vendor's last write, which is the
+  best evidence there is and not a measurement; each table's banner in the
+  header gives the counts.
 - **Hardware.** Every claim here is verified against vendor source and on a
   host. On top of that, HiSilicon, SigmaStar infinity6/6b0/6c, and Ingenic
   T21, T23, T31 and SigmaStar infinity6e have been run on real cameras and
   checked against an independent decode of their live registers. Ingenic T40
-  and Novatek NA51089 have not: nobody here has had one. On a NA51089,
+  and the Novatek dies have not: nobody here has had one. On a Novatek part,
   `/proc/nvt_info/nvt_pinmux/pinmux_summary` is the kernel's own decode of the
   same registers and is the thing to compare `reginfo --pads` against.
 

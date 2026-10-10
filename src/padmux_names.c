@@ -76,6 +76,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
     .CLK_TEST_OUT3 = "CLK_TEST_OUT3",
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .CRS_DV = "CRS_DV",
+#endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .CS2 = "CS2",
 #endif
@@ -380,6 +383,9 @@ const struct padmux_names padmux_names = {
     .D_GPIO1 = "D_GPIO1",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
+    .D_GPIO10 = "D_GPIO10",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
     .D_GPIO2 = "D_GPIO2",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -396,6 +402,12 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .D_GPIO7 = "D_GPIO7",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .D_GPIO8 = "D_GPIO8",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .D_GPIO9 = "D_GPIO9",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .EJ_MODE_1 = "EJ_MODE_1",
@@ -528,6 +540,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .ETH_MODE_3 = "ETH_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .ETH_PHYCLK = "ETH_PHYCLK",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .ETH_RMII = "ETH_RMII",
@@ -1207,11 +1222,29 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C3_SDA = "I2C3_SDA",
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .I2C4_1_SCL = "I2C4_1_SCL",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .I2C4_1_SDA = "I2C4_1_SDA",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .I2C4_2_SCL = "I2C4_2_SCL",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .I2C4_2_SDA = "I2C4_2_SDA",
+#endif
 #if defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C4_SCL = "I2C4_SCL",
 #endif
 #if defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C4_SDA = "I2C4_SDA",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .I2C5_1_SCL = "I2C5_1_SCL",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .I2C5_1_SDA = "I2C5_1_SDA",
 #endif
 #if defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C5_SCL = "I2C5_SCL",
@@ -1284,6 +1317,12 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536C)
     .I2S2_WS_TX = "I2S2_WS_TX",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .I2S_1_MCLK = "I2S_1_MCLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .I2S_2_MCLK = "I2S_2_MCLK",
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .I2S_ADC_BCLK = "I2S_ADC_BCLK",
@@ -1462,6 +1501,18 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .JTAG_TRSTN = "JTAG_TRSTN",
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_CCIR601 = "LCD_CCIR601",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_CCIR601_16BITS = "LCD_CCIR601_16BITS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_CCIR656 = "LCD_CCIR656",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_CCIR656_16BITS = "LCD_CCIR656_16BITS",
+#endif
 #if defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .LCD_CLK = "LCD_CLK",
 #endif
@@ -1540,11 +1591,35 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .LCD_DE = "LCD_DE",
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_DE_ENABLE = "LCD_DE_ENABLE",
+#endif
 #if defined(IPCHW_PADMUX_V4)
     .LCD_HS = "LCD_HS",
 #endif
 #if defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4A)
     .LCD_HSYNC = "LCD_HSYNC",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_NO_HVSYNC = "LCD_NO_HVSYNC",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_PARALLE_RGB565 = "LCD_PARALLE_RGB565",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_PARALLE_RGB666 = "LCD_PARALLE_RGB666",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_PARALLE_RGB888 = "LCD_PARALLE_RGB888",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_RGB_16BITS = "LCD_RGB_16BITS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_SERIAL_RGB_6BITS = "LCD_SERIAL_RGB_6BITS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_SERIAL_RGB_8BITS = "LCD_SERIAL_RGB_8BITS",
 #endif
 #if defined(IPCHW_PADMUX_V4)
     .LCD_VS = "LCD_VS",
@@ -1595,7 +1670,52 @@ const struct padmux_names padmux_names = {
     .L_GPIO1 = "L_GPIO1",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO10 = "L_GPIO10",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO11 = "L_GPIO11",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO12 = "L_GPIO12",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO13 = "L_GPIO13",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO14 = "L_GPIO14",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO15 = "L_GPIO15",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO16 = "L_GPIO16",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO17 = "L_GPIO17",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO18 = "L_GPIO18",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO19 = "L_GPIO19",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
     .L_GPIO2 = "L_GPIO2",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO20 = "L_GPIO20",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO21 = "L_GPIO21",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO22 = "L_GPIO22",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO23 = "L_GPIO23",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .L_GPIO24 = "L_GPIO24",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .L_GPIO3 = "L_GPIO3",
@@ -1627,6 +1747,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .MCLK_PORTA = "MCLK_PORTA",
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .MDC = "MDC",
+#endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .MDCK = "MDCK",
 #endif
@@ -1636,7 +1759,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C)
     .MDCK1 = "MDCK1",
 #endif
-#if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_NOVATEK) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .MDIO = "MDIO",
 #endif
 #if defined(IPCHW_PADMUX_3536C)
@@ -1905,6 +2028,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .MSC1_PORTC = "MSC1_PORTC",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .NAND_1CS = "NAND_1CS",
 #endif
 #if defined(IPCHW_PADMUX_V2A)
     .NF_ALE = "NF_ALE",
@@ -4076,6 +4202,9 @@ const struct padmux_names padmux_names = {
     .PWM10_3 = "PWM10_3",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
+    .PWM10_4 = "PWM10_4",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
     .PWM10_5 = "PWM10_5",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
@@ -4415,6 +4544,9 @@ const struct padmux_names padmux_names = {
     .PWM8_3 = "PWM8_3",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
+    .PWM8_4 = "PWM8_4",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
     .PWM8_5 = "PWM8_5",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
@@ -4452,6 +4584,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .PWM9_3 = "PWM9_3",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .PWM9_4 = "PWM9_4",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .PWM9_5 = "PWM9_5",
@@ -4632,6 +4767,12 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .RD = "RD",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .REFCLK = "REFCLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .REMOTE_CH3 = "REMOTE_CH3",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .REMOTE_EXT = "REMOTE_EXT",
@@ -4899,6 +5040,27 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
     .RTC_TEST_CLK = "RTC_TEST_CLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .RXD0 = "RXD0",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .RXD1 = "RXD1",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .RXD2 = "RXD2",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .RXD3 = "RXD3",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .RX_CLK = "RX_CLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .RX_CTL = "RX_CTL",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .RX_ER = "RX_ER",
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .SA0 = "SA0",
@@ -5188,6 +5350,12 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_NOVATEK)
     .SDIO3_D7 = "SDIO3_D7",
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SDIO_4BITS = "SDIO_4BITS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SDIO_8BITS = "SDIO_8BITS",
+#endif
 #if defined(IPCHW_PADMUX_V1)
     .SDIO_CARD_DETECT = "SDIO_CARD_DETECT",
 #endif
@@ -5299,6 +5467,12 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_NOVATEK)
     .SENSOR2_CCIR8BITS = "SENSOR2_CCIR8BITS",
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SENSOR2_CCIR8BITS_FIELD = "SENSOR2_CCIR8BITS_FIELD",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SENSOR2_CCIR8BITS_VDHD = "SENSOR2_CCIR8BITS_VDHD",
+#endif
 #if defined(IPCHW_PADMUX_V5)
     .SENSOR2_CLK = "SENSOR2_CLK",
 #endif
@@ -5352,6 +5526,21 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4)
     .SENSOR_RSTN = "SENSOR_RSTN",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SENSOR_SP2CLK = "SENSOR_SP2CLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SENSOR_SP2CLK_2ND = "SENSOR_SP2CLK_2ND",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SENSOR_SPCLK = "SENSOR_SPCLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SENSOR_SPCLK_2ND = "SENSOR_SPCLK_2ND",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SENSOR_SPCLK_3RD = "SENSOR_SPCLK_3RD",
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .SENSOR_VS = "SENSOR_VS",
@@ -5695,6 +5884,42 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V5)
     .SPI3_SDO = "SPI3_SDO",
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI4_1_CLK = "SPI4_1_CLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI4_1_CS = "SPI4_1_CS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI4_1_DI = "SPI4_1_DI",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI4_1_DO = "SPI4_1_DO",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI4_2_CLK = "SPI4_2_CLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI4_2_CS = "SPI4_2_CS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI4_2_DI = "SPI4_2_DI",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI4_2_DO = "SPI4_2_DO",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI5_1_CLK = "SPI5_1_CLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI5_1_CS = "SPI5_1_CS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI5_1_DI = "SPI5_1_DI",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI5_1_DO = "SPI5_1_DO",
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .SPICSZ1_GPIO_0 = "SPICSZ1_GPIO_0",
 #endif
@@ -5760,6 +5985,18 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V5)
     .SPI_3WIRE_DATA = "SPI_3WIRE_DATA",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI_3_CLK = "SPI_3_CLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI_3_CS = "SPI_3_CS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI_3_DI = "SPI_3_DI",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .SPI_3_DO = "SPI_3_DO",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .SPI_CH3_RDY = "SPI_CH3_RDY",
@@ -6086,6 +6323,15 @@ const struct padmux_names padmux_names = {
     .S_GPIO1 = "S_GPIO1",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
+    .S_GPIO10 = "S_GPIO10",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .S_GPIO11 = "S_GPIO11",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .S_GPIO12 = "S_GPIO12",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
     .S_GPIO2 = "S_GPIO2",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -6105,6 +6351,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .S_GPIO8 = "S_GPIO8",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .S_GPIO9 = "S_GPIO9",
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .TCK = "TCK",
@@ -6282,6 +6531,27 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .TTL_MODE_2 = "TTL_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .TXD0 = "TXD0",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .TXD1 = "TXD1",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .TXD2 = "TXD2",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .TXD3 = "TXD3",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .TX_CLK = "TX_CLK",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .TX_CTL = "TX_CTL",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .TX_EN = "TX_EN",
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .UART0_CTS = "UART0_CTS",
@@ -6519,6 +6789,30 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     .UART4_TXD = "UART4_TXD",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .UART_CH3_4TH = "UART_CH3_4TH",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .UART_CH3_5TH = "UART_CH3_5TH",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .UART_CH4_2ND = "UART_CH4_2ND",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .UART_CH4_CTSRTS = "UART_CH4_CTSRTS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .UART_CH4_DIROE = "UART_CH4_DIROE",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .UART_CH6 = "UART_CH6",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .UART_CH6_CTSRTS = "UART_CH6_CTSRTS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .UART_CH6_DIROE = "UART_CH6_DIROE",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .UART_IS_GPIO_0 = "UART_IS_GPIO_0",

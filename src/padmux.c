@@ -64,6 +64,8 @@ const padmux_ops_t *padmux_ops(void) {
         return &PADMUX_OPS_INGENIC;
 #endif
 #ifdef IPCHW_PADMUX_NOVATEK
+    case CHIP_NA51055:
+    case CHIP_NA51084:
     case CHIP_NA51089:
         return &PADMUX_OPS_NOVATEK;
 #endif

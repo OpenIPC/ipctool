@@ -37,14 +37,20 @@ static bool nvt_get_chip_id() {
          * the kernel hands over, named or not: a part with no table gets no
          * table, which padmux_ops() says rather than guessing one. */
         chip_generation = reg;
+        /* The ID names the die, not the part: NT98562 and NT98566 are both
+         * NA51089 and differ only in an eFuse package word whose decoding
+         * is not in the SDK, so the two read alike here. The dies with no
+         * name below (NA51055, NA51090) are named by the device tree. */
         switch (reg) {
-        case 0x5021:
-            strcpy(chip_name, "NT98562");
+        case CHIP_NA51084:
+            /* u-boot's NA51084 code drives the "_528_" clock registers and
+             * allows 1200 MHz only on an NT98529, told apart by OTP. */
+            strcpy(chip_name, "NT98528");
             return true;
-        case 0x7021:
+        case CHIP_NA51089:
             strcpy(chip_name, "NT98566");
             return true;
-        case 0x8B20:
+        case CHIP_NA51103:
             strcpy(chip_name, "NT98332G");
             return true;
         }
