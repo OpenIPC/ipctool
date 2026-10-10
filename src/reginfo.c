@@ -3445,6 +3445,9 @@ static const muxctrl_reg_t **dump_regs_by_chip(void) {
         return T31_regs;
 #endif
 #ifdef IPCHW_VENDOR_NOVATEK
+    case CHIP_NA51055:
+    case CHIP_NA51084:
+        return NA51055_regs;
     case CHIP_NA51089:
         return NA51089_regs;
 #endif
@@ -3473,6 +3476,8 @@ static uint32_t dump_mask(void) {
     case T23:
     case T31:
     case T40:
+    case CHIP_NA51055:
+    case CHIP_NA51084:
     case CHIP_NA51089:
         /* Not a selector at all: these are whole 32-bit registers and every
          * bit of them is worth printing. */

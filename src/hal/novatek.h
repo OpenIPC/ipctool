@@ -19,14 +19,15 @@ void novatek_setup_hal();
 /* na51068 */
 //#define IOADDR_TOP_REG_BASE (IOADDR_GLOBAL_BASE + 0x0E030000)
 
+/* TOP + 0xF0 bits [31:16], also /proc/nvt_info/nvt_pinmux/chip_id. One ID
+ * per die; the parts cut from a die are told apart by eFuse/OTP words. */
 enum CHIP_ID {
-    CHIP_NA51055 = 0x4821, // NT98525, 128Kb L2, 5M@30
-                           // NT98528, 256Kb L2, 4K@30
-    CHIP_NA51084 = 0x5021,
-    CHIP_NA51089 = 0x7021, // NT98562, 64Mb internal RAM
-                           // NT98566, 128Mb internal RAM
-    CHIP_NA51090 = 0xBC21,
-    CHIP_NA51103 = 0x8B20 // NVT98332G
+    CHIP_NA51055 = 0x4821, // NT9852x: NT98520, NT98525
+    CHIP_NA51084 = 0x5021, // NT98528, NT98529 (the 1.2 GHz part, by OTP)
+    CHIP_NA51089 = 0x7021, // NT98562 (64 MB internal RAM),
+                           // NT98566 (128 MB), by eFuse package word
+    CHIP_NA51090 = 0xBC21, // NT98636
+    CHIP_NA51103 = 0x8B20  // NT98332G
 };
 
 #endif /* HAL_NOVATEK_H */

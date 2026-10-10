@@ -110,6 +110,25 @@ FUNCS = [
     ("audio", "PIN_AUDIO_CFG"),
     ("eth", "PINMUX_ETH_CFG"),
     ("misc", "PINMUX_MISC_CFG"),
+    # Not a pinmux_config_*(): pinmux_select_primary_lcd(), which is what the
+    # display driver calls through pinmux_set_host(). Its argument is one LCD
+    # type plus feature flags, so it is run as each type with every set of
+    # flags rather than as combinations of bits. TV and HDMI have no pads to
+    # mux on these parts: pinmux_set_host() answers E_ID for both.
+    ("lcd", "PINMUX_LCD_SEL"),
+]
+
+# The function a FUNCS entry calls, when it is not pinmux_config_<name>().
+SPECIAL = {"lcd": "pinmux_select_primary_lcd"}
+
+# The drivers this runs, and the SoCs each is run as. The na51055 driver
+# serves two dies and branches on nvt_get_chip_id() -- NA51084 refuses UART2's
+# 3rd location, for one -- so it is run once as each, and each gets a table.
+# The third field says whether build/nvt-tools/.../top.csv describes it: the
+# csv is the NA51089 tool's.
+FAMILIES = [
+    ("na51089", [("NA51089", 0x7021)], True),
+    ("na51055", [("NA51055", 0x4821), ("NA51084", 0x5021)], False),
 ]
 
 # The groups whose GPIO writes are claims rather than releases. sensor and
@@ -151,20 +170,43 @@ PAD_SPELLINGS = [
 ]
 
 # Where the two vendor sources disagree with the code, and what was decided.
-# Key: (option, pad as the source spells it). Value: the (option, pad) it
-# means, or None to drop the annotation.
+# Key: (family, option, pad as the source spells it). Value: the (option,
+# pad) it means, or None to drop the annotation.
 ANNOTATION_ERRATA = {
     # top.csv only; top.h has P_GPIO19, and so does the code.
-    ("PIN_SIF_CFG_CH2_2ND_PINMUX", "P_GPIO29"):
+    ("na51089", "PIN_SIF_CFG_CH2_2ND_PINMUX", "P_GPIO29"):
         ("PIN_SIF_CFG_CH2_2ND_PINMUX", "P_GPIO19"),
-    # top.h only; the code and top.csv both put PICNT2_1 on L_GPIO1.
-    ("PIN_PWM_CFG_CCNT2", "P_GPIO14"): ("PIN_PWM_CFG_CCNT2", "L_GPIO1"),
+    # top.h only; the code and top.csv both put PICNT2_1 on L_GPIO1. On
+    # NA51055 the same annotation is right: its code uses P_GPIO14.
+    ("na51089", "PIN_PWM_CFG_CCNT2", "P_GPIO14"):
+        ("PIN_PWM_CFG_CCNT2", "L_GPIO1"),
     # pinmux_config_misc() tests PIN_SENSOR_CFG_SP2CLK_3RD where it means
     # this option, so this option does nothing at all. The same pad and field
     # are reached through the sensor group's SP2CLK_3RD, which top.h does not
     # annotate; the name goes there.
-    ("PIN_MISC_CFG_SP2CLK_3RD", "D_GPIO4"):
+    ("na51089", "PIN_MISC_CFG_SP2CLK_3RD", "D_GPIO4"):
         ("PIN_SENSOR_CFG_SP2CLK_3RD", "D_GPIO4"),
+
+    # NA51055's top.h carries NA51089's MISC annotations; its own code puts
+    # the special clocks elsewhere, and has no 3rd SP_CLK location at all.
+    ("na51055", "PIN_MISC_CFG_SPCLK", "P_GPIO17"):
+        ("PIN_MISC_CFG_SPCLK", "L_GPIO20"),
+    ("na51055", "PIN_MISC_CFG_SPCLK_2ND", "L_GPIO23"):
+        ("PIN_MISC_CFG_SPCLK_2ND", "P_GPIO19"),
+    ("na51055", "PIN_MISC_CFG_SPCLK_3RD", "D_GPIO3"): None,
+    # As on NA51089, only the sensor group reaches SP_CLK2's 3rd location.
+    ("na51055", "PIN_MISC_CFG_SP2CLK_3RD", "D_GPIO4"):
+        ("PIN_SENSOR_CFG_SP2CLK_3RD", "D_GPIO4"),
+    ("na51055", "PIN_MISC_CFG_SP2CLK", "P_GPIO18"):
+        ("PIN_MISC_CFG_SP2CLK", "P_GPIO24"),
+    ("na51055", "PIN_MISC_CFG_SP2CLK_2ND", "MC9"):
+        ("PIN_MISC_CFG_SP2CLK_2ND", "P_GPIO15"),
+    # "52x compatible - donot support this function": the driver comments
+    # out the HSI location of PWM8..11 on NA51055.
+    ("na51055", "PIN_PWM_CFG_PWM8_3", "HSI_GPIO6"): None,
+    ("na51055", "PIN_PWM_CFG_PWM9_3", "HSI_GPIO7"): None,
+    ("na51055", "PIN_PWM_CFG2_PWM10_3", "HSI_GPIO8"): None,
+    ("na51055", "PIN_PWM_CFG2_PWM11_3", "HSI_GPIO9"): None,
 }
 
 # One annotation: PAD[NAME]. The csv has unclosed brackets and stray
@@ -202,7 +244,11 @@ def pad_number(name):
 
 
 def option_label(option):
-    """PIN_SENSOR_CFG_12BITS -> SENSOR_12BITS."""
+    """PIN_SENSOR_CFG_12BITS -> SENSOR_12BITS, PINMUX_LCD_SEL_CCIR656 ->
+    LCD_CCIR656."""
+    m = re.match(r"^PINMUX_LCD_SEL_(\w+)$", option)
+    if m:
+        return "LCD_%s" % m.group(1)
     m = re.match(r"^PIN_(\w+?)_CFG2?_(\w+)$", option)
     if not m:
         die("cannot make a name of %s" % option)
@@ -215,13 +261,14 @@ def option_label(option):
 class Sources:
     """The SDK files this reads, located from the SDK root."""
 
-    def __init__(self, sdk):
+    def __init__(self, sdk, family="na51089"):
         kernel = os.path.join(sdk, "BSP", "linux-kernel")
+        self.family = family
         self.drv = os.path.join(kernel, "drivers", "pinctrl", "novatek",
-                                "na51089")
-        self.host_c = os.path.join(self.drv, "na51089_pinmux_host.c")
+                                family)
+        self.host_c = os.path.join(self.drv, "%s_pinmux_host.c" % family)
         self.plat = os.path.join(kernel, "arch", "arm", "plat-novatek",
-                                 "include", "plat-na51089")
+                                 "include", "plat-%s" % family)
         self.mach = os.path.join(kernel, "arch", "arm", "mach-nvt-ivot",
                                  "include", "mach")
         self.top_h = os.path.join(self.plat, "top.h")
@@ -231,7 +278,7 @@ class Sources:
         for path in (self.host_c, self.top_h, self.gpio_h,
                      os.path.join(self.mach, "rcw_macro.h")):
             if not os.path.isfile(path):
-                die("not an NA51089 SDK: no %s" % path)
+                die("not a %s SDK: no %s" % (family.upper(), path))
         if not os.path.isfile(self.csv):
             self.csv = None
 
@@ -252,19 +299,33 @@ def parse_enums(text):
                           r"\s*(.*)$", line)
             if not mm or mm.group(1).startswith("ENUM_DUMMY"):
                 continue
-            try:
-                val = int(mm.group(2), 0) if mm.group(2) else None
-            except ValueError:
-                val = None
+            val = enum_value(mm.group(2)) if mm.group(2) else None
             members.append((mm.group(1), val, mm.group(3)))
         out[m.group(2)] = members
     return out
 
 
+def enum_value(expr):
+    """An enumerator's value: `0x40`, and also `0x01 << 23`, which is how
+    PINMUX_LCD_SEL spells its feature flags. Anything else -- another
+    enumerator's name, a macro -- is None, as a member with no value is."""
+    expr = expr.strip()
+    if not re.match(r"^[0-9a-fA-FxX\s<|()]+$", expr):
+        return None
+    try:
+        return int(eval(expr, {"__builtins__": {}}, {}))
+    except Exception:
+        return None
+
+
 def option_bits(enums, enum_name):
-    """The options of one group that are a bit of their own, in order."""
+    """The options of one group that are a bit of their own, in order. For
+    the LCD selector: its types, then its feature flags."""
     if enum_name not in enums:
         die("top.h has no enum %s" % enum_name)
+    if enum_name == "PINMUX_LCD_SEL":
+        types, flags = lcd_options(enums)
+        return types + flags
     seen = set()
     bits = []
     for name, val, _ in enums[enum_name]:
@@ -274,7 +335,21 @@ def option_bits(enums, enum_name):
     return bits
 
 
-def annotations(enums, csv_text):
+def lcd_options(enums):
+    """PINMUX_LCD_SEL's types -- the members with implicit values, which
+    count from 0 -- and its feature flags, the ones with explicit values.
+    A mask is neither."""
+    types, flags = [], []
+    for name, val, _ in enums["PINMUX_LCD_SEL"]:
+        if name.endswith("_MSK"):
+            continue
+        (types if val is None else flags).append(name)
+    if not flags:
+        die("PINMUX_LCD_SEL has no feature flags this can read")
+    return types, flags
+
+
+def annotations(enums, csv_text, family="na51089"):
     """{(func or None, option, pad): name} and the list of what was found.
 
     top.h annotations hold for every group that takes the option; the csv's
@@ -284,7 +359,7 @@ def annotations(enums, csv_text):
     found = []
 
     def add(func, option, pad_raw, name_raw):
-        key = (option, pad_raw.strip().upper())
+        key = (family, option, pad_raw.strip().upper())
         if key in ANNOTATION_ERRATA:
             if ANNOTATION_ERRATA[key] is None:
                 return
@@ -326,6 +401,10 @@ def bonded_pads(gpio_h_text):
     for _, prefix, _, macro in GROUPS:
         m = re.search(r"#define\s+%s\s+(\d+)" % macro, gpio_h_text)
         if not m:
+            # NA51055 has no DSI group. Any other group missing is a
+            # renamed macro, and would drop every pad of it unseen.
+            if macro == "DSI_GPIO_NUM":
+                continue
             die("nvt-gpio.h has no %s" % macro)
         pads.extend("%s%d" % (prefix, i) for i in range(int(m.group(1))))
     return pads
@@ -336,7 +415,22 @@ def bonded_pads(gpio_h_text):
 ASSIGN = re.compile(r"\b(top_reg\w+)\.bit\.(\w+)\s*=(?!=)\s*([^;]+);")
 OTHER_WRITE = re.compile(
     r"\btop_reg\w+\.(?:bit\.\w+|reg)\s*(?:[-+*/&|^]|<<|>>)?=(?!=)")
-CASE = re.compile(r"\bcase\s+(PIN_\w+)\s*:")
+CASE = re.compile(r"\bcase\s+(PIN(?:MUX)?_\w+)\s*:")
+
+# The options a block's header tests: `config & PIN_X`, `pinmux &
+# (PIN_A | PIN_B)`. Only a bit test names a block's option. A range test --
+# `(pinmux_type >= PINMUX_LCD_SEL_CCIR656) && (pinmux_type <= ...)` -- names
+# the ends of a range, and an `==` test against the group's NONE opens an
+# empty block.
+TESTED = re.compile(r"(?<!&)&\s*\(?\s*(PIN(?:MUX)?_\w+"
+                    r"(?:\s*\|\s*PIN(?:MUX)?_\w+)*)")
+
+
+def tested(header):
+    out = []
+    for m in TESTED.finditer(header):
+        out.extend(re.findall(r"PIN(?:MUX)?_\w+", m.group(1)))
+    return out
 
 Rec = collections.namedtuple("Rec", "func path chain")
 
@@ -351,8 +445,7 @@ def blank(text):
 
 
 def extract_function(text, name):
-    m = re.search(r"^static int %s\(uint32_t config\)\s*\{" % name, text,
-                  re.M)
+    m = re.search(r"^static \w+ %s\([^)]*\)\s*\{" % name, text, re.M)
     if not m:
         die("host.c has no %s()" % name)
     clean = blank(text)
@@ -388,7 +481,7 @@ def instrument(func, body, recs):
     for pos, kind, arg in tokens:
         if kind == "{":
             header = clean[boundary:pos]
-            stack.append([pos, re.findall(r"\bPIN_\w+", header), None])
+            stack.append([pos, tested(header), None])
             boundary = pos + 1
         elif kind == "}":
             if not stack:
@@ -439,8 +532,16 @@ typedef uint8_t u8; typedef int8_t s8;
 typedef struct { int unused; } spinlock_t;
 struct device; struct seq_file;
 #define __iomem
-#include "na51089_pinmux.h"
+#include FAMILY_PINMUX_H
 #undef pr_err
+#undef TOP_SETREG
+#define TOP_SETREG(...) ((void)0)
+#define pr_debug(...) ((void)0)
+#ifndef BIT
+#define BIT(n) (1u << (n))
+#endif
+/* Which die the driver believes it is on. */
+#define nvt_get_chip_id() ((uint32_t)NVT_CHIP)
 #define pr_err(...) ((void)0)
 #define pr_info(...) ((void)0)
 #define pr_warn(...) ((void)0)
@@ -456,9 +557,22 @@ static void rec(const void *reg, uint32_t mask, uint32_t val, int id);
 """
 
 
+def lcd_body(host):
+    """pinmux_select_primary_lcd() with its local copies of REG2 and the L and
+    DSI gates turned into the globals every other function writes: it reads
+    them with TOP_GETREG() into locals, edits those, and writes them back
+    with TOP_SETREG(), which is the same writes once the copies are gone."""
+    body = extract_function(host, SPECIAL["lcd"])
+    body = re.sub(r"^\s*union\s+TOP_\w+\s+local_\w+\s*;\s*$", "", body,
+                  flags=re.M)
+    body = re.sub(r"^\s*local_\w+\.reg\s*=\s*TOP_GETREG\([^;]*\);\s*$", "",
+                  body, flags=re.M)
+    return body.replace("local_top_reg", "top_reg")
+
+
 def build_harness(src, enums, recs):
     host = read(src.host_c)
-    start = host.index('#include "na51089_pinmux.h"')
+    start = host.index('#include "%s_pinmux.h"' % src.family)
     start = host.index("\n", start) + 1
     end = host.index("struct nvt_pinctrl_info info_get_id")
     region = host[start:end]
@@ -478,6 +592,11 @@ def build_harness(src, enums, recs):
                            r"config\);", region, re.M):
         func = name[len("pinmux_config_"):]
         c.append(instrument(func, extract_function(host, name), recs))
+    if any(f == "lcd" for f, _ in FUNCS):
+        c.append(instrument("lcd", lcd_body(host), recs))
+        c.append("static int lcd_select(uint32_t cfg) {\n"
+                 "    return pinmux_select_primary_lcd(NULL, "
+                 "PINMUX_DISPMUX_SEL_LCD, cfg);\n}")
     if not recs:
         die("found no register writes to log")
 
@@ -531,7 +650,12 @@ static void rec(const void *reg, uint32_t mask, uint32_t val, int id) {
         c.append("static const uint32_t bits%d[] = {%s};"
                  % (fi, ", ".join(option_bits(enums, enum_name))))
     c.append("static int (*const fns[])(uint32_t) = {%s};" % ", ".join(
-        "pinmux_config_%s" % f for f, _ in FUNCS))
+        "lcd_select" if f == "lcd" else "pinmux_config_%s" % f
+        for f, _ in FUNCS))
+    lcd = [i for i, (f, _) in enumerate(FUNCS) if f == "lcd"]
+    ntypes = len(lcd_options(enums)[0]) if lcd else 0
+    c.append("static const int lcd_fi = %d, lcd_ntypes = %d;"
+             % (lcd[0] if lcd else -1, ntypes))
     c.append("static const uint32_t *const bits[] = {%s};" % ", ".join(
         "bits%d" % i for i in range(nfuncs)))
     c.append("static const int nbits[] = {%s};" % ", ".join(
@@ -579,7 +703,21 @@ static void one(int fi, const int *idx, int k) {
         c.append('    printf("U %%x %s\\n", %s_OFS);' % (var, utype))
     c.append("""    for (int fi = 0; fi < %d; fi++) {
         const int n = nbits[fi];
-        int idx[%d];
+        int idx[32];
+        if (fi == lcd_fi) {
+            /* One type, any set of flags. */
+            const int nf = n - lcd_ntypes;
+            for (int t = 0; t < lcd_ntypes; t++)
+                for (int fl = 0; fl < (1 << nf); fl++) {
+                    int k = 0;
+                    idx[k++] = t;
+                    for (int b = 0; b < nf; b++)
+                        if (fl & (1 << b))
+                            idx[k++] = lcd_ntypes + b;
+                    one(fi, idx, k);
+                }
+            continue;
+        }
         for (int k = 1; k <= %d && k <= n; k++) {
             for (int i = 0; i < k; i++) idx[i] = i;
             for (;;) {
@@ -591,7 +729,7 @@ static void one(int fi, const int *idx, int k) {
                 for (int j = i + 1; j < k; j++) idx[j] = idx[j - 1] + 1;
             }
         }
-    }""" % (nfuncs, MAX_COMBO, MAX_COMBO))
+    }""" % (nfuncs, MAX_COMBO))
     c.append("    return 0;")
     c.append("}")
     return "\n".join(c) + "\n"
@@ -601,7 +739,7 @@ SHIM_EMPTY = ["linux/types.h", "linux/irq.h", "linux/spinlock.h",
               "linux/slab.h", "linux/of.h", "asm/types.h", "mach/nvt-io.h"]
 
 
-def run_harness(src, enums, recs):
+def run_harness(src, enums, recs, chip_id):
     cc = os.environ.get("CC", "cc")
     tmp = tempfile.mkdtemp(prefix="nvt_padmux_")
     try:
@@ -621,7 +759,9 @@ def run_harness(src, enums, recs):
             f.write(build_harness(src, enums, recs))
         exe = os.path.join(tmp, "harness")
         res = subprocess.run([cc, "-std=gnu99", "-w", "-O1", "-o", exe, csrc,
-                              "-I", shim, "-I", src.drv],
+                              "-I", shim, "-I", src.drv,
+                              '-DFAMILY_PINMUX_H="%s_pinmux.h"' % src.family,
+                              "-DNVT_CHIP=%#x" % chip_id],
                              capture_output=True, text=True)
         if res.returncode != 0:
             die("the harness does not compile:\n" + res.stderr[-4000:])
@@ -651,7 +791,9 @@ class Run:
         self.prefix = None        # another group's option called first
         self.fields = {}          # Field -> final value in place
         self.blocks = {}          # block -> {Field: last value written in it}
-        self.gates = {}           # pad -> (0 function / 1 GPIO, rec id)
+        self.gates = {}           # pad -> (0 function / 1 GPIO, rec id, seq)
+        self.writes = {}          # Field -> [(seq, value, block, rec id)]
+        self.seq = 0
         self.regs = None          # register offset -> final value
 
 
@@ -683,11 +825,14 @@ def parse_runs(out, enums, recs):
                 if mask & (mask - 1):
                     die("a multi-bit gate write at %#x" % ofs)
                 pad = "%s%d" % (GATE_REGS[ofs][1], field_shift(mask))
-                cur.gates[pad] = (1 if val else 0, rid)
+                cur.gates[pad] = (1 if val else 0, rid, cur.seq)
             else:
                 f = Field(ofs, mask)
                 cur.fields[f] = val
                 cur.blocks.setdefault(recs[rid].path[-1], {})[f] = val
+                cur.writes.setdefault(f, []).append(
+                    (cur.seq, val, recs[rid].path[-1], rid))
+            cur.seq += 1
         elif tag == "E":
             if int(rest) == 0:
                 regs = collections.defaultdict(int)
@@ -709,8 +854,11 @@ class Claim:
         self.ungated = ungated
 
     def sort_key(self):
-        return (pad_number(self.pad), -len(self.conds), self.name,
-                self.conds, self.ungated)
+        # Most conditions first; then, of two alike, the gated one, whose
+        # cleared gate is one more piece of evidence -- CCIR8 data and CCIR8
+        # sync both hold under SENSOR2=2, and a handed-over pad is the sync.
+        return (pad_number(self.pad), -len(self.conds), self.ungated,
+                self.name, self.conds)
 
     def holds(self, regs, gate):
         return (self.ungated or gate == 0) and all(
@@ -731,6 +879,7 @@ class Model:
         self.order = {f: i for i, (f, _) in enumerate(FUNCS)}
         self.claims = {}          # pad -> [Claim], resolver order
         self.chosen = {}          # (pad, conds, ungated) -> (unnamed?, name)
+        self.chosen_by = {}       # ... -> FUNCS index of the group named it
         self.explained = set()    # (option, pad) the code touches
         self.problems = []
         self.conflicts = 0        # states where two claims hold at once
@@ -741,16 +890,41 @@ class Model:
         (conds, ungated, rec), or None for a pad it leaves a GPIO."""
         if pad not in run.gates:
             return None
-        val, rid = run.gates[pad]
+        val, rid, seq = run.gates[pad]
         rec = self.recs[rid]
         if rec.func != run.func:
             return PREFIX
         if val == 1 and run.func not in UNGATED_FUNCS:
             return None
+        return tuple(sorted(self.conds_at(run, rec, seq).items())), \
+            val == 1, rec
+
+    @staticmethod
+    def conds_at(run, rec, seq):
+        """The fields a gate write at `seq` depends on, and their values.
+
+        A field counts when a block enclosing the gate write writes it, and
+        it takes the value the last such write gave it -- UART2 = 2 comes
+        after its pads' gates in the same block and still counts. One
+        exception. A field an enclosing block wrote and a block NESTED in it
+        then overwrote, both before the gate write, takes the nested value:
+        pinmux_select_primary_lcd() resets LCD_TYPE to GPIO at its top, sets
+        it per type in a switch, and only then hands over the pads."""
+        enclosing = set(rec.path)
         conds = {}
-        for blk in rec.path:
-            conds.update(run.blocks.get(blk, {}))
-        return tuple(sorted(conds.items())), val == 1, rec
+        for f, writes in run.writes.items():
+            own = [w for w in writes if w[2] in enclosing]
+            if not own:
+                continue
+            value = own[-1][1]
+            before = [w for w in writes if w[0] < seq]
+            own_before = [w for w in own if w[0] < seq]
+            if (before and before[-1][2] not in enclosing and own_before and
+                    before[-1][0] > own_before[-1][0] and
+                    not any(w[0] > seq for w in own)):
+                value = before[-1][1]
+            conds[f] = value
+        return conds
 
     def name_for(self, run, pad, rec):
         """(unnamed?, name): the enclosing options innermost first, then the
@@ -762,6 +936,8 @@ class Model:
                     return (False, n)
         if rec.chain:
             return (True, option_label(rec.chain[0]))
+        if run.func == "lcd":
+            return (True, option_label(run.opts[0]))  # the type, not a flag
         return (True, option_label(run.opts[-1]))
 
     def add(self, pad, name, conds, ungated):
@@ -799,8 +975,9 @@ class Model:
             if len(named) > 1:
                 self.problems.append("%s is %s under the same writes"
                                      % (key[0], " and ".join(sorted(named))))
-            u, _, n = min(cands)
+            u, order, n = min(cands)
             self.chosen[key] = (u, n)
+            self.chosen_by[key] = order
 
         # A state nothing names inherits the name of the state it extends:
         # SPI_CFG_CH1_2BITS on its own does everything CH1 does plus SPI_DAT,
@@ -812,6 +989,11 @@ class Model:
             pad, conds, ungated = key
             best = None
             for other, (u, name) in self.chosen.items():
+                # Only within one group: NA51055's RMII claims L_GPIO0 with
+                # no condition at all, and an empty set is a subset of every
+                # LCD state on that pad.
+                if self.chosen_by[other] != self.chosen_by[key]:
+                    continue
                 if (not u and other[0] == pad and other[2] == ungated and
                         len(other[1]) < len(conds) and
                         set(other[1]) <= set(conds) and
@@ -841,7 +1023,7 @@ class Model:
                         if any(c.ungated for c in lst)}
         for run in self.runs:
             for pad in sorted((set(run.gates) | ungated_pads) & self.bonded):
-                gate = run.gates.get(pad, (1, None))[0]
+                gate = run.gates.get(pad, (1,))[0]
                 held = [c for c in self.claims.get(pad, ())
                         if c.holds(run.regs, gate)]
                 held_names = {c.name for c in held}
@@ -886,6 +1068,10 @@ class Model:
                         % (pad, list(run.opts), res.name, want))
                 elif res:
                     added += 1
+                else:
+                    self.problems.append(
+                        "%s after %s reads as %s, and %s cannot be made to "
+                        "win" % (pad, list(run.opts), held[0].name, want))
         return added
 
     def check_annotations(self, found):
@@ -965,7 +1151,8 @@ def packed(f, v):
     return f.reg, shift, width, v >> shift
 
 
-def render(model, bonded, regen):
+def render_soc(chip, model, bonded):
+    """One SoC's four tables and its novatek_soc_t, `chip`_padmux."""
     pads = sorted(model.claims, key=pad_number)
     conds = []
     index = {}
@@ -981,32 +1168,21 @@ def render(model, bonded, regen):
     sel = pick_selectors(model.claims)
 
     o = []
-    o.append("""/* Generated by tools/gen_novatek_padmux.py -- do not edit.
- *
- * What the vendor's pinmux_config_*() functions do to each pad of the
- * NA51089, found by running them: see the generator for how, and
- * src/hal/novatek_padmux.c for how the table is read. %d vendor states
- * were replayed against it; in %d of them two claims hold at once and the
- * table carries the one the vendor code meant, and %d leave a pad cleared
- * with its field moved elsewhere, which reads as unnamed.
- *
- * Regenerate with:
- *   %s
- */
-
-#ifndef HAL_NOVATEK_PADMUX_H
-#define HAL_NOVATEK_PADMUX_H
-
-#include "hal/novatek_padmux_types.h"
-""" % (len(model.runs), model.conflicts, model.orphans, regen))
+    o.append("/* %s: %d vendor states replayed; in %d of them two claims hold"
+             % (chip, len(model.runs), model.conflicts))
+    o.append(" * at once and the table carries the one the vendor code meant,")
+    o.append(" * and %d leave a pad cleared with its field moved elsewhere,"
+             % model.orphans)
+    o.append(" * which reads as unnamed. */")
+    o.append("")
     o.append("/* Every pad the package bonds out, by Linux GPIO number. */")
-    o.append("static const novatek_pad_t NA51089_pads[] = {")
+    o.append("static const novatek_pad_t %s_pads[] = {" % chip)
     for p in bonded:
         o.append("    {%d, PMX_%s}," % (pad_number(p), p))
     o.append("};")
     o.append("")
     o.append("/* TOP register offset, field shift, width, value. */")
-    o.append("static const novatek_cond_t NA51089_conds[] = {")
+    o.append("static const novatek_cond_t %s_conds[] = {" % chip)
     for f, v in conds:
         o.append("    {0x%02X, %d, %d, %d}," % packed(f, v))
     o.append("};")
@@ -1014,7 +1190,7 @@ def render(model, bonded, regen):
     o.append("/* Per pad, most conditions first: the first claim that holds")
     o.append(" * is what the pad carries. {pad, flags, name, first")
     o.append(" * condition, how many}. */")
-    o.append("static const novatek_claim_t NA51089_claims[] = {")
+    o.append("static const novatek_claim_t %s_claims[] = {" % chip)
     for c, idx in rows:
         o.append("    {%d, %s, PMX_%s, %d, %d}, /* %s */" % (
             pad_number(c.pad), "NVT_UNGATED" if c.ungated else "0",
@@ -1023,7 +1199,7 @@ def render(model, bonded, regen):
     o.append("")
     o.append("/* The field each function's walk row shows: {pad, name, reg,")
     o.append(" * shift, width, value}, reg NVT_GATE for the pad's gate bit. */")
-    o.append("static const novatek_sel_t NA51089_sels[] = {")
+    o.append("static const novatek_sel_t %s_sels[] = {" % chip)
     nsels = 0
     for pad in pads:
         done = set()
@@ -1042,12 +1218,35 @@ def render(model, bonded, regen):
             nsels += 1
     o.append("};")
     o.append("")
-    o.append("static const novatek_soc_t NA51089_padmux = {")
-    o.append("    NA51089_pads, %d, NA51089_claims, %d, NA51089_conds,"
-             % (len(bonded), len(rows)))
-    o.append("    NA51089_sels, %d," % nsels)
+    o.append("static const novatek_soc_t %s_padmux = {" % chip)
+    o.append("    %s_pads, %d, %s_claims, %d, %s_conds,"
+             % (chip, len(bonded), chip, len(rows), chip))
+    o.append("    %s_sels, %d," % (chip, nsels))
     o.append("};")
-    o.append("")
+    return o
+
+
+def render(socs, regen):
+    o = []
+    o.append("""/* Generated by tools/gen_novatek_padmux.py -- do not edit.
+ *
+ * What the vendor's pinmux_config_*() and pinmux_select_primary_lcd() do to
+ * each pad, found by running them: see the generator for how, and
+ * src/hal/novatek_padmux.c for how the tables are read. One table per die;
+ * NA51055 and NA51084 come from one driver run as each.
+ *
+ * Regenerate with:
+ *   %s
+ */
+
+#ifndef HAL_NOVATEK_PADMUX_H
+#define HAL_NOVATEK_PADMUX_H
+
+#include "hal/novatek_padmux_types.h"
+""" % regen)
+    for chip, model, bonded in socs:
+        o.extend(render_soc(chip, model, bonded))
+        o.append("")
     o.append("#endif /* HAL_NOVATEK_PADMUX_H */")
     return "\n".join(o) + "\n"
 
@@ -1056,19 +1255,41 @@ REGEN = "tools/gen_novatek_padmux.py --sdk <na51089 SDK root>"
 
 
 def generate(sdk):
-    src = Sources(sdk)
-    enums = parse_enums(read(src.top_h))
-    bonded = bonded_pads(read(src.gpio_h))
-    names, found = annotations(enums, read(src.csv) if src.csv else "")
-    recs = []
-    out = run_harness(src, enums, recs)
-    runs = parse_runs(out, enums, recs)
-    model = Model(runs, recs, names, bonded)
-    model.build()
-    model.check_annotations(found)
-    if model.problems:
-        die("the sources disagree:\n  " + "\n  ".join(model.problems[:40]))
-    return render(model, bonded, REGEN), model
+    """Every family the SDK carries, each run as every die it serves.
+    Returns the header and {chip: Model}."""
+    socs = []
+    models = {}
+    problems = []
+    for family, chips, uses_csv in FAMILIES:
+        src = Sources(sdk, family)
+        enums = parse_enums(read(src.top_h))
+        bonded = bonded_pads(read(src.gpio_h))
+        csv = read(src.csv) if uses_csv and src.csv else ""
+        names, found = annotations(enums, csv, family)
+        explained = set()
+        family_models = []
+        for chip, chip_id in chips:
+            recs = []
+            out = run_harness(src, enums, recs, chip_id)
+            runs = parse_runs(out, enums, recs)
+            model = Model(runs, recs, names, bonded)
+            model.build()
+            problems.extend("%s: %s" % (chip, p) for p in model.problems)
+            explained |= model.explained
+            family_models.append(model)
+            socs.append((chip, model, bonded))
+            models[chip] = model
+        # An annotation one die of the family explains is not a source error:
+        # NA51084 refuses UART2's 3rd location, NA51055 does not.
+        for model in family_models:
+            model.explained = explained
+        family_models[0].problems = []
+        family_models[0].check_annotations(found)
+        problems.extend("%s: %s" % (family, p)
+                        for p in family_models[0].problems)
+    if problems:
+        die("the sources disagree:\n  " + "\n  ".join(problems[:40]))
+    return render(socs, REGEN), models
 
 
 # ---------------------------------------------------------------- selftest
@@ -1087,6 +1308,9 @@ enum { E_OK = 0, E_PAR = -1, E_OBJ = -2 };
     "BSP/linux-kernel/arch/arm/plat-novatek/include/plat-na51089/top_reg.h":
     """
 #include <mach/rcw_macro.h>
+#define TOP_REG2_OFS 0x08
+union TOP_REG2 { uint32_t reg; struct {
+    unsigned int LCD_TYPE:4; unsigned int r0:28; } bit; };
 #define TOP_REG3_OFS 0x0C
 union TOP_REG3 { uint32_t reg; struct {
     unsigned int SENSOR:3; unsigned int r0:3;
@@ -1103,7 +1327,8 @@ union TOP_REG9 { uint32_t reg; struct {
     unsigned int UART2_CTSRTS:2; unsigned int r2:22; } bit; };
 #define TOP_REGCGPIO0_OFS 0xA0
 union TOP_REGCGPIO0 { uint32_t reg; struct {
-    unsigned int CGPIO_0:1; unsigned int r:10; unsigned int CGPIO_11:1;
+    unsigned int CGPIO_0:1; unsigned int CGPIO_1:1; unsigned int r:9;
+    unsigned int CGPIO_11:1;
     unsigned int CGPIO_12:1; unsigned int CGPIO_13:1; unsigned int r2:18;
     } bit; };
 #define TOP_REGPGPIO0_OFS 0xA8
@@ -1133,6 +1358,7 @@ typedef enum {
     PIN_SENSOR_CFG_CCIR8BITS = 0x08, ///< no annotation
     PIN_SENSOR_CFG_MCLK = 0x10, ///< mclk on C0
     PIN_SENSOR_CFG_MCLK_2ND = 0x20, ///< mclk on HSI1
+    PIN_SENSOR_CFG_VDHD = 0x40, ///< sync on HSI0, inside the 12-bit mode
 } PIN_SENSOR_CFG;
 typedef enum {
     PIN_SPI_CFG_NONE,
@@ -1145,6 +1371,11 @@ typedef enum {
     PIN_ETH_CFG_INTERANL = 2,
     PIN_ETH_CFG_MDIO = 4,
 } PINMUX_ETH_CFG;
+typedef enum {
+    PIN_MISC_CFG_NONE,
+    PIN_MISC_CFG_A = 0x1 << 0,
+    PIN_MISC_CFG_B = 0x1 << 1,
+} PINMUX_MISC_CFG;
 """,
     "BSP/linux-kernel/arch/arm/plat-novatek/include/plat-na51089/"
     "nvt-gpio.h": """
@@ -1171,8 +1402,10 @@ static int pinmux_config_uart(uint32_t config);
 static int pinmux_config_sensor(uint32_t config);
 static int pinmux_config_spi(uint32_t config);
 static int pinmux_config_eth(uint32_t config);
+static int pinmux_config_misc(uint32_t config);
 static int sticky = 0;
 
+union TOP_REG2 top_reg2;
 union TOP_REG3 top_reg3;
 union TOP_REG5 top_reg5;
 union TOP_REG9 top_reg9;
@@ -1229,6 +1462,9 @@ static int pinmux_config_sensor(uint32_t config)
         top_reg3.bit.SENSOR = 1;
         top_reg_hgpio0.bit.HSIGPIO_0 = GPIO_ID_EMUM_GPIO;
         top_reg_hgpio0.bit.HSIGPIO_1 = GPIO_ID_EMUM_GPIO;
+        if (config & PIN_SENSOR_CFG_VDHD) {
+            top_reg_hgpio0.bit.HSIGPIO_0 = GPIO_ID_EMUM_FUNC;
+        }
         break;
     case PIN_SENSOR_CFG_CCIR8BITS:
         top_reg3.bit.SENSOR = 3;
@@ -1278,6 +1514,26 @@ static int pinmux_config_eth(uint32_t config)
     }
     return E_OK;
 }
+
+static int pinmux_config_misc(uint32_t config)
+{
+    top_reg2.bit.LCD_TYPE = 0;
+    switch (config & (PIN_MISC_CFG_A | PIN_MISC_CFG_B)) {
+    case PIN_MISC_CFG_A:
+        top_reg2.bit.LCD_TYPE = 1;
+        break;
+    case PIN_MISC_CFG_B:
+        top_reg2.bit.LCD_TYPE = 2;
+        top_reg_pgpio0.bit.PGPIO_2 = GPIO_ID_EMUM_FUNC;
+        break;
+    default:
+        break;
+    }
+    if ((config >= PIN_MISC_CFG_A) && (config <= PIN_MISC_CFG_B)) {
+        top_reg_cgpio0.bit.CGPIO_1 = GPIO_ID_EMUM_FUNC;
+    }
+    return E_OK;
+}
 """,
     "build/nvt-tools/nvt_pinctrl_tool/top.csv": """\
 PIN_SPI_CFG_CH1,1,P_GPIO2[spi_clk(BS)],
@@ -1287,13 +1543,13 @@ PIN_I2C_CFG_CH3,64,P_GPIO29[I2C3_1_SCL],
 
 SELFTEST_FUNCS = [("i2c", "PIN_I2C_CFG"), ("uart", "PIN_UART_CFG"),
                   ("sensor", "PIN_SENSOR_CFG"), ("spi", "PIN_SPI_CFG"),
-                  ("eth", "PINMUX_ETH_CFG")]
+                  ("eth", "PINMUX_ETH_CFG"), ("misc", "PINMUX_MISC_CFG")]
 
 
 def selftest():
-    global FUNCS
+    global FUNCS, FAMILIES
     tmp = tempfile.mkdtemp(prefix="nvt_padmux_selftest_")
-    saved = FUNCS, dict(ANNOTATION_ERRATA)
+    saved = FUNCS, dict(ANNOTATION_ERRATA), FAMILIES
     failures = []
 
     def check(cond, what):
@@ -1307,6 +1563,7 @@ def selftest():
             with open(path, "w") as f:
                 f.write(text)
         FUNCS = SELFTEST_FUNCS
+        FAMILIES = [("na51089", [("NA51089", 0x7021)], True)]
 
         # The csv's P_GPIO29 is a typo. Without an erratum the sources
         # disagree and the generator has to say so rather than guess.
@@ -1317,9 +1574,10 @@ def selftest():
             check("PIN_I2C_CFG_CH3 names P_GPIO29" in str(e),
                   "refusal names the pad: %s" % e)
 
-        ANNOTATION_ERRATA[("PIN_I2C_CFG_CH3", "P_GPIO29")] = (
+        ANNOTATION_ERRATA[("na51089", "PIN_I2C_CFG_CH3", "P_GPIO29")] = (
             "PIN_I2C_CFG_CH3", "P_GPIO1")
-        text, model = generate(tmp)
+        text, models = generate(tmp)
+        model = models["NA51089"]
         claims = model.claims
 
         def names(pad):
@@ -1345,8 +1603,12 @@ def selftest():
         check([c.name for c in rts] == ["UART2_2_RTS"], "C13 %s"
               % [c.name for c in rts])
         check(rts and len(rts[0].conds) == 2, "C13 needs UART2 and CTSRTS")
-        check(names("P_GPIO2") == {"UART2_1_TX", "SPI_CLK"}, "P2 %s"
-              % names("P_GPIO2"))
+        # SPI_CLK claims P_GPIO2 with no condition at all; MISC_B's claim
+        # there is a superset of that and of another group, and keeps its
+        # own name. MISC_B is also a `0x1 << 1`, which has to be read.
+        check(names("P_GPIO2") == {"UART2_1_TX", "SPI_CLK", "MISC_B"},
+              "P2 %s" % names("P_GPIO2"))
+        check(enum_value("0x01 << 23") == 1 << 23, "enum shift")
         check("SENSOR_12BITS" in names("H_GPIO0"), "H0 %s" % names("H_GPIO0"))
         # MCLK depends on SEN_MCLK alone, not on the sensor mode the same
         # call selected in another block.
@@ -1387,9 +1649,23 @@ def selftest():
               % read_as("P_GPIO1", both, 0))
         check(read_as("P_GPIO1", {MDIO: 0x4}, 0) == "ETH_MDIO", "P1 MDIO")
 
+        # Gated before ungated, conditions alike: a handed-over HSI0 under
+        # the 12-bit mode is the sync, a gated one is still the data.
+        check(read_as("H_GPIO0", {SENSOR: 1}, 0) == "SENSOR_VDHD",
+              "H0 gate clear %s" % read_as("H_GPIO0", {SENSOR: 1}, 0))
+        check(read_as("H_GPIO0", {SENSOR: 1}, 1) == "SENSOR_12BITS",
+              "H0 gate set")
+        # Reset at the top, set in a switch, then the pad: the switch's
+        # value is the condition, and a range test names no option.
+        LCD = (0x08, 0x0F)
+        check(names("C_GPIO1") == {"MISC_A", "MISC_B"}, "C1 %s"
+              % names("C_GPIO1"))
+        check(read_as("C_GPIO1", {LCD: 2}, 0) == "MISC_B", "C1 under 2")
+        check(read_as("C_GPIO1", {LCD: 0}, 0) == "?", "C1 under 0")
+
         check("PMX_C_GPIO13" in text and "NA51089_claims" in text, "render")
     finally:
-        FUNCS = saved[0]
+        FUNCS, FAMILIES = saved[0], saved[2]
         ANNOTATION_ERRATA.clear()
         ANNOTATION_ERRATA.update(saved[1])
         shutil.rmtree(tmp, ignore_errors=True)

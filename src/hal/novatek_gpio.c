@@ -1,4 +1,6 @@
-/* The NA51089 GPIO controller, as the vendor's gpio-nvt-na51089.c drives it.
+/* The NA51089, NA51055 and NA51084 GPIO controller, as the vendor's
+ * gpio-nvt-na51089.c and gpio-nvt-na51055.c drive it: the same block at the
+ * same address on all three.
  *
  * Four banks of eight words at 0xF0070000: DATA, DIR, SET and CLR, one word
  * per pad group, so a pad's bit is its Linux GPIO number modulo 32 in word
@@ -16,23 +18,30 @@
 #include "hal/novatek.h"
 #include "tools.h"
 
-static const uint8_t group_pads[8] = {
-    23, /* C_GPIO, the "MC" pads */
-    26, /* P_GPIO */
-    9,  /* S_GPIO */
-    10, /* L_GPIO */
-    8,  /* D_GPIO */
-    12, /* H_GPIO, the HSI pads */
-    3,  /* A_GPIO */
-    11, /* DSI_GPIO */
-};
+/* C ("MC"), P, S, L, D, H (HSI), A, DSI. */
+static const uint8_t na51089_pads[8] = {23, 26, 9, 10, 8, 12, 3, 11};
+/* NA51055 and NA51084: more S, L and D pads, and no DSI group. */
+static const uint8_t na51055_pads[8] = {23, 26, 13, 25, 11, 12, 3, 0};
 
-bool novatek_gpio_supported(void) { return chip_generation == CHIP_NA51089; }
+static const uint8_t *group_pads(void) {
+    switch (chip_generation) {
+    case CHIP_NA51089:
+        return na51089_pads;
+    case CHIP_NA51055:
+    case CHIP_NA51084:
+        return na51055_pads;
+    default:
+        return NULL;
+    }
+}
+
+bool novatek_gpio_supported(void) { return group_pads() != NULL; }
 
 bool novatek_gpio_valid(int pad) {
-    if (!novatek_gpio_supported() || pad < 0 || pad >= NVT_GPIO_NPADS)
+    const uint8_t *pads = group_pads();
+    if (pads == NULL || pad < 0 || pad >= NVT_GPIO_NPADS)
         return false;
-    return (pad & 31) < group_pads[pad >> 5];
+    return (pad & 31) < pads[pad >> 5];
 }
 
 uint32_t novatek_gpio_reg(int pad, unsigned bank) {

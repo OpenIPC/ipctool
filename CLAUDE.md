@@ -272,14 +272,15 @@ cJSON or prints diagnostics in those shared files must sit inside
   `tools/gen_*_padmux.py` and are in `.clang-format-hook-exclude`. Novatek's
   generator is the odd one: the NA51089 SDK has no pin table, only the
   driver's `pinmux_config_*()` code, so it compiles that code on the host with
-  every register write logged and runs it -- it needs a C compiler and the
-  SDK, and its `--selftest` needs only the compiler.
+  every register write logged and runs it -- once per die, NA51089, NA51055
+  and NA51084 -- and it needs a C compiler and the SDK; its `--selftest`
+  needs only the compiler.
   `ipchw_padmux_by_func/_by_prefix/_by_pad` are safe to call concurrently once the SoC has been detected;
   detection itself is not, so call `getchipname()` once at startup.
   `ipchw_padmux_get/_set` touch `/dev/mem` and must stay on one thread.
 - `gpio get/set/scan` reach a GPIO controller per vendor: HiSilicon's bank
   words in `src/reginfo.c` (`get_chip_gpio_adress()`), SigmaStar Infinity6C's
-  per-pad registers in `src/hal/sstar_gpio.c`, and the NA51089's four
+  per-pad registers in `src/hal/sstar_gpio.c`, and the Novatek dies' four
   DATA/DIR/SET/CLR banks in `src/hal/novatek_gpio.c`. Ingenic has none, so
   only `gpio mux` and `reginfo --pads` work there.
 - `src/fake_symbols.c` holds empty definitions of HiSilicon SDK audio symbols,

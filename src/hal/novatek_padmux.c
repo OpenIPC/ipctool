@@ -1,4 +1,6 @@
-/* Novatek NA51089 (NT98562/NT98566): the pad-mux backend.
+/* Novatek NA51089 (NT98562/NT98566), NA51055 (NT9852x) and NA51084
+ * (NT98528/NT98529): the pad-mux backend. The three share the TOP block
+ * layout below; NA51055 and NA51084 have no DSI pad group.
  *
  * Two things decide what a pad carries, and they are in different places:
  *
@@ -63,6 +65,10 @@ typedef struct {
 
 static const novatek_soc_t *nvt_soc(void) {
     switch (chip_generation) {
+    case CHIP_NA51055:
+        return &NA51055_padmux;
+    case CHIP_NA51084:
+        return &NA51084_padmux;
     case CHIP_NA51089:
         return &NA51089_padmux;
     default:
@@ -420,8 +426,13 @@ static int nvt_set(int pad, const char *func_name, const padmux_io_t *io) {
                              (uint32_t)k->value << k->shift))
             return top_undo(&t, IPCHW_PADMUX_IO);
     }
-    if (!(best->flags & NVT_UNGATED) &&
-        !top_write_field(&t, gr, gate_bit(pad), 0))
+    /* A gated claim needs the gate handed over. An ungated one is what the
+     * vendor sets the gate to GPIO for -- the parallel sensor modes write
+     * GPIO_ID_EMUM_GPIO to their data pads -- and leaving it clear would let
+     * a gated claim under the same fields win: CCIR8 data and CCIR8 sync
+     * both hold under SENSOR2=2. */
+    uint32_t gate = (best->flags & NVT_UNGATED) ? gate_bit(pad) : 0;
+    if (!top_write_field(&t, gr, gate_bit(pad), gate))
         return top_undo(&t, IPCHW_PADMUX_IO);
 
     int res = drop_competitors(soc, pad, &t, best);

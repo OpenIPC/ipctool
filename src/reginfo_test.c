@@ -1019,6 +1019,55 @@ static void test_novatek(void) {
           !strcmp(r.func_name, "ETH_RMII"));
 
     CHECK(ipchw_padmux_set(54, "UART2_2_TX") == IPCHW_PADMUX_NO_FUNC);
+
+    puts("Novatek: the primary LCD, from pinmux_select_primary_lcd()");
+    nvt_boot_state();
+    /* PINMUX_LCD_SEL_PARALLE_RGB565: LCD_TYPE = LCDTYPE_ENUM_PARALLEL_LCD
+     * (3) in REG2[3:0], and L_GPIO1..8 handed over for the colour bits. */
+    CHECK(ipchw_padmux_set(0x60 + 1, "LCD_PARALLE_RGB565") == 0);
+    CHECK((reg_of(0xF0010008u) & 0xF) == 3);
+    CHECK(reg_of(0xF00100B8u) == ~(1u << 1));
+    CHECK(ipchw_padmux_get(0x60 + 1, &r) == 1 &&
+          !strcmp(r.func_name, "LCD_PARALLE_RGB565"));
+
+    /* A panel with DE: PLCD_DE (REG2 bit 6) set and L_GPIO0 handed over.
+     * Both the colour pin and the DE pin read as the LCD, and putting DE on
+     * its pin leaves the panel type where it is. */
+    nvt_boot_state();
+    fake_write(0xF0010008u, 3 | (1u << 6), 32);
+    fake_write(0xF00100B8u, ~3u, 32);
+    CHECK(ipchw_padmux_get(0x60 + 1, &r) == 1 &&
+          !strcmp(r.func_name, "LCD_PARALLE_RGB565"));
+    CHECK(ipchw_padmux_get(0x60 + 0, &r) == 1 &&
+          !strcmp(r.func_name, "LCD_DE_ENABLE"));
+    nvt_boot_state();
+    fake_write(0xF0010008u, 3, 32);
+    CHECK(ipchw_padmux_set(0x60 + 0, "LCD_DE_ENABLE") == 0);
+    CHECK(reg_of(0xF0010008u) == (3 | (1u << 6)));
+    as_chip(T31, "T31");
+}
+
+/* One driver, two dies: the na51055 driver branches on the chip ID, and the
+ * two tables are what it does as each. */
+static void test_novatek_na51055_na51084(void) {
+    puts("Novatek: NA51055 and NA51084 from one driver");
+    ipchw_padmux_t rows[8], r;
+
+    as_chip(CHIP_NA51084, "NT98528");
+    CHECK(ipchw_padmux_by_func("I2C4_1_SCL", rows, 8) >= 1);
+    CHECK(ipchw_padmux_by_func("TXD2", rows, 8) >= 1); /* RGMII */
+    /* No DSI group on these dies. */
+    CHECK(ipchw_padmux_get(0xE0 + 9, &r) == IPCHW_PADMUX_NO_PAD);
+    /* L_GPIO24 is bonded out here, and not on NA51089. */
+    CHECK(ipchw_padmux_by_pad(0x60 + 24, rows, 8) >= 1);
+
+    as_chip(CHIP_NA51055, "NA51055");
+    CHECK(ipchw_padmux_by_func("I2C4_1_SCL", rows, 8) == 0);
+    CHECK(ipchw_padmux_by_func("SPI3_3_CLK", rows, 8) >= 1);
+    CHECK(ipchw_padmux_by_pad(0x60 + 24, rows, 8) >= 1);
+
+    as_chip(CHIP_NA51089, "NT98566");
+    CHECK(ipchw_padmux_by_pad(0x60 + 24, rows, 8) == 0); /* not a pad here */
     as_chip(T31, "T31");
 }
 
@@ -1029,10 +1078,9 @@ static void test_novatek(void) {
  * field moved half-way unmuxes the peripheral from its other pads. */
 #include "hal/novatek_padmux.h"
 
-static void test_novatek_set_from_every_state(void) {
-    puts("Novatek: set() from every claim's state reads back or undoes");
-    as_chip(CHIP_NA51089, "NT98566");
-    const novatek_soc_t *soc = &NA51089_padmux;
+static void novatek_set_from_every_state(int chip, const char *name,
+                                         const novatek_soc_t *soc) {
+    as_chip(chip, name);
     int done = 0, refused = 0;
 
     for (int i = 0; i < soc->nclaims; i++) {
@@ -1085,9 +1133,16 @@ static void test_novatek_set_from_every_state(void) {
             }
         }
     }
-    printf("  (%d set, %d refused and undone)\n", done, refused);
+    printf("  %s: %d set, %d refused and undone\n", name, done, refused);
     CHECK(done > 0);
     as_chip(T31, "T31");
+}
+
+static void test_novatek_set_from_every_state(void) {
+    puts("Novatek: set() from every claim's state reads back or undoes");
+    novatek_set_from_every_state(CHIP_NA51089, "NT98566", &NA51089_padmux);
+    novatek_set_from_every_state(CHIP_NA51055, "NA51055", &NA51055_padmux);
+    novatek_set_from_every_state(CHIP_NA51084, "NT98528", &NA51084_padmux);
 }
 #endif
 
@@ -1113,6 +1168,12 @@ static void test_novatek_gpio_regs(void) {
     uint32_t base, len;
     CHECK(novatek_gpio_window(&base, &len));
     CHECK(base == 0xF0070000u && len == 0x80);
+
+    /* NA51055 and NA51084: 13 S, 25 L and 11 D pads, and no DSI. */
+    as_chip(CHIP_NA51084, "NT98528");
+    CHECK(novatek_gpio_valid(0x60 + 24) && !novatek_gpio_valid(0x60 + 25));
+    CHECK(novatek_gpio_valid(0x80 + 10) && !novatek_gpio_valid(0xE0));
+    CHECK(novatek_gpio_reg(0x60 + 24, NVT_GPIO_DATA) == 0xF007000Cu);
 
     as_chip(0, "none");
     CHECK(!novatek_gpio_supported());
@@ -1312,6 +1373,8 @@ static void test_table_integrity(void) {
 #endif
 #ifdef IPCHW_PADMUX_NOVATEK
         {CHIP_NA51089, "NT98566"},
+        {CHIP_NA51055, "NA51055"},
+        {CHIP_NA51084, "NT98528"},
 #endif
     };
 
@@ -1459,6 +1522,7 @@ int main(void) {
 #endif
 #ifdef IPCHW_PADMUX_NOVATEK
     test_novatek();
+    test_novatek_na51055_na51084();
     test_novatek_set_from_every_state();
 #endif
 #ifdef IPCHW_VENDOR_NOVATEK
