@@ -299,13 +299,23 @@ def parse_enums(text):
                           r"\s*(.*)$", line)
             if not mm or mm.group(1).startswith("ENUM_DUMMY"):
                 continue
-            try:
-                val = int(mm.group(2), 0) if mm.group(2) else None
-            except ValueError:
-                val = None
+            val = enum_value(mm.group(2)) if mm.group(2) else None
             members.append((mm.group(1), val, mm.group(3)))
         out[m.group(2)] = members
     return out
+
+
+def enum_value(expr):
+    """An enumerator's value: `0x40`, and also `0x01 << 23`, which is how
+    PINMUX_LCD_SEL spells its feature flags. Anything else -- another
+    enumerator's name, a macro -- is None, as a member with no value is."""
+    expr = expr.strip()
+    if not re.match(r"^[0-9a-fA-FxX\s<|()]+$", expr):
+        return None
+    try:
+        return int(eval(expr, {"__builtins__": {}}, {}))
+    except Exception:
+        return None
 
 
 def option_bits(enums, enum_name):
@@ -334,6 +344,8 @@ def lcd_options(enums):
         if name.endswith("_MSK"):
             continue
         (types if val is None else flags).append(name)
+    if not flags:
+        die("PINMUX_LCD_SEL has no feature flags this can read")
     return types, flags
 
 
@@ -389,7 +401,11 @@ def bonded_pads(gpio_h_text):
     for _, prefix, _, macro in GROUPS:
         m = re.search(r"#define\s+%s\s+(\d+)" % macro, gpio_h_text)
         if not m:
-            continue  # NA51055 has no DSI group
+            # NA51055 has no DSI group. Any other group missing is a
+            # renamed macro, and would drop every pad of it unseen.
+            if macro == "DSI_GPIO_NUM":
+                continue
+            die("nvt-gpio.h has no %s" % macro)
         pads.extend("%s%d" % (prefix, i) for i in range(int(m.group(1))))
     return pads
 
@@ -863,6 +879,7 @@ class Model:
         self.order = {f: i for i, (f, _) in enumerate(FUNCS)}
         self.claims = {}          # pad -> [Claim], resolver order
         self.chosen = {}          # (pad, conds, ungated) -> (unnamed?, name)
+        self.chosen_by = {}       # ... -> FUNCS index of the group named it
         self.explained = set()    # (option, pad) the code touches
         self.problems = []
         self.conflicts = 0        # states where two claims hold at once
@@ -958,8 +975,9 @@ class Model:
             if len(named) > 1:
                 self.problems.append("%s is %s under the same writes"
                                      % (key[0], " and ".join(sorted(named))))
-            u, _, n = min(cands)
+            u, order, n = min(cands)
             self.chosen[key] = (u, n)
+            self.chosen_by[key] = order
 
         # A state nothing names inherits the name of the state it extends:
         # SPI_CFG_CH1_2BITS on its own does everything CH1 does plus SPI_DAT,
@@ -971,6 +989,11 @@ class Model:
             pad, conds, ungated = key
             best = None
             for other, (u, name) in self.chosen.items():
+                # Only within one group: NA51055's RMII claims L_GPIO0 with
+                # no condition at all, and an empty set is a subset of every
+                # LCD state on that pad.
+                if self.chosen_by[other] != self.chosen_by[key]:
+                    continue
                 if (not u and other[0] == pad and other[2] == ungated and
                         len(other[1]) < len(conds) and
                         set(other[1]) <= set(conds) and
@@ -1350,8 +1373,8 @@ typedef enum {
 } PINMUX_ETH_CFG;
 typedef enum {
     PIN_MISC_CFG_NONE,
-    PIN_MISC_CFG_A = 1,
-    PIN_MISC_CFG_B = 2,
+    PIN_MISC_CFG_A = 0x1 << 0,
+    PIN_MISC_CFG_B = 0x1 << 1,
 } PINMUX_MISC_CFG;
 """,
     "BSP/linux-kernel/arch/arm/plat-novatek/include/plat-na51089/"
@@ -1501,6 +1524,7 @@ static int pinmux_config_misc(uint32_t config)
         break;
     case PIN_MISC_CFG_B:
         top_reg2.bit.LCD_TYPE = 2;
+        top_reg_pgpio0.bit.PGPIO_2 = GPIO_ID_EMUM_FUNC;
         break;
     default:
         break;
@@ -1579,8 +1603,12 @@ def selftest():
         check([c.name for c in rts] == ["UART2_2_RTS"], "C13 %s"
               % [c.name for c in rts])
         check(rts and len(rts[0].conds) == 2, "C13 needs UART2 and CTSRTS")
-        check(names("P_GPIO2") == {"UART2_1_TX", "SPI_CLK"}, "P2 %s"
-              % names("P_GPIO2"))
+        # SPI_CLK claims P_GPIO2 with no condition at all; MISC_B's claim
+        # there is a superset of that and of another group, and keeps its
+        # own name. MISC_B is also a `0x1 << 1`, which has to be read.
+        check(names("P_GPIO2") == {"UART2_1_TX", "SPI_CLK", "MISC_B"},
+              "P2 %s" % names("P_GPIO2"))
+        check(enum_value("0x01 << 23") == 1 << 23, "enum shift")
         check("SENSOR_12BITS" in names("H_GPIO0"), "H0 %s" % names("H_GPIO0"))
         # MCLK depends on SEN_MCLK alone, not on the sensor mode the same
         # call selected in another block.

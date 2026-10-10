@@ -14,9 +14,9 @@
 
 #include "hal/novatek_padmux_types.h"
 
-/* NA51089: 96566 vendor states replayed; in 19185 of them two claims hold
+/* NA51089: 96902 vendor states replayed; in 19185 of them two claims hold
  * at once and the table carries the one the vendor code meant,
- * and 478 leave a pad cleared with its field moved elsewhere,
+ * and 486 leave a pad cleared with its field moved elsewhere,
  * which reads as unnamed. */
 
 /* Every pad the package bonds out, by Linux GPIO number. */
@@ -288,6 +288,33 @@ static const novatek_cond_t NA51089_conds[] = {
     {0x08, 0, 4, 0},
     {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
+    {0x08, 0, 4, 1},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 2},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 2},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 1},
+    {0x08, 0, 4, 3},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 4},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 5},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 7},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 9},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 10},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
     {0x18, 25, 3, 5},
     {0x08, 0, 4, 2},
     {0x08, 6, 1, 0},
@@ -295,6 +322,9 @@ static const novatek_cond_t NA51089_conds[] = {
     {0x08, 0, 4, 1},
     {0x08, 6, 1, 0},
     {0x08, 8, 1, 0},
+    {0x08, 0, 4, 2},
+    {0x08, 6, 1, 0},
+    {0x08, 8, 1, 1},
     {0x08, 0, 4, 3},
     {0x08, 6, 1, 0},
     {0x08, 8, 1, 0},
@@ -363,6 +393,10 @@ static const novatek_cond_t NA51089_conds[] = {
     {0x14, 2, 2, 1},
     {0x14, 30, 2, 1},
     {0x18, 19, 3, 5},
+    {0x08, 0, 4, 9},
+    {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 10, 1, 1},
     {0x18, 28, 1, 1},
     {0x18, 22, 3, 5},
 };
@@ -639,60 +673,107 @@ static const novatek_claim_t NA51089_claims[] = {
     {72, 0, PMX_SENSOR2_MCLK_2ND, 157, 1}, /* S_GPIO8 */
     {72, 0, PMX_SPI_2_DO, 153, 1}, /* S_GPIO8 */
     {96, 0, PMX_LCD_DE_ENABLE, 158, 3}, /* L_GPIO0 */
-    {96, 0, PMX_PWM11_5, 161, 1}, /* L_GPIO0 */
-    {97, 0, PMX_LCD_CCIR601_16BITS, 162, 3}, /* L_GPIO1 */
-    {97, 0, PMX_LCD_CCIR656_16BITS, 165, 3}, /* L_GPIO1 */
-    {97, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* L_GPIO1 */
-    {97, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* L_GPIO1 */
-    {97, 0, PMX_PICNT2_1, 174, 1}, /* L_GPIO1 */
-    {98, 0, PMX_LCD_CCIR601_16BITS, 162, 3}, /* L_GPIO2 */
-    {98, 0, PMX_LCD_CCIR656_16BITS, 165, 3}, /* L_GPIO2 */
-    {98, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* L_GPIO2 */
-    {98, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* L_GPIO2 */
-    {98, 0, PMX_SP_CLK_2, 175, 1}, /* L_GPIO2 */
-    {99, 0, PMX_LCD_CCIR601_16BITS, 162, 3}, /* L_GPIO3 */
-    {99, 0, PMX_LCD_CCIR656_16BITS, 165, 3}, /* L_GPIO3 */
-    {99, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* L_GPIO3 */
-    {99, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* L_GPIO3 */
-    {100, 0, PMX_LCD_CCIR601_16BITS, 162, 3}, /* L_GPIO4 */
-    {100, 0, PMX_LCD_CCIR656_16BITS, 165, 3}, /* L_GPIO4 */
-    {100, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* L_GPIO4 */
-    {100, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* L_GPIO4 */
-    {101, 0, PMX_LCD_CCIR601_16BITS, 162, 3}, /* L_GPIO5 */
-    {101, 0, PMX_LCD_CCIR656_16BITS, 165, 3}, /* L_GPIO5 */
-    {101, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* L_GPIO5 */
-    {101, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* L_GPIO5 */
-    {102, 0, PMX_LCD_CCIR601_16BITS, 162, 3}, /* L_GPIO6 */
-    {102, 0, PMX_LCD_CCIR656_16BITS, 165, 3}, /* L_GPIO6 */
-    {102, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* L_GPIO6 */
-    {102, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* L_GPIO6 */
-    {103, 0, PMX_LCD_CCIR601_16BITS, 162, 3}, /* L_GPIO7 */
-    {103, 0, PMX_LCD_CCIR656_16BITS, 165, 3}, /* L_GPIO7 */
-    {103, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* L_GPIO7 */
-    {103, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* L_GPIO7 */
-    {104, 0, PMX_LCD_CCIR601_16BITS, 162, 3}, /* L_GPIO8 */
-    {104, 0, PMX_LCD_CCIR656_16BITS, 165, 3}, /* L_GPIO8 */
-    {104, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* L_GPIO8 */
-    {104, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* L_GPIO8 */
-    {128, 0, PMX_ETH_LED1, 176, 1}, /* D_GPIO0 */
-    {129, 0, PMX_ETH_LED1, 176, 1}, /* D_GPIO1 */
-    {131, 0, PMX_PWM4_4, 177, 1}, /* D_GPIO3 */
-    {131, 0, PMX_SB3_3_CS, 178, 1}, /* D_GPIO3 */
-    {131, 0, PMX_SP_CLK_3, 179, 1}, /* D_GPIO3 */
-    {132, 0, PMX_PWM5_4, 180, 1}, /* D_GPIO4 */
-    {132, 0, PMX_SB3_3_CK, 178, 1}, /* D_GPIO4 */
-    {132, 0, PMX_SP_CLK2_3, 181, 1}, /* D_GPIO4 */
-    {133, 0, PMX_ETH_LED2, 182, 1}, /* D_GPIO5 */
-    {133, 0, PMX_PWM6_4, 183, 1}, /* D_GPIO5 */
-    {133, 0, PMX_SB3_3_DAT, 178, 1}, /* D_GPIO5 */
-    {134, 0, PMX_ETH_LED2, 182, 1}, /* D_GPIO6 */
-    {134, 0, PMX_PWM7_4, 184, 1}, /* D_GPIO6 */
-    {135, 0, PMX_PWM11_4, 185, 1}, /* D_GPIO7 */
-    {160, 0, PMX_SENSOR_CCIR_2, 186, 2}, /* H_GPIO0 */
+    {96, 0, PMX_LCD_DE_ENABLE, 161, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_DE_ENABLE, 164, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_DE_ENABLE, 167, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_DE_ENABLE, 170, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_DE_ENABLE, 173, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_DE_ENABLE, 176, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_DE_ENABLE, 179, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_DE_ENABLE, 182, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_DE_ENABLE, 185, 3}, /* L_GPIO0 */
+    {96, 0, PMX_PWM11_5, 188, 1}, /* L_GPIO0 */
+    {97, 0, PMX_LCD_CCIR601_16BITS, 189, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR601_16BITS, 164, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR656_16BITS, 192, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR656_16BITS, 161, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_HVLD_VVLD, 195, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_HVLD_VVLD, 167, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* L_GPIO1 */
+    {97, 0, PMX_PICNT2_1, 204, 1}, /* L_GPIO1 */
+    {98, 0, PMX_LCD_CCIR601_16BITS, 189, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR601_16BITS, 164, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR656_16BITS, 192, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR656_16BITS, 161, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_HVLD_VVLD, 195, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_HVLD_VVLD, 167, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* L_GPIO2 */
+    {98, 0, PMX_SP_CLK_2, 205, 1}, /* L_GPIO2 */
+    {99, 0, PMX_LCD_CCIR601_16BITS, 189, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR601_16BITS, 164, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR656_16BITS, 192, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR656_16BITS, 161, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_FIELD, 195, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_FIELD, 167, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* L_GPIO3 */
+    {100, 0, PMX_LCD_CCIR601_16BITS, 189, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR601_16BITS, 164, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR656_16BITS, 192, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR656_16BITS, 161, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* L_GPIO4 */
+    {101, 0, PMX_LCD_CCIR601_16BITS, 189, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR601_16BITS, 164, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR656_16BITS, 192, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR656_16BITS, 161, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* L_GPIO5 */
+    {102, 0, PMX_LCD_CCIR601_16BITS, 189, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR601_16BITS, 164, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR656_16BITS, 192, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR656_16BITS, 161, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* L_GPIO6 */
+    {103, 0, PMX_LCD_CCIR601_16BITS, 189, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR601_16BITS, 164, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR656_16BITS, 192, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR656_16BITS, 161, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* L_GPIO7 */
+    {104, 0, PMX_LCD_CCIR601_16BITS, 189, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR601_16BITS, 164, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR656_16BITS, 192, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR656_16BITS, 161, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* L_GPIO8 */
+    {128, 0, PMX_ETH_LED1, 206, 1}, /* D_GPIO0 */
+    {129, 0, PMX_ETH_LED1, 206, 1}, /* D_GPIO1 */
+    {131, 0, PMX_PWM4_4, 207, 1}, /* D_GPIO3 */
+    {131, 0, PMX_SB3_3_CS, 208, 1}, /* D_GPIO3 */
+    {131, 0, PMX_SP_CLK_3, 209, 1}, /* D_GPIO3 */
+    {132, 0, PMX_PWM5_4, 210, 1}, /* D_GPIO4 */
+    {132, 0, PMX_SB3_3_CK, 208, 1}, /* D_GPIO4 */
+    {132, 0, PMX_SP_CLK2_3, 211, 1}, /* D_GPIO4 */
+    {133, 0, PMX_ETH_LED2, 212, 1}, /* D_GPIO5 */
+    {133, 0, PMX_PWM6_4, 213, 1}, /* D_GPIO5 */
+    {133, 0, PMX_SB3_3_DAT, 208, 1}, /* D_GPIO5 */
+    {134, 0, PMX_ETH_LED2, 212, 1}, /* D_GPIO6 */
+    {134, 0, PMX_PWM7_4, 214, 1}, /* D_GPIO6 */
+    {135, 0, PMX_PWM11_4, 215, 1}, /* D_GPIO7 */
+    {160, 0, PMX_SENSOR_CCIR_2, 216, 2}, /* H_GPIO0 */
     {160, 0, PMX_SENSOR_CCIR_2, 138, 1}, /* H_GPIO0 */
     {160, NVT_UNGATED, PMX_SENSOR_12BITS, 137, 1}, /* H_GPIO0 */
     {160, 0, PMX_MIPI_LVDS_DAT0, 1, 0}, /* H_GPIO0 */
-    {161, 0, PMX_SENSOR_CCIR_2, 186, 2}, /* H_GPIO1 */
+    {161, 0, PMX_SENSOR_CCIR_2, 216, 2}, /* H_GPIO1 */
     {161, 0, PMX_SENSOR_CCIR_2, 138, 1}, /* H_GPIO1 */
     {161, NVT_UNGATED, PMX_SENSOR_12BITS, 137, 1}, /* H_GPIO1 */
     {161, 0, PMX_MIPI_LVDS_DAT0, 1, 0}, /* H_GPIO1 */
@@ -712,158 +793,254 @@ static const novatek_claim_t NA51089_claims[] = {
     {165, NVT_UNGATED, PMX_SENSOR_CCIR16BITS, 52, 1}, /* H_GPIO5 */
     {165, NVT_UNGATED, PMX_SENSOR_CCIR8BITS, 138, 1}, /* H_GPIO5 */
     {165, 0, PMX_MIPI_LVDS_CLK0, 1, 0}, /* H_GPIO5 */
-    {166, 0, PMX_PWM8_3, 188, 1}, /* H_GPIO6 */
+    {166, 0, PMX_PWM8_3, 218, 1}, /* H_GPIO6 */
     {166, NVT_UNGATED, PMX_SENSOR_12BITS, 137, 1}, /* H_GPIO6 */
     {166, NVT_UNGATED, PMX_SENSOR_CCIR16BITS, 52, 1}, /* H_GPIO6 */
     {166, NVT_UNGATED, PMX_SENSOR_CCIR8BITS, 138, 1}, /* H_GPIO6 */
     {166, 0, PMX_MIPI_LVDS_DAT2, 1, 0}, /* H_GPIO6 */
-    {167, 0, PMX_PWM9_3, 189, 1}, /* H_GPIO7 */
-    {167, 0, PMX_SENSOR_LVDS_VDHD2, 190, 1}, /* H_GPIO7 */
+    {167, 0, PMX_PWM9_3, 219, 1}, /* H_GPIO7 */
+    {167, 0, PMX_SENSOR_LVDS_VDHD2, 220, 1}, /* H_GPIO7 */
     {167, NVT_UNGATED, PMX_SENSOR_12BITS, 137, 1}, /* H_GPIO7 */
     {167, NVT_UNGATED, PMX_SENSOR_CCIR16BITS, 52, 1}, /* H_GPIO7 */
     {167, NVT_UNGATED, PMX_SENSOR_CCIR8BITS, 138, 1}, /* H_GPIO7 */
     {167, 0, PMX_MIPI_LVDS_DAT2, 1, 0}, /* H_GPIO7 */
-    {168, 0, PMX_PWM10_3, 191, 1}, /* H_GPIO8 */
-    {168, 0, PMX_SENSOR_LVDS_VDHD2, 190, 1}, /* H_GPIO8 */
+    {168, 0, PMX_PWM10_3, 221, 1}, /* H_GPIO8 */
+    {168, 0, PMX_SENSOR_LVDS_VDHD2, 220, 1}, /* H_GPIO8 */
     {168, NVT_UNGATED, PMX_SENSOR_12BITS, 137, 1}, /* H_GPIO8 */
     {168, NVT_UNGATED, PMX_SENSOR_CCIR16BITS, 52, 1}, /* H_GPIO8 */
     {168, NVT_UNGATED, PMX_SENSOR_CCIR8BITS, 138, 1}, /* H_GPIO8 */
     {168, 0, PMX_MIPI_LVDS_DAT3, 1, 0}, /* H_GPIO8 */
-    {169, 0, PMX_I2C_2_SCL, 192, 1}, /* H_GPIO9 */
-    {169, 0, PMX_PWM11_3, 193, 1}, /* H_GPIO9 */
+    {169, 0, PMX_I2C_2_SCL, 222, 1}, /* H_GPIO9 */
+    {169, 0, PMX_PWM11_3, 223, 1}, /* H_GPIO9 */
     {169, NVT_UNGATED, PMX_SENSOR_12BITS, 137, 1}, /* H_GPIO9 */
     {169, NVT_UNGATED, PMX_SENSOR_CCIR16BITS, 52, 1}, /* H_GPIO9 */
     {169, NVT_UNGATED, PMX_SENSOR_CCIR8BITS, 138, 1}, /* H_GPIO9 */
     {169, 0, PMX_MIPI_LVDS_DAT3, 1, 0}, /* H_GPIO9 */
-    {170, 0, PMX_SENSOR_CCIR_2, 186, 2}, /* H_GPIO10 */
-    {170, 0, PMX_I2C_2_SDA, 192, 1}, /* H_GPIO10 */
+    {170, 0, PMX_SENSOR_CCIR_2, 216, 2}, /* H_GPIO10 */
+    {170, 0, PMX_I2C_2_SDA, 222, 1}, /* H_GPIO10 */
     {170, 0, PMX_SENSOR_CCIR_2, 138, 1}, /* H_GPIO10 */
     {170, NVT_UNGATED, PMX_SENSOR_12BITS, 137, 1}, /* H_GPIO10 */
     {170, 0, PMX_MIPI_LVDS_CLK1, 1, 0}, /* H_GPIO10 */
-    {171, 0, PMX_SENSOR_MCLK_2ND, 194, 3}, /* H_GPIO11 */
-    {171, 0, PMX_SENSOR_CCIR_2, 186, 2}, /* H_GPIO11 */
-    {171, 0, PMX_SENSOR_MCLK_2ND, 197, 2}, /* H_GPIO11 */
+    {171, 0, PMX_SENSOR_MCLK_2ND, 224, 3}, /* H_GPIO11 */
+    {171, 0, PMX_SENSOR_CCIR_2, 216, 2}, /* H_GPIO11 */
+    {171, 0, PMX_SENSOR_MCLK_2ND, 227, 2}, /* H_GPIO11 */
     {171, 0, PMX_SENSOR_CCIR_2, 138, 1}, /* H_GPIO11 */
-    {171, 0, PMX_SENSOR_MCLK_2ND, 199, 1}, /* H_GPIO11 */
+    {171, 0, PMX_SENSOR_MCLK_2ND, 229, 1}, /* H_GPIO11 */
     {171, NVT_UNGATED, PMX_SENSOR_12BITS, 137, 1}, /* H_GPIO11 */
     {171, 0, PMX_MIPI_LVDS_CLK1, 1, 0}, /* H_GPIO11 */
-    {224, 0, PMX_LCD_CCIR601, 162, 3}, /* DSI_GPIO0 */
-    {224, 0, PMX_LCD_CCIR656, 165, 3}, /* DSI_GPIO0 */
-    {224, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* DSI_GPIO0 */
-    {224, 0, PMX_LCD_PARALLE_RGB888, 200, 3}, /* DSI_GPIO0 */
-    {224, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* DSI_GPIO0 */
-    {224, 0, PMX_LCD_SERIAL_RGB_8BITS, 203, 3}, /* DSI_GPIO0 */
-    {224, 0, PMX_ETH_MDIO, 206, 1}, /* DSI_GPIO0 */
-    {224, 0, PMX_PWM0_5, 207, 1}, /* DSI_GPIO0 */
-    {224, 0, PMX_UART3_1_TX, 208, 1}, /* DSI_GPIO0 */
-    {225, 0, PMX_LCD_CCIR601, 162, 3}, /* DSI_GPIO1 */
-    {225, 0, PMX_LCD_CCIR656, 165, 3}, /* DSI_GPIO1 */
-    {225, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* DSI_GPIO1 */
-    {225, 0, PMX_LCD_PARALLE_RGB888, 200, 3}, /* DSI_GPIO1 */
-    {225, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* DSI_GPIO1 */
-    {225, 0, PMX_LCD_SERIAL_RGB_8BITS, 203, 3}, /* DSI_GPIO1 */
-    {225, 0, PMX_ETH_MDIO, 206, 1}, /* DSI_GPIO1 */
-    {225, 0, PMX_PWM1_5, 209, 1}, /* DSI_GPIO1 */
-    {225, 0, PMX_UART3_1_RX, 208, 1}, /* DSI_GPIO1 */
-    {226, 0, PMX_LCD_CCIR601, 162, 3}, /* DSI_GPIO2 */
-    {226, 0, PMX_LCD_CCIR656, 165, 3}, /* DSI_GPIO2 */
-    {226, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* DSI_GPIO2 */
-    {226, 0, PMX_LCD_PARALLE_RGB888, 200, 3}, /* DSI_GPIO2 */
-    {226, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* DSI_GPIO2 */
-    {226, 0, PMX_LCD_SERIAL_RGB_6BITS, 210, 3}, /* DSI_GPIO2 */
-    {226, 0, PMX_LCD_SERIAL_RGB_8BITS, 203, 3}, /* DSI_GPIO2 */
-    {226, 0, PMX_UART3_1_RTS, 213, 2}, /* DSI_GPIO2 */
-    {226, 0, PMX_UART3_1_RTS, 215, 2}, /* DSI_GPIO2 */
-    {226, 0, PMX_ETH_RMII, 217, 1}, /* DSI_GPIO2 */
-    {226, 0, PMX_PWM2_5, 218, 1}, /* DSI_GPIO2 */
-    {226, 0, PMX_SDIO2_D0, 219, 1}, /* DSI_GPIO2 */
-    {227, 0, PMX_LCD_CCIR601, 162, 3}, /* DSI_GPIO3 */
-    {227, 0, PMX_LCD_CCIR656, 165, 3}, /* DSI_GPIO3 */
-    {227, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* DSI_GPIO3 */
-    {227, 0, PMX_LCD_PARALLE_RGB888, 200, 3}, /* DSI_GPIO3 */
-    {227, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* DSI_GPIO3 */
-    {227, 0, PMX_LCD_SERIAL_RGB_6BITS, 210, 3}, /* DSI_GPIO3 */
-    {227, 0, PMX_LCD_SERIAL_RGB_8BITS, 203, 3}, /* DSI_GPIO3 */
-    {227, 0, PMX_UART3_1_CTS, 213, 2}, /* DSI_GPIO3 */
-    {227, 0, PMX_ETH_RMII, 217, 1}, /* DSI_GPIO3 */
-    {227, 0, PMX_PWM3_5, 220, 1}, /* DSI_GPIO3 */
-    {227, 0, PMX_SDIO2_D1, 219, 1}, /* DSI_GPIO3 */
-    {228, 0, PMX_LCD_CCIR601, 162, 3}, /* DSI_GPIO4 */
-    {228, 0, PMX_LCD_CCIR656, 165, 3}, /* DSI_GPIO4 */
-    {228, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* DSI_GPIO4 */
-    {228, 0, PMX_LCD_PARALLE_RGB888, 200, 3}, /* DSI_GPIO4 */
-    {228, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* DSI_GPIO4 */
-    {228, 0, PMX_LCD_SERIAL_RGB_6BITS, 210, 3}, /* DSI_GPIO4 */
-    {228, 0, PMX_LCD_SERIAL_RGB_8BITS, 203, 3}, /* DSI_GPIO4 */
-    {228, 0, PMX_ETH_RMII, 217, 1}, /* DSI_GPIO4 */
-    {228, 0, PMX_PWM4_5, 221, 1}, /* DSI_GPIO4 */
-    {228, 0, PMX_SDIO2_D2, 219, 1}, /* DSI_GPIO4 */
-    {228, 0, PMX_SPI2_1_CS, 222, 1}, /* DSI_GPIO4 */
-    {229, 0, PMX_LCD_CCIR601, 162, 3}, /* DSI_GPIO5 */
-    {229, 0, PMX_LCD_CCIR656, 165, 3}, /* DSI_GPIO5 */
-    {229, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* DSI_GPIO5 */
-    {229, 0, PMX_LCD_PARALLE_RGB888, 200, 3}, /* DSI_GPIO5 */
-    {229, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* DSI_GPIO5 */
-    {229, 0, PMX_LCD_SERIAL_RGB_6BITS, 210, 3}, /* DSI_GPIO5 */
-    {229, 0, PMX_LCD_SERIAL_RGB_8BITS, 203, 3}, /* DSI_GPIO5 */
-    {229, 0, PMX_ETH_RMII, 217, 1}, /* DSI_GPIO5 */
-    {229, 0, PMX_PWM5_5, 223, 1}, /* DSI_GPIO5 */
-    {229, 0, PMX_SDIO2_D3, 219, 1}, /* DSI_GPIO5 */
-    {229, 0, PMX_SPI2_1_CLK, 222, 1}, /* DSI_GPIO5 */
-    {230, 0, PMX_LCD_CCIR601, 162, 3}, /* DSI_GPIO6 */
-    {230, 0, PMX_LCD_CCIR656, 165, 3}, /* DSI_GPIO6 */
-    {230, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* DSI_GPIO6 */
-    {230, 0, PMX_LCD_PARALLE_RGB888, 200, 3}, /* DSI_GPIO6 */
-    {230, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* DSI_GPIO6 */
-    {230, 0, PMX_LCD_SERIAL_RGB_6BITS, 210, 3}, /* DSI_GPIO6 */
-    {230, 0, PMX_LCD_SERIAL_RGB_8BITS, 203, 3}, /* DSI_GPIO6 */
-    {230, 0, PMX_PWM6_5, 224, 1}, /* DSI_GPIO6 */
-    {230, 0, PMX_SDIO2_CMD, 219, 1}, /* DSI_GPIO6 */
-    {230, 0, PMX_SPI2_1_DO, 222, 1}, /* DSI_GPIO6 */
-    {231, 0, PMX_LCD_CCIR601, 162, 3}, /* DSI_GPIO7 */
-    {231, 0, PMX_LCD_CCIR656, 165, 3}, /* DSI_GPIO7 */
-    {231, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* DSI_GPIO7 */
-    {231, 0, PMX_LCD_PARALLE_RGB888, 200, 3}, /* DSI_GPIO7 */
-    {231, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* DSI_GPIO7 */
-    {231, 0, PMX_LCD_SERIAL_RGB_6BITS, 210, 3}, /* DSI_GPIO7 */
-    {231, 0, PMX_LCD_SERIAL_RGB_8BITS, 203, 3}, /* DSI_GPIO7 */
-    {231, 0, PMX_SPI2_1_DI, 225, 2}, /* DSI_GPIO7 */
-    {231, 0, PMX_ETH_RMII, 217, 1}, /* DSI_GPIO7 */
-    {231, 0, PMX_PWM7_5, 227, 1}, /* DSI_GPIO7 */
-    {231, 0, PMX_SDIO2_CLK, 219, 1}, /* DSI_GPIO7 */
-    {232, 0, PMX_DMDAT0_2, 228, 3}, /* DSI_GPIO8 */
-    {232, 0, PMX_LCD_NO_HVSYNC, 162, 3}, /* DSI_GPIO8 */
-    {232, 0, PMX_LCD_NO_HVSYNC, 168, 3}, /* DSI_GPIO8 */
-    {232, 0, PMX_LCD_NO_HVSYNC, 203, 3}, /* DSI_GPIO8 */
-    {232, 0, PMX_LCD_NO_HVSYNC, 210, 3}, /* DSI_GPIO8 */
-    {232, 0, PMX_LCD_NO_HVSYNC, 171, 3}, /* DSI_GPIO8 */
-    {232, 0, PMX_LCD_NO_HVSYNC, 200, 3}, /* DSI_GPIO8 */
-    {232, 0, PMX_ETH_RMII, 217, 1}, /* DSI_GPIO8 */
-    {232, 0, PMX_I2C3_3_SDA, 231, 1}, /* DSI_GPIO8 */
-    {232, 0, PMX_PWM8_5, 232, 1}, /* DSI_GPIO8 */
-    {233, 0, PMX_DMDAT1_2, 228, 3}, /* DSI_GPIO9 */
-    {233, 0, PMX_LCD_NO_HVSYNC, 162, 3}, /* DSI_GPIO9 */
-    {233, 0, PMX_LCD_NO_HVSYNC, 168, 3}, /* DSI_GPIO9 */
-    {233, 0, PMX_LCD_NO_HVSYNC, 203, 3}, /* DSI_GPIO9 */
-    {233, 0, PMX_LCD_NO_HVSYNC, 210, 3}, /* DSI_GPIO9 */
-    {233, 0, PMX_LCD_NO_HVSYNC, 171, 3}, /* DSI_GPIO9 */
-    {233, 0, PMX_LCD_NO_HVSYNC, 200, 3}, /* DSI_GPIO9 */
-    {233, 0, PMX_ETH_RMII, 233, 2}, /* DSI_GPIO9 */
-    {233, 0, PMX_ETH_MDIO, 206, 1}, /* DSI_GPIO9 */
-    {233, 0, PMX_ETH_RMII, 217, 1}, /* DSI_GPIO9 */
-    {233, 0, PMX_I2C3_3_SCL, 231, 1}, /* DSI_GPIO9 */
-    {233, 0, PMX_PWM9_5, 235, 1}, /* DSI_GPIO9 */
-    {234, 0, PMX_DMCLK_2, 228, 3}, /* DSI_GPIO10 */
-    {234, 0, PMX_LCD_CCIR601, 162, 3}, /* DSI_GPIO10 */
-    {234, 0, PMX_LCD_CCIR656, 165, 3}, /* DSI_GPIO10 */
-    {234, 0, PMX_LCD_PARALLE_RGB565, 168, 3}, /* DSI_GPIO10 */
-    {234, 0, PMX_LCD_PARALLE_RGB888, 200, 3}, /* DSI_GPIO10 */
-    {234, 0, PMX_LCD_RGB_16BITS, 171, 3}, /* DSI_GPIO10 */
-    {234, 0, PMX_LCD_SERIAL_RGB_6BITS, 210, 3}, /* DSI_GPIO10 */
-    {234, 0, PMX_LCD_SERIAL_RGB_8BITS, 203, 3}, /* DSI_GPIO10 */
-    {234, 0, PMX_ETH_EXTPHYCLK, 236, 1}, /* DSI_GPIO10 */
-    {234, 0, PMX_ETH_MDIO, 206, 1}, /* DSI_GPIO10 */
-    {234, 0, PMX_PWM10_5, 237, 1}, /* DSI_GPIO10 */
+    {224, 0, PMX_LCD_CCIR601, 189, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_CCIR601, 195, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_CCIR601, 164, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_CCIR601, 167, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_CCIR656, 192, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_CCIR656, 161, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_PARALLE_RGB888, 230, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_PARALLE_RGB888, 185, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_SERIAL_RGB_8BITS, 233, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_LCD_SERIAL_RGB_8BITS, 173, 3}, /* DSI_GPIO0 */
+    {224, 0, PMX_ETH_MDIO, 236, 1}, /* DSI_GPIO0 */
+    {224, 0, PMX_PWM0_5, 237, 1}, /* DSI_GPIO0 */
+    {224, 0, PMX_UART3_1_TX, 238, 1}, /* DSI_GPIO0 */
+    {225, 0, PMX_LCD_CCIR601, 189, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_CCIR601, 195, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_CCIR601, 164, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_CCIR601, 167, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_CCIR656, 192, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_CCIR656, 161, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_PARALLE_RGB888, 230, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_PARALLE_RGB888, 185, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_SERIAL_RGB_8BITS, 233, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_LCD_SERIAL_RGB_8BITS, 173, 3}, /* DSI_GPIO1 */
+    {225, 0, PMX_ETH_MDIO, 236, 1}, /* DSI_GPIO1 */
+    {225, 0, PMX_PWM1_5, 239, 1}, /* DSI_GPIO1 */
+    {225, 0, PMX_UART3_1_RX, 238, 1}, /* DSI_GPIO1 */
+    {226, 0, PMX_LCD_CCIR601, 189, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_CCIR601, 195, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_CCIR601, 164, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_CCIR601, 167, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_CCIR656, 192, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_CCIR656, 161, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_PARALLE_RGB888, 230, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_PARALLE_RGB888, 185, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_SERIAL_RGB_6BITS, 240, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_SERIAL_RGB_6BITS, 176, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_SERIAL_RGB_8BITS, 233, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_LCD_SERIAL_RGB_8BITS, 173, 3}, /* DSI_GPIO2 */
+    {226, 0, PMX_UART3_1_RTS, 243, 2}, /* DSI_GPIO2 */
+    {226, 0, PMX_UART3_1_RTS, 245, 2}, /* DSI_GPIO2 */
+    {226, 0, PMX_ETH_RMII, 247, 1}, /* DSI_GPIO2 */
+    {226, 0, PMX_PWM2_5, 248, 1}, /* DSI_GPIO2 */
+    {226, 0, PMX_SDIO2_D0, 249, 1}, /* DSI_GPIO2 */
+    {227, 0, PMX_LCD_CCIR601, 189, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_CCIR601, 195, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_CCIR601, 164, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_CCIR601, 167, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_CCIR656, 192, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_CCIR656, 161, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_PARALLE_RGB888, 230, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_PARALLE_RGB888, 185, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_SERIAL_RGB_6BITS, 240, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_SERIAL_RGB_6BITS, 176, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_SERIAL_RGB_8BITS, 233, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_LCD_SERIAL_RGB_8BITS, 173, 3}, /* DSI_GPIO3 */
+    {227, 0, PMX_UART3_1_CTS, 243, 2}, /* DSI_GPIO3 */
+    {227, 0, PMX_ETH_RMII, 247, 1}, /* DSI_GPIO3 */
+    {227, 0, PMX_PWM3_5, 250, 1}, /* DSI_GPIO3 */
+    {227, 0, PMX_SDIO2_D1, 249, 1}, /* DSI_GPIO3 */
+    {228, 0, PMX_LCD_CCIR601, 189, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_CCIR601, 195, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_CCIR601, 164, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_CCIR601, 167, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_CCIR656, 192, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_CCIR656, 161, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_PARALLE_RGB888, 230, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_PARALLE_RGB888, 185, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_SERIAL_RGB_6BITS, 240, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_SERIAL_RGB_6BITS, 176, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_SERIAL_RGB_8BITS, 233, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_LCD_SERIAL_RGB_8BITS, 173, 3}, /* DSI_GPIO4 */
+    {228, 0, PMX_ETH_RMII, 247, 1}, /* DSI_GPIO4 */
+    {228, 0, PMX_PWM4_5, 251, 1}, /* DSI_GPIO4 */
+    {228, 0, PMX_SDIO2_D2, 249, 1}, /* DSI_GPIO4 */
+    {228, 0, PMX_SPI2_1_CS, 252, 1}, /* DSI_GPIO4 */
+    {229, 0, PMX_LCD_CCIR601, 189, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_CCIR601, 195, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_CCIR601, 164, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_CCIR601, 167, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_CCIR656, 192, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_CCIR656, 161, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_PARALLE_RGB888, 230, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_PARALLE_RGB888, 185, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_SERIAL_RGB_6BITS, 240, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_SERIAL_RGB_6BITS, 176, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_SERIAL_RGB_8BITS, 233, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_LCD_SERIAL_RGB_8BITS, 173, 3}, /* DSI_GPIO5 */
+    {229, 0, PMX_ETH_RMII, 247, 1}, /* DSI_GPIO5 */
+    {229, 0, PMX_PWM5_5, 253, 1}, /* DSI_GPIO5 */
+    {229, 0, PMX_SDIO2_D3, 249, 1}, /* DSI_GPIO5 */
+    {229, 0, PMX_SPI2_1_CLK, 252, 1}, /* DSI_GPIO5 */
+    {230, 0, PMX_LCD_CCIR601, 189, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_CCIR601, 195, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_CCIR601, 164, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_CCIR601, 167, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_CCIR656, 192, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_CCIR656, 161, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_PARALLE_RGB888, 230, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_PARALLE_RGB888, 185, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_SERIAL_RGB_6BITS, 240, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_SERIAL_RGB_6BITS, 176, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_SERIAL_RGB_8BITS, 233, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_LCD_SERIAL_RGB_8BITS, 173, 3}, /* DSI_GPIO6 */
+    {230, 0, PMX_PWM6_5, 254, 1}, /* DSI_GPIO6 */
+    {230, 0, PMX_SDIO2_CMD, 249, 1}, /* DSI_GPIO6 */
+    {230, 0, PMX_SPI2_1_DO, 252, 1}, /* DSI_GPIO6 */
+    {231, 0, PMX_LCD_CCIR601, 189, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_CCIR601, 195, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_CCIR601, 164, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_CCIR601, 167, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_CCIR656, 192, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_CCIR656, 161, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_PARALLE_RGB888, 230, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_PARALLE_RGB888, 185, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_SERIAL_RGB_6BITS, 240, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_SERIAL_RGB_6BITS, 176, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_SERIAL_RGB_8BITS, 233, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_LCD_SERIAL_RGB_8BITS, 173, 3}, /* DSI_GPIO7 */
+    {231, 0, PMX_SPI2_1_DI, 255, 2}, /* DSI_GPIO7 */
+    {231, 0, PMX_ETH_RMII, 247, 1}, /* DSI_GPIO7 */
+    {231, 0, PMX_PWM7_5, 257, 1}, /* DSI_GPIO7 */
+    {231, 0, PMX_SDIO2_CLK, 249, 1}, /* DSI_GPIO7 */
+    {232, 0, PMX_DMDAT0_2, 258, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 189, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 195, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 164, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 167, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 198, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 170, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 233, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 173, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 240, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 176, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 201, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 179, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 230, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_LCD_NO_HVSYNC, 185, 3}, /* DSI_GPIO8 */
+    {232, 0, PMX_ETH_RMII, 247, 1}, /* DSI_GPIO8 */
+    {232, 0, PMX_I2C3_3_SDA, 261, 1}, /* DSI_GPIO8 */
+    {232, 0, PMX_PWM8_5, 262, 1}, /* DSI_GPIO8 */
+    {233, 0, PMX_DMDAT1_2, 258, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 189, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 195, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 164, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 167, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 198, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 170, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 233, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 173, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 240, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 176, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 201, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 179, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 230, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_LCD_NO_HVSYNC, 185, 3}, /* DSI_GPIO9 */
+    {233, 0, PMX_ETH_RMII, 263, 2}, /* DSI_GPIO9 */
+    {233, 0, PMX_ETH_MDIO, 236, 1}, /* DSI_GPIO9 */
+    {233, 0, PMX_ETH_RMII, 247, 1}, /* DSI_GPIO9 */
+    {233, 0, PMX_I2C3_3_SCL, 261, 1}, /* DSI_GPIO9 */
+    {233, 0, PMX_PWM9_5, 265, 1}, /* DSI_GPIO9 */
+    {234, 0, PMX_LCD_TE_ENABLE, 266, 4}, /* DSI_GPIO10 */
+    {234, 0, PMX_DMCLK_2, 258, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_CCIR601, 189, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_CCIR601, 195, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_CCIR601, 164, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_CCIR601, 167, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_CCIR656, 192, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_CCIR656, 161, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_PARALLE_RGB565, 198, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_PARALLE_RGB565, 170, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_PARALLE_RGB888, 230, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_PARALLE_RGB888, 185, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_RGB_16BITS, 201, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_RGB_16BITS, 179, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_SERIAL_RGB_6BITS, 240, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_SERIAL_RGB_6BITS, 176, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_SERIAL_RGB_8BITS, 233, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_LCD_SERIAL_RGB_8BITS, 173, 3}, /* DSI_GPIO10 */
+    {234, 0, PMX_ETH_EXTPHYCLK, 270, 1}, /* DSI_GPIO10 */
+    {234, 0, PMX_ETH_MDIO, 236, 1}, /* DSI_GPIO10 */
+    {234, 0, PMX_PWM10_5, 271, 1}, /* DSI_GPIO10 */
 };
 
 /* The field each function's walk row shows: {pad, name, reg,
@@ -1125,20 +1302,23 @@ static const novatek_sel_t NA51089_sels[] = {
     {72, PMX_SDIO2_D3, 0x04, 18, 2, 2},
     {72, PMX_SENSOR2_MCLK_2ND, 0x0C, 12, 2, 2},
     {72, PMX_SPI_2_DO, 0x14, 8, 2, 2},
-    {96, PMX_LCD_DE_ENABLE, 0x08, 0, 4, 0},
+    {96, PMX_LCD_DE_ENABLE, 0x08, 6, 1, 1},
     {96, PMX_PWM11_5, 0x18, 25, 3, 5},
     {97, PMX_LCD_CCIR601_16BITS, 0x08, 0, 4, 2},
     {97, PMX_LCD_CCIR656_16BITS, 0x08, 0, 4, 1},
+    {97, PMX_LCD_HVLD_VVLD, 0x08, 8, 1, 1},
     {97, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
     {97, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
     {97, PMX_PICNT2_1, 0x1C, 28, 2, 1},
     {98, PMX_LCD_CCIR601_16BITS, 0x08, 0, 4, 2},
     {98, PMX_LCD_CCIR656_16BITS, 0x08, 0, 4, 1},
+    {98, PMX_LCD_HVLD_VVLD, 0x08, 8, 1, 1},
     {98, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
     {98, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
     {98, PMX_SP_CLK_2, 0x0C, 18, 2, 2},
     {99, PMX_LCD_CCIR601_16BITS, 0x08, 0, 4, 2},
     {99, PMX_LCD_CCIR656_16BITS, 0x08, 0, 4, 1},
+    {99, PMX_LCD_FIELD, 0x08, 8, 1, 1},
     {99, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
     {99, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
     {100, PMX_LCD_CCIR601_16BITS, 0x08, 0, 4, 2},
@@ -1312,16 +1492,17 @@ static const novatek_sel_t NA51089_sels[] = {
     {231, PMX_PWM7_5, 0x1C, 21, 3, 5},
     {231, PMX_SDIO2_CLK, 0x04, 18, 2, 3},
     {232, PMX_DMDAT0_2, 0x18, 5, 1, 1},
-    {232, PMX_LCD_NO_HVSYNC, 0x08, 6, 1, 0},
+    {232, PMX_LCD_NO_HVSYNC, 0x08, 0, 4, 2},
     {232, PMX_ETH_RMII, 0x14, 30, 2, 1},
     {232, PMX_I2C3_3_SDA, 0x14, 6, 2, 3},
     {232, PMX_PWM8_5, 0x18, 16, 3, 5},
     {233, PMX_DMDAT1_2, 0x18, 5, 1, 1},
-    {233, PMX_LCD_NO_HVSYNC, 0x08, 6, 1, 0},
+    {233, PMX_LCD_NO_HVSYNC, 0x08, 0, 4, 2},
     {233, PMX_ETH_RMII, 0x14, 30, 2, 1},
     {233, PMX_ETH_MDIO, 0x14, 2, 2, 1},
     {233, PMX_I2C3_3_SCL, 0x14, 6, 2, 3},
     {233, PMX_PWM9_5, 0x18, 19, 3, 5},
+    {234, PMX_LCD_TE_ENABLE, 0x08, 0, 4, 9},
     {234, PMX_DMCLK_2, 0x18, 5, 1, 1},
     {234, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
     {234, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
@@ -1336,13 +1517,13 @@ static const novatek_sel_t NA51089_sels[] = {
 };
 
 static const novatek_soc_t NA51089_padmux = {
-    NA51089_pads, 102, NA51089_claims, 493, NA51089_conds,
-    NA51089_sels, 464,
+    NA51089_pads, 102, NA51089_claims, 636, NA51089_conds,
+    NA51089_sels, 468,
 };
 
-/* NA51055: 83348 vendor states replayed; in 25570 of them two claims hold
+/* NA51055: 83715 vendor states replayed; in 28642 of them two claims hold
  * at once and the table carries the one the vendor code meant,
- * and 284 leave a pad cleared with its field moved elsewhere,
+ * and 292 leave a pad cleared with its field moved elsewhere,
  * which reads as unnamed. */
 
 /* Every pad the package bonds out, by Linux GPIO number. */
@@ -1637,31 +1818,61 @@ static const novatek_cond_t NA51055_conds[] = {
     {0x14, 8, 2, 2},
     {0x14, 16, 1, 1},
     {0x0C, 12, 2, 2},
-    {0x08, 0, 4, 1},
+    {0x08, 0, 4, 2},
     {0x08, 6, 1, 0},
     {0x08, 8, 1, 0},
     {0x08, 0, 4, 2},
     {0x08, 6, 1, 0},
+    {0x08, 8, 1, 1},
+    {0x08, 0, 4, 2},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 2},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 1},
+    {0x08, 0, 4, 1},
+    {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 1},
+    {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
     {0x08, 0, 4, 3},
     {0x08, 6, 1, 0},
     {0x08, 8, 1, 0},
-    {0x08, 0, 4, 4},
-    {0x08, 6, 1, 0},
-    {0x08, 8, 1, 0},
-    {0x08, 0, 4, 7},
-    {0x08, 6, 1, 0},
+    {0x08, 0, 4, 3},
+    {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
     {0x08, 0, 4, 8},
     {0x08, 6, 1, 0},
     {0x08, 8, 1, 0},
+    {0x08, 0, 4, 8},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
     {0x08, 0, 4, 10},
     {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 10},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 7},
+    {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 7},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 4},
+    {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 4},
+    {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
     {0x1C, 0, 3, 5},
     {0x1C, 3, 3, 5},
     {0x08, 0, 4, 5},
     {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 5},
+    {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
     {0x1C, 6, 3, 5},
     {0x1C, 9, 3, 5},
@@ -1676,7 +1887,14 @@ static const novatek_cond_t NA51055_conds[] = {
     {0x08, 0, 4, 0},
     {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
+    {0x08, 0, 4, 9},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
     {0x18, 25, 3, 5},
+    {0x08, 0, 4, 9},
+    {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 10, 1, 1},
     {0x14, 24, 2, 1},
     {0x18, 13, 2, 1},
     {0x18, 7, 2, 3},
@@ -1984,184 +2202,349 @@ static const novatek_claim_t NA51055_claims[] = {
     {75, 0, PMX_SPI_2_DO, 168, 1}, /* S_GPIO11 */
     {76, 0, PMX_SPI_2_DI, 170, 2}, /* S_GPIO12 */
     {76, 0, PMX_SENSOR2_MCLK_2ND, 172, 1}, /* S_GPIO12 */
-    {96, 0, PMX_TXD0, 173, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 176, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 179, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 182, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 185, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 188, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 191, 3}, /* L_GPIO0 */
-    {96, 0, PMX_PWM0_5, 194, 1}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR601, 173, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR601, 176, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR601, 179, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR601, 182, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR656, 185, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR656, 188, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB888, 203, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB888, 206, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_SERIAL_RGB_8BITS, 215, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_SERIAL_RGB_8BITS, 218, 3}, /* L_GPIO0 */
+    {96, 0, PMX_PWM0_5, 221, 1}, /* L_GPIO0 */
     {96, 0, PMX_TXD0, 1, 0}, /* L_GPIO0 */
-    {97, 0, PMX_TXD1, 173, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 176, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 179, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 182, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 185, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 188, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 191, 3}, /* L_GPIO1 */
-    {97, 0, PMX_PWM1_5, 195, 1}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR601, 173, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR601, 176, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR601, 179, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR601, 182, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR656, 185, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR656, 188, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB888, 203, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB888, 206, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_SERIAL_RGB_8BITS, 215, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_SERIAL_RGB_8BITS, 218, 3}, /* L_GPIO1 */
+    {97, 0, PMX_PWM1_5, 222, 1}, /* L_GPIO1 */
     {97, 0, PMX_TXD1, 1, 0}, /* L_GPIO1 */
-    {98, 0, PMX_TX_EN, 173, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 176, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 179, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 182, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 196, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 185, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 188, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 191, 3}, /* L_GPIO2 */
-    {98, 0, PMX_PWM2_5, 199, 1}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR601, 173, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR601, 176, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR601, 179, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR601, 182, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR656, 185, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR656, 188, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB888, 203, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB888, 206, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_SERIAL_RGB_6BITS, 223, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_SERIAL_RGB_6BITS, 226, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_SERIAL_RGB_8BITS, 215, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_SERIAL_RGB_8BITS, 218, 3}, /* L_GPIO2 */
+    {98, 0, PMX_PWM2_5, 229, 1}, /* L_GPIO2 */
     {98, 0, PMX_TX_EN, 1, 0}, /* L_GPIO2 */
-    {99, 0, PMX_RXD0, 173, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 176, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 179, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 182, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 196, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 185, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 188, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 191, 3}, /* L_GPIO3 */
-    {99, 0, PMX_PWM3_5, 200, 1}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR601, 173, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR601, 176, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR601, 179, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR601, 182, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR656, 185, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR656, 188, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB888, 203, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB888, 206, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_SERIAL_RGB_6BITS, 223, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_SERIAL_RGB_6BITS, 226, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_SERIAL_RGB_8BITS, 215, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_SERIAL_RGB_8BITS, 218, 3}, /* L_GPIO3 */
+    {99, 0, PMX_PWM3_5, 230, 1}, /* L_GPIO3 */
     {99, 0, PMX_RXD0, 1, 0}, /* L_GPIO3 */
-    {100, 0, PMX_RXD1, 173, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 176, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 179, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 182, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 196, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 185, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 188, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 191, 3}, /* L_GPIO4 */
-    {100, 0, PMX_PWM4_5, 201, 1}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR601, 173, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR601, 176, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR601, 179, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR601, 182, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR656, 185, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR656, 188, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB888, 203, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB888, 206, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_SERIAL_RGB_6BITS, 223, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_SERIAL_RGB_6BITS, 226, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_SERIAL_RGB_8BITS, 215, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_SERIAL_RGB_8BITS, 218, 3}, /* L_GPIO4 */
+    {100, 0, PMX_PWM4_5, 231, 1}, /* L_GPIO4 */
     {100, 0, PMX_RXD1, 1, 0}, /* L_GPIO4 */
-    {101, 0, PMX_CRS_DV, 173, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 176, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 179, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 182, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 196, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 185, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 188, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 191, 3}, /* L_GPIO5 */
-    {101, 0, PMX_PWM5_5, 202, 1}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR601, 173, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR601, 176, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR601, 179, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR601, 182, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR656, 185, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR656, 188, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB888, 203, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB888, 206, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_SERIAL_RGB_6BITS, 223, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_SERIAL_RGB_6BITS, 226, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_SERIAL_RGB_8BITS, 215, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_SERIAL_RGB_8BITS, 218, 3}, /* L_GPIO5 */
+    {101, 0, PMX_PWM5_5, 232, 1}, /* L_GPIO5 */
     {101, 0, PMX_CRS_DV, 1, 0}, /* L_GPIO5 */
-    {102, 0, PMX_RX_ER, 173, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 176, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 179, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 182, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 196, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 185, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 188, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 191, 3}, /* L_GPIO6 */
-    {102, 0, PMX_PWM6_5, 203, 1}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR601, 173, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR601, 176, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR601, 179, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR601, 182, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR656, 185, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR656, 188, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB888, 203, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB888, 206, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_SERIAL_RGB_6BITS, 223, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_SERIAL_RGB_6BITS, 226, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_SERIAL_RGB_8BITS, 215, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_SERIAL_RGB_8BITS, 218, 3}, /* L_GPIO6 */
+    {102, 0, PMX_PWM6_5, 233, 1}, /* L_GPIO6 */
     {102, 0, PMX_RX_ER, 1, 0}, /* L_GPIO6 */
-    {103, 0, PMX_ETH_PHYCLK, 173, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 176, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 179, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 182, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 196, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 185, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 188, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 191, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 204, 1}, /* L_GPIO7 */
-    {103, 0, PMX_PWM7_5, 205, 1}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR601, 173, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR601, 176, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR601, 179, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR601, 182, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR656, 185, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR656, 188, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB888, 203, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB888, 206, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_SERIAL_RGB_6BITS, 223, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_SERIAL_RGB_6BITS, 226, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_SERIAL_RGB_8BITS, 215, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_SERIAL_RGB_8BITS, 218, 3}, /* L_GPIO7 */
+    {103, 0, PMX_ETH_PHYCLK, 234, 1}, /* L_GPIO7 */
+    {103, 0, PMX_PWM7_5, 235, 1}, /* L_GPIO7 */
     {103, 0, PMX_ETH_PHYCLK, 1, 0}, /* L_GPIO7 */
-    {104, 0, PMX_REFCLK, 173, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 176, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 179, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 182, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 196, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 185, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 188, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 191, 3}, /* L_GPIO8 */
-    {104, 0, PMX_PWM8_5, 206, 1}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR601, 173, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR601, 176, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR601, 179, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR601, 182, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR656, 185, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR656, 188, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB888, 203, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB888, 206, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_SERIAL_RGB_6BITS, 223, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_SERIAL_RGB_6BITS, 226, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_SERIAL_RGB_8BITS, 215, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_SERIAL_RGB_8BITS, 218, 3}, /* L_GPIO8 */
+    {104, 0, PMX_PWM8_5, 236, 1}, /* L_GPIO8 */
     {104, 0, PMX_REFCLK, 1, 0}, /* L_GPIO8 */
-    {105, 0, PMX_MDC, 176, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 179, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 182, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 196, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 185, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 188, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 191, 3}, /* L_GPIO9 */
-    {105, 0, PMX_PWM9_5, 207, 1}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 173, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 176, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 179, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 182, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 191, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 194, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 215, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 218, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 223, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 226, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 209, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 212, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 197, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 200, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 203, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 206, 3}, /* L_GPIO9 */
+    {105, 0, PMX_PWM9_5, 237, 1}, /* L_GPIO9 */
     {105, 0, PMX_MDC, 1, 0}, /* L_GPIO9 */
-    {106, 0, PMX_MDIO, 176, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 179, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 182, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 196, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 185, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 188, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 191, 3}, /* L_GPIO10 */
-    {106, 0, PMX_PWM10_5, 208, 1}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 173, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 176, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 179, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 182, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 191, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 194, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 215, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 218, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 223, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 226, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 209, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 212, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 197, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 200, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 203, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 206, 3}, /* L_GPIO10 */
+    {106, 0, PMX_PWM10_5, 238, 1}, /* L_GPIO10 */
     {106, 0, PMX_MDIO, 1, 0}, /* L_GPIO10 */
-    {107, 0, PMX_LCD_DE_ENABLE, 209, 3}, /* L_GPIO11 */
-    {107, 0, PMX_PWM11_5, 212, 1}, /* L_GPIO11 */
-    {108, 0, PMX_LCD_CCIR601_16BITS, 176, 3}, /* L_GPIO12 */
-    {108, 0, PMX_LCD_CCIR656_16BITS, 173, 3}, /* L_GPIO12 */
-    {108, 0, PMX_LCD_PARALLE_RGB565, 179, 3}, /* L_GPIO12 */
-    {108, 0, PMX_LCD_PARALLE_RGB666, 188, 3}, /* L_GPIO12 */
-    {108, 0, PMX_LCD_RGB_16BITS, 185, 3}, /* L_GPIO12 */
-    {109, 0, PMX_LCD_CCIR601_16BITS, 176, 3}, /* L_GPIO13 */
-    {109, 0, PMX_LCD_CCIR656_16BITS, 173, 3}, /* L_GPIO13 */
-    {109, 0, PMX_LCD_PARALLE_RGB565, 179, 3}, /* L_GPIO13 */
-    {109, 0, PMX_LCD_PARALLE_RGB666, 188, 3}, /* L_GPIO13 */
-    {109, 0, PMX_LCD_RGB_16BITS, 185, 3}, /* L_GPIO13 */
-    {110, 0, PMX_LCD_CCIR601_16BITS, 176, 3}, /* L_GPIO14 */
-    {110, 0, PMX_LCD_CCIR656_16BITS, 173, 3}, /* L_GPIO14 */
-    {110, 0, PMX_LCD_PARALLE_RGB565, 179, 3}, /* L_GPIO14 */
-    {110, 0, PMX_LCD_PARALLE_RGB666, 188, 3}, /* L_GPIO14 */
-    {110, 0, PMX_LCD_RGB_16BITS, 185, 3}, /* L_GPIO14 */
-    {111, 0, PMX_LCD_CCIR601_16BITS, 176, 3}, /* L_GPIO15 */
-    {111, 0, PMX_LCD_CCIR656_16BITS, 173, 3}, /* L_GPIO15 */
-    {111, 0, PMX_LCD_PARALLE_RGB565, 179, 3}, /* L_GPIO15 */
-    {111, 0, PMX_LCD_PARALLE_RGB666, 188, 3}, /* L_GPIO15 */
-    {111, 0, PMX_LCD_RGB_16BITS, 185, 3}, /* L_GPIO15 */
-    {112, 0, PMX_LCD_CCIR601_16BITS, 176, 3}, /* L_GPIO16 */
-    {112, 0, PMX_LCD_CCIR656_16BITS, 173, 3}, /* L_GPIO16 */
-    {112, 0, PMX_LCD_PARALLE_RGB565, 179, 3}, /* L_GPIO16 */
-    {112, 0, PMX_LCD_PARALLE_RGB666, 188, 3}, /* L_GPIO16 */
-    {112, 0, PMX_LCD_RGB_16BITS, 185, 3}, /* L_GPIO16 */
-    {113, 0, PMX_LCD_CCIR601_16BITS, 176, 3}, /* L_GPIO17 */
-    {113, 0, PMX_LCD_CCIR656_16BITS, 173, 3}, /* L_GPIO17 */
-    {113, 0, PMX_LCD_PARALLE_RGB565, 179, 3}, /* L_GPIO17 */
-    {113, 0, PMX_LCD_PARALLE_RGB666, 188, 3}, /* L_GPIO17 */
-    {113, 0, PMX_LCD_RGB_16BITS, 185, 3}, /* L_GPIO17 */
-    {114, 0, PMX_LCD_CCIR601_16BITS, 176, 3}, /* L_GPIO18 */
-    {114, 0, PMX_LCD_CCIR656_16BITS, 173, 3}, /* L_GPIO18 */
-    {114, 0, PMX_LCD_PARALLE_RGB565, 179, 3}, /* L_GPIO18 */
-    {114, 0, PMX_LCD_PARALLE_RGB666, 188, 3}, /* L_GPIO18 */
-    {114, 0, PMX_LCD_RGB_16BITS, 185, 3}, /* L_GPIO18 */
-    {115, 0, PMX_LCD_CCIR601_16BITS, 176, 3}, /* L_GPIO19 */
-    {115, 0, PMX_LCD_CCIR656_16BITS, 173, 3}, /* L_GPIO19 */
-    {115, 0, PMX_LCD_PARALLE_RGB565, 179, 3}, /* L_GPIO19 */
-    {115, 0, PMX_LCD_PARALLE_RGB666, 188, 3}, /* L_GPIO19 */
-    {115, 0, PMX_LCD_RGB_16BITS, 185, 3}, /* L_GPIO19 */
-    {116, 0, PMX_LCD_PARALLE_RGB666, 188, 3}, /* L_GPIO20 */
+    {107, 0, PMX_LCD_DE_ENABLE, 239, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 188, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 179, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 182, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 194, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 218, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 226, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 212, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 200, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 242, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 206, 3}, /* L_GPIO11 */
+    {107, 0, PMX_PWM11_5, 245, 1}, /* L_GPIO11 */
+    {108, 0, PMX_LCD_CCIR601_16BITS, 173, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_CCIR601_16BITS, 179, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_CCIR656_16BITS, 185, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_CCIR656_16BITS, 188, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_HVLD_VVLD, 176, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_HVLD_VVLD, 182, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO12 */
+    {109, 0, PMX_LCD_CCIR601_16BITS, 173, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_CCIR601_16BITS, 179, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_CCIR656_16BITS, 185, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_CCIR656_16BITS, 188, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_HVLD_VVLD, 176, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_HVLD_VVLD, 182, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO13 */
+    {110, 0, PMX_LCD_CCIR601_16BITS, 173, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_CCIR601_16BITS, 179, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_CCIR656_16BITS, 185, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_CCIR656_16BITS, 188, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_FIELD, 176, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_FIELD, 182, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO14 */
+    {111, 0, PMX_LCD_CCIR601_16BITS, 173, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_CCIR601_16BITS, 179, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_CCIR656_16BITS, 185, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_CCIR656_16BITS, 188, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO15 */
+    {112, 0, PMX_LCD_CCIR601_16BITS, 173, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_CCIR601_16BITS, 179, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_CCIR656_16BITS, 185, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_CCIR656_16BITS, 188, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO16 */
+    {113, 0, PMX_LCD_CCIR601_16BITS, 173, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_CCIR601_16BITS, 179, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_CCIR656_16BITS, 185, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_CCIR656_16BITS, 188, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO17 */
+    {114, 0, PMX_LCD_CCIR601_16BITS, 173, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_CCIR601_16BITS, 179, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_CCIR656_16BITS, 185, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_CCIR656_16BITS, 188, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO18 */
+    {115, 0, PMX_LCD_CCIR601_16BITS, 173, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_CCIR601_16BITS, 179, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_CCIR656_16BITS, 185, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_CCIR656_16BITS, 188, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_PARALLE_RGB565, 191, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_PARALLE_RGB565, 194, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_RGB_16BITS, 209, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_RGB_16BITS, 212, 3}, /* L_GPIO19 */
+    {116, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO20 */
+    {116, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO20 */
     {116, 0, PMX_SP_CLK_1, 128, 1}, /* L_GPIO20 */
-    {117, 0, PMX_LCD_PARALLE_RGB666, 188, 3}, /* L_GPIO21 */
-    {118, 0, PMX_SB3_1_CS, 213, 1}, /* L_GPIO22 */
-    {119, 0, PMX_SB3_1_CK, 213, 1}, /* L_GPIO23 */
+    {117, 0, PMX_LCD_PARALLE_RGB666, 197, 3}, /* L_GPIO21 */
+    {117, 0, PMX_LCD_PARALLE_RGB666, 200, 3}, /* L_GPIO21 */
+    {118, 0, PMX_LCD_TE_ENABLE, 246, 4}, /* L_GPIO22 */
+    {118, 0, PMX_SB3_1_CS, 250, 1}, /* L_GPIO22 */
+    {119, 0, PMX_SB3_1_CK, 250, 1}, /* L_GPIO23 */
     {119, 0, PMX_SENSOR_SPCLK_2ND, 138, 1}, /* L_GPIO23 */
-    {120, 0, PMX_SB3_1_DAT, 213, 1}, /* L_GPIO24 */
-    {128, 0, PMX_ETH_PHYCLK, 214, 1}, /* D_GPIO0 */
-    {129, 0, PMX_ETH_LED1, 214, 1}, /* D_GPIO1 */
-    {130, 0, PMX_REMOTE_CH3, 215, 1}, /* D_GPIO2 */
-    {131, 0, PMX_PWM4_4, 216, 1}, /* D_GPIO3 */
-    {131, 0, PMX_SENSOR_SPCLK_3RD, 217, 1}, /* D_GPIO3 */
-    {132, 0, PMX_PWM5_4, 218, 1}, /* D_GPIO4 */
-    {132, 0, PMX_SP_CLK2_3, 219, 1}, /* D_GPIO4 */
-    {133, 0, PMX_ETH_LED2, 220, 1}, /* D_GPIO5 */
-    {133, 0, PMX_PWM6_4, 221, 1}, /* D_GPIO5 */
-    {134, 0, PMX_ETH_LED2, 220, 1}, /* D_GPIO6 */
-    {134, 0, PMX_PWM7_4, 222, 1}, /* D_GPIO6 */
-    {135, 0, PMX_I2S_2_MCLK, 223, 1}, /* D_GPIO7 */
-    {135, 0, PMX_PWM11_4, 224, 1}, /* D_GPIO7 */
-    {136, 0, PMX_DMCLK_2, 225, 3}, /* D_GPIO8 */
-    {136, 0, PMX_PWM8_4, 228, 1}, /* D_GPIO8 */
-    {136, 0, PMX_SB3_3_CS, 229, 1}, /* D_GPIO8 */
-    {137, 0, PMX_DMDAT0_2, 225, 3}, /* D_GPIO9 */
-    {137, 0, PMX_PWM9_4, 230, 1}, /* D_GPIO9 */
-    {137, 0, PMX_SB3_3_CK, 229, 1}, /* D_GPIO9 */
-    {138, 0, PMX_DMDAT1_2, 225, 3}, /* D_GPIO10 */
-    {138, 0, PMX_PWM10_4, 231, 1}, /* D_GPIO10 */
-    {138, 0, PMX_SB3_3_DAT, 229, 1}, /* D_GPIO10 */
+    {120, 0, PMX_SB3_1_DAT, 250, 1}, /* L_GPIO24 */
+    {128, 0, PMX_ETH_PHYCLK, 251, 1}, /* D_GPIO0 */
+    {129, 0, PMX_ETH_LED1, 251, 1}, /* D_GPIO1 */
+    {130, 0, PMX_REMOTE_CH3, 252, 1}, /* D_GPIO2 */
+    {131, 0, PMX_PWM4_4, 253, 1}, /* D_GPIO3 */
+    {131, 0, PMX_SENSOR_SPCLK_3RD, 254, 1}, /* D_GPIO3 */
+    {132, 0, PMX_PWM5_4, 255, 1}, /* D_GPIO4 */
+    {132, 0, PMX_SP_CLK2_3, 256, 1}, /* D_GPIO4 */
+    {133, 0, PMX_ETH_LED2, 257, 1}, /* D_GPIO5 */
+    {133, 0, PMX_PWM6_4, 258, 1}, /* D_GPIO5 */
+    {134, 0, PMX_ETH_LED2, 257, 1}, /* D_GPIO6 */
+    {134, 0, PMX_PWM7_4, 259, 1}, /* D_GPIO6 */
+    {135, 0, PMX_I2S_2_MCLK, 260, 1}, /* D_GPIO7 */
+    {135, 0, PMX_PWM11_4, 261, 1}, /* D_GPIO7 */
+    {136, 0, PMX_DMCLK_2, 262, 3}, /* D_GPIO8 */
+    {136, 0, PMX_PWM8_4, 265, 1}, /* D_GPIO8 */
+    {136, 0, PMX_SB3_3_CS, 266, 1}, /* D_GPIO8 */
+    {137, 0, PMX_DMDAT0_2, 262, 3}, /* D_GPIO9 */
+    {137, 0, PMX_PWM9_4, 267, 1}, /* D_GPIO9 */
+    {137, 0, PMX_SB3_3_CK, 266, 1}, /* D_GPIO9 */
+    {138, 0, PMX_DMDAT1_2, 262, 3}, /* D_GPIO10 */
+    {138, 0, PMX_PWM10_4, 268, 1}, /* D_GPIO10 */
+    {138, 0, PMX_SB3_3_DAT, 266, 1}, /* D_GPIO10 */
     {160, NVT_UNGATED, PMX_SENSOR_12BITS, 152, 1}, /* H_GPIO0 */
     {160, 0, PMX_MIPI_LVDS_DAT0, 1, 0}, /* H_GPIO0 */
     {161, NVT_UNGATED, PMX_SENSOR_12BITS, 152, 1}, /* H_GPIO1 */
@@ -2469,42 +2852,117 @@ static const novatek_sel_t NA51055_sels[] = {
     {75, PMX_SPI_2_DO, 0x14, 8, 2, 2},
     {76, PMX_SPI_2_DI, 0x14, 8, 2, 2},
     {76, PMX_SENSOR2_MCLK_2ND, 0x0C, 12, 2, 2},
-    {96, PMX_TXD0, 0x08, 0, 4, 1},
+    {96, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {96, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {96, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {96, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {96, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {96, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {96, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {96, PMX_PWM0_5, 0x1C, 0, 3, 5},
-    {97, PMX_TXD1, 0x08, 0, 4, 1},
+    {96, PMX_TXD0, NVT_GATE, 0, 0, 0},
+    {97, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {97, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {97, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {97, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {97, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {97, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {97, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {97, PMX_PWM1_5, 0x1C, 3, 3, 5},
-    {98, PMX_TX_EN, 0x08, 0, 4, 1},
+    {97, PMX_TXD1, NVT_GATE, 0, 0, 0},
+    {98, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {98, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {98, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {98, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {98, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {98, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {98, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {98, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {98, PMX_PWM2_5, 0x1C, 6, 3, 5},
-    {99, PMX_RXD0, 0x08, 0, 4, 1},
+    {98, PMX_TX_EN, NVT_GATE, 0, 0, 0},
+    {99, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {99, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {99, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {99, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {99, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {99, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {99, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {99, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {99, PMX_PWM3_5, 0x1C, 9, 3, 5},
-    {100, PMX_RXD1, 0x08, 0, 4, 1},
+    {99, PMX_RXD0, NVT_GATE, 0, 0, 0},
+    {100, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {100, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {100, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {100, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {100, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {100, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {100, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {100, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {100, PMX_PWM4_5, 0x1C, 12, 3, 5},
-    {101, PMX_CRS_DV, 0x08, 0, 4, 1},
+    {100, PMX_RXD1, NVT_GATE, 0, 0, 0},
+    {101, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {101, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {101, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {101, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {101, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {101, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {101, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {101, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {101, PMX_PWM5_5, 0x1C, 15, 3, 5},
-    {102, PMX_RX_ER, 0x08, 0, 4, 1},
+    {101, PMX_CRS_DV, NVT_GATE, 0, 0, 0},
+    {102, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {102, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {102, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {102, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {102, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {102, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {102, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {102, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {102, PMX_PWM6_5, 0x1C, 18, 3, 5},
-    {103, PMX_ETH_PHYCLK, 0x08, 0, 4, 1},
+    {102, PMX_RX_ER, NVT_GATE, 0, 0, 0},
+    {103, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {103, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {103, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {103, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {103, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {103, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {103, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {103, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
+    {103, PMX_ETH_PHYCLK, 0x18, 28, 1, 1},
     {103, PMX_PWM7_5, 0x1C, 21, 3, 5},
-    {104, PMX_REFCLK, 0x08, 0, 4, 1},
+    {104, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {104, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {104, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {104, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {104, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {104, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {104, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {104, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {104, PMX_PWM8_5, 0x18, 16, 3, 5},
-    {105, PMX_MDC, 0x08, 0, 4, 2},
+    {104, PMX_REFCLK, NVT_GATE, 0, 0, 0},
+    {105, PMX_LCD_NO_HVSYNC, 0x08, 0, 4, 2},
     {105, PMX_PWM9_5, 0x18, 19, 3, 5},
-    {106, PMX_MDIO, 0x08, 0, 4, 2},
+    {105, PMX_MDC, NVT_GATE, 0, 0, 0},
+    {106, PMX_LCD_NO_HVSYNC, 0x08, 0, 4, 2},
     {106, PMX_PWM10_5, 0x18, 22, 3, 5},
-    {107, PMX_LCD_DE_ENABLE, 0x08, 0, 4, 0},
+    {106, PMX_MDIO, NVT_GATE, 0, 0, 0},
+    {107, PMX_LCD_DE_ENABLE, 0x08, 6, 1, 1},
     {107, PMX_PWM11_5, 0x18, 25, 3, 5},
     {108, PMX_LCD_CCIR601_16BITS, 0x08, 0, 4, 2},
     {108, PMX_LCD_CCIR656_16BITS, 0x08, 0, 4, 1},
+    {108, PMX_LCD_HVLD_VVLD, 0x08, 8, 1, 1},
     {108, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
     {108, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
     {108, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
     {109, PMX_LCD_CCIR601_16BITS, 0x08, 0, 4, 2},
     {109, PMX_LCD_CCIR656_16BITS, 0x08, 0, 4, 1},
+    {109, PMX_LCD_HVLD_VVLD, 0x08, 8, 1, 1},
     {109, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
     {109, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
     {109, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
     {110, PMX_LCD_CCIR601_16BITS, 0x08, 0, 4, 2},
     {110, PMX_LCD_CCIR656_16BITS, 0x08, 0, 4, 1},
+    {110, PMX_LCD_FIELD, 0x08, 8, 1, 1},
     {110, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
     {110, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
     {110, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
@@ -2536,6 +2994,7 @@ static const novatek_sel_t NA51055_sels[] = {
     {116, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
     {116, PMX_SP_CLK_1, 0x0C, 18, 2, 1},
     {117, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {118, PMX_LCD_TE_ENABLE, 0x08, 0, 4, 9},
     {118, PMX_SB3_1_CS, 0x14, 24, 2, 1},
     {119, PMX_SB3_1_CK, 0x14, 24, 2, 1},
     {119, PMX_SENSOR_SPCLK_2ND, 0x0C, 18, 2, 2},
@@ -2605,13 +3064,13 @@ static const novatek_sel_t NA51055_sels[] = {
 };
 
 static const novatek_soc_t NA51055_padmux = {
-    NA51055_pads, 113, NA51055_claims, 500, NA51055_conds,
-    NA51055_sels, 395,
+    NA51055_pads, 113, NA51055_claims, 665, NA51055_conds,
+    NA51055_sels, 471,
 };
 
-/* NA51084: 80990 vendor states replayed; in 25568 of them two claims hold
+/* NA51084: 81229 vendor states replayed; in 27520 of them two claims hold
  * at once and the table carries the one the vendor code meant,
- * and 400 leave a pad cleared with its field moved elsewhere,
+ * and 408 leave a pad cleared with its field moved elsewhere,
  * which reads as unnamed. */
 
 /* Every pad the package bonds out, by Linux GPIO number. */
@@ -2902,31 +3361,61 @@ static const novatek_cond_t NA51084_conds[] = {
     {0x14, 8, 2, 2},
     {0x14, 16, 1, 1},
     {0x0C, 12, 2, 2},
-    {0x08, 0, 4, 1},
+    {0x08, 0, 4, 2},
     {0x08, 6, 1, 0},
     {0x08, 8, 1, 0},
     {0x08, 0, 4, 2},
     {0x08, 6, 1, 0},
+    {0x08, 8, 1, 1},
+    {0x08, 0, 4, 2},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 2},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 1},
+    {0x08, 0, 4, 1},
+    {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 1},
+    {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
     {0x08, 0, 4, 3},
     {0x08, 6, 1, 0},
     {0x08, 8, 1, 0},
-    {0x08, 0, 4, 4},
-    {0x08, 6, 1, 0},
-    {0x08, 8, 1, 0},
-    {0x08, 0, 4, 7},
-    {0x08, 6, 1, 0},
+    {0x08, 0, 4, 3},
+    {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
     {0x08, 0, 4, 8},
     {0x08, 6, 1, 0},
     {0x08, 8, 1, 0},
+    {0x08, 0, 4, 8},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
     {0x08, 0, 4, 10},
     {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 10},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 7},
+    {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 7},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 4},
+    {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 4},
+    {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
     {0x1C, 0, 3, 5},
     {0x1C, 3, 3, 5},
     {0x08, 0, 4, 5},
     {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 0, 4, 5},
+    {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
     {0x1C, 6, 3, 5},
     {0x1C, 9, 3, 5},
@@ -2941,9 +3430,16 @@ static const novatek_cond_t NA51084_conds[] = {
     {0x08, 0, 4, 0},
     {0x08, 6, 1, 1},
     {0x08, 8, 1, 0},
+    {0x08, 0, 4, 9},
+    {0x08, 6, 1, 1},
+    {0x08, 8, 1, 0},
     {0x18, 25, 3, 5},
     {0x10, 8, 2, 3},
     {0x10, 8, 2, 2},
+    {0x08, 0, 4, 9},
+    {0x08, 6, 1, 0},
+    {0x08, 8, 1, 0},
+    {0x08, 10, 1, 1},
     {0x14, 24, 2, 1},
     {0x10, 8, 2, 2},
     {0x18, 28, 1, 1},
@@ -3255,209 +3751,374 @@ static const novatek_claim_t NA51084_claims[] = {
     {75, 0, PMX_SPI_2_DO, 164, 1}, /* S_GPIO11 */
     {76, 0, PMX_SPI_2_DI, 166, 2}, /* S_GPIO12 */
     {76, 0, PMX_SENSOR2_MCLK_2ND, 168, 1}, /* S_GPIO12 */
-    {96, 0, PMX_TXD0, 169, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 172, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 175, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 178, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 181, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 184, 3}, /* L_GPIO0 */
-    {96, 0, PMX_TXD0, 187, 3}, /* L_GPIO0 */
-    {96, 0, PMX_PWM0_5, 190, 1}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR601, 169, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR601, 172, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR601, 175, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR601, 178, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR656, 181, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_CCIR656, 184, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB888, 199, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_PARALLE_RGB888, 202, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_SERIAL_RGB_8BITS, 211, 3}, /* L_GPIO0 */
+    {96, 0, PMX_LCD_SERIAL_RGB_8BITS, 214, 3}, /* L_GPIO0 */
+    {96, 0, PMX_PWM0_5, 217, 1}, /* L_GPIO0 */
     {96, 0, PMX_TXD0, 1, 0}, /* L_GPIO0 */
-    {97, 0, PMX_TXD1, 169, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 172, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 175, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 178, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 181, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 184, 3}, /* L_GPIO1 */
-    {97, 0, PMX_TXD1, 187, 3}, /* L_GPIO1 */
-    {97, 0, PMX_PWM1_5, 191, 1}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR601, 169, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR601, 172, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR601, 175, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR601, 178, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR656, 181, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_CCIR656, 184, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB888, 199, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_PARALLE_RGB888, 202, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_SERIAL_RGB_8BITS, 211, 3}, /* L_GPIO1 */
+    {97, 0, PMX_LCD_SERIAL_RGB_8BITS, 214, 3}, /* L_GPIO1 */
+    {97, 0, PMX_PWM1_5, 218, 1}, /* L_GPIO1 */
     {97, 0, PMX_TXD1, 1, 0}, /* L_GPIO1 */
-    {98, 0, PMX_TX_EN, 169, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 172, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 175, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 178, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 192, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 181, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 184, 3}, /* L_GPIO2 */
-    {98, 0, PMX_TX_EN, 187, 3}, /* L_GPIO2 */
-    {98, 0, PMX_PWM2_5, 195, 1}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR601, 169, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR601, 172, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR601, 175, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR601, 178, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR656, 181, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_CCIR656, 184, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB888, 199, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_PARALLE_RGB888, 202, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_SERIAL_RGB_6BITS, 219, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_SERIAL_RGB_6BITS, 222, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_SERIAL_RGB_8BITS, 211, 3}, /* L_GPIO2 */
+    {98, 0, PMX_LCD_SERIAL_RGB_8BITS, 214, 3}, /* L_GPIO2 */
+    {98, 0, PMX_PWM2_5, 225, 1}, /* L_GPIO2 */
     {98, 0, PMX_TX_EN, 1, 0}, /* L_GPIO2 */
-    {99, 0, PMX_RXD0, 169, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 172, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 175, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 178, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 192, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 181, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 184, 3}, /* L_GPIO3 */
-    {99, 0, PMX_RXD0, 187, 3}, /* L_GPIO3 */
-    {99, 0, PMX_PWM3_5, 196, 1}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR601, 169, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR601, 172, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR601, 175, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR601, 178, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR656, 181, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_CCIR656, 184, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB888, 199, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_PARALLE_RGB888, 202, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_SERIAL_RGB_6BITS, 219, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_SERIAL_RGB_6BITS, 222, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_SERIAL_RGB_8BITS, 211, 3}, /* L_GPIO3 */
+    {99, 0, PMX_LCD_SERIAL_RGB_8BITS, 214, 3}, /* L_GPIO3 */
+    {99, 0, PMX_PWM3_5, 226, 1}, /* L_GPIO3 */
     {99, 0, PMX_RXD0, 1, 0}, /* L_GPIO3 */
-    {100, 0, PMX_RXD1, 169, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 172, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 175, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 178, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 192, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 181, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 184, 3}, /* L_GPIO4 */
-    {100, 0, PMX_RXD1, 187, 3}, /* L_GPIO4 */
-    {100, 0, PMX_PWM4_5, 197, 1}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR601, 169, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR601, 172, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR601, 175, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR601, 178, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR656, 181, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_CCIR656, 184, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB888, 199, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_PARALLE_RGB888, 202, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_SERIAL_RGB_6BITS, 219, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_SERIAL_RGB_6BITS, 222, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_SERIAL_RGB_8BITS, 211, 3}, /* L_GPIO4 */
+    {100, 0, PMX_LCD_SERIAL_RGB_8BITS, 214, 3}, /* L_GPIO4 */
+    {100, 0, PMX_PWM4_5, 227, 1}, /* L_GPIO4 */
     {100, 0, PMX_RXD1, 1, 0}, /* L_GPIO4 */
-    {101, 0, PMX_CRS_DV, 169, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 172, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 175, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 178, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 192, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 181, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 184, 3}, /* L_GPIO5 */
-    {101, 0, PMX_CRS_DV, 187, 3}, /* L_GPIO5 */
-    {101, 0, PMX_PWM5_5, 198, 1}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR601, 169, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR601, 172, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR601, 175, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR601, 178, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR656, 181, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_CCIR656, 184, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB888, 199, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_PARALLE_RGB888, 202, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_SERIAL_RGB_6BITS, 219, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_SERIAL_RGB_6BITS, 222, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_SERIAL_RGB_8BITS, 211, 3}, /* L_GPIO5 */
+    {101, 0, PMX_LCD_SERIAL_RGB_8BITS, 214, 3}, /* L_GPIO5 */
+    {101, 0, PMX_PWM5_5, 228, 1}, /* L_GPIO5 */
     {101, 0, PMX_CRS_DV, 1, 0}, /* L_GPIO5 */
-    {102, 0, PMX_RX_ER, 169, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 172, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 175, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 178, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 192, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 181, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 184, 3}, /* L_GPIO6 */
-    {102, 0, PMX_RX_ER, 187, 3}, /* L_GPIO6 */
-    {102, 0, PMX_PWM6_5, 199, 1}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR601, 169, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR601, 172, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR601, 175, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR601, 178, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR656, 181, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_CCIR656, 184, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB888, 199, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_PARALLE_RGB888, 202, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_SERIAL_RGB_6BITS, 219, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_SERIAL_RGB_6BITS, 222, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_SERIAL_RGB_8BITS, 211, 3}, /* L_GPIO6 */
+    {102, 0, PMX_LCD_SERIAL_RGB_8BITS, 214, 3}, /* L_GPIO6 */
+    {102, 0, PMX_PWM6_5, 229, 1}, /* L_GPIO6 */
     {102, 0, PMX_RX_ER, 1, 0}, /* L_GPIO6 */
-    {103, 0, PMX_ETH_PHYCLK, 169, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 172, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 175, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 178, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 192, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 181, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 184, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 187, 3}, /* L_GPIO7 */
-    {103, 0, PMX_ETH_PHYCLK, 200, 1}, /* L_GPIO7 */
-    {103, 0, PMX_PWM7_5, 201, 1}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR601, 169, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR601, 172, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR601, 175, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR601, 178, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR656, 181, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_CCIR656, 184, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB888, 199, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_PARALLE_RGB888, 202, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_SERIAL_RGB_6BITS, 219, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_SERIAL_RGB_6BITS, 222, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_SERIAL_RGB_8BITS, 211, 3}, /* L_GPIO7 */
+    {103, 0, PMX_LCD_SERIAL_RGB_8BITS, 214, 3}, /* L_GPIO7 */
+    {103, 0, PMX_ETH_PHYCLK, 230, 1}, /* L_GPIO7 */
+    {103, 0, PMX_PWM7_5, 231, 1}, /* L_GPIO7 */
     {103, 0, PMX_ETH_PHYCLK, 1, 0}, /* L_GPIO7 */
-    {104, 0, PMX_REFCLK, 169, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 172, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 175, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 178, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 192, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 181, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 184, 3}, /* L_GPIO8 */
-    {104, 0, PMX_REFCLK, 187, 3}, /* L_GPIO8 */
-    {104, 0, PMX_PWM8_5, 202, 1}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR601, 169, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR601, 172, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR601, 175, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR601, 178, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR656, 181, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_CCIR656, 184, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB888, 199, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_PARALLE_RGB888, 202, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_SERIAL_RGB_6BITS, 219, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_SERIAL_RGB_6BITS, 222, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_SERIAL_RGB_8BITS, 211, 3}, /* L_GPIO8 */
+    {104, 0, PMX_LCD_SERIAL_RGB_8BITS, 214, 3}, /* L_GPIO8 */
+    {104, 0, PMX_PWM8_5, 232, 1}, /* L_GPIO8 */
     {104, 0, PMX_REFCLK, 1, 0}, /* L_GPIO8 */
-    {105, 0, PMX_MDC, 172, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 175, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 178, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 192, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 181, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 184, 3}, /* L_GPIO9 */
-    {105, 0, PMX_MDC, 187, 3}, /* L_GPIO9 */
-    {105, 0, PMX_PWM9_5, 203, 1}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 169, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 172, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 175, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 178, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 187, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 190, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 211, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 214, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 219, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 222, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 205, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 208, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 193, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 196, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 199, 3}, /* L_GPIO9 */
+    {105, 0, PMX_LCD_NO_HVSYNC, 202, 3}, /* L_GPIO9 */
+    {105, 0, PMX_PWM9_5, 233, 1}, /* L_GPIO9 */
     {105, 0, PMX_MDC, 1, 0}, /* L_GPIO9 */
-    {106, 0, PMX_MDIO, 172, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 175, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 178, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 192, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 181, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 184, 3}, /* L_GPIO10 */
-    {106, 0, PMX_MDIO, 187, 3}, /* L_GPIO10 */
-    {106, 0, PMX_PWM10_5, 204, 1}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 169, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 172, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 175, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 178, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 187, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 190, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 211, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 214, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 219, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 222, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 205, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 208, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 193, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 196, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 199, 3}, /* L_GPIO10 */
+    {106, 0, PMX_LCD_NO_HVSYNC, 202, 3}, /* L_GPIO10 */
+    {106, 0, PMX_PWM10_5, 234, 1}, /* L_GPIO10 */
     {106, 0, PMX_MDIO, 1, 0}, /* L_GPIO10 */
-    {107, 0, PMX_LCD_DE_ENABLE, 205, 3}, /* L_GPIO11 */
-    {107, 0, PMX_PWM11_5, 208, 1}, /* L_GPIO11 */
-    {107, 0, PMX_TX_CTL, 209, 1}, /* L_GPIO11 */
-    {107, 0, PMX_TX_EN, 210, 1}, /* L_GPIO11 */
-    {108, 0, PMX_LCD_CCIR601_16BITS, 172, 3}, /* L_GPIO12 */
-    {108, 0, PMX_LCD_CCIR656_16BITS, 169, 3}, /* L_GPIO12 */
-    {108, 0, PMX_LCD_PARALLE_RGB565, 175, 3}, /* L_GPIO12 */
-    {108, 0, PMX_LCD_PARALLE_RGB666, 184, 3}, /* L_GPIO12 */
-    {108, 0, PMX_LCD_RGB_16BITS, 181, 3}, /* L_GPIO12 */
-    {108, 0, PMX_TXD0, 210, 1}, /* L_GPIO12 */
-    {108, 0, PMX_TXD0, 209, 1}, /* L_GPIO12 */
-    {109, 0, PMX_LCD_CCIR601_16BITS, 172, 3}, /* L_GPIO13 */
-    {109, 0, PMX_LCD_CCIR656_16BITS, 169, 3}, /* L_GPIO13 */
-    {109, 0, PMX_LCD_PARALLE_RGB565, 175, 3}, /* L_GPIO13 */
-    {109, 0, PMX_LCD_PARALLE_RGB666, 184, 3}, /* L_GPIO13 */
-    {109, 0, PMX_LCD_RGB_16BITS, 181, 3}, /* L_GPIO13 */
-    {109, 0, PMX_TXD1, 210, 1}, /* L_GPIO13 */
-    {109, 0, PMX_TXD1, 209, 1}, /* L_GPIO13 */
-    {110, 0, PMX_LCD_CCIR601_16BITS, 172, 3}, /* L_GPIO14 */
-    {110, 0, PMX_LCD_CCIR656_16BITS, 169, 3}, /* L_GPIO14 */
-    {110, 0, PMX_LCD_PARALLE_RGB565, 175, 3}, /* L_GPIO14 */
-    {110, 0, PMX_LCD_PARALLE_RGB666, 184, 3}, /* L_GPIO14 */
-    {110, 0, PMX_LCD_RGB_16BITS, 181, 3}, /* L_GPIO14 */
-    {110, 0, PMX_TXD2, 209, 1}, /* L_GPIO14 */
-    {111, 0, PMX_LCD_CCIR601_16BITS, 172, 3}, /* L_GPIO15 */
-    {111, 0, PMX_LCD_CCIR656_16BITS, 169, 3}, /* L_GPIO15 */
-    {111, 0, PMX_LCD_PARALLE_RGB565, 175, 3}, /* L_GPIO15 */
-    {111, 0, PMX_LCD_PARALLE_RGB666, 184, 3}, /* L_GPIO15 */
-    {111, 0, PMX_LCD_RGB_16BITS, 181, 3}, /* L_GPIO15 */
-    {111, 0, PMX_TXD3, 209, 1}, /* L_GPIO15 */
-    {112, 0, PMX_LCD_CCIR601_16BITS, 172, 3}, /* L_GPIO16 */
-    {112, 0, PMX_LCD_CCIR656_16BITS, 169, 3}, /* L_GPIO16 */
-    {112, 0, PMX_LCD_PARALLE_RGB565, 175, 3}, /* L_GPIO16 */
-    {112, 0, PMX_LCD_PARALLE_RGB666, 184, 3}, /* L_GPIO16 */
-    {112, 0, PMX_LCD_RGB_16BITS, 181, 3}, /* L_GPIO16 */
-    {112, 0, PMX_REFCLK, 210, 1}, /* L_GPIO16 */
-    {112, 0, PMX_RX_CLK, 209, 1}, /* L_GPIO16 */
-    {113, 0, PMX_LCD_CCIR601_16BITS, 172, 3}, /* L_GPIO17 */
-    {113, 0, PMX_LCD_CCIR656_16BITS, 169, 3}, /* L_GPIO17 */
-    {113, 0, PMX_LCD_PARALLE_RGB565, 175, 3}, /* L_GPIO17 */
-    {113, 0, PMX_LCD_PARALLE_RGB666, 184, 3}, /* L_GPIO17 */
-    {113, 0, PMX_LCD_RGB_16BITS, 181, 3}, /* L_GPIO17 */
-    {113, 0, PMX_CRS_DV, 210, 1}, /* L_GPIO17 */
-    {113, 0, PMX_RX_CTL, 209, 1}, /* L_GPIO17 */
-    {114, 0, PMX_LCD_CCIR601_16BITS, 172, 3}, /* L_GPIO18 */
-    {114, 0, PMX_LCD_CCIR656_16BITS, 169, 3}, /* L_GPIO18 */
-    {114, 0, PMX_LCD_PARALLE_RGB565, 175, 3}, /* L_GPIO18 */
-    {114, 0, PMX_LCD_PARALLE_RGB666, 184, 3}, /* L_GPIO18 */
-    {114, 0, PMX_LCD_RGB_16BITS, 181, 3}, /* L_GPIO18 */
-    {114, 0, PMX_RXD0, 210, 1}, /* L_GPIO18 */
-    {114, 0, PMX_RXD0, 209, 1}, /* L_GPIO18 */
-    {115, 0, PMX_LCD_CCIR601_16BITS, 172, 3}, /* L_GPIO19 */
-    {115, 0, PMX_LCD_CCIR656_16BITS, 169, 3}, /* L_GPIO19 */
-    {115, 0, PMX_LCD_PARALLE_RGB565, 175, 3}, /* L_GPIO19 */
-    {115, 0, PMX_LCD_PARALLE_RGB666, 184, 3}, /* L_GPIO19 */
-    {115, 0, PMX_LCD_RGB_16BITS, 181, 3}, /* L_GPIO19 */
-    {115, 0, PMX_RXD1, 210, 1}, /* L_GPIO19 */
-    {115, 0, PMX_RXD1, 209, 1}, /* L_GPIO19 */
-    {116, 0, PMX_LCD_PARALLE_RGB666, 184, 3}, /* L_GPIO20 */
-    {116, 0, PMX_RXD2, 209, 1}, /* L_GPIO20 */
+    {107, 0, PMX_LCD_DE_ENABLE, 235, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 184, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 175, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 178, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 190, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 214, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 222, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 208, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 196, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 238, 3}, /* L_GPIO11 */
+    {107, 0, PMX_LCD_DE_ENABLE, 202, 3}, /* L_GPIO11 */
+    {107, 0, PMX_PWM11_5, 241, 1}, /* L_GPIO11 */
+    {107, 0, PMX_TX_CTL, 242, 1}, /* L_GPIO11 */
+    {107, 0, PMX_TX_EN, 243, 1}, /* L_GPIO11 */
+    {108, 0, PMX_LCD_CCIR601_16BITS, 169, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_CCIR601_16BITS, 175, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_CCIR656_16BITS, 181, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_CCIR656_16BITS, 184, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_HVLD_VVLD, 172, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_HVLD_VVLD, 178, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO12 */
+    {108, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO12 */
+    {108, 0, PMX_TXD0, 243, 1}, /* L_GPIO12 */
+    {108, 0, PMX_TXD0, 242, 1}, /* L_GPIO12 */
+    {109, 0, PMX_LCD_CCIR601_16BITS, 169, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_CCIR601_16BITS, 175, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_CCIR656_16BITS, 181, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_CCIR656_16BITS, 184, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_HVLD_VVLD, 172, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_HVLD_VVLD, 178, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO13 */
+    {109, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO13 */
+    {109, 0, PMX_TXD1, 243, 1}, /* L_GPIO13 */
+    {109, 0, PMX_TXD1, 242, 1}, /* L_GPIO13 */
+    {110, 0, PMX_LCD_CCIR601_16BITS, 169, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_CCIR601_16BITS, 175, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_CCIR656_16BITS, 181, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_CCIR656_16BITS, 184, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_FIELD, 172, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_FIELD, 178, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO14 */
+    {110, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO14 */
+    {110, 0, PMX_TXD2, 242, 1}, /* L_GPIO14 */
+    {111, 0, PMX_LCD_CCIR601_16BITS, 169, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_CCIR601_16BITS, 175, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_CCIR656_16BITS, 181, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_CCIR656_16BITS, 184, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO15 */
+    {111, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO15 */
+    {111, 0, PMX_TXD3, 242, 1}, /* L_GPIO15 */
+    {112, 0, PMX_LCD_CCIR601_16BITS, 169, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_CCIR601_16BITS, 175, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_CCIR656_16BITS, 181, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_CCIR656_16BITS, 184, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO16 */
+    {112, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO16 */
+    {112, 0, PMX_REFCLK, 243, 1}, /* L_GPIO16 */
+    {112, 0, PMX_RX_CLK, 242, 1}, /* L_GPIO16 */
+    {113, 0, PMX_LCD_CCIR601_16BITS, 169, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_CCIR601_16BITS, 175, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_CCIR656_16BITS, 181, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_CCIR656_16BITS, 184, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO17 */
+    {113, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO17 */
+    {113, 0, PMX_CRS_DV, 243, 1}, /* L_GPIO17 */
+    {113, 0, PMX_RX_CTL, 242, 1}, /* L_GPIO17 */
+    {114, 0, PMX_LCD_CCIR601_16BITS, 169, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_CCIR601_16BITS, 175, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_CCIR656_16BITS, 181, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_CCIR656_16BITS, 184, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO18 */
+    {114, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO18 */
+    {114, 0, PMX_RXD0, 243, 1}, /* L_GPIO18 */
+    {114, 0, PMX_RXD0, 242, 1}, /* L_GPIO18 */
+    {115, 0, PMX_LCD_CCIR601_16BITS, 169, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_CCIR601_16BITS, 175, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_CCIR656_16BITS, 181, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_CCIR656_16BITS, 184, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_PARALLE_RGB565, 187, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_PARALLE_RGB565, 190, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_RGB_16BITS, 205, 3}, /* L_GPIO19 */
+    {115, 0, PMX_LCD_RGB_16BITS, 208, 3}, /* L_GPIO19 */
+    {115, 0, PMX_RXD1, 243, 1}, /* L_GPIO19 */
+    {115, 0, PMX_RXD1, 242, 1}, /* L_GPIO19 */
+    {116, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO20 */
+    {116, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO20 */
+    {116, 0, PMX_RXD2, 242, 1}, /* L_GPIO20 */
     {116, 0, PMX_SP_CLK_1, 124, 1}, /* L_GPIO20 */
-    {117, 0, PMX_LCD_PARALLE_RGB666, 184, 3}, /* L_GPIO21 */
-    {117, 0, PMX_RXD3, 209, 1}, /* L_GPIO21 */
-    {118, 0, PMX_SB3_1_CS, 211, 1}, /* L_GPIO22 */
-    {118, 0, PMX_TX_CLK, 209, 1}, /* L_GPIO22 */
-    {119, 0, PMX_MDC, 210, 1}, /* L_GPIO23 */
-    {119, 0, PMX_MDC, 209, 1}, /* L_GPIO23 */
-    {119, 0, PMX_SB3_1_CK, 211, 1}, /* L_GPIO23 */
+    {117, 0, PMX_LCD_PARALLE_RGB666, 193, 3}, /* L_GPIO21 */
+    {117, 0, PMX_LCD_PARALLE_RGB666, 196, 3}, /* L_GPIO21 */
+    {117, 0, PMX_RXD3, 242, 1}, /* L_GPIO21 */
+    {118, 0, PMX_LCD_TE_ENABLE, 244, 4}, /* L_GPIO22 */
+    {118, 0, PMX_SB3_1_CS, 248, 1}, /* L_GPIO22 */
+    {118, 0, PMX_TX_CLK, 242, 1}, /* L_GPIO22 */
+    {119, 0, PMX_MDC, 243, 1}, /* L_GPIO23 */
+    {119, 0, PMX_MDC, 242, 1}, /* L_GPIO23 */
+    {119, 0, PMX_SB3_1_CK, 248, 1}, /* L_GPIO23 */
     {119, 0, PMX_SENSOR_SPCLK_2ND, 134, 1}, /* L_GPIO23 */
-    {120, 0, PMX_MDIO, 210, 1}, /* L_GPIO24 */
-    {120, 0, PMX_MDIO, 209, 1}, /* L_GPIO24 */
-    {120, 0, PMX_SB3_1_DAT, 211, 1}, /* L_GPIO24 */
-    {128, 0, PMX_ETH_PHYCLK, 212, 2}, /* D_GPIO0 */
-    {128, 0, PMX_ETH_PHYCLK, 214, 2}, /* D_GPIO0 */
-    {128, 0, PMX_ETH_PHYCLK, 216, 1}, /* D_GPIO0 */
-    {129, 0, PMX_ETH_LED1, 216, 1}, /* D_GPIO1 */
-    {130, 0, PMX_REMOTE_CH3, 217, 1}, /* D_GPIO2 */
-    {131, 0, PMX_PWM4_4, 218, 1}, /* D_GPIO3 */
-    {131, 0, PMX_SENSOR_SPCLK_3RD, 219, 1}, /* D_GPIO3 */
-    {132, 0, PMX_PWM5_4, 220, 1}, /* D_GPIO4 */
-    {132, 0, PMX_SP_CLK2_3, 221, 1}, /* D_GPIO4 */
-    {133, 0, PMX_ETH_LED2, 222, 1}, /* D_GPIO5 */
-    {133, 0, PMX_PWM6_4, 223, 1}, /* D_GPIO5 */
-    {134, 0, PMX_ETH_LED2, 222, 1}, /* D_GPIO6 */
-    {134, 0, PMX_PWM7_4, 224, 1}, /* D_GPIO6 */
-    {135, 0, PMX_I2S_2_MCLK, 225, 1}, /* D_GPIO7 */
-    {135, 0, PMX_PWM11_4, 226, 1}, /* D_GPIO7 */
-    {136, 0, PMX_DMCLK_2, 227, 3}, /* D_GPIO8 */
-    {136, 0, PMX_PWM8_4, 230, 1}, /* D_GPIO8 */
-    {136, 0, PMX_SB3_3_CS, 231, 1}, /* D_GPIO8 */
-    {137, 0, PMX_DMDAT0_2, 227, 3}, /* D_GPIO9 */
-    {137, 0, PMX_PWM9_4, 232, 1}, /* D_GPIO9 */
-    {137, 0, PMX_SB3_3_CK, 231, 1}, /* D_GPIO9 */
-    {138, 0, PMX_DMDAT1_2, 227, 3}, /* D_GPIO10 */
-    {138, 0, PMX_PWM10_4, 233, 1}, /* D_GPIO10 */
-    {138, 0, PMX_SB3_3_DAT, 231, 1}, /* D_GPIO10 */
+    {120, 0, PMX_MDIO, 243, 1}, /* L_GPIO24 */
+    {120, 0, PMX_MDIO, 242, 1}, /* L_GPIO24 */
+    {120, 0, PMX_SB3_1_DAT, 248, 1}, /* L_GPIO24 */
+    {128, 0, PMX_ETH_PHYCLK, 249, 2}, /* D_GPIO0 */
+    {128, 0, PMX_ETH_PHYCLK, 251, 2}, /* D_GPIO0 */
+    {128, 0, PMX_ETH_PHYCLK, 253, 1}, /* D_GPIO0 */
+    {129, 0, PMX_ETH_LED1, 253, 1}, /* D_GPIO1 */
+    {130, 0, PMX_REMOTE_CH3, 254, 1}, /* D_GPIO2 */
+    {131, 0, PMX_PWM4_4, 255, 1}, /* D_GPIO3 */
+    {131, 0, PMX_SENSOR_SPCLK_3RD, 256, 1}, /* D_GPIO3 */
+    {132, 0, PMX_PWM5_4, 257, 1}, /* D_GPIO4 */
+    {132, 0, PMX_SP_CLK2_3, 258, 1}, /* D_GPIO4 */
+    {133, 0, PMX_ETH_LED2, 259, 1}, /* D_GPIO5 */
+    {133, 0, PMX_PWM6_4, 260, 1}, /* D_GPIO5 */
+    {134, 0, PMX_ETH_LED2, 259, 1}, /* D_GPIO6 */
+    {134, 0, PMX_PWM7_4, 261, 1}, /* D_GPIO6 */
+    {135, 0, PMX_I2S_2_MCLK, 262, 1}, /* D_GPIO7 */
+    {135, 0, PMX_PWM11_4, 263, 1}, /* D_GPIO7 */
+    {136, 0, PMX_DMCLK_2, 264, 3}, /* D_GPIO8 */
+    {136, 0, PMX_PWM8_4, 267, 1}, /* D_GPIO8 */
+    {136, 0, PMX_SB3_3_CS, 268, 1}, /* D_GPIO8 */
+    {137, 0, PMX_DMDAT0_2, 264, 3}, /* D_GPIO9 */
+    {137, 0, PMX_PWM9_4, 269, 1}, /* D_GPIO9 */
+    {137, 0, PMX_SB3_3_CK, 268, 1}, /* D_GPIO9 */
+    {138, 0, PMX_DMDAT1_2, 264, 3}, /* D_GPIO10 */
+    {138, 0, PMX_PWM10_4, 270, 1}, /* D_GPIO10 */
+    {138, 0, PMX_SB3_3_DAT, 268, 1}, /* D_GPIO10 */
     {160, NVT_UNGATED, PMX_SENSOR_12BITS, 148, 1}, /* H_GPIO0 */
     {160, 0, PMX_MIPI_LVDS_DAT0, 1, 0}, /* H_GPIO0 */
     {161, NVT_UNGATED, PMX_SENSOR_12BITS, 148, 1}, /* H_GPIO1 */
@@ -3775,46 +4436,121 @@ static const novatek_sel_t NA51084_sels[] = {
     {75, PMX_SPI_2_DO, 0x14, 8, 2, 2},
     {76, PMX_SPI_2_DI, 0x14, 8, 2, 2},
     {76, PMX_SENSOR2_MCLK_2ND, 0x0C, 12, 2, 2},
-    {96, PMX_TXD0, 0x08, 0, 4, 1},
+    {96, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {96, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {96, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {96, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {96, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {96, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {96, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {96, PMX_PWM0_5, 0x1C, 0, 3, 5},
-    {97, PMX_TXD1, 0x08, 0, 4, 1},
+    {96, PMX_TXD0, NVT_GATE, 0, 0, 0},
+    {97, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {97, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {97, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {97, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {97, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {97, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {97, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {97, PMX_PWM1_5, 0x1C, 3, 3, 5},
-    {98, PMX_TX_EN, 0x08, 0, 4, 1},
+    {97, PMX_TXD1, NVT_GATE, 0, 0, 0},
+    {98, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {98, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {98, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {98, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {98, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {98, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {98, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {98, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {98, PMX_PWM2_5, 0x1C, 6, 3, 5},
-    {99, PMX_RXD0, 0x08, 0, 4, 1},
+    {98, PMX_TX_EN, NVT_GATE, 0, 0, 0},
+    {99, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {99, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {99, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {99, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {99, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {99, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {99, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {99, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {99, PMX_PWM3_5, 0x1C, 9, 3, 5},
-    {100, PMX_RXD1, 0x08, 0, 4, 1},
+    {99, PMX_RXD0, NVT_GATE, 0, 0, 0},
+    {100, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {100, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {100, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {100, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {100, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {100, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {100, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {100, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {100, PMX_PWM4_5, 0x1C, 12, 3, 5},
-    {101, PMX_CRS_DV, 0x08, 0, 4, 1},
+    {100, PMX_RXD1, NVT_GATE, 0, 0, 0},
+    {101, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {101, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {101, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {101, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {101, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {101, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {101, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {101, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {101, PMX_PWM5_5, 0x1C, 15, 3, 5},
-    {102, PMX_RX_ER, 0x08, 0, 4, 1},
+    {101, PMX_CRS_DV, NVT_GATE, 0, 0, 0},
+    {102, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {102, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {102, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {102, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {102, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {102, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {102, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {102, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {102, PMX_PWM6_5, 0x1C, 18, 3, 5},
-    {103, PMX_ETH_PHYCLK, 0x08, 0, 4, 1},
+    {102, PMX_RX_ER, NVT_GATE, 0, 0, 0},
+    {103, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {103, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {103, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {103, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {103, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {103, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {103, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {103, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
+    {103, PMX_ETH_PHYCLK, 0x18, 28, 1, 1},
     {103, PMX_PWM7_5, 0x1C, 21, 3, 5},
-    {104, PMX_REFCLK, 0x08, 0, 4, 1},
+    {104, PMX_LCD_CCIR601, 0x08, 0, 4, 2},
+    {104, PMX_LCD_CCIR656, 0x08, 0, 4, 1},
+    {104, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
+    {104, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
+    {104, PMX_LCD_PARALLE_RGB888, 0x08, 0, 4, 10},
+    {104, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
+    {104, PMX_LCD_SERIAL_RGB_6BITS, 0x08, 0, 4, 5},
+    {104, PMX_LCD_SERIAL_RGB_8BITS, 0x08, 0, 4, 4},
     {104, PMX_PWM8_5, 0x18, 16, 3, 5},
-    {105, PMX_MDC, 0x08, 0, 4, 2},
+    {104, PMX_REFCLK, NVT_GATE, 0, 0, 0},
+    {105, PMX_LCD_NO_HVSYNC, 0x08, 0, 4, 2},
     {105, PMX_PWM9_5, 0x18, 19, 3, 5},
-    {106, PMX_MDIO, 0x08, 0, 4, 2},
+    {105, PMX_MDC, NVT_GATE, 0, 0, 0},
+    {106, PMX_LCD_NO_HVSYNC, 0x08, 0, 4, 2},
     {106, PMX_PWM10_5, 0x18, 22, 3, 5},
-    {107, PMX_LCD_DE_ENABLE, 0x08, 0, 4, 0},
+    {106, PMX_MDIO, NVT_GATE, 0, 0, 0},
+    {107, PMX_LCD_DE_ENABLE, 0x08, 6, 1, 1},
     {107, PMX_PWM11_5, 0x18, 25, 3, 5},
     {107, PMX_TX_CTL, 0x10, 8, 2, 3},
     {107, PMX_TX_EN, 0x10, 8, 2, 2},
     {108, PMX_LCD_CCIR601_16BITS, 0x08, 0, 4, 2},
     {108, PMX_LCD_CCIR656_16BITS, 0x08, 0, 4, 1},
+    {108, PMX_LCD_HVLD_VVLD, 0x08, 8, 1, 1},
     {108, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
     {108, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
     {108, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
     {108, PMX_TXD0, 0x10, 8, 2, 2},
     {109, PMX_LCD_CCIR601_16BITS, 0x08, 0, 4, 2},
     {109, PMX_LCD_CCIR656_16BITS, 0x08, 0, 4, 1},
+    {109, PMX_LCD_HVLD_VVLD, 0x08, 8, 1, 1},
     {109, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
     {109, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
     {109, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
     {109, PMX_TXD1, 0x10, 8, 2, 2},
     {110, PMX_LCD_CCIR601_16BITS, 0x08, 0, 4, 2},
     {110, PMX_LCD_CCIR656_16BITS, 0x08, 0, 4, 1},
+    {110, PMX_LCD_FIELD, 0x08, 8, 1, 1},
     {110, PMX_LCD_PARALLE_RGB565, 0x08, 0, 4, 3},
     {110, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
     {110, PMX_LCD_RGB_16BITS, 0x08, 0, 4, 7},
@@ -3856,6 +4592,7 @@ static const novatek_sel_t NA51084_sels[] = {
     {116, PMX_SP_CLK_1, 0x0C, 18, 2, 1},
     {117, PMX_LCD_PARALLE_RGB666, 0x08, 0, 4, 8},
     {117, PMX_RXD3, 0x10, 8, 2, 3},
+    {118, PMX_LCD_TE_ENABLE, 0x08, 0, 4, 9},
     {118, PMX_SB3_1_CS, 0x14, 24, 2, 1},
     {118, PMX_TX_CLK, 0x10, 8, 2, 3},
     {119, PMX_MDC, 0x10, 8, 2, 2},
@@ -3928,8 +4665,8 @@ static const novatek_sel_t NA51084_sels[] = {
 };
 
 static const novatek_soc_t NA51084_padmux = {
-    NA51084_pads, 113, NA51084_claims, 525, NA51084_conds,
-    NA51084_sels, 422,
+    NA51084_pads, 113, NA51084_claims, 690, NA51084_conds,
+    NA51084_sels, 498,
 };
 
 #endif /* HAL_NOVATEK_PADMUX_H */

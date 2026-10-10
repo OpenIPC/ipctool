@@ -1029,6 +1029,21 @@ static void test_novatek(void) {
     CHECK(reg_of(0xF00100B8u) == ~(1u << 1));
     CHECK(ipchw_padmux_get(0x60 + 1, &r) == 1 &&
           !strcmp(r.func_name, "LCD_PARALLE_RGB565"));
+
+    /* A panel with DE: PLCD_DE (REG2 bit 6) set and L_GPIO0 handed over.
+     * Both the colour pin and the DE pin read as the LCD, and putting DE on
+     * its pin leaves the panel type where it is. */
+    nvt_boot_state();
+    fake_write(0xF0010008u, 3 | (1u << 6), 32);
+    fake_write(0xF00100B8u, ~3u, 32);
+    CHECK(ipchw_padmux_get(0x60 + 1, &r) == 1 &&
+          !strcmp(r.func_name, "LCD_PARALLE_RGB565"));
+    CHECK(ipchw_padmux_get(0x60 + 0, &r) == 1 &&
+          !strcmp(r.func_name, "LCD_DE_ENABLE"));
+    nvt_boot_state();
+    fake_write(0xF0010008u, 3, 32);
+    CHECK(ipchw_padmux_set(0x60 + 0, "LCD_DE_ENABLE") == 0);
+    CHECK(reg_of(0xF0010008u) == (3 | (1u << 6)));
     as_chip(T31, "T31");
 }
 

@@ -1600,11 +1600,17 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_NOVATEK)
     char LCD_DE_ENABLE[sizeof "LCD_DE_ENABLE"];
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    char LCD_FIELD[sizeof "LCD_FIELD"];
+#endif
 #if defined(IPCHW_PADMUX_V4)
     char LCD_HS[sizeof "LCD_HS"];
 #endif
 #if defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4A)
     char LCD_HSYNC[sizeof "LCD_HSYNC"];
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    char LCD_HVLD_VVLD[sizeof "LCD_HVLD_VVLD"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     char LCD_NO_HVSYNC[sizeof "LCD_NO_HVSYNC"];
@@ -1626,6 +1632,9 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     char LCD_SERIAL_RGB_8BITS[sizeof "LCD_SERIAL_RGB_8BITS"];
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    char LCD_TE_ENABLE[sizeof "LCD_TE_ENABLE"];
 #endif
 #if defined(IPCHW_PADMUX_V4)
     char LCD_VS[sizeof "LCD_VS"];
@@ -9052,11 +9061,17 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_NOVATEK)
 #define PMX_LCD_DE_ENABLE ((uint16_t)offsetof(struct padmux_names, LCD_DE_ENABLE))
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+#define PMX_LCD_FIELD ((uint16_t)offsetof(struct padmux_names, LCD_FIELD))
+#endif
 #if defined(IPCHW_PADMUX_V4)
 #define PMX_LCD_HS ((uint16_t)offsetof(struct padmux_names, LCD_HS))
 #endif
 #if defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4A)
 #define PMX_LCD_HSYNC ((uint16_t)offsetof(struct padmux_names, LCD_HSYNC))
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+#define PMX_LCD_HVLD_VVLD ((uint16_t)offsetof(struct padmux_names, LCD_HVLD_VVLD))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
 #define PMX_LCD_NO_HVSYNC ((uint16_t)offsetof(struct padmux_names, LCD_NO_HVSYNC))
@@ -9078,6 +9093,9 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
 #define PMX_LCD_SERIAL_RGB_8BITS ((uint16_t)offsetof(struct padmux_names, LCD_SERIAL_RGB_8BITS))
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+#define PMX_LCD_TE_ENABLE ((uint16_t)offsetof(struct padmux_names, LCD_TE_ENABLE))
 #endif
 #if defined(IPCHW_PADMUX_V4)
 #define PMX_LCD_VS ((uint16_t)offsetof(struct padmux_names, LCD_VS))

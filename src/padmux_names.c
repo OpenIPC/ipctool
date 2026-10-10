@@ -1594,11 +1594,17 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_NOVATEK)
     .LCD_DE_ENABLE = "LCD_DE_ENABLE",
 #endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_FIELD = "LCD_FIELD",
+#endif
 #if defined(IPCHW_PADMUX_V4)
     .LCD_HS = "LCD_HS",
 #endif
 #if defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4A)
     .LCD_HSYNC = "LCD_HSYNC",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_HVLD_VVLD = "LCD_HVLD_VVLD",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .LCD_NO_HVSYNC = "LCD_NO_HVSYNC",
@@ -1620,6 +1626,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .LCD_SERIAL_RGB_8BITS = "LCD_SERIAL_RGB_8BITS",
+#endif
+#if defined(IPCHW_PADMUX_NOVATEK)
+    .LCD_TE_ENABLE = "LCD_TE_ENABLE",
 #endif
 #if defined(IPCHW_PADMUX_V4)
     .LCD_VS = "LCD_VS",
