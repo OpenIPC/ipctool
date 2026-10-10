@@ -525,9 +525,16 @@ in.
   host. On top of that, HiSilicon, SigmaStar infinity6/6b0/6c, and Ingenic
   T21, T23, T31 and SigmaStar infinity6e have been run on real cameras and
   checked against an independent decode of their live registers. Ingenic T40
-  and the Novatek dies have not: nobody here has had one. On a Novatek part,
-  `/proc/nvt_info/nvt_pinmux/pinmux_summary` is the kernel's own decode of the
-  same registers and is the thing to compare `reginfo --pads` against.
+  has not: nobody has had one.
+
+  Novatek NA51089 has, on the reporter's NT98566 in #237: `reginfo --pads`
+  agreed on every pad with `/proc/nvt_info/nvt_pinmux/pinmux_summary`, the
+  kernel's own decode of the same registers -- SPI NAND, a MIPI sensor on four
+  lanes with MCLK, three I2C buses, three UARTs (one on its 2nd location),
+  four PWMs, the internal PHY's LED2 -- and claimed no pad the kernel had not
+  configured. That is the comparison to run on any Novatek part. NA51055 and
+  NA51084 have not been run, and neither has the GPIO controller
+  (`gpio get/set/scan`) on any Novatek die.
 
 ## Adding a family
 
