@@ -1,5 +1,6 @@
 #include "hal/ingenic.h"
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -322,13 +323,13 @@ unsigned long ingenic_totalmem(unsigned long *media_mem) {
 }
 
 float ingenic_get_temp() {
-    float ret = -237.0;
     char buf[16];
-    if (line_from_file("/sys/class/thermal/thermal_zone0/temp", "(.+)", buf,
-                       sizeof(buf))) {
-        ret = strtof(buf, NULL);
-    }
-    return ret;
+    if (!line_from_file("/sys/class/thermal/thermal_zone0/temp", "(.+)", buf,
+                        sizeof(buf)))
+        return NAN;
+    /* Millidegrees, like everything under /sys/class/thermal. Returning the
+     * raw value would have reported a 45 C chip as 45000. */
+    return strtof(buf, NULL) / 1000;
 }
 
 /* Honours the adapter number instead of re-deriving it from the chip name on
@@ -378,6 +379,15 @@ void setup_hal_ingenic() {
     possible_i2c_addrs = ingenic_possible_i2c_addrs;
     i2c_adapter_nr = !strncmp(chip_name, "T40", 3) ? 1 : 0;
     open_i2c_sensor_fd = ingenic_open_i2c_fd;
+    /* Dropped by accident in 6e697a7, whose subject was the sensor clock. No
+     * Ingenic SoC up to and including T40 has a die temperature sensor, so no
+     * Ingenic kernel registers a thermal zone and the guard leaves
+     * hal_temperature NULL -- which is why nothing noticed. Kept in the shape
+     * the other sysfs-reading HALs use so that a kernel which ever grows a
+     * zone needs no change here, and so -t keeps answering honestly rather
+     * than through a function no caller can reach. */
+    if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
+        hal_temperature = ingenic_get_temp;
     /* Also as a hook, because the call above only ever runs once: getchipname()
      * caches the chip id and returns before ever reaching here again. Anything
      * that gates the clock off afterwards — the vendor SDK does, on the way
