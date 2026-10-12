@@ -13,7 +13,6 @@
 #include <unistd.h>
 
 #include "backup.h"
-#include "report.h"
 #include "bootrom.h"
 #include "chipid.h"
 #include "cjson/cJSON.h"
@@ -28,10 +27,12 @@
 #include "i2cspi.h"
 #include "membw.h"
 #include "mtd.h"
+#include "nand_migrate.h"
 #include "network.h"
 #include "ptrace.h"
 #include "ram.h"
 #include "reginfo.h"
+#include "report.h"
 #include "sdcard.h"
 #include "sensors.h"
 #include "snstool.h"
@@ -92,6 +93,9 @@ void print_usage() {
         "                            (experimental! use only on cameras with "
         "UART)\n"
         "     [-f, --force]          enforce\n"
+        "  nand-migrate [--dry-run] [--wipe-settings] <rootfs.ubifs>\n"
+        "                            move a NAND camera off the retired\n"
+        "                            layout with a `kernel` UBI volume\n"
         "  printenv                  drop-in replacement for fw_printenv\n"
         "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
         "  dmesg                     drop-in replacement for dmesg\n"
@@ -182,7 +186,8 @@ char *build_report_yaml(void) {
 
 static int backup_with_yaml(const char *backup_file) {
     cJSON *yaml = build_yaml();
-    if (!yaml) return EXIT_FAILURE;
+    if (!yaml)
+        return EXIT_FAILURE;
     char *string = cYAML_Print(yaml);
 
     int ret = do_backup(string, strlen(string), backup_file);
@@ -196,6 +201,10 @@ static int backup_with_yaml(const char *backup_file) {
 }
 
 int main(int argc, char *argv[]) {
+    // Only ever PID 1 as the /sbin/init `nand-migrate` hands busybox init
+    if (getpid() == 1)
+        return nand_migrate_pid1();
+
     // Don't use common option parser for these commands
     if (argc > 1) {
         if (!strcmp(argv[1], "gpio"))
@@ -210,6 +219,8 @@ int main(int argc, char *argv[]) {
             return report_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "restore") || !strcmp(argv[1], "upgrade"))
             return upgrade_restore_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "nand-migrate"))
+            return nand_migrate_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "printenv"))
             return cmd_printenv();
         else if (!strcmp(argv[1], "setenv"))
@@ -317,7 +328,8 @@ int main(int argc, char *argv[]) {
     }
 
     cJSON *yaml = build_yaml();
-    if (!yaml) return EXIT_FAILURE;
+    if (!yaml)
+        return EXIT_FAILURE;
     char *string = cYAML_Print(yaml);
     printf("%s", string);
     free(string);

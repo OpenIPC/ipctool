@@ -312,6 +312,10 @@ message(STATUS "libipchw vendor HALs: hisi ${_ipchw_selected}")
 set(IPCTOOL_SRC
     src/backup.c
     src/backup.h
+    src/nand_layout.c
+    src/nand_layout.h
+    src/nand_migrate.c
+    src/nand_migrate.h
     src/bootrom.c
     src/bootrom.h
     src/clocks.c
@@ -517,4 +521,8 @@ if(NOT ONLY_LIBRARY)
   # Which partitions are another name for the chip ("all" on Novatek).
   add_executable(mtd_alias_test src/mtd_alias_test.c src/mtd_alias.c)
   target_include_directories(mtd_alias_test PRIVATE include src)
+
+  # What nand-migrate decides before it touches the flash.
+  add_executable(nand_layout_test src/nand_layout_test.c src/nand_layout.c)
+  target_include_directories(nand_layout_test PRIVATE include src)
 endif()
