@@ -45,6 +45,10 @@ const char *nm_env_get(const uint8_t *env, size_t len, const char *key) {
     const char *p = (const char *)env + 4, *end = (const char *)env + len;
     while (p < end && *p) {
         size_t n = strnlen(p, end - p);
+        // A CRC only proves the bytes are what was saved, not that they
+        // are a well-formed env: an entry must end inside it
+        if (n == (size_t)(end - p))
+            return NULL;
         if (n > klen && !strncmp(p, key, klen) && p[klen] == '=')
             return p + klen + 1;
         p += n + 1;
@@ -61,6 +65,8 @@ bool nm_env_set(uint8_t *env, size_t len, const char *key, const char *value) {
     const char *p = (const char *)env + 4, *end = (const char *)env + len;
     while (p < end && *p) {
         size_t n = strnlen(p, end - p);
+        if (n == (size_t)(end - p))
+            goto toolong;
         if (!(n > klen && !strncmp(p, key, klen) && p[klen] == '=')) {
             // +2: this entry's NUL and the list's
             if (o + n + 2 > len)
@@ -83,7 +89,7 @@ bool nm_env_set(uint8_t *env, size_t len, const char *key, const char *value) {
     memcpy(env, out, len);
     free(out);
     return true;
-toolong:
+toolong: // or not a well-formed env to begin with
     free(out);
     return false;
 }
@@ -128,7 +134,8 @@ nm_plan_t nm_check_camera(const nm_camera_t *cam, const char **why) {
     if (cam->kernel_head_len < 4 || le32(cam->kernel_head) != 0xedfe0dd0)
         REFUSE("the kernel volume does not hold a FIT, so this U-Boot is not "
                "known to boot one from UBIFS");
-    if (!cam->bootargs || !strstr(cam->bootargs, "${rootargs}"))
+    // An argument of its own: "x=${rootargs}y" would expand to no root=
+    if (!cam->bootargs || !has_word(cam->bootargs, "${rootargs}"))
         REFUSE("bootargs does not take its root from ${rootargs}, which the "
                "new bootcmd sets");
     return NM_MIGRATE;
@@ -155,10 +162,45 @@ static uint32_t ubifs_node(const uint8_t *p, size_t room) {
     return len;
 }
 
+/*
+ * The entry for `name` in directory `parent` as the filesystem has it now:
+ * of every directory-entry node naming it, the one written last (highest
+ * sequence number). An entry that was deleted is a later node with inode 0;
+ * then, as when there is no entry at all, this returns 0. Otherwise the
+ * entry's inode, with its type in *type.
+ */
+static uint64_t ubifs_lookup(const uint8_t *img, size_t size, uint32_t leb,
+                             uint64_t parent, const char *name, uint8_t *type) {
+    size_t nlen_want = strlen(name);
+    uint64_t best_sqnum = 0, best_inum = 0;
+    for (size_t off = 0; off + UBIFS_CH_SZ <= size; off += 8) {
+        const uint8_t *p = img + off;
+        if (p[20] != UBIFS_DENT_NODE)
+            continue;
+        // A node never crosses the end of its LEB
+        size_t room = leb - off % leb;
+        if (room > size - off)
+            room = size - off;
+        uint32_t len = ubifs_node(p, room);
+        if (len < 56)
+            continue;
+        uint64_t sqnum = le64(p + 8);
+        uint16_t nlen = p[50] | p[51] << 8;
+        if (le32(p + 24) == parent && nlen == nlen_want && 56u + nlen <= len &&
+            !memcmp(p + 56, name, nlen) && sqnum >= best_sqnum) {
+            best_sqnum = sqnum;
+            best_inum = le64(p + 40);
+            *type = p[49];
+        }
+        off += (len + 7) / 8 * 8 - 8;
+    }
+    return best_inum;
+}
+
 const char *nm_check_image(const uint8_t *img, size_t size, uint32_t leb_size,
                            const char **kernel_name) {
     *kernel_name = NULL;
-    uint32_t len = ubifs_node(img, size);
+    uint32_t len = ubifs_node(img, size < leb_size ? size : leb_size);
     if (!len || img[20] != UBIFS_SB_NODE || len < 40)
         return "not a UBIFS image (no superblock at its start)";
     if (le32(img + 36) != leb_size)
@@ -167,43 +209,21 @@ const char *nm_check_image(const uint8_t *img, size_t size, uint32_t leb_size,
     /*
      * Directory entries carry their names uncompressed, so finding /boot and
      * the kernel in it needs no UBIFS reader: an entry's key starts with
-     * the inode of the directory it is in. A deleted entry has inode 0.
-     * Nodes are 8-byte aligned within a LEB, and LEBs are back to back.
+     * the inode of the directory it is in. Nodes are 8-byte aligned within
+     * a LEB, and LEBs are back to back.
      */
-    uint64_t boot_ino = 0;
-    for (int pass = 0; pass < 2 && !*kernel_name; pass++) {
-        for (size_t off = 0; off + UBIFS_CH_SZ <= size; off += 8) {
-            const uint8_t *p = img + off;
-            if (p[20] != UBIFS_DENT_NODE || !(len = ubifs_node(p, size - off)))
-                continue;
-            if (len < 56)
-                continue;
-            uint32_t parent = le32(p + 24);
-            uint64_t inum = le64(p + 40);
-            uint8_t type = p[49];
-            uint16_t nlen = p[50] | p[51] << 8;
-            const char *name = (const char *)p + 56;
-            if (!inum || 56u + nlen > len)
-                continue;
-            if (pass == 0 && parent == UBIFS_ROOT_INO &&
-                type == UBIFS_ITYPE_DIR && nlen == 4 &&
-                !memcmp(name, "boot", 4))
-                boot_ino = inum;
-            if (pass == 1 && boot_ino && parent == boot_ino &&
-                type == UBIFS_ITYPE_REG) {
-                if (nlen == 8 && !memcmp(name, "fitImage", 8))
-                    *kernel_name = "/boot/fitImage";
-                else if (nlen == 6 && !memcmp(name, "uImage", 6) &&
-                         !*kernel_name)
-                    *kernel_name = "/boot/uImage";
-            }
-            off += (len + 7) / 8 * 8 - 8;
+    uint8_t type = 0;
+    uint64_t boot =
+        ubifs_lookup(img, size, leb_size, UBIFS_ROOT_INO, "boot", &type);
+    if (!boot || type != UBIFS_ITYPE_DIR)
+        return "there is no /boot in it, so U-Boot would find no kernel";
+    static const char *const kernels[] = {"fitImage", "uImage"};
+    for (size_t i = 0; i < sizeof kernels / sizeof *kernels; i++)
+        if (ubifs_lookup(img, size, leb_size, boot, kernels[i], &type) &&
+            type == UBIFS_ITYPE_REG) {
+            *kernel_name = i ? "/boot/uImage" : "/boot/fitImage";
+            return NULL;
         }
-        if (pass == 0 && !boot_ino)
-            return "there is no /boot in it, so U-Boot would find no kernel";
-    }
-    if (!*kernel_name)
-        return "/boot holds neither fitImage nor uImage, so U-Boot would find "
-               "no kernel";
-    return NULL;
+    return "/boot holds neither fitImage nor uImage, so U-Boot would find "
+           "no kernel";
 }

@@ -71,6 +71,15 @@ static void test_env(void) {
     CHECK(!nm_env_set(small, sizeof(small), "bootcmd", NM_BOOTCMD_UBIFS),
           "an overlong value accepted");
     CHECK(!memcmp(copy, small, sizeof(small)), "a refused set changed env");
+
+    // CRC-valid but malformed: the last entry runs to the end of the env
+    uint8_t bad[32];
+    memset(bad, 'x', sizeof(bad));
+    memcpy(bad + 4, "bootcmd=", 8);
+    put32(bad, nm_crc32(0, bad + 4, sizeof(bad) - 4));
+    CHECK(!nm_env_get(bad, sizeof(bad), "bootcmd"),
+          "an unterminated value returned");
+    CHECK(!nm_env_set(bad, sizeof(bad), "a", "1"), "a malformed env rewritten");
     free(env);
 }
 
@@ -116,6 +125,11 @@ static void test_camera(void) {
     c.bootargs = "mem=128M root=ubi0:rootfs rootfstype=ubifs";
     CHECK(PLAN(c) == NM_REFUSE && why, "bootargs without ${rootargs} accepted");
 
+    // ${rootargs} inside another argument expands to no root= of its own
+    c = good;
+    c.bootargs = "mem=128M foo=${rootargs}bar";
+    CHECK(PLAN(c) == NM_REFUSE && why, "an embedded ${rootargs} accepted");
+
     c = good;
     c.cmdline = "root=/dev/ubiblock0_1 ubi.block=0,1";
     CHECK(PLAN(c) == NM_REFUSE && why, "a ubiblock camera accepted");
@@ -130,11 +144,14 @@ static void test_camera(void) {
     CHECK(PLAN(c) == NM_REFUSE && why, "no rootfs_data accepted");
 }
 
-/* A UBIFS node: common header + body, CRC'd as UBIFS does. */
+/* A UBIFS node: common header + body, CRC'd as UBIFS does. Each node gets
+ * the next sequence number, so one written later is newer, as on flash. */
+static uint64_t sqnum;
 static size_t node(uint8_t *p, uint8_t type, const uint8_t *body, size_t blen) {
     size_t len = 24 + blen;
     memset(p, 0, 24);
     put32(p, 0x06101831);
+    put32(p + 8, ++sqnum);
     put32(p + 16, len);
     p[20] = type;
     memcpy(p + 24, body, blen);
@@ -200,7 +217,43 @@ static void test_image(void) {
               !strcmp(k, "/boot/uImage"),
           "a /boot/uImage image refused");
 
+    // An entry deleted later is gone, though its old node is still there
+    memset(img + LEB, 0, 2 * LEB);
+    o = LEB;
+    o += dent(img + o, 1, 7, 1, "boot");
+    o += dent(img + o, 7, 9, 0, "fitImage");
+    o += dent(img + o, 7, 0, 0, "fitImage");
+    CHECK(nm_check_image(img, 3 * LEB, LEB, &k), "a deleted fitImage accepted");
+
+    // ...and one written again after its deletion is back
+    o += dent(img + o, 7, 10, 0, "fitImage");
+    CHECK(!nm_check_image(img, 3 * LEB, LEB, &k),
+          "a re-created fitImage refused");
+
+    // Newest wins wherever it sits: the deletion first in the image, but
+    // with the higher sequence number
+    memset(img + LEB, 0, 2 * LEB);
+    o = 2 * LEB;
+    o += dent(img + o, 1, 7, 1, "boot");
+    o += dent(img + o, 7, 9, 0, "fitImage");
+    o = LEB;
+    o += dent(img + o, 7, 0, 0, "fitImage");
+    CHECK(nm_check_image(img, 3 * LEB, LEB, &k),
+          "a deletion earlier in the image but newer was ignored");
+
+    // A node never crosses its LEB's end: one that would is not believed
+    memset(img + LEB, 0, 2 * LEB);
+    o = LEB;
+    o += dent(img + o, 1, 7, 1, "boot");
+    dent(img + 2 * LEB - 40, 7, 9, 0, "fitImage");
+    CHECK(nm_check_image(img, 3 * LEB, LEB, &k),
+          "an entry across a LEB boundary accepted");
+
     // A corrupted entry is not believed
+    memset(img + LEB, 0, 2 * LEB);
+    o = LEB;
+    o += dent(img + o, 7, 9, 0, "uImage");
+    o += dent(img + o, 1, 7, 1, "boot");
     img[LEB + 60] ^= 1;
     CHECK(nm_check_image(img, 3 * LEB, LEB, &k), "a bad CRC believed");
 

@@ -452,15 +452,33 @@ int nand_migrate_pid1(void) {
         finish(&c, false);
     }
 
-    // 1. the rootfs, with the kernel in /boot
+    /*
+     * 1. the rootfs, with the kernel in /boot. This is the one step a
+     * failure is not safe in: once UBI has begun the update, the old rootfs
+     * is gone, and the kernel volume kept for step 2 boots nothing without
+     * it. A write-then-swap needs the image's size free in the UBI device,
+     * and this layout has none: rootfs_data was created with autoresize.
+     * So a failure is retried from the copy in RAM -- a new update starts
+     * the volume over -- and only a run that cannot write it at all reboots,
+     * into a camera that needs its serial console.
+     */
     say("writing the rootfs volume ubi%d_%d (%zu bytes)", c.ubi, c.rootfs,
         size);
-    if (!ubi_volup(c.ubi, c.rootfs, img, size)) {
-        say("writing the rootfs failed: %s", strerror(errno));
-        finish(&c, false);
+    bool written = false;
+    for (int attempt = 1; attempt <= 3 && !written; attempt++) {
+        if (attempt > 1)
+            say("retrying the rootfs write (attempt %d of 3)", attempt);
+        if (!ubi_volup(c.ubi, c.rootfs, img, size))
+            say("writing the rootfs failed: %s", strerror(errno));
+        else if (!sha1_matches(c.ubi, c.rootfs, img, size))
+            say("the rootfs reads back different from the image");
+        else
+            written = true;
     }
-    if (!sha1_matches(c.ubi, c.rootfs, img, size)) {
-        say("the rootfs reads back different from the image");
+    if (!written) {
+        say("the rootfs volume could not be written and is incomplete; the "
+            "camera will not boot until it is reinstalled over its serial "
+            "console");
         finish(&c, false);
     }
     say("rootfs written and read back: SHA-1 matches");
@@ -765,11 +783,25 @@ int nand_migrate_cmd(int argc, char **argv) {
         return 1;
     }
     // Absolute and resolved: whether it is on /tmp decides how it is staged
-    char path[128];
-    if (!realpath(argv[optind], path)) {
+    char *resolved = realpath(argv[optind], NULL);
+    if (!resolved) {
         fprintf(stderr, "Cannot read %s: %s\n", argv[optind], strerror(errno));
         return 1;
     }
+    // Phase 2 is told where the image is through a one-line conf
+    char path[sizeof c.image];
+    bool fits = strlen(resolved) < sizeof path && !strpbrk(resolved, " \t\n");
+    if (fits)
+        strcpy(path, resolved);
+    else
+        fprintf(stderr,
+                "Cannot use %s: put the image at a shorter path with "
+                "no spaces, such as /tmp/rootfs.ubifs. Nothing was "
+                "written.\n",
+                resolved);
+    free(resolved);
+    if (!fits)
+        return 1;
     size_t size;
     uint8_t *img = map_file(path, &size);
     if (!img) {
