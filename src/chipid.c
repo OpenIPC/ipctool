@@ -56,7 +56,7 @@ static const manufacturers_t manufacturers[] = {
     {"ingenic", ingenic_detect_cpu, VENDOR_INGENIC, setup_hal_ingenic},
 #endif
 #ifdef IPCHW_VENDOR_NOVATEK
-    {NULL, novatek_detect_cpu, VENDOR_NOVATEK, novatek_setup_hal},
+    {NULL, novatek_detect_mips_cpu, VENDOR_NOVATEK, novatek_setup_hal},
 #endif
 #endif
 #ifdef __arm__

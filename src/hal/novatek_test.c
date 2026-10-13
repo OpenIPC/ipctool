@@ -39,6 +39,7 @@ static bool fixture_line_from_file(const char *path, const char *re,
 static int failures;
 static int hardware_opens;
 static int printk_disables;
+static int arm_chip_id_reads;
 static char fixture_dir[] = "/tmp/novatek_test.XXXXXX";
 
 /* The test link wraps these functions. Catch even an attempted device open,
@@ -63,8 +64,10 @@ void __wrap_disable_printk(void) { printk_disables++; }
 static bool fixture_line_from_file(const char *path, const char *re,
                                    char *out, size_t len) {
     const char *name = NULL;
-    if (!strcmp(path, "/proc/nvt_info/nvt_pinmux/chip_id"))
+    if (!strcmp(path, "/proc/nvt_info/nvt_pinmux/chip_id")) {
+        arm_chip_id_reads++;
         name = "chip_id";
+    }
     else if (!strcmp(path, "/proc/device-tree/model"))
         name = "model";
     else if (!strcmp(path, "/etc/profile_prjcfg"))
@@ -130,6 +133,7 @@ static void mips_dispatch(void) {
                        "cpu model\t: MIPS 24KEc V5.5\n");
     chip_generation = 0;
     *sysid = '\0';
+    arm_chip_id_reads = 0;
     const char *name = getchipname();
     CHECK(name && !strcmp(name, "nt98513"));
     if (!name)
@@ -137,6 +141,7 @@ static void mips_dispatch(void) {
     CHECK(!strcmp(getchipvendor(), "Novatek"));
     CHECK(!strcmp(getchipfamily(), "nt9851x"));
     CHECK(possible_i2c_addrs == NULL);
+    CHECK(arm_chip_id_reads == 0);
 
     sensor_ctx_t sensor;
     hardware_opens = 0;
@@ -152,6 +157,33 @@ static void mips_dispatch(void) {
     *sysid = '\0';
     name = getchipname();
     CHECK(name && !strcmp(name, "nt98513"));
+
+    /* This architecture has no verified ARM chip-ID proc ABI. Its detector
+     * must use the MIPS model even if an unrelated ARM ID file is present. */
+    fixture("chip_id", "7021\n");
+    chip_generation = 0;
+    *sysid = '\0';
+    arm_chip_id_reads = 0;
+    name = getchipname();
+    CHECK(name && !strcmp(name, "nt98513"));
+    CHECK(arm_chip_id_reads == 0);
+    CHECK(possible_i2c_addrs == NULL);
+}
+
+static void mips_reject_unsupported(const char *id, const char *model) {
+    fixture("chip_id", id);
+    fixture("model", model);
+    fixture("profile", "export CHIP=\"98513\"\n");
+    fixture("cpuinfo", "machine\t: Novatek\n");
+    chip_generation = 0;
+    *sysid = '\0';
+    possible_i2c_addrs = NULL;
+    arm_chip_id_reads = 0;
+    CHECK(getchipname() == NULL);
+    CHECK(chip_generation == 0);
+    CHECK(possible_i2c_addrs == NULL);
+    CHECK(open_i2c_sensor_fd != novatek_open_i2c_fd);
+    CHECK(arm_chip_id_reads == 0);
 }
 
 int main(void) {
@@ -185,6 +217,10 @@ int main(void) {
     expect_name("8B20\n", NULL, NULL, "NT98332G", false);
     expect_name("4821\n", NULL, NULL, "NA51055", false);
     mips_dispatch();
+    mips_reject_unsupported(NULL, "Novatek NA510230 evaluation board");
+    mips_reject_unsupported(NULL, "Novatek NA51055 evaluation board");
+    mips_reject_unsupported("7021\n", NULL);
+    mips_reject_unsupported("7021\n", "Novatek NA51055 evaluation board");
     fixture("chip_id", NULL);
     fixture("model", NULL);
     fixture("profile", NULL);
