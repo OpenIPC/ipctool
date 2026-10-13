@@ -55,6 +55,9 @@ static const manufacturers_t manufacturers[] = {
     {"isvp", ingenic_detect_cpu, VENDOR_INGENIC, setup_hal_ingenic},
     {"ingenic", ingenic_detect_cpu, VENDOR_INGENIC, setup_hal_ingenic},
 #endif
+#ifdef IPCHW_VENDOR_NOVATEK
+    {NULL, novatek_detect_cpu, VENDOR_NOVATEK, novatek_setup_hal},
+#endif
 #endif
 #ifdef __arm__
 #ifdef IPCHW_VENDOR_SSTAR
@@ -238,6 +241,10 @@ const char *getchipname() {
 const char *getchipfamily() {
     const char *chip_name = getchipname();
     switch (chip_generation) {
+#ifdef IPCHW_VENDOR_NOVATEK
+    case CHIP_NA51023:
+        return "nt9851x";
+#endif
 #ifdef IPCHW_HISI_V1
     case HISI_V1:
         return "hi3516cv100";

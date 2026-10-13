@@ -22,6 +22,9 @@ void novatek_setup_hal();
 /* TOP + 0xF0 bits [31:16], also /proc/nvt_info/nvt_pinmux/chip_id. One ID
  * per die; the parts cut from a die are told apart by eFuse/OTP words. */
 enum CHIP_ID {
+    /* Software family discriminator, not a TOP chip-ID register value.
+     * The MIPS SDK supplies a device-tree model but no verified chip_id. */
+    CHIP_NA51023 = 0x51023,
     CHIP_NA51055 = 0x4821, // NT9852x: NT98520, NT98525
     CHIP_NA51084 = 0x5021, // NT98528, NT98529 (the 1.2 GHz part, by OTP)
     CHIP_NA51089 = 0x7021, // NT98562 (64 MB internal RAM),

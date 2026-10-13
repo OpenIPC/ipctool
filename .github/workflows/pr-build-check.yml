@@ -139,7 +139,7 @@ jobs:
         run: |
           cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release
           cmake --build build --target cYAML_test reginfo_test longse_test \
-                                      sensors_test anyka_test hal_hisi_test \
+                                      sensors_test anyka_test novatek_test hal_hisi_test \
                                       report_test http_test mtd_alias_test \
                                       nand_layout_test
           ./build/cYAML_test
@@ -150,6 +150,7 @@ jobs:
           ./build/reginfo_test
           ./build/longse_test
           ./build/anyka_test
+          ./build/novatek_test
           ./build/hal_hisi_test
           # Run from the tree root: the fingerprint it compares against is
           # src/sensors_golden.txt, and a sensor that stopped being identified

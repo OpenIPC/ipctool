@@ -505,6 +505,16 @@ if(NOT ONLY_LIBRARY)
   target_include_directories(anyka_test PRIVATE include src)
   target_link_libraries(anyka_test m Threads::Threads)
 
+  # Includes novatek.c so only its hardware file paths are redirected.
+  add_executable(novatek_test src/hal/novatek_test.c src/hal/common.c
+                              src/sensors.c src/tools.c src/cjson/cJSON.c
+                              ${VERSION_OBJ})
+  target_include_directories(novatek_test PRIVATE include src)
+  target_compile_definitions(novatek_test PRIVATE IPCHW_VENDOR_NOVATEK
+                                                 STANDALONE_LIBRARY)
+  target_link_libraries(novatek_test m Threads::Threads
+                        "-Wl,--wrap=open" "-Wl,--wrap=disable_printk")
+
   # The body `ipctool upload` sends: part framing, the backup's layout and
   # the length that must match it, and openipc.org's answer. Off a camera,
   # like the others.

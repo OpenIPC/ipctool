@@ -65,7 +65,8 @@ bool novatek_detect_cpu(char *chip_name) {
     if(nvt_get_chip_id())
         return true;
 
-    if (!line_from_file("/proc/device-tree/model", "Novatek ([A-Z]+[0-9]+)",
+    if (!line_from_file("/proc/device-tree/model",
+                        "^Novatek ([A-Z]+[0-9]+)([[:space:]]|$)",
                         buf, sizeof(buf))) {
         /* NA51055 has a pad table and no part name the ID can give; with
          * no device-tree model either, the die is the name. */
@@ -75,6 +76,18 @@ bool novatek_detect_cpu(char *chip_name) {
     }
 
     strcpy(chip_name, buf);
+
+    if (!strcmp(buf, "NA51023")) {
+        /* The NA51023 device-tree model names a die shared by more than
+         * one part. Only the factory profile in the NT98513 dump names the
+         * part itself. Parse that declaration as data; never source it.
+         * Missing/other profiles keep the honest NA51023 family identity. */
+        chip_generation = CHIP_NA51023;
+        if (line_from_file("/etc/profile_prjcfg",
+                           "^export CHIP=\"(98513)\"[[:space:]]*$", buf,
+                           sizeof(buf)))
+            strcpy(chip_name, "NT98513");
+    }
 
     return true;
 }
@@ -118,7 +131,20 @@ static int novatek_open_i2c_fd(int i2c_adapter_nr) {
     return universal_open_sensor_fd(adapter_name);
 }
 
+static int novatek_no_sensor_bus(int adapter_nr) {
+    (void)adapter_nr;
+    return -1;
+}
+
 void novatek_setup_hal() {
+    /* This MIPS generation delegates media to uITRON. The ARM HDAL memory
+     * report, sensor I2C bus and register tables below are not its ABI. */
+    if (chip_generation == CHIP_NA51023) {
+        possible_i2c_addrs = NULL;
+        open_i2c_sensor_fd = novatek_no_sensor_bus;
+        open_spi_sensor_fd = NULL;
+        return;
+    }
     possible_i2c_addrs = novatek_possible_i2c_addrs;
     i2c_change_addr = i2c_changenshift_addr;
     open_i2c_sensor_fd = novatek_open_i2c_fd;
