@@ -532,9 +532,11 @@ in.
   kernel's own decode of the same registers -- SPI NAND, a MIPI sensor on four
   lanes with MCLK, three I2C buses, three UARTs (one on its 2nd location),
   four PWMs, the internal PHY's LED2 -- and claimed no pad the kernel had not
-  configured. That is the comparison to run on any Novatek part. NA51055 and
-  NA51084 have not been run, and neither has the GPIO controller
-  (`gpio get/set/scan`) on any Novatek die.
+  configured. That is the comparison to run on any Novatek part. The same
+  reporter found `gpio get/set/scan` working on that board, with the Linux GPIO
+  numbering ipctool speaks (`P_GPIO8` is 40) matching the stock firmware's;
+  that is their report, without posted output. NA51055 and NA51084 have not
+  been run at all.
 
 ## Adding a family
 
