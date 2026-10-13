@@ -241,7 +241,8 @@ const char *getchipname() {
 const char *getchipfamily() {
     const char *chip_name = getchipname();
     switch (chip_generation) {
-#ifdef IPCHW_VENDOR_NOVATEK
+#if defined(IPCHW_VENDOR_NOVATEK) && \
+    (defined(mips) || defined(__mips__) || defined(__mips))
     case CHIP_NA51023:
         return "nt9851x";
 #endif

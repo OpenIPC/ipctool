@@ -4,7 +4,9 @@
 #include <stdbool.h>
 
 bool novatek_detect_cpu(char *chip_name);
+#if defined(mips) || defined(__mips__) || defined(__mips)
 bool novatek_detect_mips_cpu(char *chip_name);
+#endif
 unsigned long novatek_totalmem(unsigned long *media_mem);
 void novatek_setup_hal();
 

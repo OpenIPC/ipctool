@@ -13,23 +13,41 @@
 #include <sys/ioctl.h>
 
 #include "tools.h"
+/* Read all project/system declarations before the synthetic architecture
+ * selection, especially the native Linux ioctl definitions. */
+#include "chipid.h"
+#include "hal/common.h"
+#include "sensors.h"
 
 static bool fixture_line_from_file(const char *path, const char *re,
                                    char *out, size_t len);
 #define line_from_file fixture_line_from_file
-#include "novatek.c"
-/* Select chipid.c's MIPS routing table on native CI too. All its system and
- * project headers have already been read above; architecture macros change
- * only while this platform-dispatch source is included. A real MIPS build
- * and QEMU run remain separate from this conditional-routing check. */
+/* Select both the HAL and routing table's architecture on native CI. System
+ * headers are read above before changing these macros. The default is the
+ * MIPS fixture; two additional test targets cover the existing ARM routes.
+ * These selections affect only this test translation unit, not production.
+ * A real MIPS build/QEMU run remains a separate check. */
 #pragma push_macro("__arm__")
 #pragma push_macro("__aarch64__")
 #pragma push_macro("__mips__")
+#pragma push_macro("__mips")
+#pragma push_macro("mips")
 #undef __arm__
 #undef __aarch64__
 #undef __mips__
+#undef __mips
+#undef mips
+#if defined(NOVATEK_TEST_ARM)
+#define __arm__ 1
+#elif defined(NOVATEK_TEST_AARCH64)
+#define __aarch64__ 1
+#else
 #define __mips__ 1
+#endif
+#include "novatek.c"
 #include "../chipid.c"
+#pragma pop_macro("mips")
+#pragma pop_macro("__mips")
 #pragma pop_macro("__mips__")
 #pragma pop_macro("__aarch64__")
 #pragma pop_macro("__arm__")
@@ -40,6 +58,7 @@ static int failures;
 static int hardware_opens;
 static int printk_disables;
 static int arm_chip_id_reads;
+static int profile_reads;
 static char fixture_dir[] = "/tmp/novatek_test.XXXXXX";
 
 /* The test link wraps these functions. Catch even an attempted device open,
@@ -70,8 +89,10 @@ static bool fixture_line_from_file(const char *path, const char *re,
     }
     else if (!strcmp(path, "/proc/device-tree/model"))
         name = "model";
-    else if (!strcmp(path, "/etc/profile_prjcfg"))
+    else if (!strcmp(path, "/etc/profile_prjcfg")) {
+        profile_reads++;
         name = "profile";
+    }
     else if (!strcmp(path, "/proc/cpuinfo"))
         name = "cpuinfo";
     else if (!strcmp(path, "/proc/iomem"))
@@ -124,6 +145,7 @@ static void expect_name(const char *id, const char *model,
     CHECK((possible_i2c_addrs == NULL) == legacy);
 }
 
+#if !defined(NOVATEK_TEST_ARM) && !defined(NOVATEK_TEST_AARCH64)
 static void mips_dispatch(void) {
     fixture("chip_id", NULL);
     fixture("model", "Novatek NA51023 evaluation board");
@@ -185,6 +207,7 @@ static void mips_reject_unsupported(const char *id, const char *model) {
     CHECK(open_i2c_sensor_fd != novatek_open_i2c_fd);
     CHECK(arm_chip_id_reads == 0);
 }
+#endif
 
 int main(void) {
     if (!mkdtemp(fixture_dir)) {
@@ -193,6 +216,24 @@ int main(void) {
     }
     const char *model = "Novatek NA51023 evaluation board";
     const char *profile = "export PLATFORM=\"Linux\"\nexport CHIP=\"98513\"\n";
+#if defined(NOVATEK_TEST_ARM) || defined(NOVATEK_TEST_AARCH64)
+    /* An ARM build must not refine the MIPS-only model from its profile or
+     * install the MIPS rejecting HAL. Keep the existing ARM ID/model route. */
+    profile_reads = 0;
+    expect_name(NULL, model, profile, "NA51023", false);
+    CHECK(chip_generation != CHIP_NA51023);
+    expect_name(NULL, "Novatek NA51023", profile, "NA51023", false);
+    /* These generic ARM substring matches are inherited behavior. Strict
+     * complete-token rejection is a guarantee of the new MIPS route only. */
+    expect_name(NULL, "Novatek NA51023A evaluation board", profile, "NA51023", false);
+    expect_name(NULL, "OtherNovatek NA51023 evaluation board", profile, "NA51023", false);
+    expect_name(NULL, "Novatek NA51055 evaluation board", profile, "NA51055", false);
+    expect_name("7021\n", NULL, profile, "NT98566", false);
+    expect_name("5021\n", NULL, NULL, "NT98528", false);
+    expect_name("8B20\n", NULL, NULL, "NT98332G", false);
+    expect_name("4821\n", NULL, NULL, "NA51055", false);
+    CHECK(profile_reads == 0);
+#else
     expect_name(NULL, model, profile, "NT98513", true);
     expect_name(NULL, model, NULL, "NA51023", true);
     expect_name(NULL, model, "export CHIP=\"98515\"\n", "NA51023", true);
@@ -221,6 +262,7 @@ int main(void) {
     mips_reject_unsupported(NULL, "Novatek NA51055 evaluation board");
     mips_reject_unsupported("7021\n", NULL);
     mips_reject_unsupported("7021\n", "Novatek NA51055 evaluation board");
+#endif
     fixture("chip_id", NULL);
     fixture("model", NULL);
     fixture("profile", NULL);

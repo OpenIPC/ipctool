@@ -59,6 +59,7 @@ static bool nvt_get_chip_id() {
     return true;
 }
 
+#if defined(mips) || defined(__mips__) || defined(__mips)
 static void nvt_refine_na51023(char *chip_name) {
     char buf[16];
 
@@ -85,6 +86,7 @@ bool novatek_detect_mips_cpu(char *chip_name) {
     nvt_refine_na51023(chip_name);
     return true;
 }
+#endif
 
 bool novatek_detect_cpu(char *chip_name) {
     char buf[256];
@@ -93,7 +95,13 @@ bool novatek_detect_cpu(char *chip_name) {
         return true;
 
     if (!line_from_file("/proc/device-tree/model",
+#if defined(mips) || defined(__mips__) || defined(__mips)
                         "^Novatek ([A-Z]+[0-9]+)([[:space:]]|$)",
+#else
+                        /* Keep the existing ARM/AArch64 parser unchanged.
+                         * The new MIPS route has its own strict detector. */
+                        "Novatek ([A-Z]+[0-9]+)",
+#endif
                         buf, sizeof(buf))) {
         /* NA51055 has a pad table and no part name the ID can give; with
          * no device-tree model either, the die is the name. */
@@ -104,8 +112,10 @@ bool novatek_detect_cpu(char *chip_name) {
 
     strcpy(chip_name, buf);
 
+#if defined(mips) || defined(__mips__) || defined(__mips)
     if (!strcmp(buf, "NA51023"))
         nvt_refine_na51023(chip_name);
+#endif
 
     return true;
 }
@@ -149,12 +159,15 @@ static int novatek_open_i2c_fd(int i2c_adapter_nr) {
     return universal_open_sensor_fd(adapter_name);
 }
 
+#if defined(mips) || defined(__mips__) || defined(__mips)
 static int novatek_no_sensor_bus(int adapter_nr) {
     (void)adapter_nr;
     return -1;
 }
+#endif
 
 void novatek_setup_hal() {
+#if defined(mips) || defined(__mips__) || defined(__mips)
     /* This MIPS generation delegates media to uITRON. The ARM HDAL memory
      * report, sensor I2C bus and register tables below are not its ABI. */
     if (chip_generation == CHIP_NA51023) {
@@ -163,6 +176,7 @@ void novatek_setup_hal() {
         open_spi_sensor_fd = NULL;
         return;
     }
+#endif
     possible_i2c_addrs = novatek_possible_i2c_addrs;
     i2c_change_addr = i2c_changenshift_addr;
     open_i2c_sensor_fd = novatek_open_i2c_fd;
