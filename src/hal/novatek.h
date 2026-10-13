@@ -4,7 +4,11 @@
 #include <stdbool.h>
 
 bool novatek_detect_cpu(char *chip_name);
-#if defined(mips) || defined(__mips__) || defined(__mips)
+/* NA51023 (MIPS, sold as NT98513) is identified by ipctool alone. No camera
+ * that carries libipchw is one, so the library must not pay for it: ipcinfo
+ * ships on boards whose rootfs leaves tens of KB spare. */
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
 bool novatek_detect_mips_cpu(char *chip_name);
 #endif
 unsigned long novatek_totalmem(unsigned long *media_mem);

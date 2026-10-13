@@ -506,13 +506,14 @@ if(NOT ONLY_LIBRARY)
   target_link_libraries(anyka_test m Threads::Threads)
 
   # Includes novatek.c so only its hardware file paths are redirected.
+  # Not STANDALONE_LIBRARY: the NA51023 code is ipctool-only, so the test
+  # is built the way ipctool is.
   foreach(_nvt_test novatek_test novatek_arm_test novatek_aarch64_test)
     add_executable(${_nvt_test} src/hal/novatek_test.c src/hal/common.c
                               src/sensors.c src/tools.c src/cjson/cJSON.c
                               ${VERSION_OBJ})
     target_include_directories(${_nvt_test} PRIVATE include src)
-    target_compile_definitions(${_nvt_test} PRIVATE IPCHW_VENDOR_NOVATEK
-                                                 STANDALONE_LIBRARY)
+    target_compile_definitions(${_nvt_test} PRIVATE IPCHW_VENDOR_NOVATEK)
     target_link_libraries(${_nvt_test} m Threads::Threads
                         "-Wl,--wrap=open" "-Wl,--wrap=disable_printk")
   endforeach()

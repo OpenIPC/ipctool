@@ -59,7 +59,8 @@ static bool nvt_get_chip_id() {
     return true;
 }
 
-#if defined(mips) || defined(__mips__) || defined(__mips)
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
 static void nvt_refine_na51023(char *chip_name) {
     char buf[16];
 
@@ -95,7 +96,8 @@ bool novatek_detect_cpu(char *chip_name) {
         return true;
 
     if (!line_from_file("/proc/device-tree/model",
-#if defined(mips) || defined(__mips__) || defined(__mips)
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
                         "^Novatek ([A-Z]+[0-9]+)([[:space:]]|$)",
 #else
                         /* Keep the existing ARM/AArch64 parser unchanged.
@@ -112,7 +114,8 @@ bool novatek_detect_cpu(char *chip_name) {
 
     strcpy(chip_name, buf);
 
-#if defined(mips) || defined(__mips__) || defined(__mips)
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
     if (!strcmp(buf, "NA51023"))
         nvt_refine_na51023(chip_name);
 #endif
@@ -159,7 +162,8 @@ static int novatek_open_i2c_fd(int i2c_adapter_nr) {
     return universal_open_sensor_fd(adapter_name);
 }
 
-#if defined(mips) || defined(__mips__) || defined(__mips)
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
 static int novatek_no_sensor_bus(int adapter_nr) {
     (void)adapter_nr;
     return -1;
@@ -167,7 +171,8 @@ static int novatek_no_sensor_bus(int adapter_nr) {
 #endif
 
 void novatek_setup_hal() {
-#if defined(mips) || defined(__mips__) || defined(__mips)
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
     /* This MIPS generation delegates media to uITRON. The ARM HDAL memory
      * report, sensor I2C bus and register tables below are not its ABI. */
     if (chip_generation == CHIP_NA51023) {
