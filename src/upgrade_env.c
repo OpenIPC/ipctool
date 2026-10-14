@@ -28,7 +28,14 @@ bool upgrade_mtd_id_value(const char *w, char *id, size_t idsz) {
 
 bool upgrade_bootargs_mtdparts_is_var(const char *bootargs) {
     const char *w = bootargs ? find_word(bootargs, "mtdparts=") : NULL;
-    return w && w[strlen("mtdparts=")] == '$';
+    if (!w)
+        return false;
+    // Only the variable upgrade sets: a reference to any other would leave
+    // the kernel the old partitions while root= moved on
+    w += strlen("mtdparts=");
+    size_t n = word_len(w);
+    return (n == 11 && !strncmp(w, "${mtdparts}", 11)) ||
+           (n == 9 && !strncmp(w, "$mtdparts", 9));
 }
 
 bool upgrade_mtd_id(const char *bootargs, char *id, size_t idsz) {

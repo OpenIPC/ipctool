@@ -119,6 +119,16 @@ int main(void) {
     CHECK(upgrade_bootargs(OI_DEFAULT, 3, "sfc:9k(x)", out, sizeof(out)) &&
               !strcmp(out, OI_DEFAULT),
           "a variable mtdparts= was replaced: '%s'", out);
+    CHECK(upgrade_bootargs_mtdparts_is_var("root=/dev/mtdblock3 "
+                                           "mtdparts=$mtdparts"),
+          "$mtdparts not seen");
+    // Another variable is neither literal nor the one upgrade sets: refused,
+    // or root= would move while the kernel kept the old partitions
+    const char *OTHER = "root=/dev/mtdblock3 mtdparts=${mtdpartsnor} x";
+    CHECK(!upgrade_bootargs_mtdparts_is_var(OTHER),
+          "${mtdpartsnor} taken for ${mtdparts}");
+    CHECK(!upgrade_bootargs(OTHER, 3, "sfc:9k(x)", out, sizeof(out)),
+          "bootargs naming another variable was edited");
 
     if (!failed)
         puts("upgrade_env_test: OK");

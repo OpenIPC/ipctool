@@ -23,8 +23,10 @@ bool upgrade_mtd_id(const char *bootargs, char *id, size_t idsz);
  * as mtdparts=${mtdparts}. */
 bool upgrade_mtd_id_value(const char *mtdparts, char *id, size_t idsz);
 
-/* Whether bootargs takes its partitions from a variable (mtdparts=${...}),
- * in which case that variable is what has to change. */
+/* Whether bootargs takes its partitions from the `mtdparts` variable
+ * (mtdparts=${mtdparts} or mtdparts=$mtdparts), in which case that variable
+ * is what has to change. A reference to any other variable is not this: it
+ * is neither literal nor the variable upgrade sets, and is refused. */
 bool upgrade_bootargs_mtdparts_is_var(const char *bootargs);
 
 /* bootargs with root= pointing at /dev/mtdblock<root_idx> and a literal

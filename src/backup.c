@@ -953,17 +953,21 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
                            this_offset, mtd->erasesize,
                            mtdbackup[i].data + c * chunk, chunk);
 #else
-                    const char *src = mtdbackup[i].data + c * chunk;
+                    // A pointer into the data only where there is data: the
+                    // settings partition of --wipe-settings has none at all
+                    const char *src;
+                    size_t off = c * chunk;
                     if (mtdbackup[i].padded &&
-                        (c + 1) * chunk > mtdbackup[i].payload) {
-                        size_t have = c * chunk < mtdbackup[i].payload
-                                          ? mtdbackup[i].payload - c * chunk
+                        off + chunk > mtdbackup[i].payload) {
+                        size_t have = off < mtdbackup[i].payload
+                                          ? mtdbackup[i].payload - off
                                           : 0;
                         memset(pad, 0xff, chunk);
                         if (have)
-                            memcpy(pad, src, have);
+                            memcpy(pad, mtdbackup[i].data + off, have);
                         src = pad;
-                    }
+                    } else
+                        src = mtdbackup[i].data + off;
                     if (!mtd_write(newi, this_offset, mtd->erasesize, src,
                                    chunk)) {
                         fprintf(stderr,
@@ -1705,11 +1709,25 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
         }
         // OpenIPC's bootloader keeps a second copy of the kernel read, which
         // its setnor8m/setnor16m and failsafe run; it follows the layout too
+        // A copy with no kernel read is left alone; one with a read that
+        // cannot be edited is refused like bootcmd, or failsafe would boot
+        // the old kernel's place
         const char *nor = uboot_env_get_param("bootcmdnor");
-        if (nor && !upgrade_bootcmd(nor, mtdwrite[kernel_part].off_flashb,
-                                    mtdwrite[kernel_part].size, new_bootcmdnor,
-                                    sizeof(new_bootcmdnor)))
-            printf("bootcmdnor has no kernel read to edit; left as it is\n");
+        bool nor_edited = false;
+        if (nor && strstr(nor, "sf read")) {
+            nor_edited = upgrade_bootcmd(nor, mtdwrite[kernel_part].off_flashb,
+                                         mtdwrite[kernel_part].size,
+                                         new_bootcmdnor,
+                                         sizeof(new_bootcmdnor));
+            if (!nor_edited) {
+                fprintf(stderr, "bootcmdnor reads the kernel in a way this "
+                                "cannot edit. Nothing was written.\n");
+                ret = 1;
+                goto bailout;
+            }
+        }
+        if (!nor_edited)
+            new_bootcmdnor[0] = '\0';
         printf("bootargs will be: %s\nbootcmd will be: %s\n", new_bootargs,
                new_bootcmd);
         if (uboot_env_get_param("mtdparts"))
