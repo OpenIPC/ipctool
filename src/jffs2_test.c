@@ -10,6 +10,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
+#include <sys/xattr.h>
 #include <unistd.h>
 
 #include "jffs2.h"
@@ -206,6 +207,20 @@ int main(int argc, char **argv) {
     CHECK(!jffs2_add_tree(tiny, root, "work") && *jffs2_error(tiny),
           "an image past its limit was accepted");
     jffs2_free(tiny);
+
+    // An extended attribute is refused, never dropped: overlayfs hides
+    // deleted files behind one. user.* stands in for trusted.overlay.*,
+    // which needs root to set.
+    snprintf(path, sizeof(path), "%s/root/etc", root);
+    if (!setxattr(path, "user.test", "y", 1, 0)) {
+        jffs2_img_t *x = jffs2_new(ERASE, 0x2b0000);
+        CHECK(!jffs2_add_tree(x, root, "work") &&
+                  strstr(jffs2_error(x), "extended attributes"),
+              "a directory with an xattr was carried without it");
+        jffs2_free(x);
+        removexattr(path, "user.test");
+    } else
+        printf("(no xattr case: this filesystem refuses user.*)\n");
 
     if (argc > 1)
         writefile(argv[1], data, len);

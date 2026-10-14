@@ -15,7 +15,9 @@
  * What mkfs.jffs2 makes, minus everything optional: little-endian, nodes
  * uncompressed, data in page-sized pieces, a cleanmarker at the start of
  * every erase block, a padding node where the next one would cross into the
- * next block. No xattrs, no hard links (a second name is a second copy).
+ * next block. No hard links (a second name is a second copy), and no
+ * extended attributes: a tree with any is refused, since the one overlayfs
+ * sets hides deleted files and dropping it brings them back.
  */
 
 typedef struct jffs2_img jffs2_img_t;
@@ -34,8 +36,7 @@ bool jffs2_add_tree(jffs2_img_t *img, const char *path,
 /* The image so far, padded to whole erase blocks. */
 const uint8_t *jffs2_data(jffs2_img_t *img, size_t *len);
 const char *jffs2_error(jffs2_img_t *img);
-/* How many files, directories, links and nodes it holds, and how many
- * extended attributes were left behind. */
-void jffs2_counts(jffs2_img_t *img, int *entries, int *xattrs_dropped);
+/* How many files, directories, links and device nodes it holds. */
+int jffs2_entries(jffs2_img_t *img);
 
 #endif /* JFFS2_H */

@@ -28,7 +28,7 @@ struct jffs2_img {
     uint8_t *buf;
     size_t len, cap, limit, erasesize;
     uint32_t next_ino, version;
-    int entries, xattrs;
+    int entries;
     char err[160];
 };
 
@@ -213,17 +213,16 @@ static bool add_file(jffs2_img_t *img, uint32_t ino, const char *path,
     return ok;
 }
 
-static int count_xattrs(const char *path) {
+/* This image holds no extended attributes, and dropping one is not safe to
+ * do quietly: overlayfs marks a directory that hides its lower layer with
+ * one (trusted.overlay.opaque), and without it files deleted on purpose
+ * come back. So an entry that has any is refused. */
+static bool no_xattrs(jffs2_img_t *img, const char *path) {
     ssize_t n = llistxattr(path, NULL, 0);
-    if (n <= 0)
-        return 0;
-    char *names = malloc(n);
-    int count = 0;
-    if (names && (n = llistxattr(path, names, n)) > 0)
-        for (char *p = names; p < names + n; p += strlen(p) + 1)
-            count++;
-    free(names);
-    return count;
+    if (n > 0)
+        return fail(img, "%s has extended attributes, which cannot be carried",
+                    path);
+    return true;
 }
 
 static bool add_dir(jffs2_img_t *img, uint32_t ino, const char *path,
@@ -245,9 +244,10 @@ static bool add_dir(jffs2_img_t *img, uint32_t ino, const char *path,
             ok = fail(img, "cannot stat %s: %s", child, strerror(errno));
             break;
         }
+        if (!(ok = no_xattrs(img, child)))
+            break;
         uint32_t cino = img->next_ino++;
         img->entries++;
-        img->xattrs += count_xattrs(child);
         if (!(ok = emit_dirent(img, ino, cino, e->d_name, st.st_mode,
                                st.st_mtime)))
             break;
@@ -308,7 +308,7 @@ bool jffs2_add_tree(jffs2_img_t *img, const char *path,
     if (lstat(path, &st) || !S_ISDIR(st.st_mode))
         return fail(img, "%s is not a directory", path);
     // The root's own inode, so its mode and owner are the ones it had
-    return emit_inode(img, 1, &st, 0, 0, NULL, 0) &&
+    return no_xattrs(img, path) && emit_inode(img, 1, &st, 0, 0, NULL, 0) &&
            add_dir(img, 1, path, "", skip_contents);
 }
 
@@ -325,7 +325,4 @@ const uint8_t *jffs2_data(jffs2_img_t *img, size_t *len) {
 
 const char *jffs2_error(jffs2_img_t *img) { return img->err; }
 
-void jffs2_counts(jffs2_img_t *img, int *entries, int *xattrs_dropped) {
-    *entries = img->entries;
-    *xattrs_dropped = img->xattrs;
-}
+int jffs2_entries(jffs2_img_t *img) { return img->entries; }

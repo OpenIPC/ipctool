@@ -159,6 +159,9 @@ def main():
             key, sep, value = kv.partition('=')
             if not sep or not key:
                 parser.error(f'--env {kv}: expected KEY=VALUE')
+            if key in ('bootargs', 'bootcmd'):
+                parser.error(f'--env {key}: ipctool writes it for the new '
+                             'layout itself')
             env[key] = value
         write_layout_bundle(args.layout, blobs, env, args.output)
         return

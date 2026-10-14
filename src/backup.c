@@ -1210,18 +1210,24 @@ typedef struct {
     size_t region_len, erasesize;
 } carry_t;
 
-// Where partition `num` is mounted as jffs2, if it is
-static bool jffs2_mountpoint(int num, char *path, size_t sz) {
+// Where partition `num` (named `name`) is mounted as jffs2, if it is. The
+// kernel prints the source as it was given, and each of these mounts it.
+static bool jffs2_mountpoint(int num, const char *name, char *path,
+                             size_t sz) {
     FILE *fp = fopen("/proc/mounts", "r");
     if (!fp)
         return false;
-    char want[32], line[256];
-    snprintf(want, sizeof(want), "/dev/mtdblock%d", num);
+    char block[32], bare[16], byname[80], line[256];
+    snprintf(block, sizeof(block), "/dev/mtdblock%d", num);
+    snprintf(bare, sizeof(bare), "mtd%d", num);
+    snprintf(byname, sizeof(byname), "mtd:%s", name);
     bool found = false;
     while (!found && fgets(line, sizeof line, fp)) {
         char dev[80], mnt[80], fs[80];
         if (sscanf(line, "%79s %79s %79s", dev, mnt, fs) == 3 &&
-            !strcmp(dev, want) && !strcmp(fs, "jffs2")) {
+            !strcmp(fs, "jffs2") &&
+            (!strcmp(dev, block) || !strcmp(dev, bare) ||
+             !strcmp(dev, byname))) {
             snprintf(path, sz, "%s", mnt);
             found = true;
         }
@@ -1233,23 +1239,29 @@ static bool jffs2_mountpoint(int num, char *path, size_t sz) {
 // The image of the settings into the region, everything after it erased.
 // work/ goes empty: it is overlayfs's scratch space, and overlayfs makes
 // what it needs there as it mounts.
+// Erase blocks jffs2 must find free to collect garbage in. A partition the
+// carried settings fill to the last block mounts, and the first write to it
+// -- a saved setting, a changed password -- fails with ENOSPC. The kernel
+// holds back about this many for its own use on a NOR partition this size.
+#define JFFS2_GC_BLOCKS 5
+
 static bool build_carry(void *arg) {
     carry_t *c = arg;
-    jffs2_img_t *img = jffs2_new(c->erasesize, c->region_len);
+    size_t headroom = JFFS2_GC_BLOCKS * c->erasesize;
+    if (c->region_len <= headroom) {
+        fprintf(stderr, "Cannot carry the settings: the new settings "
+                        "partition is too small to leave jffs2 room to work\n");
+        return false;
+    }
+    jffs2_img_t *img = jffs2_new(c->erasesize, c->region_len - headroom);
     bool ok = img && jffs2_add_tree(img, c->dir, "work");
     if (ok) {
         size_t len;
         const uint8_t *data = jffs2_data(img, &len);
-        int entries, xattrs;
-        jffs2_counts(img, &entries, &xattrs);
         memset(c->region, 0xff, c->region_len);
         memcpy(c->region, data, len);
-        printf("Settings: %d entries in %zu of %zu KB\n", entries, len / 1024,
-               c->region_len / 1024);
-        if (xattrs)
-            printf("  %d extended attributes left behind (an overlayfs "
-                   "opaque directory shows its lower layer again)\n",
-                   xattrs);
+        printf("Settings: %d entries in %zu of %zu KB\n", jffs2_entries(img),
+               len / 1024, c->region_len / 1024);
     } else
         fprintf(stderr, "Cannot carry the settings: %s\n",
                 img ? jffs2_error(img) : "out of memory");
@@ -1611,11 +1623,21 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
                 data_part = p;
         if (wipe_settings)
             printf("Settings will not be carried over\n");
-        else if (data_part < 0 ||
-                 !jffs2_mountpoint(data_part, carry.dir, sizeof(carry.dir)))
-            printf("No jffs2 settings partition is mounted; the new one "
+        else if (data_part < 0)
+            printf("This flash has no settings partition; the new one "
                    "starts empty\n");
-        else if (!build_carry(&carry)) {
+        else if (!jffs2_mountpoint(data_part, "rootfs_data", carry.dir,
+                                   sizeof(carry.dir))) {
+            // Starting empty would lose the settings without a word if
+            // they are only mounted in a way this does not recognise
+            fprintf(stderr,
+                    "rootfs_data (mtd%d) is not mounted as jffs2, so the "
+                    "settings cannot be read to carry over. Nothing was "
+                    "written; --wipe-settings upgrades without them.\n",
+                    data_part);
+            ret = 5;
+            goto bailout;
+        } else if (!build_carry(&carry)) {
             // A trial now, so a refusal comes while nothing is stopped. The
             // real image is taken once the partition is read-only.
             fprintf(stderr, "Nothing was written; --wipe-settings upgrades "
@@ -1646,6 +1668,31 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
                new_bootcmd);
     }
 
+    // The bundle's variables, checked while nothing is stopped. bootargs and
+    // bootcmd are what upgrade itself writes for the new layout: a bundle
+    // value would be reported as set and then replaced.
+    const cJSON *jenv = cJSON_GetObjectItemCaseSensitive(json, "env");
+    const cJSON *jvar;
+    if (jenv && !cJSON_IsObject(jenv)) {
+        fprintf(stderr, "The bundle's env is not an object. Nothing was "
+                        "written.\n");
+        ret = 2;
+        goto bailout;
+    }
+    cJSON_ArrayForEach(jvar, jenv) {
+        if (!cJSON_IsString(jvar) || !strcmp(jvar->string, "bootargs") ||
+            !strcmp(jvar->string, "bootcmd")) {
+            fprintf(stderr,
+                    "The bundle sets '%s', which upgrade %s. Nothing was "
+                    "written.\n",
+                    jvar->string,
+                    cJSON_IsString(jvar) ? "writes itself for the new layout"
+                                         : "can only set to a string");
+            ret = 2;
+            goto bailout;
+        }
+    }
+
     if (!do_flash("Analyzing", mtdwrite, &mtd, false, true)) {
         printf("Early exit, check the logs\n");
         ret = 4;
@@ -1661,13 +1708,9 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
         reboot_after_failure("Upgrading");
 
     // Variables the bundle sets, e.g. the address this firmware upgrades from
-    const cJSON *jenv = cJSON_GetObjectItemCaseSensitive(json, "env");
-    const cJSON *jvar;
     cJSON_ArrayForEach(jvar, jenv) {
-        if (cJSON_IsString(jvar)) {
-            set_env_param_ram(jvar->string, jvar->valuestring);
-            printf("set %s=%s\n", jvar->string, jvar->valuestring);
-        }
+        set_env_param_ram(jvar->string, jvar->valuestring);
+        printf("set %s=%s\n", jvar->string, jvar->valuestring);
     }
 
     if (keep_front) {
