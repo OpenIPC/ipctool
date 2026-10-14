@@ -225,6 +225,11 @@ typedef struct {
     char sha1[9];
     char name[64];
     char *data;
+    // When set, only the first `payload` bytes are in `data` and the rest of
+    // `size` is erased flash (0xFF): an image is written from where it lies
+    // rather than copied into a partition-sized buffer.
+    bool padded;
+    size_t payload;
     bool is_ubi;
     int ubi_device;
     int vol_id;
@@ -913,6 +918,19 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
 
         printf("%s %s\n", phase, mtdbackup[i].name);
         size_t chunk = mtd->erasesize;
+        // One block to pad the end of an image in, allocated on the trial
+        // pass, before anything is locked in memory
+        static char *pad;
+        static size_t padlen;
+        if (padlen < chunk) {
+            free(pad);
+            pad = malloc(chunk);
+            padlen = pad ? chunk : 0;
+            if (!pad) {
+                fprintf(stderr, "Allocation error\n");
+                return false;
+            }
+        }
         int cnt = mtdbackup[i].size / chunk;
         for (int c = 0; c < cnt; c++) {
             size_t this_offset;
@@ -935,8 +953,19 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
                            this_offset, mtd->erasesize,
                            mtdbackup[i].data + c * chunk, chunk);
 #else
-                    if (!mtd_write(newi, this_offset, mtd->erasesize,
-                                   mtdbackup[i].data + c * chunk, chunk)) {
+                    const char *src = mtdbackup[i].data + c * chunk;
+                    if (mtdbackup[i].padded &&
+                        (c + 1) * chunk > mtdbackup[i].payload) {
+                        size_t have = c * chunk < mtdbackup[i].payload
+                                          ? mtdbackup[i].payload - c * chunk
+                                          : 0;
+                        memset(pad, 0xff, chunk);
+                        if (have)
+                            memcpy(pad, src, have);
+                        src = pad;
+                    }
+                    if (!mtd_write(newi, this_offset, mtd->erasesize, src,
+                                   chunk)) {
                         fprintf(stderr,
                                 "\nSomething went wrong, aborting...\n");
                         return false;
@@ -1205,8 +1234,8 @@ static void skip_signals() {
  * jffs2 image written there along with the kernel and the rootfs.
  */
 typedef struct {
-    char dir[80];  // where the old settings partition is mounted
-    char *region;  // the new settings partition's contents, flash-sized
+    char dir[80];         // where the old settings partition is mounted
+    stored_mtd_t *region; // the new settings partition, as written
     size_t region_len, erasesize;
 } carry_t;
 
@@ -1256,12 +1285,22 @@ static bool build_carry(void *arg) {
     jffs2_img_t *img = jffs2_new(c->erasesize, c->region_len - headroom);
     bool ok = img && jffs2_add_tree(img, c->dir, "work");
     if (ok) {
+        // Only the image is kept; the rest of the partition is written as
+        // erased flash
         size_t len;
         const uint8_t *data = jffs2_data(img, &len);
-        memset(c->region, 0xff, c->region_len);
-        memcpy(c->region, data, len);
-        printf("Settings: %d entries in %zu of %zu KB\n", jffs2_entries(img),
-               len / 1024, c->region_len / 1024);
+        char *copy = malloc(len);
+        if (copy) {
+            memcpy(copy, data, len);
+            free(c->region->data);
+            c->region->data = copy;
+            c->region->payload = len;
+            printf("Settings: %d entries in %zu of %zu KB\n",
+                   jffs2_entries(img), len / 1024, c->region_len / 1024);
+        } else {
+            fprintf(stderr, "Cannot carry the settings: out of memory\n");
+            ok = false;
+        }
     } else
         fprintf(stderr, "Cannot carry the settings: %s\n",
                 img ? jffs2_error(img) : "out of memory");
@@ -1447,11 +1486,19 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
     }
     bool keep_front = !writes_boot && !mtdparts_pr && !skip_envs && !offset;
     if (keep_front) {
+        // The partitions are named in bootargs, or, as OpenIPC's own
+        // bootloader keeps them, in a variable bootargs refers to
         char id[64];
-        if (!upgrade_mtd_id(uboot_env_get_param("bootargs"), id, sizeof(id))) {
-            fprintf(stderr, "The bootloader's bootargs name no partitions "
-                            "(no literal mtdparts=), so there is no telling "
-                            "what to keep. Nothing was written.\n");
+        const char *ba = uboot_env_get_param("bootargs");
+        if (!upgrade_mtd_id(ba, id, sizeof(id)) &&
+            !(upgrade_bootargs_mtdparts_is_var(ba) &&
+              upgrade_mtd_id_value(uboot_env_get_param("mtdparts"), id,
+                                   sizeof(id)))) {
+            fprintf(stderr, "The bootloader's environment names no "
+                            "partitions (no literal mtdparts= in bootargs or "
+                            "in a mtdparts variable it refers to), so there "
+                            "is no telling what to keep. Nothing was "
+                            "written.\n");
             ret = 1;
             goto bailout;
         }
@@ -1517,15 +1564,13 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
                 ret = 1;
                 goto bailout;
             }
+            // Written from the mapped bundle: a copy padded to the partition
+            // would be 13 MB more for an ultimate image, on a camera that may
+            // have 16 MB available all told
             mtdwrite[i].size = ceil_up(payload, psize ? psize : mtd.erasesize);
-            mtdwrite[i].data = malloc(mtdwrite[i].size);
-            if (mtdwrite[i].data == NULL) {
-                fprintf(stderr, "Allocation error\n");
-                return 1;
-            }
-            memcpy(mtdwrite[i].data, read_ptr, payload);
-            memset(mtdwrite[i].data + payload, 0xff,
-                   mtdwrite[i].size - payload);
+            mtdwrite[i].data = read_ptr;
+            mtdwrite[i].padded = true;
+            mtdwrite[i].payload = payload;
             read_ptr += payload;
         }
 
@@ -1584,7 +1629,7 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
 
         i++;
     }
-    munmap(jsond, len);
+    // The bundle stays mapped: the images are written from it
 
     if (root_part == -1 || kernel_part == -1) {
         fprintf(stderr,
@@ -1596,7 +1641,7 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
              ",-(rootfs_data)");
 
     carry_t carry = {.erasesize = mtd.erasesize};
-    char new_bootargs[1024], new_bootcmd[1024];
+    char new_bootargs[1024], new_bootcmd[1024], new_bootcmdnor[1024] = "";
     if (keep_front) {
         if ((ssize_t)goff >= mtd.totalsz) {
             fprintf(stderr,
@@ -1610,13 +1655,11 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
         // what lies there now is the middle of the old one, and jffs2 would
         // mount its stale nodes as files
         carry.region_len = mtd.totalsz - goff;
-        carry.region = malloc(carry.region_len);
-        if (!carry.region) {
-            fprintf(stderr, "Allocation error\n");
-            ret = 1;
-            goto bailout;
-        }
-        memset(carry.region, 0xff, carry.region_len);
+        carry.region = &mtdwrite[i];
+        strcpy(mtdwrite[i].name, "rootfs_data");
+        mtdwrite[i].off_flashb = goff;
+        mtdwrite[i].size = carry.region_len;
+        mtdwrite[i].padded = true; // erased unless settings are carried
         int data_part = -1;
         for (int p = 0; p < MAX_MTDBLOCKS && data_part < 0; p++)
             if (!strcmp(mtd.part[p].name, "rootfs_data"))
@@ -1645,10 +1688,6 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
             ret = 5;
             goto bailout;
         }
-        strcpy(mtdwrite[i].name, "rootfs_data");
-        mtdwrite[i].off_flashb = goff;
-        mtdwrite[i].size = carry.region_len;
-        mtdwrite[i].data = carry.region;
         i++;
 
         if (!upgrade_bootargs(uboot_env_get_param("bootargs"), root_part,
@@ -1664,8 +1703,19 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
             ret = 1;
             goto bailout;
         }
+        // OpenIPC's bootloader keeps a second copy of the kernel read, which
+        // its setnor8m/setnor16m and failsafe run; it follows the layout too
+        const char *nor = uboot_env_get_param("bootcmdnor");
+        if (nor && !upgrade_bootcmd(nor, mtdwrite[kernel_part].off_flashb,
+                                    mtdwrite[kernel_part].size, new_bootcmdnor,
+                                    sizeof(new_bootcmdnor)))
+            printf("bootcmdnor has no kernel read to edit; left as it is\n");
         printf("bootargs will be: %s\nbootcmd will be: %s\n", new_bootargs,
                new_bootcmd);
+        if (uboot_env_get_param("mtdparts"))
+            printf("mtdparts will be: %s\n", mtdparts);
+        if (*new_bootcmdnor)
+            printf("bootcmdnor will be: %s\n", new_bootcmdnor);
     }
 
     // The bundle's variables, checked while nothing is stopped. bootargs and
@@ -1681,7 +1731,9 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
     }
     cJSON_ArrayForEach(jvar, jenv) {
         if (!cJSON_IsString(jvar) || !strcmp(jvar->string, "bootargs") ||
-            !strcmp(jvar->string, "bootcmd")) {
+            !strcmp(jvar->string, "bootcmd") ||
+            !strcmp(jvar->string, "bootcmdnor") ||
+            !strcmp(jvar->string, "mtdparts")) {
             fprintf(stderr,
                     "The bundle sets '%s', which upgrade %s. Nothing was "
                     "written.\n",
@@ -1714,6 +1766,12 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
     }
 
     if (keep_front) {
+        // The variable a bootargs of mtdparts=${mtdparts} reads, and the
+        // copy setnor8m/setnor16m keep, go with the layout either way
+        if (uboot_env_get_param("mtdparts"))
+            set_env_param_ram("mtdparts", mtdparts);
+        if (*new_bootcmdnor)
+            set_env_param_ram("bootcmdnor", new_bootcmdnor);
         set_env_param_ram("bootcmd", new_bootcmd);
         set_env_param_rom("bootargs", new_bootargs, mtd.env_dev,
                           mtd.env_offset, mtd.erasesize);
