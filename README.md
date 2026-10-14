@@ -308,13 +308,20 @@ What a `--layout` bundle does on the camera:
   there (`wtf` on XiongMai);
 * edits `bootargs` and `bootcmd` rather than replacing them: only `root=`,
   `mtdparts=` and the size of the kernel read change, so a vendor
-  bootloader's other arguments survive;
+  bootloader's other arguments survive. With OpenIPC's own bootloader the
+  partitions live in a `mtdparts` variable that `bootargs` refers to
+  (`mtdparts=${mtdparts}`), and the kernel read in `bootcmdnor` as well:
+  those are edited the same way;
 * carries the settings: the jffs2 overlay is copied, once it is read-only,
   into a jffs2 image written where the new `rootfs_data` starts. The camera
   comes back with its passwords, keys and configuration. `--wipe-settings`
   starts it from defaults instead;
 * sets the U-Boot variables given with `--env`, such as the address the new
   firmware upgrades itself from.
+
+The images are written straight from the bundle, so the bundle itself is
+the memory it needs: put it in `/tmp` (a 10 MB ultimate bundle wants that
+much free there), or on an SD card.
 
 Everything that can be refused is refused before any process is stopped:
 an image larger than its partition, settings that will not fit the new

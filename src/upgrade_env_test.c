@@ -64,9 +64,10 @@ int main(void) {
     CHECK(!upgrade_bootargs("console=ttyAMA0 mtdparts=sfc:1k(a)", 3,
                             "sfc:2k(a)", out, sizeof(out)),
           "a line without root= edited");
-    CHECK(!upgrade_bootargs("root=/dev/mtdblock3 mtdparts=${mtdparts}", 3,
-                            "sfc:2k(a)", out, sizeof(out)),
-          "a variable mtdparts edited");
+    CHECK(upgrade_bootargs("root=/dev/mtdblock3 mtdparts=${mtdparts}", 4,
+                           "sfc:2k(a)", out, sizeof(out)) &&
+              !strcmp(out, "root=/dev/mtdblock4 mtdparts=${mtdparts}"),
+          "a variable mtdparts was not left for its variable: '%s'", out);
     CHECK(!upgrade_bootargs(XM_BOOTARGS, 3, "hi_sfc:1k(a)", out, 32),
           "a line that does not fit returned as done");
     CHECK(!upgrade_bootargs(NULL, 3, "hi_sfc:1k(a)", out, sizeof(out)),
@@ -88,6 +89,46 @@ int main(void) {
     CHECK(!upgrade_bootcmd("sf read 0x42000000 0x50000", 0x50000, 0x300000,
                            out, sizeof(out)),
           "a read without a size edited");
+
+    // OpenIPC's own bootloader, as a camera flashed with it keeps its
+    // environment: the load address is a variable, and the partitions are
+    // also kept in a variable of their own.
+    const char *OI_BOOTCMD =
+        "setenv setargs setenv bootargs ${bootargs}; run setargs; sf probe 0; "
+        "sf read ${baseaddr} 0x50000 0x200000; bootm ${baseaddr}";
+    CHECK(upgrade_bootcmd(OI_BOOTCMD, 0x50000, 0x300000, out, sizeof(out)) &&
+              !strcmp(out, "setenv setargs setenv bootargs ${bootargs}; run "
+                           "setargs; sf probe 0; sf read ${baseaddr} 0x50000 "
+                           "0x300000; bootm ${baseaddr}"),
+          "variable load address: '%s'", out);
+    CHECK(!upgrade_bootcmd("sf read ${baseaddr}; bootm", 0x50000, 0x300000,
+                           out, sizeof(out)),
+          "a read with no offset edited");
+
+    CHECK(upgrade_mtd_id_value("hi_sfc:256k(boot),64k(env)", id, sizeof(id)) &&
+              !strcmp(id, "hi_sfc"),
+          "mtd id from the variable '%s'", id);
+    // Its default bootargs name the variable: root= moves, mtdparts= stays
+    // and the variable is what changes
+    const char *OI_DEFAULT = "mem=${osmem} console=ttyAMA0,115200 panic=20 "
+                             "root=/dev/mtdblock3 rootfstype=squashfs "
+                             "init=/init mtdparts=${mtdparts} ${extras}";
+    CHECK(upgrade_bootargs_mtdparts_is_var(OI_DEFAULT), "variable not seen");
+    CHECK(!upgrade_bootargs_mtdparts_is_var(XM_BOOTARGS),
+          "a literal taken for a variable");
+    CHECK(upgrade_bootargs(OI_DEFAULT, 3, "sfc:9k(x)", out, sizeof(out)) &&
+              !strcmp(out, OI_DEFAULT),
+          "a variable mtdparts= was replaced: '%s'", out);
+    CHECK(upgrade_bootargs_mtdparts_is_var("root=/dev/mtdblock3 "
+                                           "mtdparts=$mtdparts"),
+          "$mtdparts not seen");
+    // Another variable is neither literal nor the one upgrade sets: refused,
+    // or root= would move while the kernel kept the old partitions
+    const char *OTHER = "root=/dev/mtdblock3 mtdparts=${mtdpartsnor} x";
+    CHECK(!upgrade_bootargs_mtdparts_is_var(OTHER),
+          "${mtdpartsnor} taken for ${mtdparts}");
+    CHECK(!upgrade_bootargs(OTHER, 3, "sfc:9k(x)", out, sizeof(out)),
+          "bootargs naming another variable was edited");
 
     if (!failed)
         puts("upgrade_env_test: OK");
