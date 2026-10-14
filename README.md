@@ -287,6 +287,42 @@ sensors:
     # sync
     ```
 
+### Moving a NOR camera to another layout
+
+`upgrade` writes a kernel and a rootfs in a new partition layout over the
+running system: lite (2 MB kernel, 5 MB rootfs) to ultimate (3 MB, 10 MB) on
+16 MB of NOR, for one. The bundle comes from the release archive:
+
+```console
+$ tools/upgrade_bundle.py --layout nor16m \
+    --firmware openipc.hi3516ev300-nor-ultimate.tgz \
+    --env upgrade=https://github.com/OpenIPC/builder/releases/download/latest/<profile>-nor.tgz \
+    -o ultimate.bundle
+# ipctool upgrade /tmp/ultimate.bundle
+```
+
+What a `--layout` bundle does on the camera:
+
+* keeps every partition in front of the kernel as it is, under this flash's
+  own names -- the bootloader, its environment and whatever a vendor put
+  there (`wtf` on XiongMai);
+* edits `bootargs` and `bootcmd` rather than replacing them: only `root=`,
+  `mtdparts=` and the size of the kernel read change, so a vendor
+  bootloader's other arguments survive;
+* carries the settings: the jffs2 overlay is copied, once it is read-only,
+  into a jffs2 image written where the new `rootfs_data` starts. The camera
+  comes back with its passwords, keys and configuration. `--wipe-settings`
+  starts it from defaults instead;
+* sets the U-Boot variables given with `--env`, such as the address the new
+  firmware upgrades itself from.
+
+Everything that can be refused is refused before any process is stopped:
+an image larger than its partition, settings that will not fit the new
+`rootfs_data`, a bootloader environment with no literal `mtdparts=` or no
+single `sf read` to edit. After that every other process is stopped, the
+flash filesystems go read-only, and the camera reboots when done. Keep a
+backup and a UART at hand: a power cut mid-write leaves no kernel to boot.
+
 ### Sending a board to openipc.org
 
 A camera nobody has reported yet reaches the [board

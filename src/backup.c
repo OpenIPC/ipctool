@@ -33,11 +33,13 @@
 #include "dns.h"
 #include "hal/common.h"
 #include "http.h"
+#include "jffs2.h"
 #include "mtd.h"
 #include "network.h"
 #include "sha1.h"
 #include "tools.h"
 #include "uboot.h"
+#include "upgrade_env.h"
 #include "watchdog.h"
 
 
@@ -654,7 +656,11 @@ static bool pin_to_ram() {
 // Second half. From here on the system has no services left, so a failure
 // cannot return to the shell: the caller reboots, which on this path is safe
 // because nothing has been erased yet.
-static bool isolate_from_flash() {
+//
+// `read_only` runs once every flash filesystem is read-only and before any is
+// unmounted: the one moment their contents can be read and can no longer
+// change, which is when upgrade takes the settings it carries.
+static bool isolate_from_flash(bool (*read_only)(void *), void *arg) {
     printf("Stopping every other process before touching the flash.\n"
            "A network session will drop here; flashing continues and the\n"
            "device reboots when done. Progress goes to the serial console.\n");
@@ -699,6 +705,8 @@ static bool isolate_from_flash() {
     // Remounting read-only has flushed the flash filesystems. No sync() after
     // this point: it would also wait on network filesystems.
     if (!remount_flash_ro())
+        return false;
+    if (read_only && !read_only(arg))
         return false;
     umount_all();
     feed_watchdog();
@@ -1113,7 +1121,7 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
             goto bailout;
         if (!pin_to_ram())
             goto bailout;
-        if (!isolate_from_flash())
+        if (!isolate_from_flash(NULL, NULL))
             reboot_after_failure("Preparing the flash");
         if (!do_flash("Restoring", mtdbackup, &mtd, skip_env, false))
             reboot_after_failure("Restoring");
@@ -1131,7 +1139,7 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
 static void add_mtdpart(char *dst, const char *name, uint32_t size) {
     size_t len = strlen(dst);
     bool need_comma = false;
-    char prev = dst[len - 1];
+    char prev = len ? dst[len - 1] : '\0';
     if (len && prev != ':' && prev != '=' && prev != ',')
         need_comma = true;
     snprintf(dst + len, MAX_MTDPARTS - len, "%s%dk(%s)", need_comma ? "," : "",
@@ -1190,7 +1198,66 @@ static void skip_signals() {
 #endif
 }
 
-static int do_upgrade(const char *filename, bool force) {
+/*
+ * The settings, carried across a repartition. They live on a jffs2 overlay
+ * whose partition moves when the layout changes, and the running kernel has
+ * no partition at the new place to mount, so they travel as a ready-made
+ * jffs2 image written there along with the kernel and the rootfs.
+ */
+typedef struct {
+    char dir[80];  // where the old settings partition is mounted
+    char *region;  // the new settings partition's contents, flash-sized
+    size_t region_len, erasesize;
+} carry_t;
+
+// Where partition `num` is mounted as jffs2, if it is
+static bool jffs2_mountpoint(int num, char *path, size_t sz) {
+    FILE *fp = fopen("/proc/mounts", "r");
+    if (!fp)
+        return false;
+    char want[32], line[256];
+    snprintf(want, sizeof(want), "/dev/mtdblock%d", num);
+    bool found = false;
+    while (!found && fgets(line, sizeof line, fp)) {
+        char dev[80], mnt[80], fs[80];
+        if (sscanf(line, "%79s %79s %79s", dev, mnt, fs) == 3 &&
+            !strcmp(dev, want) && !strcmp(fs, "jffs2")) {
+            snprintf(path, sz, "%s", mnt);
+            found = true;
+        }
+    }
+    fclose(fp);
+    return found;
+}
+
+// The image of the settings into the region, everything after it erased.
+// work/ goes empty: it is overlayfs's scratch space, and overlayfs makes
+// what it needs there as it mounts.
+static bool build_carry(void *arg) {
+    carry_t *c = arg;
+    jffs2_img_t *img = jffs2_new(c->erasesize, c->region_len);
+    bool ok = img && jffs2_add_tree(img, c->dir, "work");
+    if (ok) {
+        size_t len;
+        const uint8_t *data = jffs2_data(img, &len);
+        int entries, xattrs;
+        jffs2_counts(img, &entries, &xattrs);
+        memset(c->region, 0xff, c->region_len);
+        memcpy(c->region, data, len);
+        printf("Settings: %d entries in %zu of %zu KB\n", entries, len / 1024,
+               c->region_len / 1024);
+        if (xattrs)
+            printf("  %d extended attributes left behind (an overlayfs "
+                   "opaque directory shows its lower layer again)\n",
+                   xattrs);
+    } else
+        fprintf(stderr, "Cannot carry the settings: %s\n",
+                img ? jffs2_error(img) : "out of memory");
+    jffs2_free(img);
+    return ok;
+}
+
+static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
     if (!getchipname()) {
         fprintf(stderr, "Chip has not been detected\n");
         return 1;
@@ -1242,9 +1309,22 @@ static int do_upgrade(const char *filename, bool force) {
         return 1;
     } else
         printf("Using '%s' as upgrade bundle\n", filename);
-    char *jsond = file_to_buf(filename, &len);
-    if (!jsond) {
-        fprintf(stderr, "'%s' is not found\n", filename);
+    /* Mapped rather than read: the bundle is usually in /tmp, a tmpfs, and
+     * reading it would hold it in RAM twice -- 10 MB more on a camera with
+     * 40 MB to spare, before the partitions are even laid out. */
+    char *jsond = NULL;
+    int bfd = open(filename, O_RDONLY);
+    struct stat bst;
+    if (bfd >= 0 && !fstat(bfd, &bst) && bst.st_size > 0) {
+        len = bst.st_size;
+        jsond = mmap(NULL, len, PROT_READ, MAP_PRIVATE, bfd, 0);
+        if (jsond == MAP_FAILED)
+            jsond = NULL;
+    }
+    if (bfd >= 0)
+        close(bfd);
+    if (!jsond || !memchr(jsond, '\0', len)) {
+        fprintf(stderr, "'%s' is not found or is not a bundle\n", filename);
         return 1;
     }
 
@@ -1302,13 +1382,22 @@ static int do_upgrade(const char *filename, bool force) {
             if (cJSON_IsString(skip_env)) {
                 const char *name = skip_env->valuestring;
                 ssize_t size = mtd_size_by_name(&mtd, name);
-                if (size != -1) {
-                    add_mtdpart(mtdparts, name, size);
-                    curr_mtd_part++;
-                    goff += size;
-                    printf("skipped original partition %s sized %#x\n", name,
-                           size);
+                if (size == -1) {
+                    // Skipping nothing here wrote the kernel over the
+                    // bootloader's environment on a board that calls it
+                    // something else ("wtf" on XiongMai)
+                    fprintf(stderr,
+                            "The bundle keeps partition '%s', which this "
+                            "flash does not have. Nothing was written.\n",
+                            name);
+                    ret = 1;
+                    goto bailout;
                 }
+                add_mtdpart(mtdparts, name, size);
+                curr_mtd_part++;
+                goff += size;
+                printf("skipped original partition %s sized %#zx\n", name,
+                       (size_t)size);
             }
         }
     }
@@ -1324,6 +1413,58 @@ static int do_upgrade(const char *filename, bool force) {
     ASSERT_JSON(parts);
     const cJSON *part;
     int i = 0;
+
+    /* A bundle that says nothing about what to keep keeps what the camera
+     * has in front of its kernel: the bootloader, its environment and
+     * whatever else a vendor put there, under this flash's own names and
+     * sizes. The bootloader reads its parts at fixed offsets, so they are
+     * the one part of a layout that cannot move -- and they need not be
+     * where their names suggest: a XiongMai bootloader keeps its environment
+     * at 0x30000, inside "boot", with a 64 KB "wtf" after it. Keeping up to
+     * the environment alone wrote the kernel over "wtf". The environment is
+     * then edited rather than rewritten. */
+    bool writes_boot = false;
+    const char *first_written = NULL;
+    cJSON_ArrayForEach(part, parts) {
+        const char *n =
+            cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(part, "name"));
+        if (n && !first_written)
+            first_written = n;
+        if (n && !strcmp(n, "boot"))
+            writes_boot = true;
+    }
+    bool keep_front = !writes_boot && !mtdparts_pr && !skip_envs && !offset;
+    if (keep_front) {
+        char id[64];
+        if (!upgrade_mtd_id(uboot_env_get_param("bootargs"), id, sizeof(id))) {
+            fprintf(stderr, "The bootloader's bootargs name no partitions "
+                            "(no literal mtdparts=), so there is no telling "
+                            "what to keep. Nothing was written.\n");
+            ret = 1;
+            goto bailout;
+        }
+        int keep = -1;
+        for (int p = 0; first_written && p < MAX_MTDBLOCKS && keep < 0; p++)
+            if (!strcmp(mtd.part[p].name, first_written))
+                keep = p;
+        if (keep <= mtd.env_dev) {
+            fprintf(stderr,
+                    "This flash has no '%s' partition after the bootloader's "
+                    "environment (in #%d), so there is no telling where to "
+                    "start. Nothing was written.\n",
+                    first_written ? first_written : "?", mtd.env_dev);
+            ret = 1;
+            goto bailout;
+        }
+        snprintf(mtdparts, sizeof(mtdparts), "%s:", id);
+        for (int p = 0; p < keep; p++) {
+            add_mtdpart(mtdparts, mtd.part[p].name, mtd.part[p].size);
+            curr_mtd_part++;
+            goff += mtd.part[p].size;
+            printf("Keeping %s (%zu KB)\n", mtd.part[p].name,
+                   mtd.part[p].size / 1024);
+        }
+    }
     int root_part = -1;
     int kernel_part = -1;
 
@@ -1358,6 +1499,12 @@ static int do_upgrade(const char *filename, bool force) {
                 return 1;
             }
             payload = jpayload->valueint;
+            if (payload > len - (read_ptr - jsond)) {
+                fprintf(stderr, "The bundle ends before '%s' does\n",
+                        mtdwrite[i].name);
+                ret = 1;
+                goto bailout;
+            }
             mtdwrite[i].size = ceil_up(payload, psize ? psize : mtd.erasesize);
             mtdwrite[i].data = malloc(mtdwrite[i].size);
             if (mtdwrite[i].data == NULL) {
@@ -1425,7 +1572,7 @@ static int do_upgrade(const char *filename, bool force) {
 
         i++;
     }
-    free(jsond);
+    munmap(jsond, len);
 
     if (root_part == -1 || kernel_part == -1) {
         fprintf(stderr,
@@ -1436,6 +1583,69 @@ static int do_upgrade(const char *filename, bool force) {
     snprintf(mtdparts + strlen(mtdparts), MAX_MTDPARTS - strlen(mtdparts),
              ",-(rootfs_data)");
 
+    carry_t carry = {.erasesize = mtd.erasesize};
+    char new_bootargs[1024], new_bootcmd[1024];
+    if (keep_front) {
+        if ((ssize_t)goff >= mtd.totalsz) {
+            fprintf(stderr,
+                    "The images end at %#x, the flash at %#zx: no room for "
+                    "the settings. Nothing was written.\n",
+                    goff, (size_t)mtd.totalsz);
+            ret = 1;
+            goto bailout;
+        }
+        // The new settings partition is written whole, carried or not:
+        // what lies there now is the middle of the old one, and jffs2 would
+        // mount its stale nodes as files
+        carry.region_len = mtd.totalsz - goff;
+        carry.region = malloc(carry.region_len);
+        if (!carry.region) {
+            fprintf(stderr, "Allocation error\n");
+            ret = 1;
+            goto bailout;
+        }
+        memset(carry.region, 0xff, carry.region_len);
+        int data_part = -1;
+        for (int p = 0; p < MAX_MTDBLOCKS && data_part < 0; p++)
+            if (!strcmp(mtd.part[p].name, "rootfs_data"))
+                data_part = p;
+        if (wipe_settings)
+            printf("Settings will not be carried over\n");
+        else if (data_part < 0 ||
+                 !jffs2_mountpoint(data_part, carry.dir, sizeof(carry.dir)))
+            printf("No jffs2 settings partition is mounted; the new one "
+                   "starts empty\n");
+        else if (!build_carry(&carry)) {
+            // A trial now, so a refusal comes while nothing is stopped. The
+            // real image is taken once the partition is read-only.
+            fprintf(stderr, "Nothing was written; --wipe-settings upgrades "
+                            "without them.\n");
+            ret = 5;
+            goto bailout;
+        }
+        strcpy(mtdwrite[i].name, "rootfs_data");
+        mtdwrite[i].off_flashb = goff;
+        mtdwrite[i].size = carry.region_len;
+        mtdwrite[i].data = carry.region;
+        i++;
+
+        if (!upgrade_bootargs(uboot_env_get_param("bootargs"), root_part,
+                              mtdparts, new_bootargs, sizeof(new_bootargs)) ||
+            !upgrade_bootcmd(uboot_env_get_param("bootcmd"),
+                             mtdwrite[kernel_part].off_flashb,
+                             mtdwrite[kernel_part].size, new_bootcmd,
+                             sizeof(new_bootcmd))) {
+            fprintf(stderr,
+                    "Cannot find root= and mtdparts= in bootargs, or the one "
+                    "kernel read (sf read) in bootcmd, to edit. Nothing was "
+                    "written.\n");
+            ret = 1;
+            goto bailout;
+        }
+        printf("bootargs will be: %s\nbootcmd will be: %s\n", new_bootargs,
+               new_bootcmd);
+    }
+
     if (!do_flash("Analyzing", mtdwrite, &mtd, false, true)) {
         printf("Early exit, check the logs\n");
         ret = 4;
@@ -1445,10 +1655,27 @@ static int do_upgrade(const char *filename, bool force) {
         ret = 4;
         goto bailout;
     }
-    if (!isolate_from_flash())
+    if (!isolate_from_flash(*carry.dir ? build_carry : NULL, &carry))
         reboot_after_failure("Preparing the flash");
     if (!do_flash("Upgrading", mtdwrite, &mtd, false, false))
         reboot_after_failure("Upgrading");
+
+    // Variables the bundle sets, e.g. the address this firmware upgrades from
+    const cJSON *jenv = cJSON_GetObjectItemCaseSensitive(json, "env");
+    const cJSON *jvar;
+    cJSON_ArrayForEach(jvar, jenv) {
+        if (cJSON_IsString(jvar)) {
+            set_env_param_ram(jvar->string, jvar->valuestring);
+            printf("set %s=%s\n", jvar->string, jvar->valuestring);
+        }
+    }
+
+    if (keep_front) {
+        set_env_param_ram("bootcmd", new_bootcmd);
+        set_env_param_rom("bootargs", new_bootargs, mtd.env_dev,
+                          mtd.env_offset, mtd.erasesize);
+        reboot_with_msg();
+    }
 
     char value[1024];
 
@@ -1500,10 +1727,12 @@ int upgrade_restore_cmd(int argc, char **argv) {
     const struct option long_options[] = {
         {"force", no_argument, NULL, 'f'},
         {"skip-env", no_argument, NULL, 's'},
+        {"wipe-settings", no_argument, NULL, 'w'},
         {NULL, 0, NULL, 0},
     };
     bool skip_env = false;
     bool force = false;
+    bool wipe_settings = false;
     int res;
     int option_index;
 
@@ -1515,6 +1744,9 @@ int upgrade_restore_cmd(int argc, char **argv) {
             break;
         case 'f':
             force = true;
+            break;
+        case 'w':
+            wipe_settings = true;
             break;
 
         case '?':
@@ -1529,5 +1761,5 @@ int upgrade_restore_cmd(int argc, char **argv) {
     if (restore_mode)
         return restore_backup(optarg, skip_env, force);
     else
-        return do_upgrade(optarg, force);
+        return do_upgrade(optarg, force, wipe_settings);
 }

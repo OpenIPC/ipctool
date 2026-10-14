@@ -137,7 +137,8 @@ static void uboot_setenv_cb(int mtd, uint32_t offset, const char *env,
     char *nptr = newenv + CRC_SZ;
     bool found = false;
     while (*ptr) {
-        if (!strncmp(ptr, key, strlen(key))) {
+        // The whole name: "bootcmd" is not "bootcmdnor"
+        if (!strncmp(ptr, key, strlen(key)) && ptr[strlen(key)] == '=') {
             found = true;
             char *delim = strchr(ptr, '=');
             if (!delim) {
