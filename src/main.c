@@ -93,6 +93,7 @@ void print_usage() {
         "                            (experimental! use only on cameras with "
         "UART)\n"
         "     [-f, --force]          enforce\n"
+        "     [--wipe-settings]      do not carry the settings over\n"
         "  nand-migrate [--dry-run] [--wipe-settings] <rootfs.ubifs>\n"
         "                            move a NAND camera off the retired\n"
         "                            layout with a `kernel` UBI volume\n"

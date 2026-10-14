@@ -312,6 +312,10 @@ message(STATUS "libipchw vendor HALs: hisi ${_ipchw_selected}")
 set(IPCTOOL_SRC
     src/backup.c
     src/backup.h
+    src/jffs2.c
+    src/jffs2.h
+    src/upgrade_env.c
+    src/upgrade_env.h
     src/nand_layout.c
     src/nand_layout.h
     src/nand_migrate.c
@@ -521,6 +525,13 @@ if(NOT ONLY_LIBRARY)
   # Which partitions are another name for the chip ("all" on Novatek).
   add_executable(mtd_alias_test src/mtd_alias_test.c src/mtd_alias.c)
   target_include_directories(mtd_alias_test PRIVATE include src)
+
+  # What upgrade edits in the bootloader's environment, and the image it
+  # carries the settings across a repartition in.
+  add_executable(upgrade_env_test src/upgrade_env_test.c src/upgrade_env.c)
+  target_include_directories(upgrade_env_test PRIVATE include src)
+  add_executable(jffs2_test src/jffs2_test.c src/jffs2.c)
+  target_include_directories(jffs2_test PRIVATE include src)
 
   # What nand-migrate decides before it touches the flash.
   add_executable(nand_layout_test src/nand_layout_test.c src/nand_layout.c)
