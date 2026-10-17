@@ -70,6 +70,13 @@ jobs:
         # the boards use -- so an absolute ceiling here would describe no
         # shipped binary and would go stale the moment that URL moves. A
         # delta does not care which compiler measured it.
+        #
+        # The quantity is text + data + bss from size(1), not the file size.
+        # The file is page-quantised: the RW segment's file offset must equal
+        # its address modulo 4096, so it moves a whole page the moment the
+        # code before it crosses a boundary. On 5d678de the code segment ended
+        # exactly where the data segment began (both 0xae68), and a PR adding
+        # 12 bytes of code grew the file by 4096 and failed the budget.
         if: matrix.target == 'arm32'
         run: |
           export PATH=/opt/${{ matrix.toolchain_dir }}/bin:$PATH
@@ -80,7 +87,8 @@ jobs:
                   -DBUILD_SHARED_LIBS=ON -DSKIP_VERSION=ON \
                   -DIPCHW_VENDORS="$2" > /dev/null
             cmake --build "$out" --target ipcinfo > /dev/null
-            stat -c %s "$out/ipcinfo"
+            cc=${{ matrix.cc }}
+            "${cc%gcc}size" "$out/ipcinfo" | awk 'NR == 2 { print $4 }'
           }
           git worktree add -f /tmp/ipcinfo-base \
               "${{ github.event.pull_request.base.sha }}" > /dev/null
