@@ -1028,9 +1028,34 @@ struct PT_OFFSET {
 
 // PT_UNIFY_TIMING_CFG
 
+#ifdef IPCHW_HISI_3536D
+/* SCSYSID0[31:24], "chip version" in the Hi3536DV100 data sheet, which
+ * leaves its value as TBD. Revision 2 parts exist and the 2018 SDK
+ * (V2.0.2.0) cannot drive them: its vdec and venc read the same
+ * revision back from 0x12060024 and refuse every frame above 1, while
+ * later vendor builds carry a separate path for 2. An NVR whose decoder
+ * starts but never outputs a picture is answered by this field. */
+#define HI3536D_SCSYSID0 0x12050EE0
+
+static bool hisi_3536d_revision(uint32_t *rev) {
+    uint32_t val;
+
+    if (!mem_reg(HI3536D_SCSYSID0, &val, OP_READ))
+        return false;
+    *rev = val >> 24;
+    return true;
+}
+#endif /* IPCHW_HISI_3536D */
+
 void hisi_chip_properties(cJSON *j_inner) {
     char buf[1024];
     if (hisi_get_die_id(buf, sizeof buf)) {
         ADD_PARAM("id", buf);
     }
+#ifdef IPCHW_HISI_3536D
+    uint32_t rev;
+    if (chip_generation == HISI_3536D && hisi_3536d_revision(&rev)) {
+        ADD_PARAM_NUM("revision", rev);
+    }
+#endif
 }
