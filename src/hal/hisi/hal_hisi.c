@@ -678,6 +678,17 @@ void setup_hal_hisi() {
         break;
     }
     possible_i2c_addrs = my_possible_i2c_addrs;
+#ifdef IPCHW_HISI_3536D
+    /* The Hi3536DV100 is a decoder with no video input, so there is no sensor
+     * to find, and probing for one is not free. Its i2c0 has nothing on the
+     * wire on an NVR, and the kernel's hibvt-i2c runs it in polling mode (the
+     * device tree gives it no interrupt): every transfer spins udelay(50)
+     * 0x10000 times, 3.3 s on the SoC's only core, before "wait idle timeout".
+     * The full table is 38 such transfers -- the board stopped answering ping
+     * for two minutes on every report. */
+    if (chip_generation == HISI_3536D)
+        possible_i2c_addrs = NULL;
+#endif
     hal_temperature = hisi_get_temp;
 #ifndef STANDALONE_LIBRARY
     hal_detect_ethernet = hisi_ethdetect;
