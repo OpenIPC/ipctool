@@ -15,16 +15,16 @@ static unsigned char soi_addrs[] = {0x60, 0x80, 0};
 static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char ssens_addrs[] = {0x60, 0};
 static unsigned char omni_addrs[] = {0x6c, 0};
+// ImageDesign MIS2003/MIS2006, which libsns_X123_XM530 probes at 0x30
+static unsigned char imagedesign_addrs[] = {0x60, 0};
 // only for reference, used in XM510
 static unsigned char bg_addrs[] = {0x64, 0};
 
-static sensor_addr_t xm_possible_i2c_addrs[] = {{SENSOR_SONY, sony_addrs},
-                                                {SENSOR_SMARTSENS, ssens_addrs},
-                                                {SENSOR_ONSEMI, onsemi_addrs},
-                                                {SENSOR_SOI, soi_addrs},
-                                                {SENSOR_OMNIVISION, omni_addrs},
-                                                {SENSOR_BRIGATES, bg_addrs},
-                                                {0, NULL}};
+static sensor_addr_t xm_possible_i2c_addrs[] = {
+    {SENSOR_SONY, sony_addrs},       {SENSOR_SMARTSENS, ssens_addrs},
+    {SENSOR_ONSEMI, onsemi_addrs},   {SENSOR_SOI, soi_addrs},
+    {SENSOR_OMNIVISION, omni_addrs}, {SENSOR_IMAGEDESIGN, imagedesign_addrs},
+    {SENSOR_BRIGATES, bg_addrs},     {0, NULL}};
 
 int xm_open_sensor_fd() { return universal_open_sensor_fd("/dev/xm_i2c"); }
 
