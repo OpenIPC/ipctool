@@ -72,10 +72,24 @@ static const xm_named_t xm510_named[] = {
 
 static const char *const ALT_NAMES[4] = {NULL, "FUNC1", "FUNC2", "FUNC3"};
 
-/* The pad names, "GPIO43" or "GPIO8_1", built once: a row hands out a
- * `const char *` that has to outlive the call. */
-static char xm530_gpio_names[XM530_PADS][8];
-static char xm510_gpio_names[XM510_PADS][8];
+/* The pad names, "GPIO43" or "GPIO8_1", as constant data: a row hands out a
+ * `const char *` that has to outlive the call, and lookups promise
+ * (include/ipchw.h) to read nothing but constant data. */
+#define XM_DEC(p)                                                              \
+    p "0", p "1", p "2", p "3", p "4", p "5", p "6", p "7", p "8", p "9"
+#define XM_PORT(p) p "0", p "1", p "2", p "3", p "4", p "5", p "6", p "7"
+
+static const char xm530_gpio_names[XM530_PADS][7] = {
+    XM_DEC("GPIO"),  XM_DEC("GPIO1"), XM_DEC("GPIO2"), XM_DEC("GPIO3"),
+    XM_DEC("GPIO4"), XM_DEC("GPIO5"), XM_DEC("GPIO6"), XM_DEC("GPIO7"),
+    XM_DEC("GPIO8"), XM_DEC("GPIO9"),
+};
+
+static const char xm510_gpio_names[XM510_PADS][8] = {
+    XM_PORT("GPIO0_"), XM_PORT("GPIO1_"), XM_PORT("GPIO2_"),
+    XM_PORT("GPIO3_"), XM_PORT("GPIO4_"), XM_PORT("GPIO5_"),
+    XM_PORT("GPIO6_"), XM_PORT("GPIO7_"), XM_PORT("GPIO8_"),
+};
 
 static bool is_xm510(void) { return chip_generation == CHIP_XM510; }
 
@@ -86,17 +100,7 @@ static int npads(void) {
 }
 
 static const char *gpio_name(int pad) {
-    if (is_xm510()) {
-        char *s = xm510_gpio_names[pad];
-        if (!*s)
-            snprintf(s, sizeof(xm510_gpio_names[0]), "GPIO%d_%d", pad / 8,
-                     pad % 8);
-        return s;
-    }
-    char *s = xm530_gpio_names[pad];
-    if (!*s)
-        snprintf(s, sizeof(xm530_gpio_names[0]), "GPIO%d", pad);
-    return s;
+    return is_xm510() ? xm510_gpio_names[pad] : xm530_gpio_names[pad];
 }
 
 static uint32_t reg_addr(int pad) {

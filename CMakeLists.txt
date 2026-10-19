@@ -98,6 +98,15 @@ foreach(_f IN LISTS _padmux_selected)
   string(TOUPPER ${_f} _F)
   list(APPEND IPCHW_PADMUX_DEFS IPCHW_PADMUX_${_F})
 endforeach()
+
+# Xiongmai's backend is reached only through a chip_generation that only the
+# Xiongmai HAL sets, so without that HAL it is code nothing can call. Every
+# camera's libipchw is built with the default 'all' tables; this keeps the
+# Xiongmai one out of all of them but Xiongmai's own.
+if("xm" IN_LIST _padmux_selected AND NOT "xm" IN_LIST _ipchw_selected)
+  list(REMOVE_ITEM _padmux_selected xm)
+  list(REMOVE_ITEM IPCHW_PADMUX_DEFS IPCHW_PADMUX_XM)
+endif()
 message(STATUS "libipchw pad-mux tables: ${_padmux_selected}")
 
 # The vendors whose pad-mux is its own backend rather than a table in

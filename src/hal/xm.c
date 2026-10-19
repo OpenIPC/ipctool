@@ -147,8 +147,13 @@ bool xm_detect_cpu(char *chip_name, uint32_t base) {
         *ptr = toupper(*ptr);
         ptr++;
     }
-    chip_generation = !strcmp(chip_name, "XM510") ? CHIP_XM510 : CHIP_XM530;
+    /* Only the two layouts hal/xm_padmux.c knows. Any other name keeps
+     * generation 0, and pad mux answers that it has no table rather than
+     * reading registers on a layout nobody checked. */
+    if (!strcmp(chip_name, "XM510"))
+        chip_generation = CHIP_XM510;
     if (!strcmp(chip_name, "XM530")) {
+        chip_generation = CHIP_XM530; /* XM550 is the same die */
         uint32_t reg;
         if (mem_reg(0x100B001C, (uint32_t *)&reg, OP_READ)) {
             // bank_size, 0x2 for 512M and 0x3 for 1024M
