@@ -6,7 +6,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include "chipid.h"
 #include "hal/common.h"
+#include "hal/xm.h"
 #include "ram.h"
 #include "tools.h"
 
@@ -145,6 +147,7 @@ bool xm_detect_cpu(char *chip_name, uint32_t base) {
         *ptr = toupper(*ptr);
         ptr++;
     }
+    chip_generation = !strcmp(chip_name, "XM510") ? CHIP_XM510 : CHIP_XM530;
     if (!strcmp(chip_name, "XM530")) {
         uint32_t reg;
         if (mem_reg(0x100B001C, (uint32_t *)&reg, OP_READ)) {

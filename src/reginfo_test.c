@@ -16,6 +16,7 @@
 #include "hal/novatek_gpio.h"
 #include "hal/sstar.h"
 #include "hal/sstar_gpio.h"
+#include "hal/xm.h"
 #include "ipchw.h"
 #include "padmux.h"
 #include "reginfo.h"
@@ -1376,6 +1377,10 @@ static void test_table_integrity(void) {
         {CHIP_NA51055, "NA51055"},
         {CHIP_NA51084, "NT98528"},
 #endif
+#ifdef IPCHW_PADMUX_XM
+        {CHIP_XM510, "XM510"},
+        {CHIP_XM530, "XM550"},
+#endif
     };
 
     for (size_t c = 0; c < sizeof(chips) / sizeof(*chips); c++) {
@@ -1487,6 +1492,85 @@ static void test_gpio_windows_in_mapping(void) {
     CHECK(gpio_windows_in_mapping(0x1250, 0x20, base, stride, 3) == 0x4);
 }
 
+#ifdef IPCHW_PADMUX_XM
+/* Xiongmai: a bit per alternative in the pad's (XM530) or the port's (XM510)
+ * register. The values seeded below are the lab boards' registers at rest,
+ * so get() is checked against what a camera actually holds. */
+static void test_xm(void) {
+    ipchw_padmux_t r;
+
+    puts("Xiongmai XM530/XM550: MUX1..3 in the pad's own register");
+    as_chip(CHIP_XM530, "XM550");
+    CHECK(padmux_parse_pad("43") == 43);
+    CHECK(padmux_parse_pad("GPIO43") == 43);
+    CHECK(padmux_parse_pad("5_2") == -1); /* HiSilicon's banking, pad 42 */
+    CHECK(padmux_parse_pad("100") == -1);
+    CHECK(ipchw_padmux_get(100, &r) == IPCHW_PADMUX_NO_PAD);
+
+    regs_reset();
+    fake_write(0x10020000 + 4 * 43, 0x42, 32); /* sdio0_clk: MUX1, 4 mA */
+    fake_write(0x10020000 + 4 * 9, 0x84, 32);  /* FLASH_CLK: MUX2, 8 mA */
+    fake_write(0x10020000 + 4 * 1, 0xC00, 32); /* IR-cut pad: output high */
+    fake_write(0x10020000 + 4 * 20, 0x6, 32);  /* two enables: no name */
+    CHECK(ipchw_padmux_get(43, &r) == 1 && !strcmp(r.func_name, "SDIO0_CLK"));
+    CHECK(r.func_mask == 0xE && r.func == 0x2 && r.address == 0x100200AC);
+    CHECK(ipchw_padmux_get(9, &r) == 1 && !strcmp(r.func_name, "FLASH_CLK"));
+    CHECK(ipchw_padmux_get(1, &r) == 1 && (r.flags & IPCHW_PADMUX_F_GPIO));
+    CHECK(!strcmp(r.func_name, "GPIO1") && !strcmp(r.gpio_name, "GPIO1"));
+    CHECK(ipchw_padmux_get(20, &r) == 0);
+    CHECK(ipchw_padmux_get(30, &r) == 1 && (r.flags & IPCHW_PADMUX_F_GPIO));
+
+    /* A mux write leaves the drive strength and the GPIO state alone. */
+    CHECK(ipchw_padmux_set(1, "FUNC3") == 0);
+    CHECK(reg_of(0x10020004) == (0xC00 | 0x8));
+    CHECK(ipchw_padmux_set(1, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0x10020004) == 0xC00);
+    CHECK(ipchw_padmux_set(43, "GPIO43") == 0);
+    CHECK(reg_of(0x100200AC) == 0x40);
+    CHECK(ipchw_padmux_set(43, "SDIO0_CLK") == 0);
+    CHECK(reg_of(0x100200AC) == 0x42);
+    /* A named alternative is not also offered under its selector's name. */
+    CHECK(ipchw_padmux_set(43, "FUNC1") == IPCHW_PADMUX_NO_FUNC);
+    CHECK(ipchw_padmux_set(43, "FLASH_CLK") == IPCHW_PADMUX_NO_FUNC);
+
+    puts("Xiongmai XM510: three enables per pin in its port's word");
+    as_chip(CHIP_XM510, "XM510");
+    CHECK(padmux_parse_pad("8_1") == 65);
+    CHECK(padmux_parse_pad("GPIO8_1") == 65);
+    CHECK(padmux_parse_pad("65") == 65);
+    CHECK(padmux_parse_pad("9_0") == -1);
+    CHECK(padmux_parse_pad("72") == -1);
+
+    regs_reset();
+    fake_write(0x10020000, 0x3000, 32);   /* port 0: pins 4, 5 on their 2nd */
+    fake_write(0x10020004, 0x300500, 32); /* port 1: 0, 2 on 2nd; 4, 5 on 3rd */
+    fake_write(0x10020014, 0xF, 32);      /* port 5: the SD slot */
+    fake_write(0x1002001C, 0x1, 32);      /* port 7: pin 0 on its 1st */
+    CHECK(ipchw_padmux_get(4, &r) == 1 && !strcmp(r.func_name, "FUNC2"));
+    CHECK(r.address == 0x10020000 && r.func_mask == 0x101010 &&
+          r.func == 0x1000);
+    CHECK(ipchw_padmux_get(8 + 0, &r) == 1 && !strcmp(r.func_name, "FUNC2"));
+    CHECK(ipchw_padmux_get(8 + 4, &r) == 1 && !strcmp(r.func_name, "FUNC3"));
+    CHECK(ipchw_padmux_get(8 + 1, &r) == 1 && (r.flags & IPCHW_PADMUX_F_GPIO));
+    CHECK(!strcmp(r.gpio_name, "GPIO1_1"));
+    CHECK(ipchw_padmux_get(40, &r) == 1 && !strcmp(r.func_name, "SDIO1"));
+    CHECK(ipchw_padmux_get(44, &r) == 1 && (r.flags & IPCHW_PADMUX_F_GPIO));
+    CHECK(ipchw_padmux_get(56, &r) == 1 && !strcmp(r.func_name, "FUNC1"));
+    CHECK(ipchw_padmux_get(65, &r) == 1 && (r.flags & IPCHW_PADMUX_F_GPIO));
+
+    /* One pin's bits only; the port's other pins keep theirs. */
+    CHECK(ipchw_padmux_set(56, "FUNC2") == 0);
+    CHECK(reg_of(0x1002001C) == 0x100);
+    CHECK(ipchw_padmux_set(41, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0x10020014) == 0xD);
+    CHECK(ipchw_padmux_set(41, "SDIO1") == 0);
+    CHECK(reg_of(0x10020014) == 0xF);
+    CHECK(ipchw_padmux_set(52, "SDIO2") == IPCHW_PADMUX_NO_FUNC); /* 6_4 */
+
+    as_chip(T31, "T31");
+}
+#endif
+
 int main(void) {
     /* Every register the tests below touch is one of these, not a camera's. */
     padmux_set_io(&FAKE_IO);
@@ -1527,6 +1611,9 @@ int main(void) {
 #endif
 #ifdef IPCHW_VENDOR_NOVATEK
     test_novatek_gpio_regs();
+#endif
+#ifdef IPCHW_PADMUX_XM
+    test_xm();
 #endif
     test_refusals_do_not_exit();
     test_table_integrity();

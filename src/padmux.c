@@ -15,6 +15,7 @@
 #include "hal/ingenic.h"
 #include "hal/novatek.h"
 #include "hal/sstar.h"
+#include "hal/xm.h"
 #include "tools.h"
 
 #include <stdio.h>
@@ -68,6 +69,11 @@ const padmux_ops_t *padmux_ops(void) {
     case CHIP_NA51084:
     case CHIP_NA51089:
         return &PADMUX_OPS_NOVATEK;
+#endif
+#ifdef IPCHW_PADMUX_XM
+    case CHIP_XM510:
+    case CHIP_XM530:
+        return &PADMUX_OPS_XM;
 #endif
     default:
         break;
