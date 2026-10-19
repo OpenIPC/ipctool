@@ -1,7 +1,15 @@
 #ifndef HAL_XM_H
 #define HAL_XM_H
 
+#include <stdbool.h>
 #include <stdint.h>
+
+/* chip_generation for the two pad layouts (hal/xm_padmux.c). XM550 is the
+ * XM530 die with more DRAM and shares its pad controller. */
+enum {
+    CHIP_XM510 = 0x584D0510, /* "XM" 510 */
+    CHIP_XM530 = 0x584D0530,
+};
 
 #define CMD_I2C_WRITE 0x01
 #define CMD_I2C_READ 0x03

@@ -72,7 +72,7 @@ endif()
 # Same shape as IPCHW_VENDORS above, and for the same reason -- set(... CACHE)
 # here means a parent project has to FORCE it.
 set(IPCHW_PADMUX_FAMILIES v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d sstar
-    ingenic novatek)
+    ingenic novatek xm)
 set(IPCHW_PADMUX "all" CACHE STRING
     "Pad-mux tables compiled into libipchw: 'all', 'none', or a subset of ${IPCHW_PADMUX_FAMILIES}")
 
@@ -98,6 +98,15 @@ foreach(_f IN LISTS _padmux_selected)
   string(TOUPPER ${_f} _F)
   list(APPEND IPCHW_PADMUX_DEFS IPCHW_PADMUX_${_F})
 endforeach()
+
+# Xiongmai's backend is reached only through a chip_generation that only the
+# Xiongmai HAL sets, so without that HAL it is code nothing can call. Every
+# camera's libipchw is built with the default 'all' tables; this keeps the
+# Xiongmai one out of all of them but Xiongmai's own.
+if("xm" IN_LIST _padmux_selected AND NOT "xm" IN_LIST _ipchw_selected)
+  list(REMOVE_ITEM _padmux_selected xm)
+  list(REMOVE_ITEM IPCHW_PADMUX_DEFS IPCHW_PADMUX_XM)
+endif()
 message(STATUS "libipchw pad-mux tables: ${_padmux_selected}")
 
 # The vendors whose pad-mux is its own backend rather than a table in
@@ -107,13 +116,13 @@ message(STATUS "libipchw pad-mux tables: ${_padmux_selected}")
 # SigmaStar tables in a build that detects nothing else, which is exactly what
 # reginfo_test does.
 set(IPCHW_PADMUX_BACKENDS "")
-foreach(_f sstar ingenic novatek)
+foreach(_f sstar ingenic novatek xm)
   if(_f IN_LIST _padmux_selected)
     list(APPEND IPCHW_PADMUX_BACKENDS src/hal/${_f}_padmux.c)
   endif()
 endforeach()
 set(IPCHW_PADMUX_BACKENDS_ALL src/hal/sstar_padmux.c src/hal/ingenic_padmux.c
-    src/hal/novatek_padmux.c)
+    src/hal/novatek_padmux.c src/hal/xm_padmux.c)
 
 # Which HiSilicon generations libipchw can identify. IPCHW_VENDORS does not
 # reach the CODE: chipid.c dispatches to the HiSilicon HAL directly rather

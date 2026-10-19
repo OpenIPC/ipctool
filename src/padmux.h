@@ -26,6 +26,9 @@
  *                   pad that has to be cleared before any of them reaches
  *                   it. One pad's function is a field in one register and a
  *                   bit in another.
+ *   Xiongmai        HiSilicon's shape with an enable bit per alternative
+ *                   instead of a selector: the pad's own register on
+ *                   XM530/XM550, the port's word of eight pins on XM510.
  *
  * What a caller sees is a flat ipchw_padmux_t in every case.
  * ---------------------------------------------------------------------- */
@@ -85,6 +88,9 @@ extern const padmux_ops_t PADMUX_OPS_INGENIC;
 #endif
 #ifdef IPCHW_PADMUX_NOVATEK
 extern const padmux_ops_t PADMUX_OPS_NOVATEK;
+#endif
+#ifdef IPCHW_PADMUX_XM
+extern const padmux_ops_t PADMUX_OPS_XM;
 #endif
 
 /* The backend for the SoC that has been detected, or NULL when this build

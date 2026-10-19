@@ -23,7 +23,7 @@ puts the pad back.
 > pad to GPIO. A pad that a MISC-style table drop hides from `reginfo --pads`
 > still answers here, which is the one place to see it.
 
-## Four vendors, four mechanisms
+## Five vendors, four mechanisms
 
 This is the thing to understand before touching any of it. The API looks like
 one question, and underneath it is four different pieces of silicon.
@@ -350,6 +350,38 @@ for SIF. Where neither names a pad the name is the option's own -- `SENSOR_12BIT
 `MIPI_LVDS_CLK0`, `ETH_RMII` -- which, like SigmaStar's `I2C1_MODE_3`, names a
 bus and not a wire.
 
+### Xiongmai -- an enable bit per alternative
+
+XM510 and XM530/XM550 keep a pad's mux in the GPIO block at `0x10020000`, as
+one enable bit per alternative with all bits clear meaning GPIO. They differ
+only in where the bits live:
+
+| part | register | a pad's field |
+|---|---|---|
+| XM530/XM550 | `0x10020000 + 4 * pad`, one per pad, pads 0..99 | bits 1-3, MUX1..MUX3 (`GPIO_MUX1_EN`..`GPIO_MUX3_EN` in the vendor's `mach-xm530/platform.h`); the same word holds the drive strength and GPIO state |
+| XM510 | `0x10020000 + 4 * port`, one per port of eight pins, ports 0..8 (`GPIOn_MULT_USE_EN`) | pin `b`'s bits `b`, `8 + b` and `16 + b` |
+
+So it is HiSilicon's shape -- one register, one field, every row a plain
+read-modify-write that leaves the rest of the word alone -- with a bit per
+function where HiSilicon has a selector nibble. Hence `func` for MUX1 on
+XM530 is `0x2`, and `gpio mux 6 2` and `gpio mux 6 FUNC1` mean the same.
+
+Xiongmai publishes no table of what each pad's alternatives carry, so rows are
+named after the selector -- `FUNC1`, `FUNC2`, `FUNC3` -- except where the
+vendor's own code says what it puts there, under its own names:
+
+| part | pads | alternative | names | source |
+|---|---|---|---|---|
+| XM530/XM550 | 9..14 | MUX2 | `FLASH_CLK`, `FLASH_CSN`, `FLASH_DI`, `FLASH_DO`, `FLASH_WPN`, `FLASH_HOLD` | `platform.h` `GPIO_FLASH_*`, `xmsfc_v2.c` |
+| XM530/XM550 | 43..50, 52 | MUX1 | `SDIO0_CLK`, `SDIO0_CMD`, `SDIO0_DATA0`..`3`, `SDIO0_DETECT`, `SDIO0_PWSV`, `SDIO0_LENON` | `sdio0_sd.c` `sdio0_powerup()` |
+| XM510 | `5_0`..`5_3` | 1st | `SDIO1` | `sdio1_sd.c`, port 5's word |
+| XM510 | `6_0`..`6_3` | 1st | `SDIO2` | `sdio2_wifi.c`, port 6's word |
+
+XM510's SD and Wi-Fi drivers write a port's whole word and never say which pin
+is clock, command or data, so those pads carry the bus's name, as SigmaStar's
+modes do. `chip_generation` is `CHIP_XM510` or `CHIP_XM530` (XM550 is the
+XM530 die), set by `xm_detect_cpu()`.
+
 ## Pad numbers and names
 
 `gpio_pad` is the number the kernel uses, and it is the number to speak to
@@ -361,6 +393,8 @@ every consumer:
 | SigmaStar | the vendor pad id, which is the gpiochip index (base 0) | `"PAD_SR_IO03"` |
 | Ingenic | `port * 32 + pin` | `"PB25"` |
 | Novatek | the Linux GPIO number, `group * 32 + pin` | `"P_GPIO22"` |
+| Xiongmai XM530/XM550 | the pad, as the vendor's `GPIO N` | `"GPIO43"` |
+| Xiongmai XM510 | `port * 8 + pin` | `"GPIO8_1"` |
 
 Function names are the vendor's own and are **not portable**, not even within
 HiSilicon: `PWM_OUT0` on V1, `PWM0` from V2, `PWM0_OUT1` on V5. `"PWM"` also
@@ -537,6 +571,31 @@ in.
   numbering ipctool speaks (`P_GPIO8` is 40) matching the stock firmware's;
   that is their report, without posted output. NA51055 and NA51084 have not
   been run at all.
+
+  Xiongmai has, on a lab XM510 + JX-H62 and a lab XM550:
+  - **XM510:** `reginfo --pads` agreed with every port's mux word read
+    through `devmem`: `0_4`/`0_5` and `1_0`/`1_2` on their 2nd function,
+    `1_4`/`1_5` on their 3rd, `5_0`..`5_3` as `SDIO1`, `7_0` on its 1st,
+    everything else GPIO. `gpio mux 3_0 FUNC1` set port 3's bit 0 and
+    nothing else, and `gpio mux 3_0 GPIO` cleared it.
+  - **XM550:** all 100 pads agreed with their registers, compared by
+    script. The SPI flash pads showed as `FLASH_*`; the SD pads 43..48 and
+    52 as `SDIO0_*`. `gpio mux 51 FUNC3` took pad 51 from `0x80` (8 mA
+    drive) to `0x88` and `gpio mux 51 GPIO` back to `0x80`.
+
+- **Most Xiongmai alternatives are unnamed.** Only the pads above are named,
+  because nothing public says what MUX1..3 carry anywhere else. Two groups
+  are left as selectors on purpose, though the vendor touches them:
+  - XM510 `0_4`/`0_5`, which `mach-xm510/core.c` moves from their 1st to
+    their 2nd function at boot, beside the UART clock setup, without saying
+    what it is;
+  - XM510 `5_4`..`5_7`, which `sdio1_sd.c` puts on their 1st function for
+    card detect, power save, write protect and LED -- but its two branches
+    disagree on which pin is which.
+
+  XM510's port 8 word at `+0x20` is inferred from the layout of the other
+  eight; the vendor only ever names `GPIO78_MULT_USE_EN` (`+0x1C`), and on
+  the lab board `+0x20` reads zero.
 
 ## Adding a family
 
