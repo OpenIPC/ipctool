@@ -546,3 +546,9 @@ if(NOT ONLY_LIBRARY)
   add_executable(nand_layout_test src/nand_layout_test.c src/nand_layout.c)
   target_include_directories(nand_layout_test PRIVATE include src)
 endif()
+
+# Optional standalone diagnostics; the default does not enable ASM or cross checks.
+option(BUILD_NT98513_DIAGNOSTICS "Build source-owned NT98513 Linux MIPS diagnostics" OFF)
+if(BUILD_NT98513_DIAGNOSTICS)
+  add_subdirectory(tools/nt98513)
+endif()
