@@ -59,13 +59,51 @@ static bool nvt_get_chip_id() {
     return true;
 }
 
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
+static void nvt_refine_na51023(char *chip_name) {
+    char buf[16];
+
+    /* The device-tree model names a die shared by more than one part.
+     * Parse the factory declaration as data; never source it. Missing or
+     * different profiles retain the NA51023 identity. */
+    chip_generation = CHIP_NA51023;
+    if (line_from_file("/etc/profile_prjcfg",
+                       "^export CHIP=\"(98513)\"[[:space:]]*$", buf,
+                       sizeof(buf)))
+        strcpy(chip_name, "NT98513");
+}
+
+bool novatek_detect_mips_cpu(char *chip_name) {
+    char buf[16];
+
+    /* Only this MIPS model has a verified identity and rejecting HAL.
+     * Other Novatek models and the ARM chip-ID proc ABI must not select
+     * the existing ARM sensor/HDAL backend through MIPS dispatch. */
+    if (!line_from_file("/proc/device-tree/model",
+                       "^Novatek (NA51023)([[:space:]]|$)", buf, sizeof(buf)))
+        return false;
+    strcpy(chip_name, buf);
+    nvt_refine_na51023(chip_name);
+    return true;
+}
+#endif
+
 bool novatek_detect_cpu(char *chip_name) {
     char buf[256];
 
     if(nvt_get_chip_id())
         return true;
 
-    if (!line_from_file("/proc/device-tree/model", "Novatek ([A-Z]+[0-9]+)",
+    if (!line_from_file("/proc/device-tree/model",
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
+                        "^Novatek ([A-Z]+[0-9]+)([[:space:]]|$)",
+#else
+                        /* Keep the existing ARM/AArch64 parser unchanged.
+                         * The new MIPS route has its own strict detector. */
+                        "Novatek ([A-Z]+[0-9]+)",
+#endif
                         buf, sizeof(buf))) {
         /* NA51055 has a pad table and no part name the ID can give; with
          * no device-tree model either, the die is the name. */
@@ -75,6 +113,12 @@ bool novatek_detect_cpu(char *chip_name) {
     }
 
     strcpy(chip_name, buf);
+
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
+    if (!strcmp(buf, "NA51023"))
+        nvt_refine_na51023(chip_name);
+#endif
 
     return true;
 }
@@ -118,7 +162,26 @@ static int novatek_open_i2c_fd(int i2c_adapter_nr) {
     return universal_open_sensor_fd(adapter_name);
 }
 
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
+static int novatek_no_sensor_bus(int adapter_nr) {
+    (void)adapter_nr;
+    return -1;
+}
+#endif
+
 void novatek_setup_hal() {
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
+    /* This MIPS generation delegates media to uITRON. The ARM HDAL memory
+     * report, sensor I2C bus and register tables below are not its ABI. */
+    if (chip_generation == CHIP_NA51023) {
+        possible_i2c_addrs = NULL;
+        open_i2c_sensor_fd = novatek_no_sensor_bus;
+        open_spi_sensor_fd = NULL;
+        return;
+    }
+#endif
     possible_i2c_addrs = novatek_possible_i2c_addrs;
     i2c_change_addr = i2c_changenshift_addr;
     open_i2c_sensor_fd = novatek_open_i2c_fd;
