@@ -16,6 +16,72 @@ struct padmux_names {
     /* Offset 0 is the empty string, which is what makes 0 usable
      * as the end of a row's function list. */
     char _none[1];
+#if defined(IPCHW_PADMUX_FH)
+    char ACIP_ADBCLK[sizeof "ACIP_ADBCLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ACIP_ADDAT[sizeof "ACIP_ADDAT"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ACIP_ADLRC[sizeof "ACIP_ADLRC"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ACIP_BCLK[sizeof "ACIP_BCLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ACIP_DABCLK[sizeof "ACIP_DABCLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ACIP_DADAT[sizeof "ACIP_DADAT"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ACIP_DALRC[sizeof "ACIP_DALRC"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char AC_I2S_CLK[sizeof "AC_I2S_CLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char AC_I2S_DI[sizeof "AC_I2S_DI"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char AC_I2S_DO[sizeof "AC_I2S_DO"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char AC_I2S_WS[sizeof "AC_I2S_WS"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char AC_MCLK[sizeof "AC_MCLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ARC_JTAG_TCK[sizeof "ARC_JTAG_TCK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ARC_JTAG_TDI[sizeof "ARC_JTAG_TDI"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ARC_JTAG_TDO[sizeof "ARC_JTAG_TDO"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ARC_JTAG_TMS[sizeof "ARC_JTAG_TMS"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ARC_JTAG_TRSTN[sizeof "ARC_JTAG_TRSTN"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ARM_JTAG_TCK[sizeof "ARM_JTAG_TCK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ARM_JTAG_TDI[sizeof "ARM_JTAG_TDI"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ARM_JTAG_TDO[sizeof "ARM_JTAG_TDO"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ARM_JTAG_TMS[sizeof "ARM_JTAG_TMS"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ARM_JTAG_TRSTN[sizeof "ARM_JTAG_TRSTN"];
+#endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     char A_GPIO0[sizeof "A_GPIO0"];
 #endif
@@ -69,6 +135,9 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char CIM2_VIC_MCLK_PC[sizeof "CIM2_VIC_MCLK_PC"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char CIS_CLK[sizeof "CIS_CLK"];
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
     char CLK_TEST_OUT0[sizeof "CLK_TEST_OUT0"];
@@ -382,6 +451,18 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char DVP_VSYNC[sizeof "DVP_VSYNC"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char DW_I2S_CLK[sizeof "DW_I2S_CLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char DW_I2S_DI[sizeof "DW_I2S_DI"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char DW_I2S_DO[sizeof "DW_I2S_DO"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char DW_I2S_WS[sizeof "DW_I2S_WS"];
+#endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     char D_GPIO0[sizeof "D_GPIO0"];
 #endif
@@ -520,11 +601,20 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_NOVATEK)
     char ETH_LED2[sizeof "ETH_LED2"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char ETH_LINK_ACT[sizeof "ETH_LINK_ACT"];
+#endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V5)
     char ETH_LINK_ACT_LED[sizeof "ETH_LINK_ACT_LED"];
 #endif
 #if defined(IPCHW_PADMUX_3536D)
     char ETH_LINK_LED[sizeof "ETH_LINK_LED"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ETH_LINK_SPD[sizeof "ETH_LINK_SPD"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char ETH_LINK_STA[sizeof "ETH_LINK_STA"];
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V5)
     char ETH_LINK_STA_LED[sizeof "ETH_LINK_STA_LED"];
@@ -661,6 +751,9 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char GMAC_TXEN[sizeof "GMAC_TXEN"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO0[sizeof "GPIO0"];
+#endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO0_0[sizeof "GPIO0_0"];
 #endif
@@ -684,6 +777,12 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO0_7[sizeof "GPIO0_7"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO1[sizeof "GPIO1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO10[sizeof "GPIO10"];
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     char GPIO10_0[sizeof "GPIO10_0"];
@@ -709,6 +808,9 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     char GPIO10_7[sizeof "GPIO10_7"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO11[sizeof "GPIO11"];
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     char GPIO11_0[sizeof "GPIO11_0"];
 #endif
@@ -732,6 +834,9 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
     char GPIO11_7[sizeof "GPIO11_7"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO12[sizeof "GPIO12"];
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
     char GPIO12_0[sizeof "GPIO12_0"];
@@ -757,6 +862,9 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
     char GPIO12_7[sizeof "GPIO12_7"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO13[sizeof "GPIO13"];
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A)
     char GPIO13_0[sizeof "GPIO13_0"];
 #endif
@@ -780,6 +888,9 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V5)
     char GPIO13_7[sizeof "GPIO13_7"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO14[sizeof "GPIO14"];
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V5)
     char GPIO14_0[sizeof "GPIO14_0"];
@@ -805,6 +916,9 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V5)
     char GPIO14_7[sizeof "GPIO14_7"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO15[sizeof "GPIO15"];
+#endif
 #if defined(IPCHW_PADMUX_V2A)
     char GPIO15_0[sizeof "GPIO15_0"];
 #endif
@@ -814,6 +928,9 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_V2A)
     char GPIO15_2[sizeof "GPIO15_2"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO16[sizeof "GPIO16"];
+#endif
 #if defined(IPCHW_PADMUX_V3A)
     char GPIO16_1[sizeof "GPIO16_1"];
 #endif
@@ -822,6 +939,15 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_V3A)
     char GPIO16_3[sizeof "GPIO16_3"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO17[sizeof "GPIO17"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO18[sizeof "GPIO18"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO19[sizeof "GPIO19"];
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO1_0[sizeof "GPIO1_0"];
@@ -847,6 +973,39 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO1_7[sizeof "GPIO1_7"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO2[sizeof "GPIO2"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO20[sizeof "GPIO20"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO21[sizeof "GPIO21"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO22[sizeof "GPIO22"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO23[sizeof "GPIO23"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO24[sizeof "GPIO24"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO25[sizeof "GPIO25"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO26[sizeof "GPIO26"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO27[sizeof "GPIO27"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO28[sizeof "GPIO28"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO29[sizeof "GPIO29"];
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO2_0[sizeof "GPIO2_0"];
 #endif
@@ -870,6 +1029,39 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO2_7[sizeof "GPIO2_7"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO3[sizeof "GPIO3"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO30[sizeof "GPIO30"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO31[sizeof "GPIO31"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO32[sizeof "GPIO32"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO33[sizeof "GPIO33"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO34[sizeof "GPIO34"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO35[sizeof "GPIO35"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO36[sizeof "GPIO36"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO37[sizeof "GPIO37"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO38[sizeof "GPIO38"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO39[sizeof "GPIO39"];
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     char GPIO3_0[sizeof "GPIO3_0"];
@@ -895,6 +1087,39 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO3_7[sizeof "GPIO3_7"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO4[sizeof "GPIO4"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO40[sizeof "GPIO40"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO41[sizeof "GPIO41"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO42[sizeof "GPIO42"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO43[sizeof "GPIO43"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO44[sizeof "GPIO44"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO45[sizeof "GPIO45"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO46[sizeof "GPIO46"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO47[sizeof "GPIO47"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO48[sizeof "GPIO48"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO49[sizeof "GPIO49"];
+#endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO4_0[sizeof "GPIO4_0"];
 #endif
@@ -918,6 +1143,39 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     char GPIO4_7[sizeof "GPIO4_7"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO5[sizeof "GPIO5"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO50[sizeof "GPIO50"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO51[sizeof "GPIO51"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO52[sizeof "GPIO52"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO53[sizeof "GPIO53"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO54[sizeof "GPIO54"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO55[sizeof "GPIO55"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO56[sizeof "GPIO56"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO57[sizeof "GPIO57"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO58[sizeof "GPIO58"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO59[sizeof "GPIO59"];
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO5_0[sizeof "GPIO5_0"];
@@ -943,6 +1201,21 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO5_7[sizeof "GPIO5_7"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO6[sizeof "GPIO6"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO60[sizeof "GPIO60"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO61[sizeof "GPIO61"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO62[sizeof "GPIO62"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO63[sizeof "GPIO63"];
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO6_0[sizeof "GPIO6_0"];
 #endif
@@ -966,6 +1239,9 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO6_7[sizeof "GPIO6_7"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO7[sizeof "GPIO7"];
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO7_0[sizeof "GPIO7_0"];
@@ -991,6 +1267,9 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO7_7[sizeof "GPIO7_7"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO8[sizeof "GPIO8"];
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     char GPIO8_0[sizeof "GPIO8_0"];
 #endif
@@ -1014,6 +1293,9 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     char GPIO8_7[sizeof "GPIO8_7"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char GPIO9[sizeof "GPIO9"];
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char GPIO9_0[sizeof "GPIO9_0"];
@@ -1111,10 +1393,10 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char I2C0_PORTA[sizeof "I2C0_PORTA"];
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char I2C0_SCL[sizeof "I2C0_SCL"];
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char I2C0_SDA[sizeof "I2C0_SDA"];
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
@@ -1147,10 +1429,10 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char I2C1_PORTC[sizeof "I2C1_PORTC"];
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char I2C1_SCL[sizeof "I2C1_SCL"];
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char I2C1_SDA[sizeof "I2C1_SDA"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -1189,10 +1471,10 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char I2C2_PORTB[sizeof "I2C2_PORTB"];
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char I2C2_SCL[sizeof "I2C2_SCL"];
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char I2C2_SDA[sizeof "I2C2_SDA"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -1758,6 +2040,36 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char MAC0_RMII_P1[sizeof "MAC0_RMII_P1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char MAC_MDC[sizeof "MAC_MDC"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char MAC_MDIO[sizeof "MAC_MDIO"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char MAC_REF_CLK[sizeof "MAC_REF_CLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char MAC_RMII_CLK[sizeof "MAC_RMII_CLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char MAC_RXDV[sizeof "MAC_RXDV"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char MAC_RXD_0[sizeof "MAC_RXD_0"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char MAC_RXD_1[sizeof "MAC_RXD_1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char MAC_TXD_0[sizeof "MAC_TXD_0"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char MAC_TXD_1[sizeof "MAC_TXD_1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char MAC_TXEN[sizeof "MAC_TXEN"];
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char MCLK_PORTA[sizeof "MCLK_PORTA"];
@@ -2733,6 +3045,21 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     char PAD_USB_DP[sizeof "PAD_USB_DP"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char PAE_JTAG_TCK[sizeof "PAE_JTAG_TCK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char PAE_JTAG_TDI[sizeof "PAE_JTAG_TDI"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char PAE_JTAG_TDO[sizeof "PAE_JTAG_TDO"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char PAE_JTAG_TMS[sizeof "PAE_JTAG_TMS"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char PAE_JTAG_TRSTN[sizeof "PAE_JTAG_TRSTN"];
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     char PAFLG[sizeof "PAFLG"];
@@ -4153,7 +4480,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_V4)
     char POR_SEL[sizeof "POR_SEL"];
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     char PWM0[sizeof "PWM0"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4201,10 +4528,10 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char PWM0_PC[sizeof "PWM0_PC"];
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     char PWM1[sizeof "PWM1"];
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
     char PWM10[sizeof "PWM10"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4234,7 +4561,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_SSTAR)
     char PWM10_MODE_4[sizeof "PWM10_MODE_4"];
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
     char PWM11[sizeof "PWM11"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4312,7 +4639,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char PWM1_PC[sizeof "PWM1_PC"];
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     char PWM2[sizeof "PWM2"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4351,7 +4678,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char PWM2_PC[sizeof "PWM2_PC"];
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     char PWM3[sizeof "PWM3"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4390,7 +4717,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char PWM3_PC[sizeof "PWM3_PC"];
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     char PWM4[sizeof "PWM4"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4429,7 +4756,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char PWM4_PC[sizeof "PWM4_PC"];
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     char PWM5[sizeof "PWM5"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4468,7 +4795,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char PWM5_PC[sizeof "PWM5_PC"];
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     char PWM6[sizeof "PWM6"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4507,7 +4834,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char PWM6_PD[sizeof "PWM6_PD"];
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     char PWM7[sizeof "PWM7"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4546,7 +4873,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char PWM7_PD[sizeof "PWM7_PD"];
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
     char PWM8[sizeof "PWM8"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4588,7 +4915,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_SSTAR)
     char PWM8_MODE_8[sizeof "PWM8_MODE_8"];
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
     char PWM9[sizeof "PWM9"];
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -5050,7 +5377,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_V4)
     char RST_N[sizeof "RST_N"];
 #endif
-#if defined(IPCHW_PADMUX_NOVATEK)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_NOVATEK)
     char RTC_CLK[sizeof "RTC_CLK"];
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
@@ -5085,6 +5412,18 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char SA2[sizeof "SA2"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SADC_XAIN0[sizeof "SADC_XAIN0"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SADC_XAIN1[sizeof "SADC_XAIN1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SADC_XAIN2[sizeof "SADC_XAIN2"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SADC_XAIN3[sizeof "SADC_XAIN3"];
 #endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3)
     char SAR_ADC_CH0[sizeof "SAR_ADC_CH0"];
@@ -5176,11 +5515,32 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char SD0[sizeof "SD0"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD0_CD[sizeof "SD0_CD"];
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
     char SD0_CDZ_MODE[sizeof "SD0_CDZ_MODE"];
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     char SD0_CDZ_MODE_1[sizeof "SD0_CDZ_MODE_1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD0_CLK[sizeof "SD0_CLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD0_CMD_RSP[sizeof "SD0_CMD_RSP"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD0_DATA_0[sizeof "SD0_DATA_0"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD0_DATA_1[sizeof "SD0_DATA_1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD0_DATA_2[sizeof "SD0_DATA_2"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD0_DATA_3[sizeof "SD0_DATA_3"];
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     char SD0_MODE[sizeof "SD0_MODE"];
@@ -5188,8 +5548,14 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_SSTAR)
     char SD0_MODE_1[sizeof "SD0_MODE_1"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD0_WP[sizeof "SD0_WP"];
+#endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char SD1[sizeof "SD1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD1_CD[sizeof "SD1_CD"];
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     char SD1_CDZ_MODE_1[sizeof "SD1_CDZ_MODE_1"];
@@ -5197,11 +5563,32 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_SSTAR)
     char SD1_CDZ_MODE_2[sizeof "SD1_CDZ_MODE_2"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD1_CLK[sizeof "SD1_CLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD1_CMD_RSP[sizeof "SD1_CMD_RSP"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD1_DATA_0[sizeof "SD1_DATA_0"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD1_DATA_1[sizeof "SD1_DATA_1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD1_DATA_2[sizeof "SD1_DATA_2"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD1_DATA_3[sizeof "SD1_DATA_3"];
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
     char SD1_MODE_1[sizeof "SD1_MODE_1"];
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     char SD1_MODE_2[sizeof "SD1_MODE_2"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SD1_WP[sizeof "SD1_WP"];
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char SD2[sizeof "SD2"];
@@ -5518,7 +5905,7 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_NOVATEK)
     char SENSOR_CCIR_2[sizeof "SENSOR_CCIR_2"];
 #endif
-#if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4)
     char SENSOR_CLK[sizeof "SENSOR_CLK"];
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
@@ -6268,8 +6655,20 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char SSI0_CE1[sizeof "SSI0_CE1"];
 #endif
-#if defined(IPCHW_PADMUX_INGENIC)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC)
     char SSI0_CLK[sizeof "SSI0_CLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI0_CSN_0[sizeof "SSI0_CSN_0"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI0_CSN_1[sizeof "SSI0_CSN_1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI0_D2[sizeof "SSI0_D2"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI0_D3[sizeof "SSI0_D3"];
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char SSI0_DR[sizeof "SSI0_DR"];
@@ -6289,11 +6688,20 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_INGENIC)
     char SSI0_PORTC[sizeof "SSI0_PORTC"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI0_RXD[sizeof "SSI0_RXD"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI0_TXD[sizeof "SSI0_TXD"];
+#endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char SSI1_CE0[sizeof "SSI1_CE0"];
 #endif
-#if defined(IPCHW_PADMUX_INGENIC)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC)
     char SSI1_CLK[sizeof "SSI1_CLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI1_CSN_0[sizeof "SSI1_CSN_0"];
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char SSI1_DR[sizeof "SSI1_DR"];
@@ -6303,6 +6711,27 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char SSI1_PORTC[sizeof "SSI1_PORTC"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI1_RXD[sizeof "SSI1_RXD"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI1_TXD[sizeof "SSI1_TXD"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI2_CLK[sizeof "SSI2_CLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI2_CSN[sizeof "SSI2_CSN"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI2_CSN_0[sizeof "SSI2_CSN_0"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI2_RXD[sizeof "SSI2_RXD"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char SSI2_TXD[sizeof "SSI2_TXD"];
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char SSI_SLV_CE0[sizeof "SSI_SLV_CE0"];
@@ -6385,6 +6814,15 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char TEST_CLK[sizeof "TEST_CLK"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_INT_RMII_TXD_0[sizeof "TEST_INT_RMII_TXD_0"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_INT_RMII_TXD_1[sizeof "TEST_INT_RMII_TXD_1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_INT_RMII_TXEN[sizeof "TEST_INT_RMII_TXEN"];
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
     char TEST_IN_MODE_1[sizeof "TEST_IN_MODE_1"];
 #endif
@@ -6393,6 +6831,12 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     char TEST_IN_MODE_3[sizeof "TEST_IN_MODE_3"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_I_INT_SMI_MDC[sizeof "TEST_I_INT_SMI_MDC"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_I_INT_SMI_MDIO_I[sizeof "TEST_I_INT_SMI_MDIO_I"];
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char TEST_MODE[sizeof "TEST_MODE"];
@@ -6405,6 +6849,39 @@ struct padmux_names {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     char TEST_OUT_MODE_3[sizeof "TEST_OUT_MODE_3"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_RMII_CLK[sizeof "TEST_O_INT_RMII_CLK"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_RMII_CRSDV[sizeof "TEST_O_INT_RMII_CRSDV"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_RMII_RXD_0[sizeof "TEST_O_INT_RMII_RXD_0"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_RMII_RXD_1[sizeof "TEST_O_INT_RMII_RXD_1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_RMII_TXD_0[sizeof "TEST_O_INT_RMII_TXD_0"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_RMII_TXD_1[sizeof "TEST_O_INT_RMII_TXD_1"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_RMII_TXEN[sizeof "TEST_O_INT_RMII_TXEN"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_SMI_MDC[sizeof "TEST_O_INT_SMI_MDC"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_SMI_MDIO_I[sizeof "TEST_O_INT_SMI_MDIO_I"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_SMI_MDIO_O[sizeof "TEST_O_INT_SMI_MDIO_O"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char TEST_O_INT_SMI_MDIO_OE[sizeof "TEST_O_INT_SMI_MDIO_OE"];
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     char TFT_LCD_PD[sizeof "TFT_LCD_PD"];
@@ -6607,8 +7084,14 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_3536C)
     char UART0_RTSN[sizeof "UART0_RTSN"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char UART0_RX[sizeof "UART0_RX"];
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char UART0_RXD[sizeof "UART0_RXD"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char UART0_TX[sizeof "UART0_TX"];
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char UART0_TXD[sizeof "UART0_TXD"];
@@ -6649,8 +7132,14 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char UART1_RTSN[sizeof "UART1_RTSN"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char UART1_RX[sizeof "UART1_RX"];
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char UART1_RXD[sizeof "UART1_RXD"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char UART1_TX[sizeof "UART1_TX"];
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char UART1_TXD[sizeof "UART1_TXD"];
@@ -6724,8 +7213,14 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     char UART2_RTSN[sizeof "UART2_RTSN"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char UART2_RX[sizeof "UART2_RX"];
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char UART2_RXD[sizeof "UART2_RXD"];
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    char UART2_TX[sizeof "UART2_TX"];
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char UART2_TXD[sizeof "UART2_TXD"];
@@ -6883,10 +7378,13 @@ struct padmux_names {
 #if defined(IPCHW_PADMUX_V4A)
     char USBPHY_TEST_OBS7[sizeof "USBPHY_TEST_OBS7"];
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    char USB_DBG_CLK[sizeof "USB_DBG_CLK"];
+#endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char USB_OVRCUR[sizeof "USB_OVRCUR"];
 #endif
-#if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     char USB_PWREN[sizeof "USB_PWREN"];
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
@@ -7477,6 +7975,72 @@ static inline const char *padmux_name(uint16_t off) {
     return (const char *)&padmux_names + off;
 }
 
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ACIP_ADBCLK ((uint16_t)offsetof(struct padmux_names, ACIP_ADBCLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ACIP_ADDAT ((uint16_t)offsetof(struct padmux_names, ACIP_ADDAT))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ACIP_ADLRC ((uint16_t)offsetof(struct padmux_names, ACIP_ADLRC))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ACIP_BCLK ((uint16_t)offsetof(struct padmux_names, ACIP_BCLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ACIP_DABCLK ((uint16_t)offsetof(struct padmux_names, ACIP_DABCLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ACIP_DADAT ((uint16_t)offsetof(struct padmux_names, ACIP_DADAT))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ACIP_DALRC ((uint16_t)offsetof(struct padmux_names, ACIP_DALRC))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_AC_I2S_CLK ((uint16_t)offsetof(struct padmux_names, AC_I2S_CLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_AC_I2S_DI ((uint16_t)offsetof(struct padmux_names, AC_I2S_DI))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_AC_I2S_DO ((uint16_t)offsetof(struct padmux_names, AC_I2S_DO))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_AC_I2S_WS ((uint16_t)offsetof(struct padmux_names, AC_I2S_WS))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_AC_MCLK ((uint16_t)offsetof(struct padmux_names, AC_MCLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ARC_JTAG_TCK ((uint16_t)offsetof(struct padmux_names, ARC_JTAG_TCK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ARC_JTAG_TDI ((uint16_t)offsetof(struct padmux_names, ARC_JTAG_TDI))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ARC_JTAG_TDO ((uint16_t)offsetof(struct padmux_names, ARC_JTAG_TDO))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ARC_JTAG_TMS ((uint16_t)offsetof(struct padmux_names, ARC_JTAG_TMS))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ARC_JTAG_TRSTN ((uint16_t)offsetof(struct padmux_names, ARC_JTAG_TRSTN))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ARM_JTAG_TCK ((uint16_t)offsetof(struct padmux_names, ARM_JTAG_TCK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ARM_JTAG_TDI ((uint16_t)offsetof(struct padmux_names, ARM_JTAG_TDI))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ARM_JTAG_TDO ((uint16_t)offsetof(struct padmux_names, ARM_JTAG_TDO))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ARM_JTAG_TMS ((uint16_t)offsetof(struct padmux_names, ARM_JTAG_TMS))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ARM_JTAG_TRSTN ((uint16_t)offsetof(struct padmux_names, ARM_JTAG_TRSTN))
+#endif
 #if defined(IPCHW_PADMUX_NOVATEK)
 #define PMX_A_GPIO0 ((uint16_t)offsetof(struct padmux_names, A_GPIO0))
 #endif
@@ -7530,6 +8094,9 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_CIM2_VIC_MCLK_PC ((uint16_t)offsetof(struct padmux_names, CIM2_VIC_MCLK_PC))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_CIS_CLK ((uint16_t)offsetof(struct padmux_names, CIS_CLK))
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
 #define PMX_CLK_TEST_OUT0 ((uint16_t)offsetof(struct padmux_names, CLK_TEST_OUT0))
@@ -7843,6 +8410,18 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_DVP_VSYNC ((uint16_t)offsetof(struct padmux_names, DVP_VSYNC))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_DW_I2S_CLK ((uint16_t)offsetof(struct padmux_names, DW_I2S_CLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_DW_I2S_DI ((uint16_t)offsetof(struct padmux_names, DW_I2S_DI))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_DW_I2S_DO ((uint16_t)offsetof(struct padmux_names, DW_I2S_DO))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_DW_I2S_WS ((uint16_t)offsetof(struct padmux_names, DW_I2S_WS))
+#endif
 #if defined(IPCHW_PADMUX_NOVATEK)
 #define PMX_D_GPIO0 ((uint16_t)offsetof(struct padmux_names, D_GPIO0))
 #endif
@@ -7981,11 +8560,20 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_NOVATEK)
 #define PMX_ETH_LED2 ((uint16_t)offsetof(struct padmux_names, ETH_LED2))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ETH_LINK_ACT ((uint16_t)offsetof(struct padmux_names, ETH_LINK_ACT))
+#endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V5)
 #define PMX_ETH_LINK_ACT_LED ((uint16_t)offsetof(struct padmux_names, ETH_LINK_ACT_LED))
 #endif
 #if defined(IPCHW_PADMUX_3536D)
 #define PMX_ETH_LINK_LED ((uint16_t)offsetof(struct padmux_names, ETH_LINK_LED))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ETH_LINK_SPD ((uint16_t)offsetof(struct padmux_names, ETH_LINK_SPD))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_ETH_LINK_STA ((uint16_t)offsetof(struct padmux_names, ETH_LINK_STA))
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V5)
 #define PMX_ETH_LINK_STA_LED ((uint16_t)offsetof(struct padmux_names, ETH_LINK_STA_LED))
@@ -8122,6 +8710,9 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_GMAC_TXEN ((uint16_t)offsetof(struct padmux_names, GMAC_TXEN))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO0 ((uint16_t)offsetof(struct padmux_names, GPIO0))
+#endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO0_0 ((uint16_t)offsetof(struct padmux_names, GPIO0_0))
 #endif
@@ -8145,6 +8736,12 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO0_7 ((uint16_t)offsetof(struct padmux_names, GPIO0_7))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO1 ((uint16_t)offsetof(struct padmux_names, GPIO1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO10 ((uint16_t)offsetof(struct padmux_names, GPIO10))
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
 #define PMX_GPIO10_0 ((uint16_t)offsetof(struct padmux_names, GPIO10_0))
@@ -8170,6 +8767,9 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
 #define PMX_GPIO10_7 ((uint16_t)offsetof(struct padmux_names, GPIO10_7))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO11 ((uint16_t)offsetof(struct padmux_names, GPIO11))
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
 #define PMX_GPIO11_0 ((uint16_t)offsetof(struct padmux_names, GPIO11_0))
 #endif
@@ -8193,6 +8793,9 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
 #define PMX_GPIO11_7 ((uint16_t)offsetof(struct padmux_names, GPIO11_7))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO12 ((uint16_t)offsetof(struct padmux_names, GPIO12))
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
 #define PMX_GPIO12_0 ((uint16_t)offsetof(struct padmux_names, GPIO12_0))
@@ -8218,6 +8821,9 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
 #define PMX_GPIO12_7 ((uint16_t)offsetof(struct padmux_names, GPIO12_7))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO13 ((uint16_t)offsetof(struct padmux_names, GPIO13))
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A)
 #define PMX_GPIO13_0 ((uint16_t)offsetof(struct padmux_names, GPIO13_0))
 #endif
@@ -8241,6 +8847,9 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO13_7 ((uint16_t)offsetof(struct padmux_names, GPIO13_7))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO14 ((uint16_t)offsetof(struct padmux_names, GPIO14))
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO14_0 ((uint16_t)offsetof(struct padmux_names, GPIO14_0))
@@ -8266,6 +8875,9 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO14_7 ((uint16_t)offsetof(struct padmux_names, GPIO14_7))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO15 ((uint16_t)offsetof(struct padmux_names, GPIO15))
+#endif
 #if defined(IPCHW_PADMUX_V2A)
 #define PMX_GPIO15_0 ((uint16_t)offsetof(struct padmux_names, GPIO15_0))
 #endif
@@ -8275,6 +8887,9 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_V2A)
 #define PMX_GPIO15_2 ((uint16_t)offsetof(struct padmux_names, GPIO15_2))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO16 ((uint16_t)offsetof(struct padmux_names, GPIO16))
+#endif
 #if defined(IPCHW_PADMUX_V3A)
 #define PMX_GPIO16_1 ((uint16_t)offsetof(struct padmux_names, GPIO16_1))
 #endif
@@ -8283,6 +8898,15 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_V3A)
 #define PMX_GPIO16_3 ((uint16_t)offsetof(struct padmux_names, GPIO16_3))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO17 ((uint16_t)offsetof(struct padmux_names, GPIO17))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO18 ((uint16_t)offsetof(struct padmux_names, GPIO18))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO19 ((uint16_t)offsetof(struct padmux_names, GPIO19))
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO1_0 ((uint16_t)offsetof(struct padmux_names, GPIO1_0))
@@ -8308,6 +8932,39 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO1_7 ((uint16_t)offsetof(struct padmux_names, GPIO1_7))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO2 ((uint16_t)offsetof(struct padmux_names, GPIO2))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO20 ((uint16_t)offsetof(struct padmux_names, GPIO20))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO21 ((uint16_t)offsetof(struct padmux_names, GPIO21))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO22 ((uint16_t)offsetof(struct padmux_names, GPIO22))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO23 ((uint16_t)offsetof(struct padmux_names, GPIO23))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO24 ((uint16_t)offsetof(struct padmux_names, GPIO24))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO25 ((uint16_t)offsetof(struct padmux_names, GPIO25))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO26 ((uint16_t)offsetof(struct padmux_names, GPIO26))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO27 ((uint16_t)offsetof(struct padmux_names, GPIO27))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO28 ((uint16_t)offsetof(struct padmux_names, GPIO28))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO29 ((uint16_t)offsetof(struct padmux_names, GPIO29))
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO2_0 ((uint16_t)offsetof(struct padmux_names, GPIO2_0))
 #endif
@@ -8331,6 +8988,39 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO2_7 ((uint16_t)offsetof(struct padmux_names, GPIO2_7))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO3 ((uint16_t)offsetof(struct padmux_names, GPIO3))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO30 ((uint16_t)offsetof(struct padmux_names, GPIO30))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO31 ((uint16_t)offsetof(struct padmux_names, GPIO31))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO32 ((uint16_t)offsetof(struct padmux_names, GPIO32))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO33 ((uint16_t)offsetof(struct padmux_names, GPIO33))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO34 ((uint16_t)offsetof(struct padmux_names, GPIO34))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO35 ((uint16_t)offsetof(struct padmux_names, GPIO35))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO36 ((uint16_t)offsetof(struct padmux_names, GPIO36))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO37 ((uint16_t)offsetof(struct padmux_names, GPIO37))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO38 ((uint16_t)offsetof(struct padmux_names, GPIO38))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO39 ((uint16_t)offsetof(struct padmux_names, GPIO39))
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
 #define PMX_GPIO3_0 ((uint16_t)offsetof(struct padmux_names, GPIO3_0))
@@ -8356,6 +9046,39 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO3_7 ((uint16_t)offsetof(struct padmux_names, GPIO3_7))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO4 ((uint16_t)offsetof(struct padmux_names, GPIO4))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO40 ((uint16_t)offsetof(struct padmux_names, GPIO40))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO41 ((uint16_t)offsetof(struct padmux_names, GPIO41))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO42 ((uint16_t)offsetof(struct padmux_names, GPIO42))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO43 ((uint16_t)offsetof(struct padmux_names, GPIO43))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO44 ((uint16_t)offsetof(struct padmux_names, GPIO44))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO45 ((uint16_t)offsetof(struct padmux_names, GPIO45))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO46 ((uint16_t)offsetof(struct padmux_names, GPIO46))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO47 ((uint16_t)offsetof(struct padmux_names, GPIO47))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO48 ((uint16_t)offsetof(struct padmux_names, GPIO48))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO49 ((uint16_t)offsetof(struct padmux_names, GPIO49))
+#endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO4_0 ((uint16_t)offsetof(struct padmux_names, GPIO4_0))
 #endif
@@ -8379,6 +9102,39 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
 #define PMX_GPIO4_7 ((uint16_t)offsetof(struct padmux_names, GPIO4_7))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO5 ((uint16_t)offsetof(struct padmux_names, GPIO5))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO50 ((uint16_t)offsetof(struct padmux_names, GPIO50))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO51 ((uint16_t)offsetof(struct padmux_names, GPIO51))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO52 ((uint16_t)offsetof(struct padmux_names, GPIO52))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO53 ((uint16_t)offsetof(struct padmux_names, GPIO53))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO54 ((uint16_t)offsetof(struct padmux_names, GPIO54))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO55 ((uint16_t)offsetof(struct padmux_names, GPIO55))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO56 ((uint16_t)offsetof(struct padmux_names, GPIO56))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO57 ((uint16_t)offsetof(struct padmux_names, GPIO57))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO58 ((uint16_t)offsetof(struct padmux_names, GPIO58))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO59 ((uint16_t)offsetof(struct padmux_names, GPIO59))
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO5_0 ((uint16_t)offsetof(struct padmux_names, GPIO5_0))
@@ -8404,6 +9160,21 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO5_7 ((uint16_t)offsetof(struct padmux_names, GPIO5_7))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO6 ((uint16_t)offsetof(struct padmux_names, GPIO6))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO60 ((uint16_t)offsetof(struct padmux_names, GPIO60))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO61 ((uint16_t)offsetof(struct padmux_names, GPIO61))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO62 ((uint16_t)offsetof(struct padmux_names, GPIO62))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO63 ((uint16_t)offsetof(struct padmux_names, GPIO63))
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO6_0 ((uint16_t)offsetof(struct padmux_names, GPIO6_0))
 #endif
@@ -8427,6 +9198,9 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO6_7 ((uint16_t)offsetof(struct padmux_names, GPIO6_7))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO7 ((uint16_t)offsetof(struct padmux_names, GPIO7))
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO7_0 ((uint16_t)offsetof(struct padmux_names, GPIO7_0))
@@ -8452,6 +9226,9 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO7_7 ((uint16_t)offsetof(struct padmux_names, GPIO7_7))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO8 ((uint16_t)offsetof(struct padmux_names, GPIO8))
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
 #define PMX_GPIO8_0 ((uint16_t)offsetof(struct padmux_names, GPIO8_0))
 #endif
@@ -8475,6 +9252,9 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
 #define PMX_GPIO8_7 ((uint16_t)offsetof(struct padmux_names, GPIO8_7))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_GPIO9 ((uint16_t)offsetof(struct padmux_names, GPIO9))
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_GPIO9_0 ((uint16_t)offsetof(struct padmux_names, GPIO9_0))
@@ -8572,10 +9352,10 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_I2C0_PORTA ((uint16_t)offsetof(struct padmux_names, I2C0_PORTA))
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_I2C0_SCL ((uint16_t)offsetof(struct padmux_names, I2C0_SCL))
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_I2C0_SDA ((uint16_t)offsetof(struct padmux_names, I2C0_SDA))
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
@@ -8608,10 +9388,10 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_I2C1_PORTC ((uint16_t)offsetof(struct padmux_names, I2C1_PORTC))
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_I2C1_SCL ((uint16_t)offsetof(struct padmux_names, I2C1_SCL))
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_I2C1_SDA ((uint16_t)offsetof(struct padmux_names, I2C1_SDA))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -8650,10 +9430,10 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_I2C2_PORTB ((uint16_t)offsetof(struct padmux_names, I2C2_PORTB))
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_I2C2_SCL ((uint16_t)offsetof(struct padmux_names, I2C2_SCL))
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_I2C2_SDA ((uint16_t)offsetof(struct padmux_names, I2C2_SDA))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -9219,6 +9999,36 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_MAC0_RMII_P1 ((uint16_t)offsetof(struct padmux_names, MAC0_RMII_P1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_MAC_MDC ((uint16_t)offsetof(struct padmux_names, MAC_MDC))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_MAC_MDIO ((uint16_t)offsetof(struct padmux_names, MAC_MDIO))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_MAC_REF_CLK ((uint16_t)offsetof(struct padmux_names, MAC_REF_CLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_MAC_RMII_CLK ((uint16_t)offsetof(struct padmux_names, MAC_RMII_CLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_MAC_RXDV ((uint16_t)offsetof(struct padmux_names, MAC_RXDV))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_MAC_RXD_0 ((uint16_t)offsetof(struct padmux_names, MAC_RXD_0))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_MAC_RXD_1 ((uint16_t)offsetof(struct padmux_names, MAC_RXD_1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_MAC_TXD_0 ((uint16_t)offsetof(struct padmux_names, MAC_TXD_0))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_MAC_TXD_1 ((uint16_t)offsetof(struct padmux_names, MAC_TXD_1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_MAC_TXEN ((uint16_t)offsetof(struct padmux_names, MAC_TXEN))
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_MCLK_PORTA ((uint16_t)offsetof(struct padmux_names, MCLK_PORTA))
@@ -10194,6 +11004,21 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
 #define PMX_PAD_USB_DP ((uint16_t)offsetof(struct padmux_names, PAD_USB_DP))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_PAE_JTAG_TCK ((uint16_t)offsetof(struct padmux_names, PAE_JTAG_TCK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_PAE_JTAG_TDI ((uint16_t)offsetof(struct padmux_names, PAE_JTAG_TDI))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_PAE_JTAG_TDO ((uint16_t)offsetof(struct padmux_names, PAE_JTAG_TDO))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_PAE_JTAG_TMS ((uint16_t)offsetof(struct padmux_names, PAE_JTAG_TMS))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_PAE_JTAG_TRSTN ((uint16_t)offsetof(struct padmux_names, PAE_JTAG_TRSTN))
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
 #define PMX_PAFLG ((uint16_t)offsetof(struct padmux_names, PAFLG))
@@ -11614,7 +12439,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_V4)
 #define PMX_POR_SEL ((uint16_t)offsetof(struct padmux_names, POR_SEL))
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
 #define PMX_PWM0 ((uint16_t)offsetof(struct padmux_names, PWM0))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -11662,10 +12487,10 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_PWM0_PC ((uint16_t)offsetof(struct padmux_names, PWM0_PC))
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
 #define PMX_PWM1 ((uint16_t)offsetof(struct padmux_names, PWM1))
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
 #define PMX_PWM10 ((uint16_t)offsetof(struct padmux_names, PWM10))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -11695,7 +12520,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_PWM10_MODE_4 ((uint16_t)offsetof(struct padmux_names, PWM10_MODE_4))
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
 #define PMX_PWM11 ((uint16_t)offsetof(struct padmux_names, PWM11))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -11773,7 +12598,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_PWM1_PC ((uint16_t)offsetof(struct padmux_names, PWM1_PC))
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
 #define PMX_PWM2 ((uint16_t)offsetof(struct padmux_names, PWM2))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -11812,7 +12637,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_PWM2_PC ((uint16_t)offsetof(struct padmux_names, PWM2_PC))
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
 #define PMX_PWM3 ((uint16_t)offsetof(struct padmux_names, PWM3))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -11851,7 +12676,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_PWM3_PC ((uint16_t)offsetof(struct padmux_names, PWM3_PC))
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
 #define PMX_PWM4 ((uint16_t)offsetof(struct padmux_names, PWM4))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -11890,7 +12715,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_PWM4_PC ((uint16_t)offsetof(struct padmux_names, PWM4_PC))
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
 #define PMX_PWM5 ((uint16_t)offsetof(struct padmux_names, PWM5))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -11929,7 +12754,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_PWM5_PC ((uint16_t)offsetof(struct padmux_names, PWM5_PC))
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
 #define PMX_PWM6 ((uint16_t)offsetof(struct padmux_names, PWM6))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -11968,7 +12793,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_PWM6_PD ((uint16_t)offsetof(struct padmux_names, PWM6_PD))
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
 #define PMX_PWM7 ((uint16_t)offsetof(struct padmux_names, PWM7))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -12007,7 +12832,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_PWM7_PD ((uint16_t)offsetof(struct padmux_names, PWM7_PD))
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
 #define PMX_PWM8 ((uint16_t)offsetof(struct padmux_names, PWM8))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -12049,7 +12874,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_PWM8_MODE_8 ((uint16_t)offsetof(struct padmux_names, PWM8_MODE_8))
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
 #define PMX_PWM9 ((uint16_t)offsetof(struct padmux_names, PWM9))
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -12511,7 +13336,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_V4)
 #define PMX_RST_N ((uint16_t)offsetof(struct padmux_names, RST_N))
 #endif
-#if defined(IPCHW_PADMUX_NOVATEK)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_NOVATEK)
 #define PMX_RTC_CLK ((uint16_t)offsetof(struct padmux_names, RTC_CLK))
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
@@ -12546,6 +13371,18 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SA2 ((uint16_t)offsetof(struct padmux_names, SA2))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SADC_XAIN0 ((uint16_t)offsetof(struct padmux_names, SADC_XAIN0))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SADC_XAIN1 ((uint16_t)offsetof(struct padmux_names, SADC_XAIN1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SADC_XAIN2 ((uint16_t)offsetof(struct padmux_names, SADC_XAIN2))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SADC_XAIN3 ((uint16_t)offsetof(struct padmux_names, SADC_XAIN3))
 #endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3)
 #define PMX_SAR_ADC_CH0 ((uint16_t)offsetof(struct padmux_names, SAR_ADC_CH0))
@@ -12637,11 +13474,32 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SD0 ((uint16_t)offsetof(struct padmux_names, SD0))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD0_CD ((uint16_t)offsetof(struct padmux_names, SD0_CD))
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_SD0_CDZ_MODE ((uint16_t)offsetof(struct padmux_names, SD0_CDZ_MODE))
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_SD0_CDZ_MODE_1 ((uint16_t)offsetof(struct padmux_names, SD0_CDZ_MODE_1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD0_CLK ((uint16_t)offsetof(struct padmux_names, SD0_CLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD0_CMD_RSP ((uint16_t)offsetof(struct padmux_names, SD0_CMD_RSP))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD0_DATA_0 ((uint16_t)offsetof(struct padmux_names, SD0_DATA_0))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD0_DATA_1 ((uint16_t)offsetof(struct padmux_names, SD0_DATA_1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD0_DATA_2 ((uint16_t)offsetof(struct padmux_names, SD0_DATA_2))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD0_DATA_3 ((uint16_t)offsetof(struct padmux_names, SD0_DATA_3))
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_SD0_MODE ((uint16_t)offsetof(struct padmux_names, SD0_MODE))
@@ -12649,8 +13507,14 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_SD0_MODE_1 ((uint16_t)offsetof(struct padmux_names, SD0_MODE_1))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD0_WP ((uint16_t)offsetof(struct padmux_names, SD0_WP))
+#endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SD1 ((uint16_t)offsetof(struct padmux_names, SD1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD1_CD ((uint16_t)offsetof(struct padmux_names, SD1_CD))
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_SD1_CDZ_MODE_1 ((uint16_t)offsetof(struct padmux_names, SD1_CDZ_MODE_1))
@@ -12658,11 +13522,32 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_SD1_CDZ_MODE_2 ((uint16_t)offsetof(struct padmux_names, SD1_CDZ_MODE_2))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD1_CLK ((uint16_t)offsetof(struct padmux_names, SD1_CLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD1_CMD_RSP ((uint16_t)offsetof(struct padmux_names, SD1_CMD_RSP))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD1_DATA_0 ((uint16_t)offsetof(struct padmux_names, SD1_DATA_0))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD1_DATA_1 ((uint16_t)offsetof(struct padmux_names, SD1_DATA_1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD1_DATA_2 ((uint16_t)offsetof(struct padmux_names, SD1_DATA_2))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD1_DATA_3 ((uint16_t)offsetof(struct padmux_names, SD1_DATA_3))
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_SD1_MODE_1 ((uint16_t)offsetof(struct padmux_names, SD1_MODE_1))
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_SD1_MODE_2 ((uint16_t)offsetof(struct padmux_names, SD1_MODE_2))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SD1_WP ((uint16_t)offsetof(struct padmux_names, SD1_WP))
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SD2 ((uint16_t)offsetof(struct padmux_names, SD2))
@@ -12979,7 +13864,7 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_NOVATEK)
 #define PMX_SENSOR_CCIR_2 ((uint16_t)offsetof(struct padmux_names, SENSOR_CCIR_2))
 #endif
-#if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4)
 #define PMX_SENSOR_CLK ((uint16_t)offsetof(struct padmux_names, SENSOR_CLK))
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
@@ -13729,8 +14614,20 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SSI0_CE1 ((uint16_t)offsetof(struct padmux_names, SSI0_CE1))
 #endif
-#if defined(IPCHW_PADMUX_INGENIC)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SSI0_CLK ((uint16_t)offsetof(struct padmux_names, SSI0_CLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI0_CSN_0 ((uint16_t)offsetof(struct padmux_names, SSI0_CSN_0))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI0_CSN_1 ((uint16_t)offsetof(struct padmux_names, SSI0_CSN_1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI0_D2 ((uint16_t)offsetof(struct padmux_names, SSI0_D2))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI0_D3 ((uint16_t)offsetof(struct padmux_names, SSI0_D3))
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SSI0_DR ((uint16_t)offsetof(struct padmux_names, SSI0_DR))
@@ -13750,11 +14647,20 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SSI0_PORTC ((uint16_t)offsetof(struct padmux_names, SSI0_PORTC))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI0_RXD ((uint16_t)offsetof(struct padmux_names, SSI0_RXD))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI0_TXD ((uint16_t)offsetof(struct padmux_names, SSI0_TXD))
+#endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SSI1_CE0 ((uint16_t)offsetof(struct padmux_names, SSI1_CE0))
 #endif
-#if defined(IPCHW_PADMUX_INGENIC)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SSI1_CLK ((uint16_t)offsetof(struct padmux_names, SSI1_CLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI1_CSN_0 ((uint16_t)offsetof(struct padmux_names, SSI1_CSN_0))
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SSI1_DR ((uint16_t)offsetof(struct padmux_names, SSI1_DR))
@@ -13764,6 +14670,27 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SSI1_PORTC ((uint16_t)offsetof(struct padmux_names, SSI1_PORTC))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI1_RXD ((uint16_t)offsetof(struct padmux_names, SSI1_RXD))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI1_TXD ((uint16_t)offsetof(struct padmux_names, SSI1_TXD))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI2_CLK ((uint16_t)offsetof(struct padmux_names, SSI2_CLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI2_CSN ((uint16_t)offsetof(struct padmux_names, SSI2_CSN))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI2_CSN_0 ((uint16_t)offsetof(struct padmux_names, SSI2_CSN_0))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI2_RXD ((uint16_t)offsetof(struct padmux_names, SSI2_RXD))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_SSI2_TXD ((uint16_t)offsetof(struct padmux_names, SSI2_TXD))
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_SSI_SLV_CE0 ((uint16_t)offsetof(struct padmux_names, SSI_SLV_CE0))
@@ -13846,6 +14773,15 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_TEST_CLK ((uint16_t)offsetof(struct padmux_names, TEST_CLK))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_INT_RMII_TXD_0 ((uint16_t)offsetof(struct padmux_names, TEST_INT_RMII_TXD_0))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_INT_RMII_TXD_1 ((uint16_t)offsetof(struct padmux_names, TEST_INT_RMII_TXD_1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_INT_RMII_TXEN ((uint16_t)offsetof(struct padmux_names, TEST_INT_RMII_TXEN))
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_TEST_IN_MODE_1 ((uint16_t)offsetof(struct padmux_names, TEST_IN_MODE_1))
 #endif
@@ -13854,6 +14790,12 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_TEST_IN_MODE_3 ((uint16_t)offsetof(struct padmux_names, TEST_IN_MODE_3))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_I_INT_SMI_MDC ((uint16_t)offsetof(struct padmux_names, TEST_I_INT_SMI_MDC))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_I_INT_SMI_MDIO_I ((uint16_t)offsetof(struct padmux_names, TEST_I_INT_SMI_MDIO_I))
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_TEST_MODE ((uint16_t)offsetof(struct padmux_names, TEST_MODE))
@@ -13866,6 +14808,39 @@ static inline const char *padmux_name(uint16_t off) {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
 #define PMX_TEST_OUT_MODE_3 ((uint16_t)offsetof(struct padmux_names, TEST_OUT_MODE_3))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_RMII_CLK ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_RMII_CLK))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_RMII_CRSDV ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_RMII_CRSDV))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_RMII_RXD_0 ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_RMII_RXD_0))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_RMII_RXD_1 ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_RMII_RXD_1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_RMII_TXD_0 ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_RMII_TXD_0))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_RMII_TXD_1 ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_RMII_TXD_1))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_RMII_TXEN ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_RMII_TXEN))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_SMI_MDC ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_SMI_MDC))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_SMI_MDIO_I ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_SMI_MDIO_I))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_SMI_MDIO_O ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_SMI_MDIO_O))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_TEST_O_INT_SMI_MDIO_OE ((uint16_t)offsetof(struct padmux_names, TEST_O_INT_SMI_MDIO_OE))
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
 #define PMX_TFT_LCD_PD ((uint16_t)offsetof(struct padmux_names, TFT_LCD_PD))
@@ -14068,8 +15043,14 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_3536C)
 #define PMX_UART0_RTSN ((uint16_t)offsetof(struct padmux_names, UART0_RTSN))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_UART0_RX ((uint16_t)offsetof(struct padmux_names, UART0_RX))
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_UART0_RXD ((uint16_t)offsetof(struct padmux_names, UART0_RXD))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_UART0_TX ((uint16_t)offsetof(struct padmux_names, UART0_TX))
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_UART0_TXD ((uint16_t)offsetof(struct padmux_names, UART0_TXD))
@@ -14110,8 +15091,14 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_UART1_RTSN ((uint16_t)offsetof(struct padmux_names, UART1_RTSN))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_UART1_RX ((uint16_t)offsetof(struct padmux_names, UART1_RX))
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_UART1_RXD ((uint16_t)offsetof(struct padmux_names, UART1_RXD))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_UART1_TX ((uint16_t)offsetof(struct padmux_names, UART1_TX))
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_UART1_TXD ((uint16_t)offsetof(struct padmux_names, UART1_TXD))
@@ -14185,8 +15172,14 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
 #define PMX_UART2_RTSN ((uint16_t)offsetof(struct padmux_names, UART2_RTSN))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_UART2_RX ((uint16_t)offsetof(struct padmux_names, UART2_RX))
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_UART2_RXD ((uint16_t)offsetof(struct padmux_names, UART2_RXD))
+#endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_UART2_TX ((uint16_t)offsetof(struct padmux_names, UART2_TX))
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_UART2_TXD ((uint16_t)offsetof(struct padmux_names, UART2_TXD))
@@ -14344,10 +15337,13 @@ static inline const char *padmux_name(uint16_t off) {
 #if defined(IPCHW_PADMUX_V4A)
 #define PMX_USBPHY_TEST_OBS7 ((uint16_t)offsetof(struct padmux_names, USBPHY_TEST_OBS7))
 #endif
+#if defined(IPCHW_PADMUX_FH)
+#define PMX_USB_DBG_CLK ((uint16_t)offsetof(struct padmux_names, USB_DBG_CLK))
+#endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_USB_OVRCUR ((uint16_t)offsetof(struct padmux_names, USB_OVRCUR))
 #endif
-#if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
 #define PMX_USB_PWREN ((uint16_t)offsetof(struct padmux_names, USB_PWREN))
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)

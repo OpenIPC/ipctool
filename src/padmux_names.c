@@ -10,6 +10,72 @@
 
 const struct padmux_names padmux_names = {
     ._none = "",
+#if defined(IPCHW_PADMUX_FH)
+    .ACIP_ADBCLK = "ACIP_ADBCLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ACIP_ADDAT = "ACIP_ADDAT",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ACIP_ADLRC = "ACIP_ADLRC",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ACIP_BCLK = "ACIP_BCLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ACIP_DABCLK = "ACIP_DABCLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ACIP_DADAT = "ACIP_DADAT",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ACIP_DALRC = "ACIP_DALRC",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .AC_I2S_CLK = "AC_I2S_CLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .AC_I2S_DI = "AC_I2S_DI",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .AC_I2S_DO = "AC_I2S_DO",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .AC_I2S_WS = "AC_I2S_WS",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .AC_MCLK = "AC_MCLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ARC_JTAG_TCK = "ARC_JTAG_TCK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ARC_JTAG_TDI = "ARC_JTAG_TDI",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ARC_JTAG_TDO = "ARC_JTAG_TDO",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ARC_JTAG_TMS = "ARC_JTAG_TMS",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ARC_JTAG_TRSTN = "ARC_JTAG_TRSTN",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ARM_JTAG_TCK = "ARM_JTAG_TCK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ARM_JTAG_TDI = "ARM_JTAG_TDI",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ARM_JTAG_TDO = "ARM_JTAG_TDO",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ARM_JTAG_TMS = "ARM_JTAG_TMS",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ARM_JTAG_TRSTN = "ARM_JTAG_TRSTN",
+#endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .A_GPIO0 = "A_GPIO0",
 #endif
@@ -63,6 +129,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .CIM2_VIC_MCLK_PC = "CIM2_VIC_MCLK_PC",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .CIS_CLK = "CIS_CLK",
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
     .CLK_TEST_OUT0 = "CLK_TEST_OUT0",
@@ -376,6 +445,18 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .DVP_VSYNC = "DVP_VSYNC",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .DW_I2S_CLK = "DW_I2S_CLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .DW_I2S_DI = "DW_I2S_DI",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .DW_I2S_DO = "DW_I2S_DO",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .DW_I2S_WS = "DW_I2S_WS",
+#endif
 #if defined(IPCHW_PADMUX_NOVATEK)
     .D_GPIO0 = "D_GPIO0",
 #endif
@@ -514,11 +595,20 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_NOVATEK)
     .ETH_LED2 = "ETH_LED2",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .ETH_LINK_ACT = "ETH_LINK_ACT",
+#endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V5)
     .ETH_LINK_ACT_LED = "ETH_LINK_ACT_LED",
 #endif
 #if defined(IPCHW_PADMUX_3536D)
     .ETH_LINK_LED = "ETH_LINK_LED",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ETH_LINK_SPD = "ETH_LINK_SPD",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .ETH_LINK_STA = "ETH_LINK_STA",
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V5)
     .ETH_LINK_STA_LED = "ETH_LINK_STA_LED",
@@ -655,6 +745,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .GMAC_TXEN = "GMAC_TXEN",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO0 = "GPIO0",
+#endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO0_0 = "GPIO0_0",
 #endif
@@ -678,6 +771,12 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO0_7 = "GPIO0_7",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO1 = "GPIO1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO10 = "GPIO10",
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     .GPIO10_0 = "GPIO10_0",
@@ -703,6 +802,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     .GPIO10_7 = "GPIO10_7",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO11 = "GPIO11",
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4A)
     .GPIO11_0 = "GPIO11_0",
 #endif
@@ -726,6 +828,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
     .GPIO11_7 = "GPIO11_7",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO12 = "GPIO12",
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
     .GPIO12_0 = "GPIO12_0",
@@ -751,6 +856,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A)
     .GPIO12_7 = "GPIO12_7",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO13 = "GPIO13",
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A)
     .GPIO13_0 = "GPIO13_0",
 #endif
@@ -774,6 +882,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V5)
     .GPIO13_7 = "GPIO13_7",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO14 = "GPIO14",
 #endif
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V5)
     .GPIO14_0 = "GPIO14_0",
@@ -799,6 +910,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V5)
     .GPIO14_7 = "GPIO14_7",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO15 = "GPIO15",
+#endif
 #if defined(IPCHW_PADMUX_V2A)
     .GPIO15_0 = "GPIO15_0",
 #endif
@@ -808,6 +922,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V2A)
     .GPIO15_2 = "GPIO15_2",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO16 = "GPIO16",
+#endif
 #if defined(IPCHW_PADMUX_V3A)
     .GPIO16_1 = "GPIO16_1",
 #endif
@@ -816,6 +933,15 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_V3A)
     .GPIO16_3 = "GPIO16_3",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO17 = "GPIO17",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO18 = "GPIO18",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO19 = "GPIO19",
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO1_0 = "GPIO1_0",
@@ -841,6 +967,39 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO1_7 = "GPIO1_7",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO2 = "GPIO2",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO20 = "GPIO20",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO21 = "GPIO21",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO22 = "GPIO22",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO23 = "GPIO23",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO24 = "GPIO24",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO25 = "GPIO25",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO26 = "GPIO26",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO27 = "GPIO27",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO28 = "GPIO28",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO29 = "GPIO29",
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO2_0 = "GPIO2_0",
 #endif
@@ -864,6 +1023,39 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO2_7 = "GPIO2_7",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO3 = "GPIO3",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO30 = "GPIO30",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO31 = "GPIO31",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO32 = "GPIO32",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO33 = "GPIO33",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO34 = "GPIO34",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO35 = "GPIO35",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO36 = "GPIO36",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO37 = "GPIO37",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO38 = "GPIO38",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO39 = "GPIO39",
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .GPIO3_0 = "GPIO3_0",
@@ -889,6 +1081,39 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO3_7 = "GPIO3_7",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO4 = "GPIO4",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO40 = "GPIO40",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO41 = "GPIO41",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO42 = "GPIO42",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO43 = "GPIO43",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO44 = "GPIO44",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO45 = "GPIO45",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO46 = "GPIO46",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO47 = "GPIO47",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO48 = "GPIO48",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO49 = "GPIO49",
+#endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO4_0 = "GPIO4_0",
 #endif
@@ -912,6 +1137,39 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .GPIO4_7 = "GPIO4_7",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO5 = "GPIO5",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO50 = "GPIO50",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO51 = "GPIO51",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO52 = "GPIO52",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO53 = "GPIO53",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO54 = "GPIO54",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO55 = "GPIO55",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO56 = "GPIO56",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO57 = "GPIO57",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO58 = "GPIO58",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO59 = "GPIO59",
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO5_0 = "GPIO5_0",
@@ -937,6 +1195,21 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO5_7 = "GPIO5_7",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO6 = "GPIO6",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO60 = "GPIO60",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO61 = "GPIO61",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO62 = "GPIO62",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO63 = "GPIO63",
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO6_0 = "GPIO6_0",
 #endif
@@ -960,6 +1233,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO6_7 = "GPIO6_7",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO7 = "GPIO7",
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO7_0 = "GPIO7_0",
@@ -985,6 +1261,9 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO7_7 = "GPIO7_7",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO8 = "GPIO8",
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .GPIO8_0 = "GPIO8_0",
 #endif
@@ -1008,6 +1287,9 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .GPIO8_7 = "GPIO8_7",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .GPIO9 = "GPIO9",
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .GPIO9_0 = "GPIO9_0",
@@ -1105,10 +1387,10 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .I2C0_PORTA = "I2C0_PORTA",
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C0_SCL = "I2C0_SCL",
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C0_SDA = "I2C0_SDA",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
@@ -1141,10 +1423,10 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .I2C1_PORTC = "I2C1_PORTC",
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C1_SCL = "I2C1_SCL",
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C1_SDA = "I2C1_SDA",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -1183,10 +1465,10 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .I2C2_PORTB = "I2C2_PORTB",
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C2_SCL = "I2C2_SCL",
 #endif
-#if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .I2C2_SDA = "I2C2_SDA",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -1752,6 +2034,36 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .MAC0_RMII_P1 = "MAC0_RMII_P1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .MAC_MDC = "MAC_MDC",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .MAC_MDIO = "MAC_MDIO",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .MAC_REF_CLK = "MAC_REF_CLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .MAC_RMII_CLK = "MAC_RMII_CLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .MAC_RXDV = "MAC_RXDV",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .MAC_RXD_0 = "MAC_RXD_0",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .MAC_RXD_1 = "MAC_RXD_1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .MAC_TXD_0 = "MAC_TXD_0",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .MAC_TXD_1 = "MAC_TXD_1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .MAC_TXEN = "MAC_TXEN",
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .MCLK_PORTA = "MCLK_PORTA",
@@ -2727,6 +3039,21 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR) || (defined(IPCHW_VENDOR_SSTAR) && !defined(STANDALONE_LIBRARY))
     .PAD_USB_DP = "PAD_USB_DP",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .PAE_JTAG_TCK = "PAE_JTAG_TCK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .PAE_JTAG_TDI = "PAE_JTAG_TDI",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .PAE_JTAG_TDO = "PAE_JTAG_TDO",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .PAE_JTAG_TMS = "PAE_JTAG_TMS",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .PAE_JTAG_TRSTN = "PAE_JTAG_TRSTN",
 #endif
 #if defined(IPCHW_VENDOR_INGENIC) && !defined(STANDALONE_LIBRARY)
     .PAFLG = "PAFLG",
@@ -4147,7 +4474,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V4)
     .POR_SEL = "POR_SEL",
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .PWM0 = "PWM0",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4195,10 +4522,10 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM0_PC = "PWM0_PC",
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .PWM1 = "PWM1",
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
     .PWM10 = "PWM10",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4228,7 +4555,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_SSTAR)
     .PWM10_MODE_4 = "PWM10_MODE_4",
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
     .PWM11 = "PWM11",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4306,7 +4633,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM1_PC = "PWM1_PC",
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM2 = "PWM2",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4345,7 +4672,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM2_PC = "PWM2_PC",
 #endif
-#if defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM3 = "PWM3",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4384,7 +4711,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM3_PC = "PWM3_PC",
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM4 = "PWM4",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4423,7 +4750,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM4_PC = "PWM4_PC",
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM5 = "PWM5",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4462,7 +4789,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM5_PC = "PWM5_PC",
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM6 = "PWM6",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4501,7 +4828,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM6_PD = "PWM6_PD",
 #endif
-#if defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4)
     .PWM7 = "PWM7",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4540,7 +4867,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .PWM7_PD = "PWM7_PD",
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
     .PWM8 = "PWM8",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -4582,7 +4909,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_SSTAR)
     .PWM8_MODE_8 = "PWM8_MODE_8",
 #endif
-#if defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V4)
     .PWM9 = "PWM9",
 #endif
 #if defined(IPCHW_PADMUX_NOVATEK)
@@ -5044,7 +5371,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V4)
     .RST_N = "RST_N",
 #endif
-#if defined(IPCHW_PADMUX_NOVATEK)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_NOVATEK)
     .RTC_CLK = "RTC_CLK",
 #endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2A)
@@ -5079,6 +5406,18 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .SA2 = "SA2",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SADC_XAIN0 = "SADC_XAIN0",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SADC_XAIN1 = "SADC_XAIN1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SADC_XAIN2 = "SADC_XAIN2",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SADC_XAIN3 = "SADC_XAIN3",
 #endif
 #if defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3)
     .SAR_ADC_CH0 = "SAR_ADC_CH0",
@@ -5170,11 +5509,32 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .SD0 = "SD0",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD0_CD = "SD0_CD",
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .SD0_CDZ_MODE = "SD0_CDZ_MODE",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .SD0_CDZ_MODE_1 = "SD0_CDZ_MODE_1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD0_CLK = "SD0_CLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD0_CMD_RSP = "SD0_CMD_RSP",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD0_DATA_0 = "SD0_DATA_0",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD0_DATA_1 = "SD0_DATA_1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD0_DATA_2 = "SD0_DATA_2",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD0_DATA_3 = "SD0_DATA_3",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .SD0_MODE = "SD0_MODE",
@@ -5182,8 +5542,14 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_SSTAR)
     .SD0_MODE_1 = "SD0_MODE_1",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD0_WP = "SD0_WP",
+#endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .SD1 = "SD1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD1_CD = "SD1_CD",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .SD1_CDZ_MODE_1 = "SD1_CDZ_MODE_1",
@@ -5191,11 +5557,32 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_SSTAR)
     .SD1_CDZ_MODE_2 = "SD1_CDZ_MODE_2",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD1_CLK = "SD1_CLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD1_CMD_RSP = "SD1_CMD_RSP",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD1_DATA_0 = "SD1_DATA_0",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD1_DATA_1 = "SD1_DATA_1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD1_DATA_2 = "SD1_DATA_2",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD1_DATA_3 = "SD1_DATA_3",
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .SD1_MODE_1 = "SD1_MODE_1",
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .SD1_MODE_2 = "SD1_MODE_2",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SD1_WP = "SD1_WP",
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .SD2 = "SD2",
@@ -5512,7 +5899,7 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_NOVATEK)
     .SENSOR_CCIR_2 = "SENSOR_CCIR_2",
 #endif
-#if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4)
     .SENSOR_CLK = "SENSOR_CLK",
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
@@ -6262,8 +6649,20 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .SSI0_CE1 = "SSI0_CE1",
 #endif
-#if defined(IPCHW_PADMUX_INGENIC)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC)
     .SSI0_CLK = "SSI0_CLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI0_CSN_0 = "SSI0_CSN_0",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI0_CSN_1 = "SSI0_CSN_1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI0_D2 = "SSI0_D2",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI0_D3 = "SSI0_D3",
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .SSI0_DR = "SSI0_DR",
@@ -6283,11 +6682,20 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_INGENIC)
     .SSI0_PORTC = "SSI0_PORTC",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI0_RXD = "SSI0_RXD",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI0_TXD = "SSI0_TXD",
+#endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .SSI1_CE0 = "SSI1_CE0",
 #endif
-#if defined(IPCHW_PADMUX_INGENIC)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_INGENIC)
     .SSI1_CLK = "SSI1_CLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI1_CSN_0 = "SSI1_CSN_0",
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .SSI1_DR = "SSI1_DR",
@@ -6297,6 +6705,27 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .SSI1_PORTC = "SSI1_PORTC",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI1_RXD = "SSI1_RXD",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI1_TXD = "SSI1_TXD",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI2_CLK = "SSI2_CLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI2_CSN = "SSI2_CSN",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI2_CSN_0 = "SSI2_CSN_0",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI2_RXD = "SSI2_RXD",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .SSI2_TXD = "SSI2_TXD",
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .SSI_SLV_CE0 = "SSI_SLV_CE0",
@@ -6379,6 +6808,15 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .TEST_CLK = "TEST_CLK",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_INT_RMII_TXD_0 = "TEST_INT_RMII_TXD_0",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_INT_RMII_TXD_1 = "TEST_INT_RMII_TXD_1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_INT_RMII_TXEN = "TEST_INT_RMII_TXEN",
+#endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .TEST_IN_MODE_1 = "TEST_IN_MODE_1",
 #endif
@@ -6387,6 +6825,12 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .TEST_IN_MODE_3 = "TEST_IN_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_I_INT_SMI_MDC = "TEST_I_INT_SMI_MDC",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_I_INT_SMI_MDIO_I = "TEST_I_INT_SMI_MDIO_I",
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .TEST_MODE = "TEST_MODE",
@@ -6399,6 +6843,39 @@ const struct padmux_names padmux_names = {
 #endif
 #if defined(IPCHW_PADMUX_SSTAR)
     .TEST_OUT_MODE_3 = "TEST_OUT_MODE_3",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_RMII_CLK = "TEST_O_INT_RMII_CLK",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_RMII_CRSDV = "TEST_O_INT_RMII_CRSDV",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_RMII_RXD_0 = "TEST_O_INT_RMII_RXD_0",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_RMII_RXD_1 = "TEST_O_INT_RMII_RXD_1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_RMII_TXD_0 = "TEST_O_INT_RMII_TXD_0",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_RMII_TXD_1 = "TEST_O_INT_RMII_TXD_1",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_RMII_TXEN = "TEST_O_INT_RMII_TXEN",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_SMI_MDC = "TEST_O_INT_SMI_MDC",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_SMI_MDIO_I = "TEST_O_INT_SMI_MDIO_I",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_SMI_MDIO_O = "TEST_O_INT_SMI_MDIO_O",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .TEST_O_INT_SMI_MDIO_OE = "TEST_O_INT_SMI_MDIO_OE",
 #endif
 #if defined(IPCHW_PADMUX_INGENIC)
     .TFT_LCD_PD = "TFT_LCD_PD",
@@ -6601,8 +7078,14 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536C)
     .UART0_RTSN = "UART0_RTSN",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .UART0_RX = "UART0_RX",
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART0_RXD = "UART0_RXD",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .UART0_TX = "UART0_TX",
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART0_TXD = "UART0_TXD",
@@ -6643,8 +7126,14 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART1_RTSN = "UART1_RTSN",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .UART1_RX = "UART1_RX",
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART1_RXD = "UART1_RXD",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .UART1_TX = "UART1_TX",
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART1_TXD = "UART1_TXD",
@@ -6718,8 +7207,14 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A)
     .UART2_RTSN = "UART2_RTSN",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .UART2_RX = "UART2_RX",
+#endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART2_RXD = "UART2_RXD",
+#endif
+#if defined(IPCHW_PADMUX_FH)
+    .UART2_TX = "UART2_TX",
 #endif
 #if defined(IPCHW_PADMUX_3536C) || defined(IPCHW_PADMUX_3536D) || defined(IPCHW_PADMUX_INGENIC) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V3A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .UART2_TXD = "UART2_TXD",
@@ -6877,10 +7372,13 @@ const struct padmux_names padmux_names = {
 #if defined(IPCHW_PADMUX_V4A)
     .USBPHY_TEST_OBS7 = "USBPHY_TEST_OBS7",
 #endif
+#if defined(IPCHW_PADMUX_FH)
+    .USB_DBG_CLK = "USB_DBG_CLK",
+#endif
 #if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .USB_OVRCUR = "USB_OVRCUR",
 #endif
-#if defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
+#if defined(IPCHW_PADMUX_FH) || defined(IPCHW_PADMUX_V1) || defined(IPCHW_PADMUX_V2) || defined(IPCHW_PADMUX_V2A) || defined(IPCHW_PADMUX_V3) || defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)
     .USB_PWREN = "USB_PWREN",
 #endif
 #if defined(IPCHW_PADMUX_V4) || defined(IPCHW_PADMUX_V4A) || defined(IPCHW_PADMUX_V5)

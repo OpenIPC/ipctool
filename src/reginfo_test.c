@@ -16,6 +16,7 @@
 #include "hal/novatek_gpio.h"
 #include "hal/sstar.h"
 #include "hal/sstar_gpio.h"
+#include "hal/fh.h"
 #include "hal/xm.h"
 #include "ipchw.h"
 #include "padmux.h"
@@ -1196,7 +1197,7 @@ static void test_round_trip(const char *chip, const ipchw_padmux_t *rows,
             continue;
 
         regs_reset();
-        int res = ipchw_padmux_set(want->gpio_pad, want->func_name);
+        int res = ipchw_padmux_set_forced(want->gpio_pad, want->func_name);
         if (res != 0) {
             fprintf(stderr, "  FAIL %s: set(%d, %s) = %d\n", chip,
                     want->gpio_pad, want->func_name, res);
@@ -1216,7 +1217,7 @@ static void test_round_trip(const char *chip, const ipchw_padmux_t *rows,
 
         if (want->gpio_name != NULL) {
             regs_reset();
-            if (ipchw_padmux_set(want->gpio_pad, IPCHW_PADMUX_GPIO) != 0 ||
+            if (ipchw_padmux_set_forced(want->gpio_pad, IPCHW_PADMUX_GPIO) != 0 ||
                 ipchw_padmux_get(want->gpio_pad, &got) != 1 ||
                 !(got.flags & IPCHW_PADMUX_F_GPIO)) {
                 fprintf(stderr, "  FAIL %s: pad %d will not go back to GPIO\n",
@@ -1381,6 +1382,10 @@ static void test_table_integrity(void) {
         {CHIP_XM510, "XM510"},
         {CHIP_XM530, "XM550"},
 #endif
+#ifdef IPCHW_PADMUX_FH
+        {CHIP_FH8852V200, "FH8852V200"},
+        {CHIP_FH8852V100, "FH8852V100"},
+#endif
     };
 
     for (size_t c = 0; c < sizeof(chips) / sizeof(*chips); c++) {
@@ -1491,6 +1496,82 @@ static void test_gpio_windows_in_mapping(void) {
     CHECK(gpio_windows_in_mapping(0x1300, 0x100, base, stride, 3) == 0x0);
     CHECK(gpio_windows_in_mapping(0x1250, 0x20, base, stride, 3) == 0x4);
 }
+
+#ifdef IPCHW_PADMUX_FH
+static void test_fh(void) {
+    ipchw_padmux_t r;
+
+    /* A Tenda IC7-L (FH8852V200 + GC4653): the IR-cut filter is on GPIO9 and
+     * GPIO10, pads 46 and 47, which come up as SSI0_D2/D3 and needed
+     * "mux,GPIO9,GPIO9,0" in /proc/driver/pinctrl before the filter moved.
+     * After it the kernel's dump read "GPIO9 sel=0001 ie=0000 oe=0001". */
+    puts("Fullhan FH8852V200: a selector in the pad's own register");
+    as_chip(CHIP_FH8852V200, "FH8852V200");
+    CHECK(padmux_parse_pad("9") == 9);
+    CHECK(padmux_parse_pad("GPIO9") == 9);
+    CHECK(padmux_parse_pad("1_1") == -1); /* HiSilicon's banking */
+    CHECK(padmux_parse_pad("64") == -1); /* GPIO0..63 are all there is */
+    CHECK(ipchw_padmux_get(64, &r) == IPCHW_PADMUX_NO_PAD);
+    /* 46 is GPIO9's pad id, and a GPIO number in its own right: GPIO46 is a
+     * different pad, so it must not resolve to pad 46's register. */
+    CHECK(ipchw_padmux_by_pad(46, &r, 1) >= 1 && r.address != 0xF0000138);
+
+    CHECK(ipchw_padmux_by_pad(9, NULL, 0) == 5);
+    CHECK(ipchw_padmux_by_func("SSI0_D2", &r, 1) == 1);
+    CHECK(r.address == 0xF0000138 && r.gpio_pad == 9 &&
+          !strcmp(r.gpio_name, "GPIO9"));
+    CHECK(r.func_mask == 0x1F001100 && r.func == 0x10001100);
+    CHECK(r.gpio_func == 0x11001100);
+
+    regs_reset();
+    fake_write(0xF0000138, 0x00000021, 32); /* SSI0_D2, ds 2 */
+    CHECK(ipchw_padmux_get(9, &r) == 1 && !strcmp(r.func_name, "SSI0_D2"));
+    CHECK(!(r.flags & IPCHW_PADMUX_F_GPIO));
+
+    /* A flash function is not moved off without being told to: the hardware
+     * cannot say whether the flash is using it. */
+    CHECK(ipchw_padmux_set(9, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_IN_USE);
+    CHECK(reg_of(0xF0000138) == 0x00000021);
+
+    /* What the kernel's mux writes: the selector, and the input, output and
+     * Schmitt enables. The drive strength in bits 4..6 is left alone. */
+    CHECK(ipchw_padmux_set_forced(9, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0xF0000138) == 0x11001121);
+    CHECK(ipchw_padmux_get(9, &r) == 1 && (r.flags & IPCHW_PADMUX_F_GPIO));
+    CHECK(!strcmp(r.func_name, "GPIO9"));
+    CHECK(ipchw_padmux_set(9, "UART1_TX") == 0);
+    CHECK(reg_of(0xF0000138) == 0x12001121);
+    CHECK(ipchw_padmux_set(9, "SSI0_D3") == IPCHW_PADMUX_NO_FUNC);
+    CHECK(ipchw_padmux_set(10, "SSI0_D3") == 0);
+    CHECK(reg_of(0xF000013C) == 0x10001100);
+
+    /* A selector the table has no function for. */
+    fake_write(0xF0000138, 0x0F000000, 32);
+    CHECK(ipchw_padmux_get(9, &r) == 0);
+
+    /* SSI0_TXD on GPIO7, as a Tenda IC7-L reads it. Moving it off is
+     * refused and writes nothing; writing what it carries is not moving it;
+     * the forced call does what it is told. */
+    fake_write(0xF0000130, 0x10001120, 32);
+    CHECK(ipchw_padmux_set(7, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_IN_USE);
+    CHECK(reg_of(0xF0000130) == 0x10001120);
+    CHECK(ipchw_padmux_set(7, "SSI0_TXD") == 0);
+    CHECK(ipchw_padmux_set_forced(7, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0xF0000130) == 0x11001120);
+    /* A pad of something else with its enables set is anyone's to move. */
+    CHECK(ipchw_padmux_set(9, "UART1_TX") == 0);
+    CHECK(ipchw_padmux_set(9, IPCHW_PADMUX_GPIO) == 0);
+
+    /* The V100 parts number the same GPIO on a different pad. */
+    puts("Fullhan FH8852V100: the same layout, its own table");
+    as_chip(CHIP_FH8852V100, "FH8852V100");
+    CHECK(ipchw_padmux_by_pad(9, &r, 1) >= 1 && r.address == 0xF0000130);
+
+    /* Recognised, but the vendor ships no table for it. */
+    as_chip(CHIP_FH8856V201, "FH8856V201");
+    CHECK(ipchw_padmux_get(9, &r) == IPCHW_PADMUX_NO_TABLE);
+}
+#endif
 
 #ifdef IPCHW_PADMUX_XM
 /* Xiongmai: a bit per alternative in the pad's (XM530) or the port's (XM510)
@@ -1614,6 +1695,9 @@ int main(void) {
 #endif
 #ifdef IPCHW_PADMUX_XM
     test_xm();
+#endif
+#ifdef IPCHW_PADMUX_FH
+    test_fh();
 #endif
     test_refusals_do_not_exit();
     test_table_integrity();

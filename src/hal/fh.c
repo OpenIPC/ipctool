@@ -5,6 +5,7 @@
 
 #include <unistd.h>
 
+#include "chipid.h"
 #include "hal/common.h"
 #include "tools.h"
 
@@ -37,27 +38,35 @@ bool fh_detect_cpu(char *chip_name) {
             switch (sysctrl & 0xffffff) {
             case 0x00000001:
                 strcpy(chip_name, "FH8852V200");
+                chip_generation = CHIP_FH8852V200;
                 break;
             case 0x00100001:
                 strcpy(chip_name, "FH8856V200");
+                chip_generation = CHIP_FH8856V200;
                 break;
             case 0x00410001:
                 strcpy(chip_name, "FH8858V200");
+                chip_generation = CHIP_FH8858V200;
                 break;
             case 0x00000002:
                 strcpy(chip_name, "FH8852V210");
+                chip_generation = CHIP_FH8852V210;
                 break;
             case 0x00100002:
                 strcpy(chip_name, "FH8856V210");
+                chip_generation = CHIP_FH8856V210;
                 break;
             case 0x00410002:
                 strcpy(chip_name, "FH8858V210");
+                chip_generation = CHIP_FH8858V210;
                 break;
             case 0x00200001:
                 strcpy(chip_name, "FH8856V201");
+                chip_generation = CHIP_FH8856V201;
                 break;
             case 0x00300001:
                 strcpy(chip_name, "FH8858V201");
+                chip_generation = CHIP_FH8858V201;
                 break;
             }
             break;
@@ -65,9 +74,11 @@ bool fh_detect_cpu(char *chip_name) {
             switch (ipver & 0xf) {
             case 0xc:
                 strcpy(chip_name, "FH8852V100");
+                chip_generation = CHIP_FH8852V100;
                 break;
             case 0xd:
                 strcpy(chip_name, "FH8856V100");
+                chip_generation = CHIP_FH8856V100;
                 break;
             }
             break;

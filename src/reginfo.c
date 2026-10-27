@@ -3401,7 +3401,7 @@ uint32_t gpio_windows_in_mapping(unsigned long off, unsigned long len,
 #endif
 
 static int gpio_mux_by(const char *gpio_number, int func_num,
-                       const char *set_func);
+                       const char *set_func, bool force);
 static int padmux_refuse(int code, const char *pad_spec, const char *func);
 static int sstar_gpio_getset(char **argv, bool set_op);
 static int sstar_gpio_scan_cmd(void);
@@ -3689,7 +3689,7 @@ static int gpio_manipulate(char **argv, bool set_op) {
     }
 
     const char *gpio_num = argv[1];
-    gpio_mux_by(gpio_num, -1, NULL);
+    gpio_mux_by(gpio_num, -1, NULL, false);
 
     int group, num;
     if (sscanf(gpio_num, "%d_%d", &group, &num) != 2) {
@@ -3787,6 +3787,12 @@ static int padmux_refuse(int code, const char *pad_spec, const char *func) {
         fprintf(stderr, "Cannot reach the pad-mux register of GPIO %s\n",
                 pad_spec);
         break;
+    case IPCHW_PADMUX_IN_USE:
+        fprintf(stderr,
+                "GPIO %s is carrying a line the board runs from (the boot "
+                "flash); not moving it. Add --force if you are sure\n",
+                pad_spec);
+        break;
     default:
         fprintf(stderr, "Pad-mux error %d on GPIO %s\n", code, pad_spec);
         break;
@@ -3804,7 +3810,7 @@ static int padmux_refuse(int code, const char *pad_spec, const char *func) {
  * resolved to the name of the function it selects, which is the only spelling
  * the two other vendors have. */
 static int gpio_mux_by(const char *gpio_number, int func_num,
-                       const char *set_func) {
+                       const char *set_func, bool force) {
     /* Detection first: how a pad may be spelled is the SoC's to say. */
     getchipname();
 
@@ -3886,7 +3892,8 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
         return EXIT_SUCCESS;
     }
 
-    int res = ipchw_padmux_set(pad, want);
+    int res = force ? ipchw_padmux_set_forced(pad, want)
+                    : ipchw_padmux_set(pad, want);
     if (res != 0)
         return padmux_refuse(res, gpio_number, want);
 
@@ -3894,26 +3901,29 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
 }
 
 static int gpio_mux_cmd(int argc, char **argv) {
-    if (argc < 2 || argc > 3) {
+    /* --force last, and only after a function: asking cannot be forced. */
+    bool force = argc == 4 && !strcmp(argv[3], "--force");
+    if (argc < 2 || argc > 4 || (argc == 4 && !force)) {
         printf(
-            "Usage: ipctool gpio %s <gpio number>%s\n%s%s", "mux",
-            " [function name or number]",
+            "Usage: ipctool gpio %s <gpio number>%s\n%s%s%s", "mux",
+            " [function name or number [--force]]",
             "where: <gpio number> is 46, 5_6 on HiSilicon, or the pad's name "
             "(P_GPIO22 on Novatek)\n",
             "       with no function, reports what the pad carries;\n"
-            "       pass GPIO to mux it back to plain GPIO\n");
+            "       pass GPIO to mux it back to plain GPIO\n",
+            "       --force moves a pad off a line the board runs from\n");
         return EXIT_FAILURE;
     }
 
     const char *set_func = NULL;
     int func_num = -1;
-    if (argc == 3) {
+    if (argc >= 3) {
         set_func = argv[2];
         if (isdigit(set_func[0]))
             func_num = strtoul(set_func, NULL, 10);
     }
 
-    return gpio_mux_by(argv[1], func_num, set_func);
+    return gpio_mux_by(argv[1], func_num, set_func, force);
 }
 
 /* Which pads are muxed to plain GPIO right now, a bitmask per bank of eight.
@@ -4084,7 +4094,7 @@ static bool sstar_gpio_streamer_mapped(void) {
 static int sstar_gpio_getset(char **argv, bool set_op) {
     const char *gpio_num = argv[1];
 
-    gpio_mux_by(gpio_num, -1, NULL);
+    gpio_mux_by(gpio_num, -1, NULL, false);
 
     char *tail;
     long pad = strtol(gpio_num, &tail, 10);
@@ -4248,7 +4258,7 @@ static int sstar_gpio_scan_cmd(void) {
 static int novatek_gpio_getset(char **argv, bool set_op) {
     const char *gpio_num = argv[1];
 
-    gpio_mux_by(gpio_num, -1, NULL);
+    gpio_mux_by(gpio_num, -1, NULL, false);
 
     int pad = padmux_parse_pad(gpio_num);
     if (!novatek_gpio_valid(pad)) {
