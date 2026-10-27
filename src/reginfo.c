@@ -3844,7 +3844,7 @@ static int gpio_mux_by(const char *gpio_number, int func_num,
          * ipchw_padmux_set() knows how to write it. */
         want = NULL;
         for (int i = 0; i < n; i++) {
-            if (rows[i].func != func_num)
+            if (padmux_func_number(&rows[i]) != func_num)
                 continue;
             if (want != NULL && strcmp(want, rows[i].func_name) != 0) {
                 fprintf(stderr,

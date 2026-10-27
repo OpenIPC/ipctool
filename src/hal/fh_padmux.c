@@ -39,6 +39,7 @@
  * as an owner who has named that pad for something else. That Tenda's
  * GPIO9/GPIO10 are SSI0_D2/D3 unused by its flash, and its IR-cut coils. */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -213,12 +214,11 @@ static int fh_set(int pad, const char *func_name, const padmux_io_t *io) {
     return 0;
 }
 
+/* Asked only after the front door has read the pad successfully, so a read
+ * that fails is reported as the I/O error it is, never as a flash line. */
 static bool fh_in_use(int pad, const padmux_io_t *io) {
     ipchw_padmux_t now;
-    const int res = fh_get(pad, &now, io);
-    if (res == IPCHW_PADMUX_IO)
-        return true; /* cannot tell: not known to be free */
-    return res == 1 && !strncmp(now.func_name, "SSI0_", 5);
+    return fh_get(pad, &now, io) == 1 && !strncmp(now.func_name, "SSI0_", 5);
 }
 
 /* "GPIO9" or "9", both the GPIO number and never the pad id. HiSilicon's
@@ -227,10 +227,20 @@ static bool fh_in_use(int pad, const padmux_io_t *io) {
 static int fh_parse_pad(const char *spec) {
     const char *s = strncmp(spec, "GPIO", 4) == 0 ? spec + 4 : spec;
     char *tail;
+    errno = 0;
     long v = strtol(s, &tail, 10);
-    if (tail == s || *tail != '\0' || v < 0)
+    /* Bounded before it is narrowed: "4294967297" is GPIO1 once it has been
+     * through an int on a 64-bit host. A GPIO number is a byte here. */
+    if (tail == s || *tail != '\0' || errno || v < 0 || v > INT8_MAX)
         return -1;
     return find_pad(table(), (int)v) >= 0 ? (int)v : -1;
+}
+
+/* The number a person types for a function: the selector, as
+ * /proc/driver/pinctrl prints it in its `sel` column -- not `func`, which is
+ * the whole value a write puts in the register, enables included. */
+static int fh_func_number(const ipchw_padmux_t *r) {
+    return (int)(((uint32_t)r->func & FH_SEL_MASK) >> FH_SEL_SHIFT);
 }
 
 const padmux_ops_t PADMUX_OPS_FH = {
@@ -240,4 +250,5 @@ const padmux_ops_t PADMUX_OPS_FH = {
     .set = fh_set,
     .parse_pad = fh_parse_pad,
     .in_use = fh_in_use,
+    .func_number = fh_func_number,
 };

@@ -194,10 +194,16 @@ static int padmux_set(int pad, const char *func_name, bool force) {
     if (res < 0)
         return res;
 
-    /* Writing what the pad already carries is not moving it off anything. */
-    if (!force && ops->in_use != NULL && ops->in_use(pad, IO)) {
+    /* Read first: a pad that cannot be read is an I/O error, and calling it
+     * a flash line would send someone to --force for no reason. Writing what
+     * the pad already carries is not moving it off anything. */
+    if (!force && ops->in_use != NULL) {
         ipchw_padmux_t now;
-        if (ops->get(pad, &now, IO) != 1 || strcmp(now.func_name, func_name))
+        const int got = ops->get(pad, &now, IO);
+        if (got < 0)
+            return got;
+        if (got == 1 && strcmp(now.func_name, func_name) != 0 &&
+            ops->in_use(pad, IO))
             return IPCHW_PADMUX_IN_USE;
     }
 
@@ -210,6 +216,12 @@ int ipchw_padmux_set(int pad, const char *func_name) {
 
 int ipchw_padmux_set_forced(int pad, const char *func_name) {
     return padmux_set(pad, func_name, true);
+}
+
+int padmux_func_number(const ipchw_padmux_t *row) {
+    const padmux_ops_t *ops = chip_generation ? padmux_ops() : NULL;
+    return ops != NULL && ops->func_number != NULL ? ops->func_number(row)
+                                                   : row->func;
 }
 
 bool padmux_pad_is_gpio(int pad) {

@@ -1511,6 +1511,9 @@ static void test_fh(void) {
     CHECK(padmux_parse_pad("GPIO9") == 9);
     CHECK(padmux_parse_pad("1_1") == -1); /* HiSilicon's banking */
     CHECK(padmux_parse_pad("64") == -1); /* GPIO0..63 are all there is */
+    /* Bounded before it is narrowed: 2^32 + 1 is GPIO1 through an int. */
+    CHECK(padmux_parse_pad("4294967297") == -1);
+    CHECK(padmux_parse_pad("GPIO4294967297") == -1);
     CHECK(ipchw_padmux_get(64, &r) == IPCHW_PADMUX_NO_PAD);
     /* 46 is GPIO9's pad id, and a GPIO number in its own right: GPIO46 is a
      * different pad, so it must not resolve to pad 46's register. */
@@ -1522,6 +1525,17 @@ static void test_fh(void) {
           !strcmp(r.gpio_name, "GPIO9"));
     CHECK(r.func_mask == 0x1F001100 && r.func == 0x10001100);
     CHECK(r.gpio_func == 0x11001100);
+    /* `gpio mux 9 0` / `9 1`: the number is the selector, not `func`. */
+    CHECK(padmux_func_number(&r) == 0);
+    {
+        ipchw_padmux_t rows[8];
+        int n = ipchw_padmux_by_pad(9, rows, 8);
+        int found = -1;
+        for (int i = 0; i < n && i < 8; i++)
+            if (padmux_func_number(&rows[i]) == 1)
+                found = i;
+        CHECK(found >= 0 && !strcmp(rows[found].func_name, "GPIO9"));
+    }
 
     regs_reset();
     fake_write(0xF0000138, 0x00000021, 32); /* SSI0_D2, ds 2 */
@@ -1532,6 +1546,10 @@ static void test_fh(void) {
      * cannot say whether the flash is using it. */
     CHECK(ipchw_padmux_set(9, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_IN_USE);
     CHECK(reg_of(0xF0000138) == 0x00000021);
+    /* A register that cannot be read is an I/O error, not a flash line. */
+    IO_FAILS = true;
+    CHECK(ipchw_padmux_set(9, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_IO);
+    IO_FAILS = false;
 
     /* What the kernel's mux writes: the selector, and the input, output and
      * Schmitt enables. The drive strength in bits 4..6 is left alone. */

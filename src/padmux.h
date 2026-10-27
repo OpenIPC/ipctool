@@ -82,6 +82,11 @@ typedef struct {
      * be moved off it -- read from the hardware, not assumed. NULL where the
      * backend cannot tell, which is every one but Fullhan's. */
     bool (*in_use)(int pad, const padmux_io_t *io);
+
+    /* The number `gpio mux <pad> <n>` means by a row, where that is not the
+     * row's `func`: Fullhan's `func` is the whole value a write puts in the
+     * register, and a person types the selector. NULL means `func`. */
+    int (*func_number)(const ipchw_padmux_t *row);
 } padmux_ops_t;
 
 /* Always present: reginfo.c is compiled into every configuration, and its
@@ -117,5 +122,9 @@ bool padmux_pad_is_gpio(int pad);
  * the detected SoC's own: "P_GPIO22" on Novatek, where "5_2" is refused
  * because the bank-of-eight numbering is HiSilicon's. -1 for anything else. */
 int padmux_parse_pad(const char *spec);
+
+/* The number the command line accepts for this row's function, on the
+ * detected SoC: the backend's func_number(), or the row's `func`. */
+int padmux_func_number(const ipchw_padmux_t *row);
 
 #endif /* PADMUX_H */
