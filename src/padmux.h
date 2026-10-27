@@ -29,6 +29,9 @@
  *   Xiongmai        HiSilicon's shape with an enable bit per alternative
  *                   instead of a selector: the pad's own register on
  *                   XM530/XM550, the port's word of eight pins on XM510.
+ *   Fullhan         HiSilicon's shape exactly, a selector field in the pad's
+ *                   own register -- but the register is indexed by pad id
+ *                   and the pad is addressed by its GPIO number.
  *
  * What a caller sees is a flat ipchw_padmux_t in every case.
  * ---------------------------------------------------------------------- */
@@ -74,6 +77,16 @@ typedef struct {
     /* The vendor's own spellings of a pad, to its number, or -1. NULL where
      * the two generic ones in padmux_parse_pad() are all there is. */
     int (*parse_pad)(const char *spec);
+
+    /* True when `pad` is carrying something the board runs from and must not
+     * be moved off it -- read from the hardware, not assumed. NULL where the
+     * backend cannot tell, which is every one but Fullhan's. */
+    bool (*in_use)(int pad, const padmux_io_t *io);
+
+    /* The number `gpio mux <pad> <n>` means by a row, where that is not the
+     * row's `func`: Fullhan's `func` is the whole value a write puts in the
+     * register, and a person types the selector. NULL means `func`. */
+    int (*func_number)(const ipchw_padmux_t *row);
 } padmux_ops_t;
 
 /* Always present: reginfo.c is compiled into every configuration, and its
@@ -92,6 +105,9 @@ extern const padmux_ops_t PADMUX_OPS_NOVATEK;
 #ifdef IPCHW_PADMUX_XM
 extern const padmux_ops_t PADMUX_OPS_XM;
 #endif
+#ifdef IPCHW_PADMUX_FH
+extern const padmux_ops_t PADMUX_OPS_FH;
+#endif
 
 /* The backend for the SoC that has been detected, or NULL when this build
  * carries no pad-mux table that could serve it. */
@@ -106,5 +122,9 @@ bool padmux_pad_is_gpio(int pad);
  * the detected SoC's own: "P_GPIO22" on Novatek, where "5_2" is refused
  * because the bank-of-eight numbering is HiSilicon's. -1 for anything else. */
 int padmux_parse_pad(const char *spec);
+
+/* The number the command line accepts for this row's function, on the
+ * detected SoC: the backend's func_number(), or the row's `func`. */
+int padmux_func_number(const ipchw_padmux_t *row);
 
 #endif /* PADMUX_H */

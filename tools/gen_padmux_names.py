@@ -76,6 +76,7 @@ SOURCES = [
     ("src/hal/ingenic_padmux.h", "defined(IPCHW_PADMUX_INGENIC)", "table"),
     ("src/hal/sstar_padmux.h", "defined(IPCHW_PADMUX_SSTAR)", "table"),
     ("src/hal/novatek_padmux.h", "defined(IPCHW_PADMUX_NOVATEK)", "table"),
+    ("src/hal/fh_padmux.h", "defined(IPCHW_PADMUX_FH)", "table"),
     (
         "src/hal/novatek_reginfo.h",
         "defined(IPCHW_VENDOR_NOVATEK) && !defined(STANDALONE_LIBRARY)",

@@ -67,6 +67,8 @@ enum {
     IPCHW_PADMUX_NO_PAD = -4,  /* this SoC has no pad with that number */
     IPCHW_PADMUX_NO_FUNC = -5, /* that pad cannot carry that function */
     IPCHW_PADMUX_IO = -6,      /* a register could not be reached */
+    IPCHW_PADMUX_IN_USE = -7,  /* the pad is carrying something the board
+                                * runs from -- see ipchw_padmux_set() */
 };
 
 enum {
@@ -163,5 +165,13 @@ int ipchw_padmux_get(int pad, ipchw_padmux_t *out);
  *
  * WRITES /dev/mem; see the threading note above. */
 int ipchw_padmux_set(int pad, const char *func_name);
+
+/* ipchw_padmux_set() also refuses, with IPCHW_PADMUX_IN_USE and nothing
+ * written, to move a pad off a function the board is running from where the
+ * backend can tell: on Fullhan, a boot-flash line the kernel set up at boot.
+ * The same pad carrying that function unused is not refused. This is the one
+ * call that skips the check, for an operator who knows better -- and for a
+ * test that cycles every pad through every function. */
+int ipchw_padmux_set_forced(int pad, const char *func_name);
 
 #endif /* IPCHW_H */

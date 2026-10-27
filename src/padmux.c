@@ -12,6 +12,7 @@
 #include "padmux.h"
 
 #include "chipid.h"
+#include "hal/fh.h"
 #include "hal/ingenic.h"
 #include "hal/novatek.h"
 #include "hal/sstar.h"
@@ -74,6 +75,21 @@ const padmux_ops_t *padmux_ops(void) {
     case CHIP_XM510:
     case CHIP_XM530:
         return &PADMUX_OPS_XM;
+#endif
+#ifdef IPCHW_PADMUX_FH
+    /* The two V201 parts too, so their answer is the backend's "no table"
+     * rather than the HiSilicon fallback's. */
+    case CHIP_FH8852V100:
+    case CHIP_FH8856V100:
+    case CHIP_FH8852V200:
+    case CHIP_FH8856V200:
+    case CHIP_FH8858V200:
+    case CHIP_FH8852V210:
+    case CHIP_FH8856V210:
+    case CHIP_FH8858V210:
+    case CHIP_FH8856V201:
+    case CHIP_FH8858V201:
+        return &PADMUX_OPS_FH;
 #endif
     default:
         break;
@@ -169,7 +185,7 @@ int ipchw_padmux_get(int pad, ipchw_padmux_t *out) {
     return ops->get(pad, out, IO);
 }
 
-int ipchw_padmux_set(int pad, const char *func_name) {
+static int padmux_set(int pad, const char *func_name, bool force) {
     if (pad < 0 || func_name == NULL || !*func_name)
         return IPCHW_PADMUX_BAD_ARG;
 
@@ -178,7 +194,34 @@ int ipchw_padmux_set(int pad, const char *func_name) {
     if (res < 0)
         return res;
 
+    /* Read first: a pad that cannot be read is an I/O error, and calling it
+     * a flash line would send someone to --force for no reason. Writing what
+     * the pad already carries is not moving it off anything. */
+    if (!force && ops->in_use != NULL) {
+        ipchw_padmux_t now;
+        const int got = ops->get(pad, &now, IO);
+        if (got < 0)
+            return got;
+        if (got == 1 && strcmp(now.func_name, func_name) != 0 &&
+            ops->in_use(pad, IO))
+            return IPCHW_PADMUX_IN_USE;
+    }
+
     return ops->set(pad, func_name, IO);
+}
+
+int ipchw_padmux_set(int pad, const char *func_name) {
+    return padmux_set(pad, func_name, false);
+}
+
+int ipchw_padmux_set_forced(int pad, const char *func_name) {
+    return padmux_set(pad, func_name, true);
+}
+
+int padmux_func_number(const ipchw_padmux_t *row) {
+    const padmux_ops_t *ops = chip_generation ? padmux_ops() : NULL;
+    return ops != NULL && ops->func_number != NULL ? ops->func_number(row)
+                                                   : row->func;
 }
 
 bool padmux_pad_is_gpio(int pad) {

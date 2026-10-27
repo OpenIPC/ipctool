@@ -23,7 +23,7 @@ puts the pad back.
 > pad to GPIO. A pad that a MISC-style table drop hides from `reginfo --pads`
 > still answers here, which is the one place to see it.
 
-## Five vendors, four mechanisms
+## Six vendors, four mechanisms
 
 This is the thing to understand before touching any of it. The API looks like
 one question, and underneath it is four different pieces of silicon.
@@ -382,6 +382,44 @@ is clock, command or data, so those pads carry the bus's name, as SigmaStar's
 modes do. `chip_generation` is `CHIP_XM510` or `CHIP_XM530` (XM550 is the
 XM530 die), set by `xm_detect_cpu()`.
 
+### Fullhan -- a selector per pad, addressed by GPIO number
+
+FH8852, FH8856 and FH8858, V100, V200 and V210, are HiSilicon's shape exactly:
+one register per pad in the PMU block at `0xF0000080 + 4 * pad`, and a four-bit
+selector (`mfs`) in bits 24..27 of it. The functions each pad offers are the
+vendor kernel's own `iopad.h` -- `PINCTRL_FUNC(SSI0_D2, 46, FUNC0, ...)` --
+generated into `src/hal/fh_padmux.h`.
+
+Two things are not HiSilicon's:
+
+- **The register is indexed by the vendor's pad id, but a pad is addressed by
+  its GPIO number**, which is what the kernel exports (`/sys/class/gpio/GPIO9`
+  is pad 46 on V200, pad 44 on V100). Every call takes and returns the GPIO
+  number. The few pads with no GPIO function have no number to pass, so they
+  appear in a walk of the whole table and nowhere else. A plain number is a
+  GPIO number, never a pad id, and the `5_2` spelling is refused.
+- **A mux write sets four fields, not one.** The kernel's own mux
+  (`fh_pinctrl_func_select()`) writes the selector together with the pad's
+  input, output and Schmitt enables, and clears both enables on a pad no
+  device claims at boot. A write here does the same as the kernel's.
+  `func_mask` covers all four, so a composed read-modify-write does what the
+  kernel does; `get()` reads the selector alone. Pull and drive strength are
+  left as they are.
+
+The six V200/V210 parts share one table and the two V100 parts another; the
+generator proves that by parsing each file rather than assuming it from the
+names. FH8856V201 and FH8858V201 are recognised but answer "no table": the
+vendor kernel ships none for them. `chip_generation` is one of the
+`CHIP_FH*` values in `hal/fh.h`, set by `fh_detect_cpu()`.
+
+Several pads double as boot-flash lines -- on V200, GPIO7..GPIO10 are also
+`SSI0_TXD`, `SSI0_RXD`, `SSI0_D2` and `SSI0_D3` -- and neither the table nor
+the hardware says whether a board's flash is using them: the pad enables do not
+tell (input enable reads set on every pad, output enable reads clear on every
+pad). So `ipchw_padmux_set()` refuses, with `IPCHW_PADMUX_IN_USE` and nothing
+written, to move a pad off any `SSI0_*` function. `ipchw_padmux_set_forced()`
+and `gpio mux <pad> <function> --force` are for whoever knows the board.
+
 ## Pad numbers and names
 
 `gpio_pad` is the number the kernel uses, and it is the number to speak to
@@ -395,6 +433,7 @@ every consumer:
 | Novatek | the Linux GPIO number, `group * 32 + pin` | `"P_GPIO22"` |
 | Xiongmai XM530/XM550 | the pad, as the vendor's `GPIO N` | `"GPIO43"` |
 | Xiongmai XM510 | `port * 8 + pin` | `"GPIO8_1"` |
+| Fullhan | the GPIO number the kernel exports, not the pad id | `"GPIO9"` |
 
 Function names are the vendor's own and are **not portable**, not even within
 HiSilicon: `PWM_OUT0` on V1, `PWM0` from V2, `PWM0_OUT1` on V5. `"PWM"` also
@@ -431,6 +470,16 @@ tools/gen_ingenic_padmux.py \
 
 Each generated header carries the exact command that made it, so the recipe
 above is only the shape; the header is the record.
+
+Fullhan, from the vendor kernel's per-chip `iopad.h`, one `--table` per
+distinct layout; files under one tag must parse to the same rows:
+
+```sh
+tools/gen_fh_padmux.py \
+    --table V200=<fullhan-fh8852v200>/arch/arm/mach-fh/fh8852v200/iopad.h,... \
+    --table V100=<fullhan-fh8852v100>/arch/arm/mach-fh/include/mach/fh8852_iopad.h,... \
+    > src/hal/fh_padmux.h
+```
 
 Novatek is generated differently, because its source is code and not a table:
 
