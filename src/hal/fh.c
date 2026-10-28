@@ -23,7 +23,7 @@ static sensor_addr_t fh_possible_i2c_addrs[] = {
 bool fh_detect_cpu(char *chip_name) {
 
     char buf[256];
-    uint32_t sysctrl, ipver, reg;
+    uint32_t sysctrl, ipver, chipinfo = 0, reg;
     unsigned int chip_id = 0;
 
     if (!line_from_file("/proc/cpuinfo", "Hardware.+: ([a-zA-Z0-9-]+)", buf,
@@ -96,7 +96,9 @@ bool fh_detect_cpu(char *chip_name) {
             }
             break;
         case 0x20031601:
-            switch (ipver & 0xc) {
+            /* mach-fh/fh_chipid.c reads the FH865x package from CHIP_INFO */
+            mem_reg(REG_PMU_CHIP_INFO, &chipinfo, OP_READ);
+            switch (chipinfo & 0xc) {
             case 0xc:
                 strcpy(chip_name, "FH8652");
                 break;
