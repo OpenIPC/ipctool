@@ -29,7 +29,9 @@ static unsigned char gc_addrs[] = {0x6e, 0x52, 0x42, 0x78, 0};
 static unsigned char superpix_addrs[] = {0x79, 0};
 static unsigned char tp_addrs[] = {0x88, 0};
 static unsigned char imagedesign_addrs[] = {0x60, 0};
-static unsigned char visemi_addrs[] = {0x20, 0};
+/* 0x6c: the VS4388 of a Hi3516CV610 camera, whose vendor firmware addresses
+ * it there (I2C_SLAVE_FORCE 0x36) and not at 0x20. */
+static unsigned char visemi_addrs[] = {0x20, 0x6c, 0};
 static unsigned char cvsens_addrs[] = {0x6a, 0};
 
 static sensor_addr_t my_possible_i2c_addrs[] = {
