@@ -86,7 +86,9 @@ bool fh_detect_cpu(char *chip_name) {
             strcpy(chip_name, "FH8626V100");
             break;
         case 0x46488302:
-            switch (ipver & 0x3f) {
+            /* and the FH8632 one from SPC_IO_STATUS (fh_get_chipid) */
+            mem_reg(REG_PMU_SPC_IO_STATUS, &chipinfo, OP_READ);
+            switch (chipinfo & 0x3f) {
             case 0x37:
                 strcpy(chip_name, "FH8632");
                 break;

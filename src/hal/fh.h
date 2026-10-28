@@ -8,6 +8,7 @@
 #define REG_PMU_IP_VER (PMU_REG_BASE + 0x0004)
 #define REG_PMU_FW_VER (PMU_REG_BASE + 0x0008)
 #define REG_PMU_SYS_CTRL (PMU_REG_BASE + 0x000c)
+#define REG_PMU_SPC_IO_STATUS (PMU_REG_BASE + 0x0054)
 #define REG_PMU_CHIP_INFO (PMU_REG_BASE + 0x033c)
 
 /* chip_generation for the parts hal/fh_padmux.c has a pad table for, and the
