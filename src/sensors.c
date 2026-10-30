@@ -468,6 +468,15 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
     return sid;
 }
 
+// SC1135 holds no ID in 0x3107/0x3108; it is told by 0x3008 = 0x60 and
+// 0x3005 = 0x22. That is the pair the Xiongmai XM510 isp daemon accepts as an
+// SC1135 once 0x3107/0x3108 matched none of its IDs: a sweep of every 0x3005
+// value with 0x3008 = 0x60 under emulation accepted 0x22 alone.
+static bool is_smartsens_sc1135(int fd, unsigned char i2c_addr) {
+    return i2c_read_register(fd, i2c_addr, 0x3008, 2, 1) == 0x60 &&
+           i2c_read_register(fd, i2c_addr, 0x3005, 2, 1) == 0x22;
+}
+
 static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
                                    unsigned char i2c_addr) {
     if (i2c_change_addr(fd, i2c_addr) < 0)
@@ -482,8 +491,6 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     int lower = i2c_read_register(fd, i2c_addr, 0x3108, 2, 1);
     if (lower == -1)
         return false;
-
-    // check for SC1035, SC1145, SC1135 '0x3008' reg val is equal to 0x60
 
     int res = high << 8 | lower;
     switch (res) {
@@ -707,12 +714,13 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0xeb2c:
         strcpy(ctx->sensor_id, "SC2355");
         return true;
-    case 0:
-    case 0xffff:
-        // SC1135 catches here
-        return false;
     default:
-        SENSOR_ERR("SmartSens", res);
+        if (is_smartsens_sc1135(fd, i2c_addr)) {
+            strcpy(ctx->sensor_id, "SC1135");
+            return true;
+        }
+        if (res != 0 && res != 0xffff)
+            SENSOR_ERR("SmartSens", res);
         return false;
     }
 
