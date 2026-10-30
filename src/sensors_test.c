@@ -139,6 +139,14 @@ static void sc_smartsens(uint32_t id) {
     mock_set(0x3107, 2, 1, id >> 8);
     mock_set(0x3108, 2, 1, id & 0xff);
 }
+/* SC1135 has no ID in 0x3107/0x3108: they read empty, and 0x3008/0x3005
+ * name it. */
+static void sc_smartsens_sc1135(uint32_t id) {
+    mock_set(0x3107, 2, 1, 0x00);
+    mock_set(0x3108, 2, 1, 0x00);
+    mock_set(0x3008, 2, 1, id >> 8);
+    mock_set(0x3005, 2, 1, id & 0xff);
+}
 static void sc_soi(uint32_t id) {
     mock_set(0x0a, 1, 1, id >> 8);
     mock_set(0x0b, 1, 1, id & 0xff);
@@ -221,6 +229,7 @@ static void sc_techpoint(uint32_t id) {
 
 static const struct scenario scenarios[] = {
     {"smartsens", detect_smartsens_sensor, sc_smartsens},
+    {"smartsens-sc1135", detect_smartsens_sensor, sc_smartsens_sc1135},
     {"soi", detect_soi_sensor, sc_soi},
     {"onsemi", detect_onsemi_sensor, sc_onsemi},
     {"omni", detect_omni_sensor, sc_omni},
