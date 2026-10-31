@@ -394,6 +394,72 @@ static void check_techpoint(void) {
     CHECK(probe_once(&techpoint, 0) == NULL);
 }
 
+/* Two SmartSens IDs are shared by a pair of parts that a register outside
+ * the ID tells apart: 0x801b on 0xcb3e (SC223A / SC223AP) and 0x801e's low
+ * nibble on 0x9b3a (SC2336P / SC2337P), as the Xiongmai V200 isp daemons
+ * read them. The sweep leaves those registers unanswered, which is the
+ * first part's answer; these are the second. */
+static uint32_t variant_reg, variant_val;
+
+static void sc_smartsens_variant(uint32_t id) {
+    sc_smartsens(id);
+    mock_set(variant_reg, 2, 1, variant_val);
+}
+
+static void check_smartsens_variants(void) {
+    static const struct scenario variant = {
+        "smartsens-variant", detect_smartsens_sensor, sc_smartsens_variant};
+    static const struct {
+        uint32_t id, reg, val;
+        const char *want;
+    } cases[] = {
+        {0xcb3e, 0x801b, 0x00, "SC223A"},  {0xcb3e, 0x801b, 0x01, "SC223AP"},
+        {0x9b3a, 0x801e, 0x00, "SC2336P"}, {0x9b3a, 0x801e, 0x10, "SC2336P"},
+        {0x9b3a, 0x801e, 0x01, "SC2337P"},
+    };
+
+    for (size_t i = 0; i < ARRCNT(cases); i++) {
+        variant_reg = cases[i].reg;
+        variant_val = cases[i].val;
+        const char *got = probe_once(&variant, cases[i].id);
+        CHECK(got && !strcmp(got, cases[i].want));
+        if (!got || strcmp(got, cases[i].want))
+            fprintf(
+                stderr,
+                "    (%#06x with %#06x = %#04x: wanted \"%s\", got \"%s\")\n",
+                cases[i].id, cases[i].reg, cases[i].val, cases[i].want,
+                got ? got : "(none)");
+    }
+}
+
+/* GalaxyCore parts are named either through one-byte register addresses or
+ * through two-byte ones, and the width a caller then talks to the part with
+ * has to be the one that named it. */
+static void check_galaxycore_reg_width(void) {
+    static const struct {
+        void (*script)(uint32_t id);
+        uint32_t id;
+        unsigned int want;
+    } cases[] = {
+        {sc_galaxycore_legacy, 0x2053, 1},
+        {sc_galaxycore, 0x4653, 2},
+        {sc_galaxycore, 0x1084, 2},
+    };
+    sensor_ctx_t ctx;
+
+    for (size_t i = 0; i < ARRCNT(cases); i++) {
+        memset(&ctx, 0, sizeof(ctx));
+        ctx.reg_width = 0xa5;
+        mock_clear();
+        cases[i].script(cases[i].id);
+        CHECK(detect_galaxycore_sensor(&ctx, 0, mock_addr));
+        CHECK(ctx.reg_width == cases[i].want);
+        if (ctx.reg_width != cases[i].want)
+            fprintf(stderr, "    (GC%04x: reg_width %u, wanted %u)\n",
+                    cases[i].id, ctx.reg_width, cases[i].want);
+    }
+}
+
 /* The two IDs SmartSens gives to different parts depending on the SoC. */
 static void check_vendor_dependent(void) {
     static const struct {
@@ -617,6 +683,8 @@ int main(int argc, char **argv) {
     check_sony();
     check_techpoint();
     check_vendor_dependent();
+    check_smartsens_variants();
+    check_galaxycore_reg_width();
     check_probe_restores_console();
     check_superpix_spared_by_galaxycore();
 

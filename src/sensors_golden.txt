@@ -11,6 +11,7 @@ smartsens 2032 SC2035
 smartsens 2045 SC2045
 smartsens 2135 SC2135
 smartsens 2145 SC2145
+smartsens 2210 SC2210
 smartsens 2232 SC2235P
 smartsens 2235 SC2235
 smartsens 2238 SC2315E
@@ -34,9 +35,10 @@ smartsens 9c42 SC4336P
 smartsens bd1e SC850SL
 smartsens bd2f SC450AI
 smartsens c143 SC830AI
-smartsens c170 SC831AI
+smartsens c170 SC831HAI
 smartsens ca13 SC1335T
 smartsens ca18 SC1330T
+smartsens ca3f SC1336
 smartsens cb07 SC2232H
 smartsens cb08 SC2320
 smartsens cb10 SC2239
@@ -60,9 +62,11 @@ smartsens ce1f SC501AI
 smartsens ce39 SC430AI
 smartsens ce50 SC5336
 smartsens da23 SC1345
+smartsens da2a SC120AT
 smartsens da4d SC1346
 smartsens dc42 SC4336
 smartsens eb2c SC2355
+smartsens eb52 SC202CS
 smartsens-sc1135 6022 SC1135
 soi 0500 JXK00
 soi 0501 JXK01
@@ -324,6 +328,7 @@ soi 0841 JXF37P
 soi 0842 JXF53
 soi 0843 JXQ03P
 soi 0844 JXF38P
+soi 0848 JXH63P
 soi 0a00 JXH0
 soi 0a01 JXH1
 soi 0a02 JXH2
@@ -1114,9 +1119,11 @@ omni-mfg 5305 OV5305
 omni-mfg 9711 OV9712
 omni-mfg 9732 OV9732
 omni-mfg 9750 OV9750
+galaxycore 1084 GC1084
 galaxycore 2053 GC2053
 galaxycore 2083 GC2083
 galaxycore 2093 GC2093
+galaxycore 3003 GC3003
 galaxycore 4023 GC4023
 galaxycore 4653 GC4653
 galaxycore-legacy 1004 GC1004
