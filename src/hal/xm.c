@@ -51,10 +51,23 @@ static sensor_addr_t xm_v200_possible_i2c_addrs[] = {
     {SENSOR_GALAXYCORE, v200_gc_addrs},
     {0, NULL}};
 
-static int xm_v200_open_sensor_fd() {
-    if (!access("/dev/i2c0", F_OK))
-        return universal_open_sensor_fd("/dev/i2c0");
-    return universal_open_sensor_fd("/dev/xm_i2c");
+/* Bus n: /dev/i2cN, or the XM533's /dev/xm_i2c (bus 0) and /dev/xm_i2cN. */
+static int xm_v200_open_sensor_fd(int adapter_nr) {
+    char name[16];
+
+    if (adapter_nr < 0 || adapter_nr > 2)
+        return -1;
+    snprintf(name, sizeof(name), "/dev/i2c%d", adapter_nr);
+    if (!access(name, F_OK)) {
+        int fd = universal_open_sensor_fd(name);
+        if (fd >= 0)
+            return fd;
+    }
+    if (adapter_nr)
+        snprintf(name, sizeof(name), "/dev/xm_i2c%d", adapter_nr);
+    else
+        snprintf(name, sizeof(name), "/dev/xm_i2c");
+    return universal_open_sensor_fd(name);
 }
 
 /* The names a V200 kernel gives its machine: OpenIPC's xm530v200, xm533,
