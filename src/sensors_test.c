@@ -432,6 +432,34 @@ static void check_smartsens_variants(void) {
     }
 }
 
+/* GalaxyCore parts are named either through one-byte register addresses or
+ * through two-byte ones, and the width a caller then talks to the part with
+ * has to be the one that named it. */
+static void check_galaxycore_reg_width(void) {
+    static const struct {
+        void (*script)(uint32_t id);
+        uint32_t id;
+        unsigned int want;
+    } cases[] = {
+        {sc_galaxycore_legacy, 0x2053, 1},
+        {sc_galaxycore, 0x4653, 2},
+        {sc_galaxycore, 0x1084, 2},
+    };
+    sensor_ctx_t ctx;
+
+    for (size_t i = 0; i < ARRCNT(cases); i++) {
+        memset(&ctx, 0, sizeof(ctx));
+        ctx.reg_width = 0xa5;
+        mock_clear();
+        cases[i].script(cases[i].id);
+        CHECK(detect_galaxycore_sensor(&ctx, 0, mock_addr));
+        CHECK(ctx.reg_width == cases[i].want);
+        if (ctx.reg_width != cases[i].want)
+            fprintf(stderr, "    (GC%04x: reg_width %u, wanted %u)\n",
+                    cases[i].id, ctx.reg_width, cases[i].want);
+    }
+}
+
 /* The two IDs SmartSens gives to different parts depending on the SoC. */
 static void check_vendor_dependent(void) {
     static const struct {
@@ -656,6 +684,7 @@ int main(int argc, char **argv) {
     check_techpoint();
     check_vendor_dependent();
     check_smartsens_variants();
+    check_galaxycore_reg_width();
     check_probe_restores_console();
     check_superpix_spared_by_galaxycore();
 

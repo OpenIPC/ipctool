@@ -902,6 +902,7 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     case 0x5035:
     case 0x5603:
         sprintf(ctx->sensor_id, "GC%04x", res);
+        ctx->reg_width = 1;
         return true;
     }
 
@@ -921,7 +922,9 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2093:
     case 0x4023:
     case 0x4653:
+        // named through two-byte addresses, so that is what the part takes
         sprintf(ctx->sensor_id, "GC%04x", wide);
+        ctx->reg_width = 2;
         return true;
     case 0xffff:
         // no response
@@ -1248,8 +1251,8 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_galaxycore_sensor,
                                        SENSOR_GALAXYCORE)) {
+        // the probe sets reg_width: one byte or two, by the ID it matched
         strcpy(ctx->vendor, "GalaxyCore");
-        ctx->reg_width = 1;
         detected = true;
     } else if (detect_possible_sensors(ctx, fd, detect_techpoint_adc,
                                        SENSOR_TECHPOINT)) {
