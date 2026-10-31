@@ -30,6 +30,54 @@ static sensor_addr_t xm_possible_i2c_addrs[] = {
 
 int xm_open_sensor_fd() { return universal_open_sensor_fd("/dev/xm_i2c"); }
 
+/* The V200 series (XM530V200, XM533, XM535D1/D2/W1): the same i2c.ko ioctls,
+ * its buses /dev/i2c0..2 (/dev/xm_i2c, xm_i2c1, xm_i2c2 on the XM533). Bus 0
+ * carries a sensor on every board seen, and the addresses are the ones those
+ * chips' isp daemons probe: SmartSens at 0x30 and 0x32, and SC202CS at 0x10;
+ * SOI at 0x40, 0x42 and 0x44; MIS at 0x30 and 0x31; GalaxyCore at 0x37;
+ * OV2735 (the SuperPix probe's) at 0x3c. */
+static unsigned char v200_ssens_addrs[] = {0x60, 0x64, 0x20, 0};
+static unsigned char v200_soi_addrs[] = {0x80, 0x84, 0x88, 0};
+static unsigned char v200_sp_addrs[] = {0x78, 0};
+static unsigned char v200_imagedesign_addrs[] = {0x60, 0x62, 0};
+static unsigned char v200_gc_addrs[] = {0x6e, 0};
+
+static sensor_addr_t xm_v200_possible_i2c_addrs[] = {
+    {SENSOR_SONY, sony_addrs},
+    {SENSOR_SMARTSENS, v200_ssens_addrs},
+    {SENSOR_SOI, v200_soi_addrs},
+    {SENSOR_SUPERPIX, v200_sp_addrs},
+    {SENSOR_IMAGEDESIGN, v200_imagedesign_addrs},
+    {SENSOR_GALAXYCORE, v200_gc_addrs},
+    {0, NULL}};
+
+/* Bus n: /dev/i2cN, or the XM533's /dev/xm_i2c (bus 0) and /dev/xm_i2cN. */
+static int xm_v200_open_sensor_fd(int adapter_nr) {
+    char name[16];
+
+    if (adapter_nr < 0 || adapter_nr > 2)
+        return -1;
+    snprintf(name, sizeof(name), "/dev/i2c%d", adapter_nr);
+    if (!access(name, F_OK)) {
+        int fd = universal_open_sensor_fd(name);
+        if (fd >= 0)
+            return fd;
+    }
+    if (adapter_nr)
+        snprintf(name, sizeof(name), "/dev/xm_i2c%d", adapter_nr);
+    else
+        snprintf(name, sizeof(name), "/dev/xm_i2c");
+    return universal_open_sensor_fd(name);
+}
+
+/* The names a V200 kernel gives its machine: OpenIPC's xm530v200, xm533,
+ * xm535d1, xm535d2 and xm535w1, the vendor's xm530v200 and xm535 (the
+ * XM535D1, D2 and W1 alike) and qiandaohu, its XM533. */
+static bool xm_is_v200(const char *name) {
+    return !strncmp(name, "XM530V200", 9) || !strncmp(name, "XM533", 5) ||
+           !strncmp(name, "XM535", 5);
+}
+
 int xm_sensor_read_register(int fd, unsigned char i2c_addr,
                             unsigned int reg_addr, unsigned int reg_width,
                             unsigned int data_width) {
@@ -43,7 +91,11 @@ int xm_sensor_read_register(int fd, unsigned char i2c_addr,
 
     ret = ioctl(fd, CMD_I2C_READ, &i2c_data);
     if (ret) {
+        /* a probe expects most addresses not to answer, and stdout is the
+         * report */
+#ifndef NDEBUG
         printf("xm_i2c read failed!\n");
+#endif
         return -1;
     }
 
@@ -65,7 +117,9 @@ int xm_sensor_write_register(int fd, unsigned char i2c_addr,
     ret = ioctl(fd, CMD_I2C_WRITE, &i2c_data);
 
     if (ret) {
+#ifndef NDEBUG
         printf("xm_i2c write failed!\n");
+#endif
         return -1;
     }
 
@@ -80,6 +134,10 @@ void setup_hal_xm() {
     i2c_read_register = xm_sensor_read_register;
     i2c_write_register = xm_sensor_write_register;
     possible_i2c_addrs = xm_possible_i2c_addrs;
+    if (xm_is_v200(chip_name)) {
+        open_i2c_sensor_fd = xm_v200_open_sensor_fd;
+        possible_i2c_addrs = xm_v200_possible_i2c_addrs;
+    }
     hal_cleanup = xm_hal_cleanup;
 #ifndef STANDALONE_LIBRARY
     hal_totalmem = xm_totalmem;
@@ -139,7 +197,11 @@ bool xm_detect_cpu(char *chip_name, uint32_t base) {
     bool res =
         line_from_file("/proc/cpuinfo", "^Hardware.+(xm.+)", buf, sizeof(buf));
     if (!res) {
-        return false;
+        // the vendor's XM533 kernel calls its machine qiandaohu
+        if (!line_from_file("/proc/cpuinfo", "^Hardware.+(qiandaohu)", buf,
+                            sizeof(buf)))
+            return false;
+        strcpy(buf, "xm533");
     }
     strcpy(chip_name, buf);
     char *ptr = chip_name;
