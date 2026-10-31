@@ -416,6 +416,10 @@ static int detect_soi_sensor(sensor_ctx_t *ctx, int fd,
         } else if (ver == 0x44) {
             sprintf(ctx->sensor_id, "JXF38P");
             return true;
+        } else if (ver == 0x48) {
+            // the Xiongmai V200 isp daemons' H63P
+            sprintf(ctx->sensor_id, "JXH63P");
+            return true;
         }
         // fall through
     case 0:
@@ -654,10 +658,15 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     // reads 0x01 on unrelated SmartSens parts too, so it is a revision byte.
     // 0x301f only says which init table the running driver loaded, which is a
     // statement about the firmware and not about the silicon. See issue #112.
-    case 0xcb3e:
+    // SC223AP is another part with the same ID: the Xiongmai V200 isp daemons
+    // take 0xcb3e for an SC223A where 0x801b reads 0 and for an SC223AP
+    // otherwise, and run a different driver for each.
+    case 0xcb3e: {
         // XM
-        strcpy(ctx->sensor_id, "SC223A");
+        int variant = i2c_read_register(fd, i2c_addr, 0x801b, 2, 1);
+        strcpy(ctx->sensor_id, variant > 0 ? "SC223AP" : "SC223A");
         return true;
+    }
     case 0xcd2e:
         // XM
         strcpy(ctx->sensor_id, "SC401AI");
@@ -702,7 +711,7 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         strcpy(ctx->sensor_id, "SC830AI");
         return true;
     case 0xc170:
-        strcpy(ctx->sensor_id, "SC831AI");
+        strcpy(ctx->sensor_id, "SC831HAI");
         return true;
     case 0xbd1e:
         strcpy(ctx->sensor_id, "SC850SL");
@@ -710,8 +719,27 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
     case 0x8235:
         strcpy(ctx->sensor_id, "SC8238");
         return true;
-    case 0x9b3a:
-        strcpy(ctx->sensor_id, "SC2336P");
+    // SC2336P and SC2337P both read 0x9b3a once streaming (in standby they
+    // read 0xcb3a, as the SC2336 does); the Xiongmai V200 isp daemons tell
+    // the SC2337P by 0x801e's low nibble being non-zero.
+    case 0x9b3a: {
+        int variant = i2c_read_register(fd, i2c_addr, 0x801e, 2, 1);
+        strcpy(ctx->sensor_id,
+               variant > 0 && variant & 0xf ? "SC2337P" : "SC2336P");
+        return true;
+    }
+    // The four below are what the Xiongmai V200 isp daemons name these IDs.
+    case 0xca3f:
+        strcpy(ctx->sensor_id, "SC1336");
+        return true;
+    case 0xda2a:
+        strcpy(ctx->sensor_id, "SC120AT");
+        return true;
+    case 0xeb52:
+        strcpy(ctx->sensor_id, "SC202CS");
+        return true;
+    case 0x2210:
+        strcpy(ctx->sensor_id, "SC2210");
         return true;
     case 0xeb2c:
         strcpy(ctx->sensor_id, "SC2355");
@@ -884,6 +912,10 @@ static int detect_galaxycore_sensor(sensor_ctx_t *ctx, int fd,
 
     int wide = prod_msb << 8 | prod_lsb;
     switch (wide) {
+    // GC1084 and GC3003 as the Xiongmai V200 isp daemons read them, at
+    // 0x3f0/0x3f1 with two-byte addresses (I2C address 0x37)
+    case 0x1084:
+    case 0x3003:
     case 0x2053:
     case 0x2083:
     case 0x2093:
