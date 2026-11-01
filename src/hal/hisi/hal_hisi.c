@@ -749,6 +749,7 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
 #define CV610_TSENSOR_CTRL2 0x1102A008
 #define CV610_PERI_CRG4560 0x11014740
 
+#ifdef IPCHW_HISI_GOKE7206
 /* GK7206V1x (the SDK's xm7206v1x, machine "xmorca"). The T-sensor block sits
  * one word above EV300's, so EV300's addresses land on the wrong registers:
  * its "MISC_CTRL47" is the config word here, and its "MISC_CTRL45" is not
@@ -802,6 +803,7 @@ static float gk7206_get_temp() {
     /* T = (Y - Y0) * 0.303 + T0, with the driver's 1241/4096 for 0.303 */
     return ((int)code - y0) * 1241 / 4096.0f + t0 / 100.0f;
 }
+#endif
 
 static float hisi_get_temp() {
     float tempo;
@@ -870,8 +872,10 @@ static float hisi_get_temp() {
         tempo = ((tempo - 127) / 784 * 165) - 40;
         break;
 #endif
+#ifdef IPCHW_HISI_GOKE7206
     case GOKE_7206:
         return gk7206_get_temp();
+#endif
     default:
         return NAN;
     }
@@ -1166,6 +1170,7 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
         chip_generation = HISI_V4;
         return "7205V530";
 #endif
+#ifdef IPCHW_HISI_GOKE7206
     case 0x72060100:
         // expected by the SDK's numbering (XM7605V11 is 0x76050110), unseen
         chip_generation = GOKE_7206;
@@ -1177,6 +1182,7 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
         // expected by the SDK's numbering, unseen
         chip_generation = GOKE_7206;
         return "7206V12";
+#endif
 
     default:
         fprintf(stderr, "Got unexpected ID 0x%x for HiSilicon\n", family_id);

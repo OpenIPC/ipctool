@@ -188,7 +188,7 @@ jobs:
         # and it keeps the sweep to a few seconds.
         run: |
           status=0
-          for gen in all none v1 v2 v2a "v2;v2a" v3 v3a v4 v4a v5 3536c 3536d; do
+          for gen in all none v1 v2 v2a "v2;v2a" v3 v3a v4 v4a v5 3536c 3536d goke7206; do
             dir=build-hisi-$(echo "$gen" | tr -d ';')
             if cmake -H. -B"$dir" -DCMAKE_BUILD_TYPE=Release \
                      -DIPCHW_VENDORS=none -DIPCHW_HISI="$gen" > "$dir.log" 2>&1 \
