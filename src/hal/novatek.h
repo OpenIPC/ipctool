@@ -4,6 +4,13 @@
 #include <stdbool.h>
 
 bool novatek_detect_cpu(char *chip_name);
+/* NA51023 (MIPS, sold as NT98513) is identified by ipctool alone. No camera
+ * that carries libipchw is one, so the library must not pay for it: ipcinfo
+ * ships on boards whose rootfs leaves tens of KB spare. */
+#if (defined(mips) || defined(__mips__) || defined(__mips)) &&                 \
+    !defined(STANDALONE_LIBRARY)
+bool novatek_detect_mips_cpu(char *chip_name);
+#endif
 unsigned long novatek_totalmem(unsigned long *media_mem);
 void novatek_setup_hal();
 
@@ -22,6 +29,9 @@ void novatek_setup_hal();
 /* TOP + 0xF0 bits [31:16], also /proc/nvt_info/nvt_pinmux/chip_id. One ID
  * per die; the parts cut from a die are told apart by eFuse/OTP words. */
 enum CHIP_ID {
+    /* Software family discriminator, not a TOP chip-ID register value.
+     * The MIPS SDK supplies a device-tree model but no verified chip_id. */
+    CHIP_NA51023 = 0x51023,
     CHIP_NA51055 = 0x4821, // NT9852x: NT98520, NT98525
     CHIP_NA51084 = 0x5021, // NT98528, NT98529 (the 1.2 GHz part, by OTP)
     CHIP_NA51089 = 0x7021, // NT98562 (64 MB internal RAM),
