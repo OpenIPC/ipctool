@@ -19,6 +19,9 @@
 #define HISI_OT 0x3516C610
 #define HISI_3536C 0x3536C100
 #define HISI_3536D 0x3536D100
+/* Goke's own designs that kept the HiSilicon chip-ID register. Not a HiSi
+ * generation: the shared blocks moved, so none of HISI_V4's paths apply. */
+#define GOKE_7206 0x72060100 /* GK7206V10/V11/V12 */
 
 #define IS_CHIP(name) (!strcmp(chip_name, name))
 

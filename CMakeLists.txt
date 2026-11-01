@@ -141,7 +141,7 @@ set(IPCHW_PADMUX_BACKENDS_ALL src/hal/sstar_padmux.c src/hal/ingenic_padmux.c
 # Same shape and vocabulary as IPCHW_PADMUX above, and "none" is meaningful
 # here too: a SigmaStar or Ingenic consumer drops the HiSilicon HAL entirely.
 # The ipctool executable always carries every generation.
-set(IPCHW_HISI_GENERATIONS v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d)
+set(IPCHW_HISI_GENERATIONS v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d goke7206)
 
 # The default follows IPCHW_VENDORS, because a consumer that has named its
 # silicon has already answered this question and should not have to answer it
@@ -505,7 +505,7 @@ if(NOT ONLY_LIBRARY)
   target_include_directories(hal_hisi_test PRIVATE include src)
   target_compile_definitions(hal_hisi_test PRIVATE STANDALONE_LIBRARY
                              IPCHW_HISI_ANY IPCHW_HISI_V3 IPCHW_HISI_V4
-                             IPCHW_HISI_V5)
+                             IPCHW_HISI_V5 IPCHW_HISI_GOKE7206)
   target_link_libraries(hal_hisi_test m Threads::Threads)
 
   # Parsing only: longse.c itself pulls in cJSON and the HAL, and the part

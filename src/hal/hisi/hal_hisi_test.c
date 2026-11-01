@@ -395,6 +395,32 @@ int main(void) {
     }
     CHECK(explored == (int)ARRCNT(seeds) * 4096);
 
+    /* GK7206: the record and calibration come from the block one word above
+     * EV300's, and a sensor found disabled is enabled the way the vendor
+     * driver leaves it. Unfused OTP means the driver's defaults: code 512 is
+     * exactly T0, 47.64 degC. */
+    fresh(GK7206_TSENSOR_CTRL, 0, GOKE_7206);
+    seed(GK7206_OTP_TSENSOR, 0);
+    seed(GK7206_TSENSOR_RECORD, 512);
+    float t = hisi_get_temp();
+    CHECK(fabsf(t - 47.64f) < 0.01f);
+    CHECK(peek(GK7206_TSENSOR_CTRL) == GK7206_TSENSOR_CFG);
+
+    /* A fused die uses its own Y0/T0, and a running sensor is not touched:
+     * (600 - 500) * 1241/4096 + 40.00 = 70.30. */
+    fresh(GK7206_TSENSOR_CTRL, 0xE0100000, GOKE_7206);
+    seed(GK7206_OTP_TSENSOR, (500 << 12) | 4000);
+    seed(GK7206_TSENSOR_RECORD, 0xfffffc00u | 600); /* only [9:0] count */
+    reset_counters();
+    t = hisi_get_temp();
+    CHECK(fabsf(t - 70.30f) < 0.01f);
+    CHECK(writes == 0);
+
+    /* A record that never becomes ready is no reading, not -107 degC. */
+    fresh(GK7206_TSENSOR_CTRL, 0xE0100000, GOKE_7206);
+    seed(GK7206_TSENSOR_RECORD, 0);
+    CHECK(isnan(hisi_get_temp()));
+
     if (failures)
         fprintf(stderr, "hal_hisi_test: %d failure(s)\n", failures);
     else

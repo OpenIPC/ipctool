@@ -34,6 +34,7 @@ smartsens 9c41 SC3336P
 smartsens 9c42 SC4336P
 smartsens bd1e SC850SL
 smartsens bd2f SC450AI
+smartsens bd82 SC465SL
 smartsens c143 SC830AI
 smartsens c170 SC831HAI
 smartsens ca13 SC1335T

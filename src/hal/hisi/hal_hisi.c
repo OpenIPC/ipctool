@@ -749,6 +749,62 @@ static uint32_t hisi_reg_temp(uint32_t read_addr, int temp_bitness,
 #define CV610_TSENSOR_CTRL2 0x1102A008
 #define CV610_PERI_CRG4560 0x11014740
 
+#ifdef IPCHW_HISI_GOKE7206
+/* GK7206V1x (the SDK's xm7206v1x, machine "xmorca"). The T-sensor block sits
+ * one word above EV300's, so EV300's addresses land on the wrong registers:
+ * its "MISC_CTRL47" is the config word here, and its "MISC_CTRL45" is not
+ * part of the block at all. Layout and formula are the vendor kernel's
+ * lotus/misc/tsensor.c and machine/xmorca/include/platform.h. */
+#define GK7206_TSENSOR_CTRL 0x120280B8
+#define GK7206_TSENSOR_RECORD 0x120280C0
+#define GK7206_TSENSOR_EN (1u << 31)
+/* What the vendor driver leaves in CTRL: enabled, one-shot circulation,
+ * averaging bypassed, one 2.048 ms period. */
+#define GK7206_TSENSOR_CFG 0xE0100000
+/* Per-die calibration in the OTP shadow: bits[11:0] T0 in 1/100 degC,
+ * bits[22:12] Y0, the code read at T0. Either one zero means unfused, and
+ * the driver falls back to these. */
+#define GK7206_OTP_TSENSOR 0x12020414
+#define GK7206_DEFAULT_Y0 512
+#define GK7206_DEFAULT_T0 4764
+
+static float gk7206_get_temp() {
+    uint32_t val;
+
+    if (!mem_reg(GK7206_TSENSOR_CTRL, &val, OP_READ))
+        return NAN;
+    if (!(val & GK7206_TSENSOR_EN)) {
+        val = GK7206_TSENSOR_CFG;
+        if (!mem_reg(GK7206_TSENSOR_CTRL, &val, OP_WRITE))
+            return NAN;
+    }
+
+    int y0 = GK7206_DEFAULT_Y0, t0 = GK7206_DEFAULT_T0;
+    if (mem_reg(GK7206_OTP_TSENSOR, &val, OP_READ)) {
+        const int y = (val >> 12) & 0x7ff, t = val & 0xfff;
+        if (y && t) {
+            y0 = y;
+            t0 = t;
+        }
+    }
+
+    /* The record reads 0 until the first conversion after enabling. */
+    uint32_t code = 0;
+    for (int i = 0; i < 50 && !code; i++) {
+        if (!mem_reg(GK7206_TSENSOR_RECORD, &val, OP_READ))
+            return NAN;
+        code = val & 0x3ff;
+        if (!code)
+            usleep(2000);
+    }
+    if (!code)
+        return NAN;
+
+    /* T = (Y - Y0) * 0.303 + T0, with the driver's 1241/4096 for 0.303 */
+    return ((int)code - y0) * 1241 / 4096.0f + t0 / 100.0f;
+}
+#endif
+
 static float hisi_get_temp() {
     float tempo;
     switch (chip_generation) {
@@ -815,6 +871,10 @@ static float hisi_get_temp() {
             hisi_reg_temp(CV610_TSENSOR_CTRL2, 10, CV610_PERI_CRG4560, 0x11);
         tempo = ((tempo - 127) / 784 * 165) - 40;
         break;
+#endif
+#ifdef IPCHW_HISI_GOKE7206
+    case GOKE_7206:
+        return gk7206_get_temp();
 #endif
     default:
         return NAN;
@@ -1109,6 +1169,19 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
     case 0x72050530:
         chip_generation = HISI_V4;
         return "7205V530";
+#endif
+#ifdef IPCHW_HISI_GOKE7206
+    case 0x72060100:
+        // expected by the SDK's numbering (XM7605V11 is 0x76050110), unseen
+        chip_generation = GOKE_7206;
+        return "7206V10";
+    case 0x72060110:
+        chip_generation = GOKE_7206;
+        return "7206V11";
+    case 0x72060120:
+        // expected by the SDK's numbering, unseen
+        chip_generation = GOKE_7206;
+        return "7206V12";
 #endif
 
     default:
