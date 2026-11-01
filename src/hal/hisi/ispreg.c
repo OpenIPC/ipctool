@@ -866,6 +866,95 @@ struct PT_INTF_MOD {
 // cv500 - 0x1000 + PT_N x 0x100
 // ev300 - 0x1000 + PT_N x 0x100
 
+#ifdef IPCHW_HISI_GOKE7206
+/* GK7206V1x: a Synopsys DesignWare CSI-2 host per VI device behind two
+ * 2-lane D-PHYs, none of it HiSilicon's. Layout from the vendor's xm_vi.ko
+ * (its hal_reg_mipi_* setters, hal_vi_mipi_rx_enable, hal_vi_dev_reset);
+ * the device tree's mipi@11240000 is not what that driver maps. */
+#define GK7206_MIPI_HOST0 0x10FE0000
+#define GK7206_MIPI_HOST1 0x11010000
+#define GK7206_MIPI_N_LANES 0x04       // [2:0] lanes - 1
+#define GK7206_MIPI_CSI2_RESETN 0x08   // [0]
+#define GK7206_MIPI_IPI_DATA_TYPE 0x88 // [5:0] CSI-2 data type
+/* The PHY controls live in the MISC block. PHY_SEL [0] joins PHY0 and PHY1
+ * into one 4-lane PHY; LANE_SEL holds two bits per PHY data lane, PHY0's
+ * dl0/dl1 in [1:0]/[3:2] and PHY1's in [5:4]/[7:6]; each PHY_CTRL has
+ * csi_en in [0] and its dl0/dl1 enables in [1]/[2]. */
+#define GK7206_MIPI_PHY_SEL 0x12028900
+#define GK7206_MIPI_LANE_SEL 0x120289AC
+#define GK7206_MIPI_PHY0_CTRL 0x120289B0
+#define GK7206_MIPI_PHY1_CTRL 0x120289D0
+
+/* The PHY a receiver is running on, or -1. Asked of the PHY controls, which
+ * are readable whenever the chip is up, before the CSI-2 host is touched at
+ * all: the host's clock is the VI driver's to turn on, and what a read of it
+ * gated does has not been tried. VI device N drives PHY N, and a 4-lane
+ * receiver is device 0 on the joined pair. */
+static int gk7206_mipi_phy(bool *joined) {
+    uint32_t sel, phy0, phy1;
+
+    if (!mem_reg(GK7206_MIPI_PHY_SEL, &sel, OP_READ) ||
+        !mem_reg(GK7206_MIPI_PHY0_CTRL, &phy0, OP_READ) ||
+        !mem_reg(GK7206_MIPI_PHY1_CTRL, &phy1, OP_READ))
+        return -1;
+    *joined = sel & 1;
+    if (phy0 & 1)
+        return 0;
+    if (phy1 & 1)
+        return 1;
+    return -1;
+}
+
+static uint32_t gk7206_mipi_host(int phy) {
+    return phy ? GK7206_MIPI_HOST1 : GK7206_MIPI_HOST0;
+}
+
+static int gk7206_vi_is_running(cJSON *j_inner) {
+    bool joined;
+    uint32_t resetn = 0;
+    const int phy = gk7206_mipi_phy(&joined);
+
+    if (phy >= 0)
+        mem_reg(gk7206_mipi_host(phy) + GK7206_MIPI_CSI2_RESETN, &resetn,
+                OP_READ);
+    if (!(resetn & 1)) {
+        ADD_PARAM("vicap-state", "down");
+        return 0;
+    }
+    return 1;
+}
+
+static void gk7206_sensor_data(cJSON *j_root) {
+    bool joined;
+    uint32_t n_lanes, dt, lane_sel;
+    const int phy = gk7206_mipi_phy(&joined);
+
+    if (phy < 0)
+        return;
+    const uint32_t host = gk7206_mipi_host(phy);
+    if (!mem_reg(host + GK7206_MIPI_N_LANES, &n_lanes, OP_READ) ||
+        !mem_reg(host + GK7206_MIPI_IPI_DATA_TYPE, &dt, OP_READ) ||
+        !mem_reg(GK7206_MIPI_LANE_SEL, &lane_sel, OP_READ))
+        return;
+
+    cJSON *j_inner = cJSON_CreateObject();
+    ADD_PARAM("type", "MIPI");
+    ADD_PARAM_NOTNULL("input-data-type", ev300_mipi_raw_data(dt & 0x3f));
+
+    /* Logical lanes in order: the PHY's two data lanes, then PHY1's two when
+     * the pair is joined. */
+    const size_t lanes = (n_lanes & 7) + 1;
+    const unsigned first = joined ? 0 : phy * 2;
+    cJSON *j_lanes = cJSON_AddArrayToObject(j_inner, "lane-id");
+    for (size_t i = 0; i < lanes && first + i < 4; i++)
+        cJSON_AddItemToArray(
+            j_lanes,
+            cJSON_CreateNumber((lane_sel >> ((first + i) * 2)) & 3));
+
+    cJSON_AddItemToObject(j_root, "data", j_inner);
+}
+#endif
+
 int hisi_vi_is_running(cJSON *j_inner) {
     uint32_t vicap0 = 0, vicap1 = 0, PT_N = 0;
     switch (chip_generation) {
@@ -887,6 +976,10 @@ int hisi_vi_is_running(cJSON *j_inner) {
     case HISI_V4:
         vicap0 = 0x11000000 + 0x1000 + PT_N * 0x100;
         break;
+#ifdef IPCHW_HISI_GOKE7206
+    case GOKE_7206:
+        return gk7206_vi_is_running(j_inner);
+#endif
     default:
         return false;
     }
@@ -919,6 +1012,10 @@ static void determine_sensor_data_type(cJSON *j_inner, int vistate) {
         return hisi_cv300_sensor_data(j_inner);
     case HISI_V4:
         return hisi_ev300_sensor_data(j_inner);
+#ifdef IPCHW_HISI_GOKE7206
+    case GOKE_7206:
+        return gk7206_sensor_data(j_inner);
+#endif
     default:
         return;
     }
