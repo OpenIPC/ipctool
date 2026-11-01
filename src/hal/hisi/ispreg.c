@@ -866,7 +866,7 @@ struct PT_INTF_MOD {
 // cv500 - 0x1000 + PT_N x 0x100
 // ev300 - 0x1000 + PT_N x 0x100
 
-#ifdef IPCHW_HISI_GOKE7206
+#if defined(IPCHW_HISI_GOKE7206) && !defined(STANDALONE_LIBRARY)
 /* GK7206V1x: a Synopsys DesignWare CSI-2 host per VI device behind two
  * 2-lane D-PHYs, none of it HiSilicon's. Layout from the vendor's xm_vi.ko
  * (its hal_reg_mipi_* setters, hal_vi_mipi_rx_enable, hal_vi_dev_reset);
@@ -976,7 +976,7 @@ int hisi_vi_is_running(cJSON *j_inner) {
     case HISI_V4:
         vicap0 = 0x11000000 + 0x1000 + PT_N * 0x100;
         break;
-#ifdef IPCHW_HISI_GOKE7206
+#if defined(IPCHW_HISI_GOKE7206) && !defined(STANDALONE_LIBRARY)
     case GOKE_7206:
         return gk7206_vi_is_running(j_inner);
 #endif
@@ -1012,7 +1012,7 @@ static void determine_sensor_data_type(cJSON *j_inner, int vistate) {
         return hisi_cv300_sensor_data(j_inner);
     case HISI_V4:
         return hisi_ev300_sensor_data(j_inner);
-#ifdef IPCHW_HISI_GOKE7206
+#if defined(IPCHW_HISI_GOKE7206) && !defined(STANDALONE_LIBRARY)
     case GOKE_7206:
         return gk7206_sensor_data(j_inner);
 #endif
