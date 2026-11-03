@@ -25,15 +25,30 @@ static sensor_addr_t novatek_possible_i2c_addrs[] = {
 static bool nvt_get_chip_id() {
     char buf[8];
 
-    if (!line_from_file("/proc/nvt_info/nvt_pinmux/chip_id", "(.+)", buf,
-                        sizeof(buf)))
-        return false;
-
     /* The TOP block's chip-ID word, which is what tells the pad-mux table and
      * the GPIO controller which SoC this is. Set for every ID the kernel hands
      * over, named or not: a part with no table gets no table, which
      * padmux_ops() says rather than guessing one. */
-    chip_generation = (uint16_t)strtol(buf, NULL, 16);
+    if (line_from_file("/proc/nvt_info/nvt_pinmux/chip_id", "(.+)", buf,
+                       sizeof(buf))) {
+        chip_generation = (uint16_t)strtol(buf, NULL, 16);
+    } else {
+#if defined(__mips__)
+        /* NA51023's 4.1 kernel predates nvt_pinmux. Its TOP block is
+         * NA51089's at 0xC0000000 instead of 0xF0000000, and the vendor
+         * firmware's drv_init() aborts unless TOP+0xF0 [31:16] is 0x6E19.
+         * Only that value is taken: this is a refinement, the device-tree
+         * model below still names the die on a kernel that withholds
+         * /dev/mem. */
+        uint32_t reg;
+        if (!mem_reg(0xC0010000 + TOP_VERSION_REG_OFS, &reg, OP_READ) ||
+            (reg >> 16) != CHIP_NA51023)
+            return false;
+        chip_generation = CHIP_NA51023;
+#else
+        return false;
+#endif
+    }
 
     /* The ID names the die, not the part: NT98562 and NT98566 are both
      * NA51089 and differ only in an eFuse package word whose decoding is not
@@ -41,6 +56,11 @@ static bool nvt_get_chip_id() {
      * (NA51055, NA51090) are named by the device tree. */
     const char *name;
     switch (chip_generation) {
+    case CHIP_NA51023:
+        /* One ID for the NT96672 dashcam part and the NT9851x camera parts;
+         * nothing in the BSP tells them apart, so the die is the name. */
+        name = "NA51023";
+        break;
     case CHIP_NA51084:
         /* u-boot's NA51084 code drives the "_528_" clock registers and allows
          * 1200 MHz only on an NT98529, told apart by OTP. */
