@@ -55,6 +55,10 @@ static const manufacturers_t manufacturers[] = {
     {"isvp", ingenic_detect_cpu, VENDOR_INGENIC, setup_hal_ingenic},
     {"ingenic", ingenic_detect_cpu, VENDOR_INGENIC, setup_hal_ingenic},
 #endif
+#ifdef IPCHW_VENDOR_NOVATEK
+    /* NA51023 (NT96672, NT9851x): a MIPS 24KEc, "machine : Novatek ..." */
+    {"Novatek", novatek_detect_cpu, VENDOR_NOVATEK, novatek_setup_hal},
+#endif
 #endif
 #ifdef __arm__
 #ifdef IPCHW_VENDOR_SSTAR
@@ -74,7 +78,8 @@ static const manufacturers_t manufacturers[] = {
     {NULL /* Generic */, anyka_detect_cpu, VENDOR_ANYKA, anyka_setup_hal},
 #endif
 #ifdef IPCHW_VENDOR_ROCKCHIP
-    {NULL /* Generic */, rockchip_detect_cpu, VENDOR_ROCKCHIP, rockchip_setup_hal},
+    {NULL /* Generic */, rockchip_detect_cpu, VENDOR_ROCKCHIP,
+     rockchip_setup_hal},
 #endif
 #ifdef IPCHW_VENDOR_XILINX
     {"Xilinx", xilinx_detect_cpu, NULL, xilinx_setup_hal},
