@@ -403,6 +403,19 @@ struct mtd_entry {
     bool valid;
 };
 
+bool mtd_flash_offset(int num, uint64_t *offset) {
+    char path[64];
+    snprintf(path, sizeof(path), "/sys/class/mtd/mtd%d/offset", num);
+    FILE *f = fopen(path, "r");
+    unsigned long long o = 0;
+    bool known = f && fscanf(f, "%llu", &o) == 1;
+    if (f)
+        fclose(f);
+    if (known)
+        *offset = o;
+    return known;
+}
+
 void enum_mtd_info(void *ctx, cb_mtd cb) {
     FILE *fp;
     char dev[80];
@@ -466,14 +479,8 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
     for (int i = 0; i < n; i++) {
         if (!mtds[i].valid)
             continue;
-        char path[64];
-        snprintf(path, sizeof(path), "/sys/class/mtd/mtd%d/offset", mtds[i].i);
-        FILE *f = fopen(path, "r");
-        unsigned long long o = 0;
-        has_off[m] = f && fscanf(f, "%llu", &o) == 1;
-        if (f)
-            fclose(f);
-        offs[m] = o;
+        offs[m] = 0;
+        has_off[m] = mtd_flash_offset(mtds[i].i, &offs[m]);
         sizes[m] = mtds[i].mtd.size;
         idx[m++] = i;
     }
