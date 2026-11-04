@@ -114,11 +114,39 @@ int main(void) {
     p[4].size = ES;
     planned(p, 5, (int[]){0, 1, 2, 3}, 4);
 
+    // hi3516cv610 on a kernel with mtdsplit: what is left once firmware has
+    // gone as an alias. rootfs_data is the tail of rootfs and is not written
+    // twice.
+    layout(p);
+    p[3].size = 0x5b0000;
+    p[4] = p[3];
+    p[4].num = 4;
+    p[4].offset = 0x6d0000;
+    p[4].size = 0x130000;
+    planned(p, 5, (int[]){0, 1, 2, 3}, 4);
+
+    // A parent still standing is written through, in either listing order
+    layout(p);
+    p[2] = (raw_part_t){.num = 2,
+                        .size = 0x7b0000,
+                        .erasesize = ES,
+                        .nor = true,
+                        .has_offset = true,
+                        .offset = 0x50000};
+    p[3] = p[2];
+    p[3].num = 3;
+    p[3].size = 0x200000;
+    planned(p, 4, (int[]){0, 1, 2}, 3);
+    raw_part_t parent = p[2];
+    p[2] = p[3];
+    p[3] = parent;
+    planned(p, 4, (int[]){0, 1, 2}, 3);
+
     // The sizes add up, and only the offsets show these two share flash
     layout(p);
     p[2].offset -= ES;
     p[3].offset += ES;
-    refused(p, 4, FLASH, "mtd2 overlaps");
+    refused(p, 4, FLASH, "no partition covers 0x240000-0x260000");
     layout(p);
     p[3].offset = p[2].offset;
     p[3].offset += p[2].size - ES;

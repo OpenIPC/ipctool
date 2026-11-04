@@ -1058,6 +1058,7 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
         mtd.env_dev = -1;
     }
     enum_mtd_info(&mtd, cb_mtd_restore);
+    mtd.totalsz = mtd_flash_size();
     if (skip_env) {
         if (mtd.env_dev != -1)
             printf("U-Boot env detected at #%d/0x%x\n", mtd.env_dev,
@@ -1506,6 +1507,7 @@ static int do_upgrade(const char *filename, bool force, bool wipe_settings) {
 
     mtd_restore_ctx_t mtd = {.env_dev = -1};
     enum_mtd_info(&mtd, cb_mtd_restore);
+    mtd.totalsz = mtd_flash_size();
     if (mtd.env_dev == -1) {
         fprintf(stderr, "Cannot find env, internal error\n");
         return 1;

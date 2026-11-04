@@ -7,11 +7,19 @@
 
 /* Marks alias[i] for each partition that is another name for flash the
  * others already cover -- Novatek's "all", 0..chip size, after "loader" to
- * "encrypt". Where the kernel gives offsets (has_off), a partition that
- * contains another one whole is the alias. Without them, one whose size is
- * the sum of all the others' is. Backing it up would put the chip in twice. */
+ * "encrypt". Where the kernel gives offsets (has_off), it is a partition the
+ * smaller ones inside it cover from end to end: holding one is not enough.
+ * OpenIPC's "firmware" is kernel + rootfs and goes, while "rootfs_data" is
+ * only the tail of "rootfs", which stays because the squashfs is nowhere else.
+ * Without offsets, an alias is one whose size is the sum of all the others'.
+ * Backing up an alias would put the chip in twice. */
 void mtd_mark_aliases(int n, const uint64_t *off, const bool *has_off,
                       const uint64_t *size, bool *alias);
+
+/* How much flash `n` partitions cover, each byte once: nested partitions are
+ * not a bigger chip. One with no offset can only be added on. */
+uint64_t mtd_covered_size(int n, const uint64_t *off, const bool *has_off,
+                          const uint64_t *size);
 
 /*
  * Where a partition starts, for kernels before 4.4: they have no

@@ -9,14 +9,21 @@ void mtd_mark_aliases(int n, const uint64_t *off, const bool *has_off,
     for (int i = 0; i < n; i++) {
         alias[i] = false;
         if (has_off[i]) {
-            for (int j = 0; j < n; j++) {
-                if (j == i || !has_off[j] || size[j] >= size[i])
-                    continue;
-                if (off[j] >= off[i] && off[j] + size[j] <= off[i] + size[i]) {
-                    alias[i] = true;
-                    break;
+            // How far from its start the partitions inside it reach
+            uint64_t end = off[i] + size[i], reached = off[i];
+            for (bool moved = true; moved && reached < end;) {
+                moved = false;
+                for (int j = 0; j < n; j++) {
+                    if (j == i || !has_off[j] || size[j] >= size[i] ||
+                        off[j] < off[i] || off[j] + size[j] > end)
+                        continue;
+                    if (off[j] <= reached && off[j] + size[j] > reached) {
+                        reached = off[j] + size[j];
+                        moved = true;
+                    }
                 }
             }
+            alias[i] = reached == end;
             continue;
         }
         uint64_t others = 0;
@@ -24,6 +31,32 @@ void mtd_mark_aliases(int n, const uint64_t *off, const bool *has_off,
             if (j != i)
                 others += size[j];
         alias[i] = n > 1 && others == size[i];
+    }
+}
+
+uint64_t mtd_covered_size(int n, const uint64_t *off, const bool *has_off,
+                          const uint64_t *size) {
+    uint64_t total = 0, reached = 0;
+    for (int i = 0; i < n; i++)
+        if (!has_off[i])
+            total += size[i];
+    // The lowest start past what is counted, n times at most
+    for (;;) {
+        int next = -1;
+        uint64_t next_from = 0;
+        for (int i = 0; i < n; i++) {
+            if (!has_off[i] || off[i] + size[i] <= reached)
+                continue;
+            uint64_t from = off[i] < reached ? reached : off[i];
+            if (next < 0 || from < next_from) {
+                next = i;
+                next_from = from;
+            }
+        }
+        if (next < 0)
+            return total;
+        total += off[next] + size[next] - next_from;
+        reached = off[next] + size[next];
     }
 }
 

@@ -48,6 +48,57 @@ int main(void) {
     for (int i = 0; i < 4; i++)
         CHECK(!nalias[i], "NOR partition %d called an alias", i);
 
+    // A parent partition with a split inside it (hi3516cv610, 8 MB NOR):
+    // firmware is kernel + rootfs, while rootfs_data is only rootfs's tail,
+    // and dropping rootfs for holding it lost the squashfs from backups.
+    const char *cv[6] = {"u-boot", "env",    "firmware",
+                         "kernel", "rootfs", "rootfs_data"};
+    uint64_t coff[6] = {0, 0x40000, 0x50000, 0x50000, 0x250000, 0x6d0000};
+    uint64_t csize[6] = {0x40000,  0x10000,  0x7b0000,
+                         0x200000, 0x5b0000, 0x130000};
+    bool chas[6] = {true, true, true, true, true, true}, calias[6];
+    mtd_mark_aliases(6, coff, chas, csize, calias);
+    for (int i = 0; i < 6; i++)
+        CHECK(calias[i] == (i == 2), "%s alias=%d", cv[i], calias[i]);
+
+    // A parent of parents goes too; a parent with a hole in it stays
+    uint64_t goff[5] = {0, 0x100000, 0, 0x100000, 0x300000};
+    uint64_t gsize[5] = {0x800000, 0x700000, 0x100000, 0x200000, 0x500000};
+    bool ghas[5] = {true, true, true, true, true}, galias[5];
+    mtd_mark_aliases(5, goff, ghas, gsize, galias);
+    CHECK(galias[0] && galias[1] && !galias[2] && !galias[3] && !galias[4],
+          "parent of parents");
+    uint64_t hoff[3] = {0, 0, 0x200000};
+    uint64_t hsize[3] = {0x400000, 0x100000, 0x200000};
+    bool hhas[3] = {true, true, true}, halias[3];
+    mtd_mark_aliases(3, hoff, hhas, hsize, halias);
+    CHECK(!halias[0], "a parent with a hole called an alias");
+
+    // Listed in any order
+    uint64_t roff[3] = {0x200000, 0, 0};
+    uint64_t rsize[3] = {0x200000, 0x400000, 0x200000};
+    bool rhas[3] = {true, true, true}, ralias[3];
+    mtd_mark_aliases(3, roff, rhas, rsize, ralias);
+    CHECK(!ralias[0] && ralias[1] && !ralias[2], "out of order");
+
+    // What is left of that layout is 8 MB, not the 9.2 of its sizes
+    uint64_t kept_off[5] = {0, 0x40000, 0x50000, 0x250000, 0x6d0000};
+    uint64_t kept_size[5] = {0x40000, 0x10000, 0x200000, 0x5b0000, 0x130000};
+    bool kept_has[5] = {true, true, true, true, true};
+    uint64_t sz = mtd_covered_size(5, kept_off, kept_has, kept_size);
+    CHECK(sz == 0x800000, "covered %llx", (unsigned long long)sz);
+    // In any order, with a hole not counted, and a tail that outruns
+    uint64_t any_off[4] = {0x700000, 0, 0x600000, 0x100000};
+    uint64_t any_size[4] = {0x100000, 0x100000, 0x180000, 0x100000};
+    bool any_has[4] = {true, true, true, true};
+    sz = mtd_covered_size(4, any_off, any_has, any_size);
+    CHECK(sz == 0x400000, "covered %llx", (unsigned long long)sz);
+    // Unknown offsets are all that can be added up, and none at all is 0
+    kept_has[1] = false;
+    sz = mtd_covered_size(5, kept_off, kept_has, kept_size);
+    CHECK(sz == 0x800000, "partly known %llx", (unsigned long long)sz);
+    CHECK(!mtd_covered_size(0, NULL, NULL, NULL), "no partitions");
+
     // One partition alone is never an alias.
     uint64_t one = 0x1000000, zero = 0;
     bool f = false, a;
