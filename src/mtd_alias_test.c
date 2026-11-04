@@ -81,6 +81,24 @@ int main(void) {
     mtd_mark_aliases(3, roff, rhas, rsize, ralias);
     CHECK(!ralias[0] && ralias[1] && !ralias[2], "out of order");
 
+    // What is left of that layout is 8 MB, not the 9.2 of its sizes
+    uint64_t kept_off[5] = {0, 0x40000, 0x50000, 0x250000, 0x6d0000};
+    uint64_t kept_size[5] = {0x40000, 0x10000, 0x200000, 0x5b0000, 0x130000};
+    bool kept_has[5] = {true, true, true, true, true};
+    uint64_t sz = mtd_covered_size(5, kept_off, kept_has, kept_size);
+    CHECK(sz == 0x800000, "covered %llx", (unsigned long long)sz);
+    // In any order, with a hole not counted, and a tail that outruns
+    uint64_t any_off[4] = {0x700000, 0, 0x600000, 0x100000};
+    uint64_t any_size[4] = {0x100000, 0x100000, 0x180000, 0x100000};
+    bool any_has[4] = {true, true, true, true};
+    sz = mtd_covered_size(4, any_off, any_has, any_size);
+    CHECK(sz == 0x400000, "covered %llx", (unsigned long long)sz);
+    // Unknown offsets are all that can be added up, and none at all is 0
+    kept_has[1] = false;
+    sz = mtd_covered_size(5, kept_off, kept_has, kept_size);
+    CHECK(sz == 0x800000, "partly known %llx", (unsigned long long)sz);
+    CHECK(!mtd_covered_size(0, NULL, NULL, NULL), "no partitions");
+
     // One partition alone is never an alias.
     uint64_t one = 0x1000000, zero = 0;
     bool f = false, a;

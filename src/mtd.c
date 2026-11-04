@@ -436,6 +436,11 @@ bool mtd_flash_offset(int num, const char *name, uint64_t size,
     return known;
 }
 
+// What the last enum_mtd_info() found the partitions to cover
+static uint64_t flash_size;
+
+uint64_t mtd_flash_size() { return flash_size; }
+
 void enum_mtd_info(void *ctx, cb_mtd cb) {
     FILE *fp;
     char dev[80];
@@ -506,9 +511,17 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
         idx[m++] = i;
     }
     mtd_mark_aliases(m, offs, has_off, sizes, alias);
-    for (int k = 0; k < m; k++)
-        if (alias[k])
+    int kept = 0;
+    for (int k = 0; k < m; k++) {
+        if (alias[k]) {
             mtds[idx[k]].valid = false;
+            continue;
+        }
+        offs[kept] = offs[k];
+        has_off[kept] = has_off[k];
+        sizes[kept++] = sizes[k];
+    }
+    flash_size = mtd_covered_size(kept, offs, has_off, sizes);
 
     for (int i = 0; i < n; i++) {
         if (mtds[i].valid && !cb(mtds[i].i, mtds[i].name, &mtds[i].mtd, ctx))
@@ -533,7 +546,7 @@ cJSON *get_mtd_info() {
     cJSON *j_inner = ctx.json;
 
     if (ctx.totalsz)
-        ADD_PARAM_FMT("size", "%dM", ctx.totalsz / 1024 / 1024);
+        ADD_PARAM_FMT("size", "%dM", (int)(mtd_flash_size() / 1024 / 1024));
 
     if (hal_fmc_mode) {
         const char *fmc_mode = hal_fmc_mode();

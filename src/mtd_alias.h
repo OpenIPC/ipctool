@@ -16,6 +16,11 @@
 void mtd_mark_aliases(int n, const uint64_t *off, const bool *has_off,
                       const uint64_t *size, bool *alias);
 
+/* How much flash `n` partitions cover, each byte once: nested partitions are
+ * not a bigger chip. One with no offset can only be added on. */
+uint64_t mtd_covered_size(int n, const uint64_t *off, const bool *has_off,
+                          const uint64_t *size);
+
 /*
  * Where a partition starts, for kernels before 4.4: they have no
  * /sys/class/mtd/mtdN/offset. A partition is found by name and size, and is

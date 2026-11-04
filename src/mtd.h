@@ -10,6 +10,9 @@ typedef bool (*cb_mtd)(int i, const char *name, struct mtd_info_user *mtd,
 cJSON *get_mtd_info();
 char *open_mtdblock(int i, int *fd, uint32_t size, int flags);
 void enum_mtd_info(void *ctx, cb_mtd cb);
+// How much flash the partitions of the last enum_mtd_info() cover, each byte
+// once. Partitions can nest, so adding up what it hands out overstates it.
+uint64_t mtd_flash_size();
 // Where partition `num` starts on the flash: the kernel's word where it gives
 // one, then the command line and the boot log, which a long uptime can lose
 bool mtd_flash_offset(int num, const char *name, uint64_t size,
