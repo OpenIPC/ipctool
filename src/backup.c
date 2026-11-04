@@ -36,6 +36,7 @@
 #include "jffs2.h"
 #include "mtd.h"
 #include "network.h"
+#include "raw_image.h"
 #include "sha1.h"
 #include "tools.h"
 #include "uboot.h"
@@ -234,6 +235,10 @@ typedef struct {
     int ubi_device;
     int vol_id;
     char vol_name[64];
+    // Written straight to /dev/mtd<dev> from its start, for an image that
+    // knows where each partition really lies
+    bool to_dev;
+    int dev;
 } stored_mtd_t;
 
 static int yaml_parseblock(char *start, int indent, stored_mtd_t *mi) {
@@ -933,9 +938,11 @@ static bool do_flash(const char *phase, stored_mtd_t *mtdbackup,
         }
         int cnt = mtdbackup[i].size / chunk;
         for (int c = 0; c < cnt; c++) {
-            size_t this_offset;
-            int newi =
-                map_old_new_mtd(i, c * chunk, &this_offset, mtdbackup, mtd);
+            size_t this_offset = c * chunk;
+            int newi = mtdbackup[i].to_dev
+                           ? mtdbackup[i].dev
+                           : map_old_new_mtd(i, c * chunk, &this_offset,
+                                             mtdbackup, mtd);
             if (newi == -1) {
                 fprintf(stderr, "\nOffset algorithm error, aborting...\n");
                 return false;
@@ -1165,6 +1172,158 @@ static int restore_backup(const char *arg, bool skip_env, bool force) {
 
         free(backup);
     }
+    return 1;
+}
+
+typedef struct {
+    mtd_restore_ctx_t mtd; // first: cb_mtd_restore() is handed this struct
+    raw_part_t part[MAX_MTDBLOCKS];
+    size_t nparts;
+} raw_ctx_t;
+
+static bool cb_mtd_raw(int i, const char *name, struct mtd_info_user *mtd,
+                       void *ctx) {
+    raw_ctx_t *c = (raw_ctx_t *)ctx;
+    if (c->nparts == MAX_MTDBLOCKS || i >= MAX_MTDBLOCKS)
+        return false;
+    raw_part_t *p = &c->part[c->nparts++];
+    *p = (raw_part_t){.num = i,
+                      .size = mtd->size,
+                      .erasesize = mtd->erasesize,
+                      .nor = mtd->type == MTD_NORFLASH};
+    p->has_offset = mtd_flash_offset(i, name, mtd->size, &p->offset);
+    return cb_mtd_restore(i, name, mtd, ctx);
+}
+
+static void image_sha1(const char *image, size_t size, char digest[20]) {
+    SHA1_CTX sha;
+    SHA1Init(&sha);
+    for (size_t off = 0; off < size;) {
+        size_t n = MIN(size - off, 1024 * 1024);
+        SHA1Update(&sha, (const unsigned char *)image + off, n);
+        off += n;
+        feed_watchdog();
+    }
+    SHA1Final((unsigned char *)digest, &sha);
+}
+
+/*
+ * A plain image of the whole NOR flash, from a programmer or `dd`. It says
+ * nothing about itself, so what makes it safe to write is that it fits this
+ * flash exactly, and all of that is settled before anything is stopped.
+ */
+static int restore_raw(const char *arg, bool skip_env, bool force) {
+    if (arg == NULL || access(arg, R_OK)) {
+        fprintf(stderr, "restore --raw needs a flash image: "
+                        "ipctool restore --raw <file>\n");
+        return 1;
+    }
+
+    static raw_ctx_t ctx;
+    ctx.mtd.env_dev = skip_env ? -1 : 0;
+    ctx.mtd.skip_env = skip_env;
+    enum_mtd_info(&ctx, cb_mtd_raw);
+    if (skip_env && ctx.mtd.env_dev == -1) {
+        fprintf(stderr, "No U-Boot env found, aborting...\n");
+        return 1;
+    }
+
+    // Mapped rather than read, like an upgrade bundle: a dump in /tmp would
+    // be in RAM twice. pin_to_ram() holds its pages, not their contents, so
+    // what was shown is checked again once nothing else is left to change it.
+    int fd = open(arg, O_RDONLY);
+    struct stat st;
+    if (fd < 0 || fstat(fd, &st)) {
+        fprintf(stderr, "Cannot read '%s': %s\n", arg, strerror(errno));
+        if (fd >= 0)
+            close(fd);
+        return 1;
+    }
+    char why[160];
+    static raw_part_t plan[MAX_MTDBLOCKS];
+    size_t nplan = raw_image_plan(ctx.part, ctx.nparts, st.st_size, plan, why,
+                                  sizeof(why));
+    if (!nplan) {
+        fprintf(stderr, "Not writing '%s': %s\n", arg, why);
+        close(fd);
+        return 1;
+    }
+    char *image = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (image == MAP_FAILED) {
+        fprintf(stderr, "Cannot map '%s': %s\n", arg, strerror(errno));
+        close(fd);
+        return 1;
+    }
+
+    // Nothing in the image can be checked, so show what would be written
+    char digest[20];
+    image_sha1(image, st.st_size, digest);
+    printf("Raw image %s, 0x%llx bytes, SHA1 ", arg,
+           (unsigned long long)st.st_size);
+    for (size_t i = 0; i < sizeof(digest); i++)
+        printf("%02x", (unsigned char)digest[i]);
+    printf("\n%s", skip_env ? "  U-Boot env overwrite will be skipped\n" : "");
+
+    static stored_mtd_t stored[MAX_MTDBLOCKS];
+    for (size_t k = 0; k < nplan; k++) {
+        const raw_part_t *p = &plan[k];
+        // A name is what makes do_flash() write an entry at all
+        snprintf(stored[k].name, sizeof(stored[k].name), "mtd%d %s", p->num,
+                 ctx.mtd.part[p->num].name);
+        stored[k].off_flashb = p->offset;
+        stored[k].size = p->size;
+        stored[k].data = image + p->offset;
+        stored[k].to_dev = true;
+        stored[k].dev = p->num;
+        printf("[%zu] 0x%.8zx\t0x%.8zx\t%s\n", k, stored[k].off_flashb,
+               stored[k].size, stored[k].name);
+    }
+
+    if (!force) {
+        char c = 0;
+        fprintf(stderr, "This image replaces the whole flash, bootloader "
+                        "included.\nAre you sure to proceed? (y/n)? ");
+        int ret = scanf(" %c", &c);
+        (void)ret;
+        if (c != 'y')
+            goto bailout;
+    }
+
+    if (!free_resources(force))
+        goto bailout;
+    if (!do_flash("Analyzing", stored, &ctx.mtd, skip_env, true))
+        goto bailout;
+    if (!pin_to_ram())
+        goto bailout;
+    if (!isolate_from_flash(NULL, NULL)) {
+        reboot_after_failure("Preparing the flash");
+        goto bailout;
+    }
+
+    // Size first: reading past the end of a truncated file is a SIGBUS, and
+    // from here that would leave a camera with no services and no reboot
+    struct stat now;
+    char again[sizeof(digest)];
+    if (fstat(fd, &now) || now.st_size != st.st_size) {
+        fprintf(stderr, "The image changed size\n");
+        reboot_after_failure("Checking the image");
+        goto bailout;
+    }
+    image_sha1(image, st.st_size, again);
+    if (memcmp(digest, again, sizeof(digest))) {
+        fprintf(stderr, "The image is not the one shown\n");
+        reboot_after_failure("Checking the image");
+        goto bailout;
+    }
+
+    if (!do_flash("Restoring", stored, &ctx.mtd, skip_env, false))
+        reboot_after_failure("Restoring");
+
+    reboot_with_msg();
+
+bailout:
+    close(fd);
+    munmap(image, st.st_size);
     return 1;
 }
 
@@ -1847,11 +2006,13 @@ int upgrade_restore_cmd(int argc, char **argv) {
         {"force", no_argument, NULL, 'f'},
         {"skip-env", no_argument, NULL, 's'},
         {"wipe-settings", no_argument, NULL, 'w'},
+        {"raw", no_argument, NULL, 'r'},
         {NULL, 0, NULL, 0},
     };
     bool skip_env = false;
     bool force = false;
     bool wipe_settings = false;
+    bool raw = false;
     int res;
     int option_index;
 
@@ -1867,6 +2028,9 @@ int upgrade_restore_cmd(int argc, char **argv) {
         case 'w':
             wipe_settings = true;
             break;
+        case 'r':
+            raw = true;
+            break;
 
         case '?':
             print_usage();
@@ -1877,6 +2041,12 @@ int upgrade_restore_cmd(int argc, char **argv) {
     const char *optarg = argv[optind];
 
     bool restore_mode = argv[0][0] == 'r';
+    if (raw && !restore_mode) {
+        fprintf(stderr, "--raw is an option of restore\n");
+        return EXIT_FAILURE;
+    }
+    if (raw)
+        return restore_raw(optarg, skip_env, force);
     if (restore_mode)
         return restore_backup(optarg, skip_env, force);
     else

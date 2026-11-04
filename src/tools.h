@@ -61,6 +61,8 @@ bool dts_items_by_regex(const char *filename, const char *re, char *outbuf,
 bool line_from_file(const char *filename, const char *re, char *outbuf,
                     size_t outlen);
 int dmesg();
+// The kernel log, malloc()ed and not NUL-terminated; its length, or <= 0
+ssize_t get_dmesg_buf(char **buf);
 uint32_t read_le32(const char *ptr);
 char *file_to_buf(const char *filename, size_t *len);
 char *fread_to_buf(const char *filename, size_t *len, uint32_t round_up,

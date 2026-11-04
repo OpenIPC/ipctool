@@ -119,6 +119,9 @@ Where:
   restore <filename>        restore from a backup file
      [-s, --skip-env]       skip environment
      [-f, --force]          enforce
+     [--raw]                the file is a plain image of the whole
+                            NOR flash, not a backup; must match the
+                            flash size exactly
   upgrade <bundle>          upgrade to OpenIPC firmware
                             (experimental! use only on cameras with UART)
      [-f, --force]          enforce
@@ -286,6 +289,24 @@ sensors:
     # ipctool backup /var/utils/mybackup-00:12:17:83:d6:39
     # sync
     ```
+
+* Write a plain image of the whole NOR flash, from a programmer or `dd`:
+
+    ```console
+    # ipctool restore --raw /tmp/flash.bin
+    ```
+
+  A raw image describes nothing and carries no checksums, so `--raw` prints
+  its SHA1 to compare by hand, and checks that SHA1 again just before erasing.
+  It refuses before anything is stopped unless the image is exactly the size
+  the partitions cover, each byte by one partition. `--force` skips the
+  question, not those checks. NAND is refused: a raw NAND image has no answer
+  for bad blocks or UBI.
+
+  Partitions are placed by where they really lie, so one that overlaps the
+  others whole, such as `all`, is left out. Kernels before 4.4 do not report
+  that, so it comes from `mtdparts=` on the command line or the boot log. If
+  both have nothing, reboot and run it again while the log still has it.
 
 ### Moving a NOR camera to another layout
 

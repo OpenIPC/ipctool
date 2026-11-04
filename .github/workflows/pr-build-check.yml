@@ -150,7 +150,7 @@ jobs:
                                       sensors_test anyka_test hal_hisi_test \
                                       report_test http_test mtd_alias_test \
                                       nand_layout_test upgrade_env_test \
-                                      jffs2_test
+                                      jffs2_test raw_image_test
           ./build/cYAML_test
           ./build/report_test
           ./build/http_test
@@ -158,6 +158,7 @@ jobs:
           ./build/upgrade_env_test
           ./build/jffs2_test
           ./build/nand_layout_test
+          ./build/raw_image_test
           ./build/reginfo_test
           ./build/longse_test
           ./build/anyka_test

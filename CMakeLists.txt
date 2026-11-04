@@ -334,6 +334,8 @@ set(IPCTOOL_SRC
     src/nand_layout.h
     src/nand_migrate.c
     src/nand_migrate.h
+    src/raw_image.c
+    src/raw_image.h
     src/bootrom.c
     src/bootrom.h
     src/clocks.c
@@ -550,4 +552,8 @@ if(NOT ONLY_LIBRARY)
   # What nand-migrate decides before it touches the flash.
   add_executable(nand_layout_test src/nand_layout_test.c src/nand_layout.c)
   target_include_directories(nand_layout_test PRIVATE include src)
+
+  # What restore --raw decides before it touches the flash.
+  add_executable(raw_image_test src/raw_image_test.c src/raw_image.c)
+  target_include_directories(raw_image_test PRIVATE include src)
 endif()

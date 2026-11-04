@@ -403,6 +403,39 @@ struct mtd_entry {
     bool valid;
 };
 
+bool mtd_flash_offset(int num, const char *name, uint64_t size,
+                      uint64_t *offset) {
+    char path[64];
+    snprintf(path, sizeof(path), "/sys/class/mtd/mtd%d/offset", num);
+    FILE *f = fopen(path, "r");
+    unsigned long long o = 0;
+    bool known = f && fscanf(f, "%llu", &o) == 1;
+    if (f)
+        fclose(f);
+    if (known) {
+        *offset = o;
+        return true;
+    }
+
+    // Before 4.4 the kernel keeps this to itself
+    char cmdline[4096];
+    f = fopen("/proc/cmdline", "r");
+    if (f) {
+        size_t n = fread(cmdline, 1, sizeof(cmdline) - 1, f);
+        fclose(f);
+        cmdline[n] = 0;
+        cmdline[strcspn(cmdline, "\n")] = 0;
+        if (mtd_offset_from_cmdline(cmdline, name, size, offset))
+            return true;
+    }
+
+    char *log = NULL;
+    ssize_t len = get_dmesg_buf(&log);
+    known = log && len > 0 && mtd_offset_from_log(log, len, name, size, offset);
+    free(log);
+    return known;
+}
+
 void enum_mtd_info(void *ctx, cb_mtd cb) {
     FILE *fp;
     char dev[80];
@@ -466,14 +499,9 @@ void enum_mtd_info(void *ctx, cb_mtd cb) {
     for (int i = 0; i < n; i++) {
         if (!mtds[i].valid)
             continue;
-        char path[64];
-        snprintf(path, sizeof(path), "/sys/class/mtd/mtd%d/offset", mtds[i].i);
-        FILE *f = fopen(path, "r");
-        unsigned long long o = 0;
-        has_off[m] = f && fscanf(f, "%llu", &o) == 1;
-        if (f)
-            fclose(f);
-        offs[m] = o;
+        offs[m] = 0;
+        has_off[m] = mtd_flash_offset(mtds[i].i, mtds[i].name, mtds[i].mtd.size,
+                                      &offs[m]);
         sizes[m] = mtds[i].mtd.size;
         idx[m++] = i;
     }

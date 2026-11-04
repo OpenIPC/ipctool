@@ -56,5 +56,86 @@ int main(void) {
 
     if (!failed)
         printf("mtd_alias_test: ok\n");
+    // Where a partition lies, as a kernel without sysfs offsets tells it
+    uint64_t at;
+    const char *hi = "mem=32M console=ttyAMA0,115200 root=/dev/mtdblock3 "
+                     "mtdparts=hi_sfc:256k(boot),64k(env),2048k(kernel),"
+                     "5120k(rootfs),-(rootfs_data) panic=20";
+    CHECK(mtd_offset_from_cmdline(hi, "boot", 0x40000, &at) && at == 0, "boot");
+    CHECK(mtd_offset_from_cmdline(hi, "rootfs", 0x500000, &at) &&
+              at == 0x250000,
+          "rootfs at %llx", (unsigned long long)at);
+    // "-" says nothing of the size, and the size is not asked of it
+    CHECK(mtd_offset_from_cmdline(hi, "rootfs_data", 0x2b0000, &at) &&
+              at == 0x750000,
+          "rootfs_data at %llx", (unsigned long long)at);
+    // The size is what says this table is the one the kernel used
+    CHECK(!mtd_offset_from_cmdline(hi, "boot", 0x20000, &at), "wrong size");
+    CHECK(!mtd_offset_from_cmdline(hi, "nope", 0x40000, &at), "wrong name");
+    CHECK(!mtd_offset_from_cmdline("root=/dev/ram", "boot", 0x40000, &at),
+          "no mtdparts");
+
+    const char *over = "mtdparts=spi0.0:1M@0x10000(a)ro,0x20000(b),"
+                       "16M@0(all),8m@2M(c)lk;nand:1g(d)";
+    CHECK(mtd_offset_from_cmdline(over, "a", 0x100000, &at) && at == 0x10000,
+          "@ and ro");
+    CHECK(mtd_offset_from_cmdline(over, "b", 0x20000, &at) && at == 0x110000,
+          "after @");
+    CHECK(mtd_offset_from_cmdline(over, "all", 0x1000000, &at) && at == 0,
+          "all");
+    CHECK(mtd_offset_from_cmdline(over, "c", 0x800000, &at) && at == 0x200000,
+          "suffixed @ and lk");
+    CHECK(mtd_offset_from_cmdline(over, "d", 0x40000000, &at) && at == 0,
+          "second chip");
+
+    // The last mtdparts= is the one the kernel keeps, not a lookalike
+    CHECK(mtd_offset_from_cmdline("mtdparts=a:1M(x) mtdparts=a:1M@2M(x)", "x",
+                                  0x100000, &at) &&
+              at == 0x200000,
+          "last wins");
+    CHECK(!mtd_offset_from_cmdline("xmtdparts=a:1M(x)", "x", 0x100000, &at),
+          "lookalike");
+    // Two chips, one name and size: which is it
+    CHECK(!mtd_offset_from_cmdline("mtdparts=a:1M(x);b:1M@1M(x)", "x", 0x100000,
+                                   &at),
+          "ambiguous");
+    CHECK(!mtd_offset_from_cmdline("mtdparts=a:zz(x)", "x", 0x100000, &at),
+          "garbage");
+    CHECK(!mtd_offset_from_cmdline("mtdparts=a:1M(x", "x", 0x100000, &at),
+          "unterminated");
+
+    // The kernel's own format, on 3.0 to 6.x, in the shapes dmesg gives it
+    static const char klog[] =
+        "<5>Creating 5 MTD partitions on \"hi_sfc\":\n"
+        "<5>0x000000000000-0x000000020000 : \"BOOT\"\n"
+        "<5>[    1.234567] 0x000000040000-0x0000001d0000 : \"KERNEL\"\n"
+        "0x000000020000-0x000000040000 : \"UBOOT\"\n"
+        "<5>0x000000100000-0x000000110000 : \"twice\"\n"
+        "<5>0x000000200000-0x000000210000 : \"twice\"\n"
+        "<5>0x000000300000-0x000000310000 : \"same\"\n"
+        "<5>0x000000300000-0x000000310000 : \"same\"\n"
+        "<6>spi: at 0x12340000 irq 5\n"
+        "<5>0x0000007b0000-0x000000800000 : \"cut";
+    size_t klen = sizeof(klog) - 1;
+    CHECK(mtd_offset_from_log(klog, klen, "BOOT", 0x20000, &at) && at == 0,
+          "BOOT");
+    CHECK(mtd_offset_from_log(klog, klen, "KERNEL", 0x190000, &at) &&
+              at == 0x40000,
+          "timestamped");
+    CHECK(mtd_offset_from_log(klog, klen, "UBOOT", 0x20000, &at) &&
+              at == 0x20000,
+          "bare");
+    CHECK(!mtd_offset_from_log(klog, klen, "BOOT", 0x10000, &at), "wrong size");
+    CHECK(!mtd_offset_from_log(klog, klen, "nope", 0x20000, &at), "wrong name");
+    CHECK(!mtd_offset_from_log(klog, klen, "twice", 0x10000, &at),
+          "two places");
+    CHECK(mtd_offset_from_log(klog, klen, "same", 0x10000, &at) &&
+              at == 0x300000,
+          "logged twice");
+    CHECK(!mtd_offset_from_log(klog, klen, "cut", 0x50000, &at), "torn line");
+    // Bounded by len: nothing after it is read
+    CHECK(!mtd_offset_from_log(klog, 10, "BOOT", 0x20000, &at), "len");
+    CHECK(!mtd_offset_from_log("", 0, "BOOT", 0x20000, &at), "empty");
+
     return failed;
 }
