@@ -2,9 +2,9 @@
 #define RAW_IMAGE_H
 
 /*
- * The pure half of `ipctool restore --raw`: whether an image with no
- * description of its own can be cut along this camera's partitions. Kept
- * apart so it can be tested on a host (raw_image_test.c).
+ * The pure half of `ipctool restore --raw`: how an image with no description
+ * of its own is cut along this camera's partitions. Kept apart so it can be
+ * tested on a host (raw_image_test.c).
  */
 
 #include <stdbool.h>
@@ -16,18 +16,21 @@ typedef struct {
     uint64_t size;
     uint32_t erasesize;
     bool nor;
-    // Where the kernel says the partition starts, on kernels that say
+    // Where it starts on the flash, if anything could say
     bool has_offset;
     uint64_t offset;
 } raw_part_t;
 
 /*
- * `parts` in the order they lie on the flash. True when an image of
- * `image_size` bytes maps onto them one to one; otherwise `why` says what is
- * in the way. There is no override: an image that does not fit is the wrong
- * image, or a layout the offsets cannot be trusted on.
+ * Picks the partitions that cover an image of `image_size` bytes exactly once
+ * and puts them in `plan`, which holds `nparts`, in flash order. Returns how
+ * many, or 0 with `why` saying what is in the way. A partition that lies
+ * wholly inside the ones picked is another name for them and is left out.
+ * There is no override: an image that does not fit is the wrong image, and a
+ * layout that cannot be established cannot be written safely.
  */
-bool raw_image_fits(const raw_part_t *parts, size_t nparts, uint64_t image_size,
-                    char *why, size_t whylen);
+size_t raw_image_plan(const raw_part_t *parts, size_t nparts,
+                      uint64_t image_size, raw_part_t *plan, char *why,
+                      size_t whylen);
 
 #endif /* RAW_IMAGE_H */

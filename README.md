@@ -297,10 +297,16 @@ sensors:
     ```
 
   A raw image describes nothing and carries no checksums, so `--raw` prints
-  its SHA1 to compare by hand, and refuses before anything is stopped unless
-  the image is exactly the size of the flash and the partitions lie in order,
-  one after the other. `--force` skips the question, not those checks. NAND is
-  refused: a raw NAND image has no answer for bad blocks or UBI.
+  its SHA1 to compare by hand, and checks that SHA1 again just before erasing.
+  It refuses before anything is stopped unless the image is exactly the size
+  the partitions cover, each byte by one partition. `--force` skips the
+  question, not those checks. NAND is refused: a raw NAND image has no answer
+  for bad blocks or UBI.
+
+  Partitions are placed by where they really lie, so one that overlaps the
+  others whole, such as `all`, is left out. Kernels before 4.4 do not report
+  that, so it comes from `mtdparts=` on the command line or the boot log. If
+  both have nothing, reboot and run it again while the log still has it.
 
 ### Moving a NOR camera to another layout
 

@@ -10,8 +10,10 @@ typedef bool (*cb_mtd)(int i, const char *name, struct mtd_info_user *mtd,
 cJSON *get_mtd_info();
 char *open_mtdblock(int i, int *fd, uint32_t size, int flags);
 void enum_mtd_info(void *ctx, cb_mtd cb);
-// Where partition `num` starts on the flash; old kernels do not say
-bool mtd_flash_offset(int num, uint64_t *offset);
+// Where partition `num` starts on the flash: the kernel's word where it gives
+// one, then the command line and the boot log, which a long uptime can lose
+bool mtd_flash_offset(int num, const char *name, uint64_t size,
+                      uint64_t *offset);
 bool mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
                size_t size);
 int mtd_unlock_cmd();
