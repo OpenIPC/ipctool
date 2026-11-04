@@ -9,14 +9,21 @@ void mtd_mark_aliases(int n, const uint64_t *off, const bool *has_off,
     for (int i = 0; i < n; i++) {
         alias[i] = false;
         if (has_off[i]) {
-            for (int j = 0; j < n; j++) {
-                if (j == i || !has_off[j] || size[j] >= size[i])
-                    continue;
-                if (off[j] >= off[i] && off[j] + size[j] <= off[i] + size[i]) {
-                    alias[i] = true;
-                    break;
+            // How far from its start the partitions inside it reach
+            uint64_t end = off[i] + size[i], reached = off[i];
+            for (bool moved = true; moved && reached < end;) {
+                moved = false;
+                for (int j = 0; j < n; j++) {
+                    if (j == i || !has_off[j] || size[j] >= size[i] ||
+                        off[j] < off[i] || off[j] + size[j] > end)
+                        continue;
+                    if (off[j] <= reached && off[j] + size[j] > reached) {
+                        reached = off[j] + size[j];
+                        moved = true;
+                    }
                 }
             }
+            alias[i] = reached == end;
             continue;
         }
         uint64_t others = 0;

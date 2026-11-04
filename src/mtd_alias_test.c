@@ -48,6 +48,39 @@ int main(void) {
     for (int i = 0; i < 4; i++)
         CHECK(!nalias[i], "NOR partition %d called an alias", i);
 
+    // A parent partition with a split inside it (hi3516cv610, 8 MB NOR):
+    // firmware is kernel + rootfs, while rootfs_data is only rootfs's tail,
+    // and dropping rootfs for holding it lost the squashfs from backups.
+    const char *cv[6] = {"u-boot", "env",    "firmware",
+                         "kernel", "rootfs", "rootfs_data"};
+    uint64_t coff[6] = {0, 0x40000, 0x50000, 0x50000, 0x250000, 0x6d0000};
+    uint64_t csize[6] = {0x40000,  0x10000,  0x7b0000,
+                         0x200000, 0x5b0000, 0x130000};
+    bool chas[6] = {true, true, true, true, true, true}, calias[6];
+    mtd_mark_aliases(6, coff, chas, csize, calias);
+    for (int i = 0; i < 6; i++)
+        CHECK(calias[i] == (i == 2), "%s alias=%d", cv[i], calias[i]);
+
+    // A parent of parents goes too; a parent with a hole in it stays
+    uint64_t goff[5] = {0, 0x100000, 0, 0x100000, 0x300000};
+    uint64_t gsize[5] = {0x800000, 0x700000, 0x100000, 0x200000, 0x500000};
+    bool ghas[5] = {true, true, true, true, true}, galias[5];
+    mtd_mark_aliases(5, goff, ghas, gsize, galias);
+    CHECK(galias[0] && galias[1] && !galias[2] && !galias[3] && !galias[4],
+          "parent of parents");
+    uint64_t hoff[3] = {0, 0, 0x200000};
+    uint64_t hsize[3] = {0x400000, 0x100000, 0x200000};
+    bool hhas[3] = {true, true, true}, halias[3];
+    mtd_mark_aliases(3, hoff, hhas, hsize, halias);
+    CHECK(!halias[0], "a parent with a hole called an alias");
+
+    // Listed in any order
+    uint64_t roff[3] = {0x200000, 0, 0};
+    uint64_t rsize[3] = {0x200000, 0x400000, 0x200000};
+    bool rhas[3] = {true, true, true}, ralias[3];
+    mtd_mark_aliases(3, roff, rhas, rsize, ralias);
+    CHECK(!ralias[0] && ralias[1] && !ralias[2], "out of order");
+
     // One partition alone is never an alias.
     uint64_t one = 0x1000000, zero = 0;
     bool f = false, a;

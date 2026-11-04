@@ -29,7 +29,10 @@ size_t raw_image_plan(const raw_part_t *parts, size_t nparts,
         }
     }
 
-    // By offset; few enough that this is all the sort it needs
+    // By offset, the larger first where two start together: a parent that
+    // nothing could drop (its children leave a hole) covers them, whereas
+    // picking a child first would make the parent look like an overlap.
+    // Few enough that this is all the sort it needs.
     static raw_part_t sorted[64];
     if (nparts > sizeof(sorted) / sizeof(sorted[0])) {
         snprintf(why, whylen, "too many partitions");
@@ -37,7 +40,10 @@ size_t raw_image_plan(const raw_part_t *parts, size_t nparts,
     }
     for (size_t k = 0; k < nparts; k++) {
         size_t at = k;
-        for (; at && sorted[at - 1].offset > parts[k].offset; at--)
+        for (; at && (sorted[at - 1].offset > parts[k].offset ||
+                      (sorted[at - 1].offset == parts[k].offset &&
+                       sorted[at - 1].size < parts[k].size));
+             at--)
             sorted[at] = sorted[at - 1];
         sorted[at] = parts[k];
     }
