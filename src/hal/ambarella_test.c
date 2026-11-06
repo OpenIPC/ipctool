@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "hal/ambarella.h"
+#include "hal/common.h"
 
 int chip_generation;
 char chip_name[128];
@@ -92,6 +93,13 @@ int main() {
     CHECK(!ambarella_iavmem_from_dt(path, &start, &size));
     unlink(path);
     CHECK(!ambarella_iavmem_from_dt(path, &start, &size));
+
+    /* ram.c rounds the total up to a power of two; on this board the total
+     * already is one and must stay 512M, not become 1024M. */
+    CHECK(rounded_num((0x07800000u + 0x18800000u) / 1024 / 1024) == 512);
+    CHECK(rounded_num(112) == 128); /* a MemTotal of 114940 kB */
+    CHECK(rounded_num(513) == 1024);
+    CHECK(rounded_num(1) == 1);
 
     if (failures)
         return EXIT_FAILURE;
