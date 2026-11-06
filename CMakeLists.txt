@@ -51,7 +51,7 @@ include_directories(./src/)
 # directly rather than through the table. Affects libipchw only; the ipctool
 # executable is a diagnostic tool and always carries every vendor.
 set(IPCHW_OPTIONAL_VENDORS
-    allwinner anyka bcm fh gm ingenic novatek rockchip sstar tegra xilinx xm)
+    allwinner ambarella anyka bcm fh gm ingenic novatek rockchip sstar tegra xilinx xm)
 set(IPCHW_VENDORS "all" CACHE STRING
     "Vendor HALs to compile into libipchw: 'all', 'none', or a ;-separated \
 subset of: ${IPCHW_OPTIONAL_VENDORS}")
@@ -524,6 +524,13 @@ if(NOT ONLY_LIBRARY)
                             ${VERSION_OBJ})
   target_include_directories(anyka_test PRIVATE include src)
   target_link_libraries(anyka_test m Threads::Threads)
+
+  # Same reason as anyka_test: the parser is all that can run off a camera.
+  add_executable(ambarella_test src/hal/ambarella_test.c src/hal/ambarella.c
+                                src/hal/common.c src/tools.c src/cjson/cJSON.c
+                                ${VERSION_OBJ})
+  target_include_directories(ambarella_test PRIVATE include src)
+  target_link_libraries(ambarella_test m Threads::Threads)
 
   # The body `ipctool upload` sends: part framing, the backup's layout and
   # the length that must match it, and openipc.org's answer. Off a camera,

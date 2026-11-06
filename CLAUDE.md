@@ -126,6 +126,8 @@ CMake knobs worth knowing:
   purpose. Same situation as `longse_test` and the same `CHECK` macro: nobody
   on the project has an Anyka camera, so this is all the verification that
   code gets until a reporter runs it.
+- `./build/ambarella_test`: the `/proc/cpuinfo` machine string the Ambarella
+  HAL parses, same `CHECK` macro and same reason.
 - `tools/test_pipeline.sh`: hardware-free end-to-end check of the sensor
   driver extraction pipeline (`trace_segment.py` -> `trace_to_driver.py` ->
   `gcc -fsyntax-only` -> `trace_diff.py`), plus the `--selftest` of every
@@ -212,6 +214,14 @@ AK3916, AK3918 or AK3919 depending on which `CONFIG_CPU_AK39xx` it was built
 with. Reading the register is therefore a refinement and never the gate, which
 is also what lets detection survive a kernel that will not hand over
 `/dev/mem`.
+
+Ambarella (`src/hal/ambarella.c`) stops at the machine string on purpose. The
+exact part (S3L33M, S3L55M, S3L66, ...) is a word the DSP firmware writes,
+reachable only through `/dev/iav`, so the report says `S3L`. Do not derive
+total RAM from the boot log's `IAVMEM` line: Amboot computes it from a
+compile-time `DRAM_SIZE`, and #266 has it ending at 512 MiB on a camera
+reported as 256 MiB. Dahua kernels also refuse `execve()` from writable
+filesystems, so `/tmp/ipctool` fails there with "Success" and exit code 2.
 
 Sensor I2C addresses in tables are the 8-bit (write) form; the default
 `i2c_change_addr` shifts right by one for the kernel, and some HALs install
