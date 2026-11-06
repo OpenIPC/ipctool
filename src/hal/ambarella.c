@@ -102,12 +102,14 @@ unsigned long ambarella_media_kb(const char *iomem, uint64_t end) {
     if (!f)
         return 0;
 
-    /* Top level only: "Kernel code" and the like are indented inside it */
+    /* Top level only: "Kernel code" and the like are indented inside it,
+     * and %llx would skip that indent */
     while (fgets(line, sizeof(line), f)) {
         unsigned long long from, to;
         int name = 0;
 
-        if (sscanf(line, "%llx-%llx : %n", &from, &to, &name) == 2 && name &&
+        if (*line != ' ' &&
+            sscanf(line, "%llx-%llx : %n", &from, &to, &name) == 2 && name &&
             !strncmp(line + name, "System RAM", 10) && to + 1 > top)
             top = to + 1;
     }
