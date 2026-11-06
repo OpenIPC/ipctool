@@ -1,6 +1,7 @@
 /* Hardware-free cover for the Ambarella machine-string parser. The strings
  * are the DT_MACHINE_START names in the vendor kernel, and the S3L cpuinfo is
  * the one from issue #266. */
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,6 +101,50 @@ int main() {
     CHECK(rounded_num(112) == 128); /* a MemTotal of 114940 kB */
     CHECK(rounded_num(513) == 1024);
     CHECK(rounded_num(1) == 1);
+
+    /* Two boards.  On the DS-2CD2423G0-I /iavmem is stale: the DT says the
+     * DSP starts at 64 MiB and Linux runs to 112 MiB.  On the IP4M-1026E the
+     * two agree. */
+    {
+        char iomem[] = "/tmp/ambarella_test.XXXXXX";
+        const char *hik = "00200000-06ffffff : System RAM\n"
+                          "  00208000-00719667 : Kernel code\n";
+        const char *dahua = "00200000-077fffff : System RAM\n";
+        int ifd = mkstemp(iomem);
+
+        CHECK(ifd >= 0);
+        CHECK(write(ifd, hik, strlen(hik)) == (ssize_t)strlen(hik));
+        close(ifd);
+        CHECK(ambarella_media_kb(iomem, 0x04000000, 0x0c000000) ==
+              144 * 1024);
+
+        ifd = open(iomem, O_WRONLY | O_TRUNC);
+        CHECK(ifd >= 0);
+        CHECK(write(ifd, dahua, strlen(dahua)) == (ssize_t)strlen(dahua));
+        close(ifd);
+        CHECK(ambarella_media_kb(iomem, 0x07800000, 0x18800000) ==
+              392 * 1024);
+
+        /* RAM past the carve-out, or none listed: take the size as given */
+        CHECK(ambarella_media_kb("/nonexistent", 0x07800000, 0x18800000) ==
+              392 * 1024);
+        unlink(iomem);
+    }
+
+    {
+        char iav[] = "/tmp/ambarella_test.XXXXXX";
+        const char *text = "AMBARELLA_CHIP=S3Lm\ndsp_op_mode: 1\n";
+        char family[16];
+        int ifd = mkstemp(iav);
+
+        CHECK(ifd >= 0);
+        CHECK(write(ifd, text, strlen(text)) == (ssize_t)strlen(text));
+        close(ifd);
+        CHECK(ambarella_family(iav, family, sizeof(family)));
+        CHECK(!strcmp(family, "S3Lm"));
+        unlink(iav);
+        CHECK(!ambarella_family(iav, family, sizeof(family)));
+    }
 
     if (failures)
         return EXIT_FAILURE;

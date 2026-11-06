@@ -451,6 +451,12 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
     case 0x256:
         sid = 0x0237;
         break;
+    /* Register 0x3000 reads 0x0950 on the DS-2CD2423G0-I, whose firmware
+     * drives that sensor with its ar0237 module. No datasheet to hand: the
+     * vendor driver reads this register but does not check it. */
+    case 0x5009:
+        sid = 0x0237;
+        break;
     case 0x2602:
         sid = 0x0331;
         break;
