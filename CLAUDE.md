@@ -217,11 +217,17 @@ is also what lets detection survive a kernel that will not hand over
 
 Ambarella (`src/hal/ambarella.c`) stops at the machine string on purpose. The
 exact part (S3L33M, S3L55M, S3L66, ...) is a word the DSP firmware writes,
-reachable only through `/dev/iav`, so the report says `S3L`. Do not derive
-total RAM from the boot log's `IAVMEM` line: Amboot computes it from a
-compile-time `DRAM_SIZE`, and #266 has it ending at 512 MiB on a camera
-reported as 256 MiB. That Dahua kernel also refuses `execve()` from writable
-filesystems, so `/tmp/ipctool` fails there with "Success" and exit code 2.
+reachable only through `/dev/iav`, so the report says `S3L`. Total RAM is the
+top of the DSP carve-out, because `mem=` keeps the kernel far below it: 118 MiB
+of 512 MiB on the camera in #266, where the DRAM marking confirmed the figure.
+The carve-out comes from `/proc/device-tree/iavmem/reg`, or from the boot log's
+`IAVMEM` line on kernels with no `/proc/device-tree`, which Dahua's 3.10.73 is.
+That line is printed once, so if the ring buffer has dropped it the report falls
+back to what the kernel sees. Stock Dahua firmware has no `/dev/i2c-*` either:
+its own `sensor.ko` owns the bus, so no sensor is reported there, and reaching
+for the controller registers would race that driver. The same kernel refuses
+`execve()` from writable filesystems, so `/tmp/ipctool` fails with "Success"
+and exit code 2.
 
 Sensor I2C addresses in tables are the 8-bit (write) form; the default
 `i2c_change_addr` shifts right by one for the kernel, and some HALs install
