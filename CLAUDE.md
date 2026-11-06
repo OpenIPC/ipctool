@@ -217,11 +217,15 @@ is also what lets detection survive a kernel that will not hand over
 
 Ambarella (`src/hal/ambarella.c`) stops at the machine string on purpose. The
 exact part (S3L33M, S3L55M, S3L66, ...) is a word the DSP firmware writes,
-reachable only through `/dev/iav`, so the report says `S3L`. Total RAM is the
+reachable only through `/dev/iav`, so the report says `S3L`, plus `family: S3Lm`
+when `iav.ko` is loaded. Total RAM is the
 top of the DSP carve-out, because `mem=` keeps the kernel far below it: 118 MiB
 of 512 MiB on the camera in #266, where the DRAM marking confirmed the figure.
 The carve-out comes from `/proc/device-tree/iavmem/reg`, or from the boot log's
 `IAVMEM` line on kernels with no `/proc/device-tree`, which Dahua's 3.10.73 is.
+Only its end is trusted: Hikvision's kernel moves the split at boot and leaves
+`/iavmem` stale, so media is what lies above Linux's RAM in `/proc/iomem`, and
+with no such RAM listed it is left out, not guessed.
 That line is printed once, so if the ring buffer has dropped it the report falls
 back to what the kernel sees. Stock Dahua firmware has no `/dev/i2c-*` either:
 its own `sensor.ko` owns the bus, so no sensor is reported there, and reaching

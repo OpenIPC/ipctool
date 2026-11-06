@@ -16,5 +16,7 @@ bool ambarella_iavmem_from_dt(const char *path, uint32_t *start,
                               uint32_t *size);
 bool ambarella_iavmem_from_log(const char *log, uint32_t *start,
                                uint32_t *size);
+unsigned long ambarella_media_kb(const char *iomem, uint64_t end);
+bool ambarella_family(const char *iav, char *out, size_t outlen);
 
 #endif /* HAL_AMBARELLA_H */

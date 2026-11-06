@@ -1,6 +1,7 @@
 /* Hardware-free cover for the Ambarella machine-string parser. The strings
  * are the DT_MACHINE_START names in the vendor kernel, and the S3L cpuinfo is
  * the one from issue #266. */
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,6 +101,65 @@ int main() {
     CHECK(rounded_num(112) == 128); /* a MemTotal of 114940 kB */
     CHECK(rounded_num(513) == 1024);
     CHECK(rounded_num(1) == 1);
+
+    /* Two boards.  On the DS-2CD2423G0-I /iavmem is stale: the DT says the
+     * DSP starts at 64 MiB and Linux runs to 112 MiB.  On the IP4M-1026E the
+     * two agree, Linux ending exactly where the DSP starts. */
+    {
+        char iomem[] = "/tmp/ambarella_test.XXXXXX";
+        const char *hik = "00200000-06ffffff : System RAM\n"
+                          "  00208000-00719667 : Kernel code\n";
+        const char *dahua = "00200000-077fffff : System RAM\n";
+        /* Split, the higher range last, and an indented line that must not
+         * count however high it goes */
+        const char *split = "00200000-03ffffff : System RAM\n"
+                            "  00208000-00719667 : Kernel code\n"
+                            "04100000-06ffffff : System RAM\n"
+                            "  0ff00000-0fffffff : System RAM\n";
+        const char *none = "e8005000-e8005fff : uart\n";
+        const uint64_t top = 0x10000000;
+        int ifd = mkstemp(iomem);
+
+        CHECK(ifd >= 0);
+        close(ifd);
+#define IOMEM(text)                                                            \
+    do {                                                                       \
+        int w = open(iomem, O_WRONLY | O_TRUNC);                               \
+        CHECK(w >= 0);                                                         \
+        CHECK(write(w, text, strlen(text)) == (ssize_t)strlen(text));          \
+        close(w);                                                              \
+    } while (0)
+        IOMEM(hik);
+        CHECK(ambarella_media_kb(iomem, top) == 144 * 1024);
+        IOMEM(dahua);
+        CHECK(ambarella_media_kb(iomem, 0x20000000) == 392 * 1024);
+        IOMEM(split);
+        CHECK(ambarella_media_kb(iomem, top) == 144 * 1024);
+
+        /* Nothing to measure from, or Linux past the end: unknown */
+        IOMEM(none);
+        CHECK(ambarella_media_kb(iomem, top) == 0);
+        IOMEM(hik);
+        CHECK(ambarella_media_kb(iomem, 0x07000000) == 0);
+        unlink(iomem);
+        CHECK(ambarella_media_kb(iomem, top) == 0);
+#undef IOMEM
+    }
+
+    {
+        char iav[] = "/tmp/ambarella_test.XXXXXX";
+        const char *text = "AMBARELLA_CHIP=S3Lm\ndsp_op_mode: 1\n";
+        char family[16];
+        int ifd = mkstemp(iav);
+
+        CHECK(ifd >= 0);
+        CHECK(write(ifd, text, strlen(text)) == (ssize_t)strlen(text));
+        close(ifd);
+        CHECK(ambarella_family(iav, family, sizeof(family)));
+        CHECK(!strcmp(family, "S3Lm"));
+        unlink(iav);
+        CHECK(!ambarella_family(iav, family, sizeof(family)));
+    }
 
     if (failures)
         return EXIT_FAILURE;

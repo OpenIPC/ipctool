@@ -11,9 +11,10 @@
 /* Defaults of the `addr` module parameter across the S3L SDK's VIN drivers,
  * the 8-bit form ipctool's tables use. AR0521 is the one part left out: it
  * answers on 0x6C, and the onsemi probe runs before the OmniVision one, so
- * listing it would have that probe reading an OV4689. */
+ * listing it would have that probe reading an OV4689. 0x30 is not a default:
+ * the Hikvision DS-2CD2423G0-I strings its AR0237 there. */
 static unsigned char sony_addrs[] = {0x34, 0};
-static unsigned char onsemi_addrs[] = {0x20, 0};
+static unsigned char onsemi_addrs[] = {0x20, 0x30, 0};
 static unsigned char omni_addrs[] = {0x6c, 0};
 
 static sensor_addr_t ambarella_possible_i2c_addrs[] = {
@@ -88,6 +89,52 @@ bool ambarella_iavmem_from_log(const char *log, uint32_t *start,
            end == '\n';
 }
 
+/* The carve-out's end is the top of DRAM on every board seen, but its start
+ * cannot be trusted: Hikvision's kernel moves the split at boot, and leaves
+ * /iavmem saying 0x04000000 where it gave Linux up to 0x07000000. So media is
+ * what lies between the top of Linux's RAM and that end, and with no RAM listed
+ * to measure from it is unknown: 0, which the report leaves out. */
+unsigned long ambarella_media_kb(const char *iomem, uint64_t end) {
+    FILE *f = fopen(iomem, "r");
+    uint64_t top = 0;
+    char line[128];
+
+    if (!f)
+        return 0;
+
+    /* Top level only: "Kernel code" and the like are indented inside it,
+     * and %llx would skip that indent */
+    while (fgets(line, sizeof(line), f)) {
+        unsigned long long from, to;
+        int name = 0;
+
+        if (*line != ' ' &&
+            sscanf(line, "%llx-%llx : %n", &from, &to, &name) == 2 && name &&
+            !strncmp(line + name, "System RAM", 10) && to + 1 > top)
+            top = to + 1;
+    }
+    fclose(f);
+
+    return top && top < end ? (end - top) / 1024 : 0;
+}
+
+/* iav's own view of the part, there once iav.ko is loaded: "S3Lm", which the
+ * machine string cannot tell from S3L. */
+bool ambarella_family(const char *iav, char *out, size_t outlen) {
+    if (!outlen || !line_from_file(iav, "AMBARELLA_CHIP=(\\w+)", out, outlen))
+        return false;
+
+    out[outlen - 1] = '\0';
+    return true;
+}
+
+static void ambarella_chip_properties(cJSON *j_inner) {
+    char family[32];
+
+    if (ambarella_family("/proc/ambarella/iav", family, sizeof(family)))
+        ADD_PARAM("family", family);
+}
+
 static unsigned long ambarella_totalmem(unsigned long *media_mem) {
     uint32_t start = 0, size = 0;
     bool found = ambarella_iavmem_from_dt("/proc/device-tree/iavmem/reg",
@@ -113,8 +160,8 @@ static unsigned long ambarella_totalmem(unsigned long *media_mem) {
     if (!found || !size || start + size < start)
         return kernel_mem();
 
-    *media_mem = size / 1024;
-    return (unsigned long)(start / 1024) + *media_mem;
+    *media_mem = ambarella_media_kb("/proc/iomem", (uint64_t)start + size);
+    return (unsigned long)(((uint64_t)start + size) / 1024);
 }
 #endif
 
@@ -122,5 +169,6 @@ void ambarella_setup_hal() {
     possible_i2c_addrs = ambarella_possible_i2c_addrs;
 #ifndef STANDALONE_LIBRARY
     hal_totalmem = ambarella_totalmem;
+    hal_chip_properties = ambarella_chip_properties;
 #endif
 }
