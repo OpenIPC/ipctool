@@ -268,6 +268,9 @@ unsigned long kernel_mem() {
 }
 
 uint32_t rounded_num(uint32_t n) {
+    if (n && !(n & (n - 1)))
+        return n;
+
     int i;
     for (i = 0; n; i++) {
         n /= 2;
