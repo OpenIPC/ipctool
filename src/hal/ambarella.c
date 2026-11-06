@@ -73,14 +73,19 @@ bool ambarella_iavmem_from_dt(const char *path, uint32_t *start,
 }
 
 /* "Ambarella:   IAVMEM = 0x07800000[          ],0x18800000". Printed once at
- * boot, so a long-lived ring buffer may have dropped it. */
+ * boot, so a long-lived ring buffer may have dropped it. The newline is part
+ * of the match: without it a log cut off inside the size would still parse,
+ * as a smaller number. */
 bool ambarella_iavmem_from_log(const char *log, uint32_t *start,
                                uint32_t *size) {
     const char *line = strstr(log, "IAVMEM = ");
+    char end = 0;
 
     if (!line)
         return false;
-    return sscanf(line, "IAVMEM = 0x%x[%*[^]]],0x%x", start, size) == 2;
+    return sscanf(line, "IAVMEM = 0x%x[%*[^]]],0x%x%c", start, size, &end) ==
+               3 &&
+           end == '\n';
 }
 
 static unsigned long ambarella_totalmem(unsigned long *media_mem) {
@@ -92,10 +97,13 @@ static unsigned long ambarella_totalmem(unsigned long *media_mem) {
         char *log = NULL;
         ssize_t len = get_dmesg_buf(&log);
 
-        /* klogctl() does not terminate what it returns, and a full ring
-         * leaves no room after it. The last byte of a log is no loss. */
-        if (log && len > 0) {
-            log[len - 1] = '\0';
+        /* klogctl() does not terminate what it returns, and the buffer is
+         * exactly the size of a full ring. */
+        char *text = log && len > 0 ? realloc(log, len + 1) : NULL;
+
+        if (text) {
+            log = text;
+            log[len] = '\0';
             found = ambarella_iavmem_from_log(log, &start, &size);
         }
         free(log);

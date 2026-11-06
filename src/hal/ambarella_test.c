@@ -72,6 +72,12 @@ int main() {
         &start, &size));
     CHECK(start == 0x07800000 && size == 0x18800000);
     CHECK(!ambarella_iavmem_from_log("Linux version 3.10.73\n", &start, &size));
+    /* Cut off inside the size: 0x1880 must not be taken for the answer. */
+    CHECK(!ambarella_iavmem_from_log(
+        "Ambarella:   IAVMEM = 0x07800000[          ],0x1880", &start, &size));
+    CHECK(!ambarella_iavmem_from_log(
+        "Ambarella:   IAVMEM = 0x07800000[          ],0x18800000", &start,
+        &size));
 
     char path[] = "/tmp/ambarella_test.XXXXXX";
     int fd = mkstemp(path);
