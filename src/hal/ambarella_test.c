@@ -1,6 +1,7 @@
 /* Hardware-free cover for the Ambarella machine-string parser. The strings
  * are the DT_MACHINE_START names in the vendor kernel, and the S3L cpuinfo is
  * the one from issue #266. */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,6 +62,36 @@ int main() {
     CHECK(!parse("Hardware\t: Ambarella S3L (Flattened Device Tree)\n",
                  guarded + 1, 0));
     CHECK(guarded[0] == 'x' && guarded[1] == 'y' && guarded[2] == 'z');
+
+    /* The reporter's board: 512 MiB, with 392 MiB of it the DSP's. */
+    uint32_t start = 0, size = 0;
+    CHECK(ambarella_iavmem_from_log(
+        "Ambarella:    DRAMC = 0xdffe0000[0xef000000],0x00020000 0\n"
+        "Ambarella:   IAVMEM = 0x07800000[          ],0x18800000\n"
+        "Ambarella:    FBMEM = 0x00000000[          ],0x00000000\n",
+        &start, &size));
+    CHECK(start == 0x07800000 && size == 0x18800000);
+    CHECK(!ambarella_iavmem_from_log("Linux version 3.10.73\n", &start, &size));
+    /* Cut off inside the size: 0x1880 must not be taken for the answer. */
+    CHECK(!ambarella_iavmem_from_log(
+        "Ambarella:   IAVMEM = 0x07800000[          ],0x1880", &start, &size));
+    CHECK(!ambarella_iavmem_from_log(
+        "Ambarella:   IAVMEM = 0x07800000[          ],0x18800000", &start,
+        &size));
+
+    char path[] = "/tmp/ambarella_test.XXXXXX";
+    int fd = mkstemp(path);
+    const unsigned char reg[] = {0x0e, 0x40, 0x00, 0x00,
+                                 0x11, 0xc0, 0x00, 0x00};
+    CHECK(fd >= 0);
+    CHECK(write(fd, reg, sizeof(reg)) == (ssize_t)sizeof(reg));
+    close(fd);
+    CHECK(ambarella_iavmem_from_dt(path, &start, &size));
+    CHECK(start == 0x0e400000 && size == 0x11c00000);
+    CHECK(truncate(path, 4) == 0);
+    CHECK(!ambarella_iavmem_from_dt(path, &start, &size));
+    unlink(path);
+    CHECK(!ambarella_iavmem_from_dt(path, &start, &size));
 
     if (failures)
         return EXIT_FAILURE;
