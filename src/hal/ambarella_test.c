@@ -104,31 +104,46 @@ int main() {
 
     /* Two boards.  On the DS-2CD2423G0-I /iavmem is stale: the DT says the
      * DSP starts at 64 MiB and Linux runs to 112 MiB.  On the IP4M-1026E the
-     * two agree. */
+     * two agree, Linux ending exactly where the DSP starts. */
     {
         char iomem[] = "/tmp/ambarella_test.XXXXXX";
         const char *hik = "00200000-06ffffff : System RAM\n"
                           "  00208000-00719667 : Kernel code\n";
         const char *dahua = "00200000-077fffff : System RAM\n";
+        /* Split, the higher range last, and an indented line that must not
+         * count however high it goes */
+        const char *split = "00200000-03ffffff : System RAM\n"
+                            "  00208000-00719667 : Kernel code\n"
+                            "04100000-06ffffff : System RAM\n"
+                            "  0ff00000-0fffffff : System RAM\n";
+        const char *none = "e8005000-e8005fff : uart\n";
+        const uint64_t top = 0x10000000;
         int ifd = mkstemp(iomem);
 
         CHECK(ifd >= 0);
-        CHECK(write(ifd, hik, strlen(hik)) == (ssize_t)strlen(hik));
         close(ifd);
-        CHECK(ambarella_media_kb(iomem, 0x04000000, 0x0c000000) ==
-              144 * 1024);
+#define IOMEM(text)                                                            \
+    do {                                                                       \
+        int w = open(iomem, O_WRONLY | O_TRUNC);                               \
+        CHECK(w >= 0);                                                         \
+        CHECK(write(w, text, strlen(text)) == (ssize_t)strlen(text));          \
+        close(w);                                                              \
+    } while (0)
+        IOMEM(hik);
+        CHECK(ambarella_media_kb(iomem, top) == 144 * 1024);
+        IOMEM(dahua);
+        CHECK(ambarella_media_kb(iomem, 0x20000000) == 392 * 1024);
+        IOMEM(split);
+        CHECK(ambarella_media_kb(iomem, top) == 144 * 1024);
 
-        ifd = open(iomem, O_WRONLY | O_TRUNC);
-        CHECK(ifd >= 0);
-        CHECK(write(ifd, dahua, strlen(dahua)) == (ssize_t)strlen(dahua));
-        close(ifd);
-        CHECK(ambarella_media_kb(iomem, 0x07800000, 0x18800000) ==
-              392 * 1024);
-
-        /* RAM past the carve-out, or none listed: take the size as given */
-        CHECK(ambarella_media_kb("/nonexistent", 0x07800000, 0x18800000) ==
-              392 * 1024);
+        /* Nothing to measure from, or Linux past the end: unknown */
+        IOMEM(none);
+        CHECK(ambarella_media_kb(iomem, top) == 0);
+        IOMEM(hik);
+        CHECK(ambarella_media_kb(iomem, 0x07000000) == 0);
         unlink(iomem);
+        CHECK(ambarella_media_kb(iomem, top) == 0);
+#undef IOMEM
     }
 
     {

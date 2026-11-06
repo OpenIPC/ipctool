@@ -91,21 +91,29 @@ bool ambarella_iavmem_from_log(const char *log, uint32_t *start,
 
 /* The carve-out's end is the top of DRAM on every board seen, but its start
  * cannot be trusted: Hikvision's kernel moves the split at boot, and leaves
- * /iavmem saying 0x04000000 where it gave Linux up to 0x07000000. What is not
- * Linux's is the DSP's, so the size comes from what Linux ended up with. */
-unsigned long ambarella_media_kb(const char *iomem, uint32_t start,
-                                 uint32_t size) {
-    uint64_t end = (uint64_t)start + size;
-    char buf[32];
+ * /iavmem saying 0x04000000 where it gave Linux up to 0x07000000. So media is
+ * what lies between the top of Linux's RAM and that end, and with no RAM listed
+ * to measure from it is unknown: 0, which the report leaves out. */
+unsigned long ambarella_media_kb(const char *iomem, uint64_t end) {
+    FILE *f = fopen(iomem, "r");
+    uint64_t top = 0;
+    char line[128];
 
-    if (line_from_file(iomem, "^\\w+-(\\w+) *: *System RAM", buf,
-                       sizeof(buf))) {
-        uint64_t top = strtoull(buf, NULL, 16) + 1;
+    if (!f)
+        return 0;
 
-        if (top > start && top < end)
-            return (end - top) / 1024;
+    /* Top level only: "Kernel code" and the like are indented inside it */
+    while (fgets(line, sizeof(line), f)) {
+        unsigned long long from, to;
+        int name = 0;
+
+        if (sscanf(line, "%llx-%llx : %n", &from, &to, &name) == 2 && name &&
+            !strncmp(line + name, "System RAM", 10) && to + 1 > top)
+            top = to + 1;
     }
-    return size / 1024;
+    fclose(f);
+
+    return top && top < end ? (end - top) / 1024 : 0;
 }
 
 /* iav's own view of the part, there once iav.ko is loaded: "S3Lm", which the
@@ -150,7 +158,7 @@ static unsigned long ambarella_totalmem(unsigned long *media_mem) {
     if (!found || !size || start + size < start)
         return kernel_mem();
 
-    *media_mem = ambarella_media_kb("/proc/iomem", start, size);
+    *media_mem = ambarella_media_kb("/proc/iomem", (uint64_t)start + size);
     return (unsigned long)(((uint64_t)start + size) / 1024);
 }
 #endif
