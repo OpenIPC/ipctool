@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #define VENDOR_ALLWINNER "Allwinner"
+#define VENDOR_AMBARELLA "Ambarella"
 #define VENDOR_ANYKA "Anyka"
 #define VENDOR_BCM "Broadcom"
 #define VENDOR_FH "Fullhan"
