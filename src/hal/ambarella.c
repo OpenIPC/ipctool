@@ -25,6 +25,9 @@ static sensor_addr_t ambarella_possible_i2c_addrs[] = {
  * known only to the DSP firmware once it runs, so "S3L" is as far as this
  * goes. */
 bool ambarella_machine_name(const char *cpuinfo, char *out, size_t outlen) {
+    if (!outlen)
+        return false;
+
     if (!line_from_file(cpuinfo, "Hardware.+: Ambarella ([A-Za-z0-9]+)", out,
                         outlen))
         return false;
@@ -39,6 +42,10 @@ bool ambarella_detect_cpu(char *chip_name) {
     if (!ambarella_machine_name("/proc/cpuinfo", machine, sizeof(machine)))
         return false;
     strcpy(chip_name, machine);
+
+    /* chip_generation stays 0 on purpose. It keys the pad-mux, clock and boot
+     * ROM tables, and ipctool has none for Ambarella, so 0 sends those paths to
+     * their no-table answer and getchipfamily() back to the name. */
     return true;
 }
 

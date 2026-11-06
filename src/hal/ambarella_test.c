@@ -56,6 +56,12 @@ int main() {
     CHECK(!parse("model name\t: ARMv7 Processor rev 1 (v7l)\n", buf,
                  sizeof(buf)));
 
+    /* Nothing may land in the buffer, or just before it. */
+    char guarded[3] = {'x', 'y', 'z'};
+    CHECK(!parse("Hardware\t: Ambarella S3L (Flattened Device Tree)\n",
+                 guarded + 1, 0));
+    CHECK(guarded[0] == 'x' && guarded[1] == 'y' && guarded[2] == 'z');
+
     if (failures)
         return EXIT_FAILURE;
     puts("ambarella_test: all cases passed");

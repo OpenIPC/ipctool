@@ -220,7 +220,7 @@ exact part (S3L33M, S3L55M, S3L66, ...) is a word the DSP firmware writes,
 reachable only through `/dev/iav`, so the report says `S3L`. Do not derive
 total RAM from the boot log's `IAVMEM` line: Amboot computes it from a
 compile-time `DRAM_SIZE`, and #266 has it ending at 512 MiB on a camera
-reported as 256 MiB. Dahua kernels also refuse `execve()` from writable
+reported as 256 MiB. That Dahua kernel also refuses `execve()` from writable
 filesystems, so `/tmp/ipctool` fails there with "Success" and exit code 2.
 
 Sensor I2C addresses in tables are the 8-bit (write) form; the default
