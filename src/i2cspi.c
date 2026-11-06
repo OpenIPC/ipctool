@@ -2,9 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "chipid.h"
 #include "hal/common.h"
+#include "hal/hisi/hal_hisi.h"
 #include "i2cspi.h"
 
 #define SELECT_WIDE(reg_addr) reg_addr > 0xff ? 2 : 1
@@ -186,6 +188,26 @@ static int i2cdump(int argc, char **argv, bool script_mode) {
     return EXIT_SUCCESS;
 }
 
+/* Is anything at the address i2c_change_addr() last set?
+ *
+ * The register read below sends a one-byte address and then a repeated start,
+ * and on a Hi3516CV610 that wedges a GC4653, which takes two-byte addresses:
+ * every later transfer on the bus fails until the sensor is reset.
+ *
+ * So one byte and a stop, read nothing back. A read alone would be gentler
+ * still, but bsp-i2c without an interrupt waits 51 ms for data on every
+ * address that does not answer, where a write fails on the NACK at once. A
+ * zero-length write is no use either: the driver loads len - 1 into its loop
+ * counter and the controller then waits on an empty FIFO. */
+static int i2cdetect_probe(int fd, unsigned char i2c_addr) {
+    if (chip_generation == HISI_OT) {
+        unsigned char byte = 0;
+        return write(fd, &byte, 1) == 1 ? 0 : -1;
+    }
+
+    return i2c_read_register(fd, i2c_addr, 0x00, SELECT_WIDE(0), 1);
+}
+
 static int i2cdetect(int argc, char **argv, bool script_mode) {
     (void)argv;
     (void)script_mode;
@@ -203,7 +225,7 @@ static int i2cdetect(int argc, char **argv, bool script_mode) {
     do {
         ++i2c_addr;
         i2c_change_addr(fd, i2c_addr);
-        int res = i2c_read_register(fd, i2c_addr, 0x00, SELECT_WIDE(0), 1);
+        int res = i2cdetect_probe(fd, i2c_addr);
 
         if (i2c_addr % 16 == 0)
             printf("%4.x: ", i2c_addr);
