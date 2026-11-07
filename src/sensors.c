@@ -448,6 +448,14 @@ static int detect_onsemi_sensor(sensor_ctx_t *ctx, int fd,
     case 0x2402:
         sid = 0x0130;
         break;
+    /* AR0230 CHIP_VERSION_REG. The Ambarella S3L firmware drives one (its
+     * ar0230 module reads 0x3000 at probe); the second value is the same
+     * reading with the bytes swapped, as the AR0237's 0x0950 arrives as 0x5009
+     * through the reader the S3L HAL uses. */
+    case 0x0056:
+    case 0x5600:
+        sid = 0x0230;
+        break;
     case 0x256:
         sid = 0x0237;
         break;
