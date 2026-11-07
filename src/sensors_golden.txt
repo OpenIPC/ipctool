@@ -1098,11 +1098,13 @@ soi a0fc JXHfc
 soi a0fd JXHfd
 soi a0fe JXHfe
 soi a0ff JXHff
+onsemi 0056 AR0230
 onsemi 0256 AR0237
 onsemi 2402 AR0130
 onsemi 2602 AR0331
 onsemi 2604 AR0330
 onsemi 5009 AR0237
+onsemi 5600 AR0230
 omni 2710 OV2710
 omni 2715 OV2715
 omni 2718 OV2718
