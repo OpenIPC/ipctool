@@ -5,7 +5,7 @@ smartsens 0132 SC132GS
 smartsens 1045 SC1045
 smartsens 1145 SC1145
 smartsens 1235 SC1235
-smartsens 1245 SC2145H_B
+smartsens 1245 SC2145H
 smartsens 17cb SC210IoT
 smartsens 2032 SC2035
 smartsens 2045 SC2045

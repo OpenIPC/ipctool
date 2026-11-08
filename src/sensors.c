@@ -533,11 +533,11 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         break;
     case 0x1235:
         break;
-    case 0x1245: {
-        int sw = i2c_read_register(fd, i2c_addr, 0x3020, 2, 1);
-        sprintf(ctx->sensor_id, "SC2145H_%c", sw == 2 ? 'A' : 'B');
+    case 0x1245:
+        /* 0x3020 tells two silicon revisions apart (the Anyka driver picks
+         * its init variant by it, 2 or 3); it is not a different part. */
+        strcpy(ctx->sensor_id, "SC2145H");
         return true;
-    }
     case 0x2032:
         res = 0x2035;
         break;
