@@ -22,17 +22,18 @@
  * boards. The part number comes from the machine string instead. */
 /* The first generation, Aimer39 (AK3918, AK3916, AK3910): its 0x20120100 is
  * shared with some AK3918EV200 boards, so the board string decides. */
-/* anyka_model_name() prints the low 16 bits as the part suffix (0xE200 is
- * EV200), so a new AK39 constant has to spell its own. */
-#define AK39_EV1 0x3918E100
+/* A constant whose low nibble is 0 spells its part's suffix in its low 16
+ * bits, 0xE200 being EV200, and anyka_model_name() prints it; the others have
+ * none to give. */
+#define AK39_EV1 0x3918E101
 #define AK39_EV2 0x3918E200
 #define AK39_EV3 0x3918E300
 #define AK39_EV330 0x3939E330
 #define AK39_EV300L 0x3918E30C
 #define AK39_AV100 0x3918A100
 #define AK39_AV130 0x3918A130
-#define AK37_D 0x3737D000
-#define AK37_E 0x3737E000
+#define AK37_D 0x3737D001
+#define AK37_E 0x3737E001
 
 bool anyka_detect_cpu(char *chip_name);
 void anyka_setup_hal();
@@ -47,7 +48,6 @@ void anyka_model_name(const char *machine, const char *compat, int generation,
                       char *out, size_t outlen);
 unsigned long anyka_media_mem(const char *cmdline, const char *iomem);
 unsigned long anyka_dt_memsize(const char *reg_path);
-bool anyka_dt_gpio(const char *pattern, int *pin, bool *active_low);
-unsigned anyka_peri_pll_mhz(uint32_t pll1);
+unsigned anyka_cis_divider(uint32_t pll1);
 
 #endif /* HAL_ANYKA_H */

@@ -1,6 +1,7 @@
 #include "hal/anyka.h"
 
 #include <ctype.h>
+#include <fcntl.h>
 #include <glob.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -49,7 +50,9 @@ static sensor_addr_t anyka_possible_i2c_addrs[] = {
 /* Raw chip ID as it was read, kept so the report can show the number the
  * kernel's own "ANYKA CPU ... (ID 0x...)" banner prints. Zero when /dev/mem
  * would not give it up. */
+#ifndef STANDALONE_LIBRARY
 static uint32_t anyka_chip_id;
+#endif
 
 static const struct {
     uint32_t id;
@@ -88,7 +91,8 @@ int anyka_generation(uint32_t chip_id) {
  * with /proc/iomem, so the machine string is the one signal that every
  * kernel gives without /dev/mem. Every Anyka camera board spells a part
  * number into it: "CLOUD39EV3_AK3918EV300_MNBD",
- * "Cloud39EV2_AK3918E80PIN_MNBD", "AK3918EV200_GWELL_V1", "Cloud39E_AK3918E+H42_V1.0.2",
+ * "Cloud39EV2_AK3918E80PIN_MNBD", "AK3918EV200_GWELL_V1",
+ * "Cloud39E_AK3918E+H42_V1.0.2",
  * "Aimer39_AK3918_MB_V1.0.0", "AK39EV330". */
 bool anyka_machine_name(const char *cpuinfo, char *out, size_t outlen) {
     if (!line_from_file(cpuinfo, "Hardware.*:.*([Aa][Kk]3[0-9][0-9A-Za-z]*)",
@@ -101,10 +105,11 @@ bool anyka_machine_name(const char *cpuinfo, char *out, size_t outlen) {
     return true;
 }
 
-/* Is s "AK" + four digits, e.g. AK3918? */
+#ifndef STANDALONE_LIBRARY
+/* Is this match of the board or device tree patterns below "AK" + four
+ * digits, e.g. AK3918, and not the generation-wide AK39EV330? */
 static bool is_part_base(const char *s) {
-    return (s[0] | 32) == 'a' && (s[1] | 32) == 'k' && isdigit(s[2]) &&
-           isdigit(s[3]) && isdigit(s[4]) && isdigit(s[5]);
+    return s[0] && isdigit(s[4]) && isdigit(s[5]);
 }
 
 static bool is_bare_part(const char *s) {
@@ -114,7 +119,7 @@ static bool is_bare_part(const char *s) {
 /* ...followed by EVnnn or AVnnn: the whole part number, AK3918EV200. A
  * package, "AK3918E80PIN", has no V there. */
 static bool is_full_part(const char *s) {
-    return is_part_base(s) && s[6] && (s[7] | 32) == 'v' && isdigit(s[8]);
+    return is_part_base(s) && s[6] && (s[7] | 32) == 'v';
 }
 
 /* The model to report. `compat` is what follows "anyka," in the device tree's
@@ -128,15 +133,12 @@ static bool is_full_part(const char *s) {
  * kernel's CPU banner names it. */
 void anyka_model_name(const char *machine, const char *compat, int generation,
                       char *out, size_t outlen) {
-    const char *part = compat;
+    const char *part = is_full_part(compat) ? compat : machine;
 
-    if (!part || !is_full_part(part)) {
-        part = machine ? machine : "";
-        if (generation == AK39_EV330 && !is_full_part(part))
-            part = "AK39XXEV330";
-    }
-    if (is_part_base(part) && !is_full_part(part) && generation >> 24 == 0x39 &&
-        generation != AK39_EV1 && !(generation & 0xf))
+    if (generation == AK39_EV330 && !is_full_part(part))
+        part = "AK39XXEV330";
+    if (generation && !(generation & 0xf) && is_part_base(part) &&
+        !is_full_part(part))
         snprintf(out, outlen, "AK%.4s%XV%03X", part + 2, generation >> 12 & 0xf,
                  generation & 0xfff);
     else
@@ -145,58 +147,70 @@ void anyka_model_name(const char *machine, const char *compat, int generation,
         *p = toupper((unsigned char)*p);
 }
 
-bool anyka_detect_cpu(char *chip_name) {
+/* Up to len bytes of a file, or 0. */
+static int read_file(const char *path, void *buf, size_t len) {
+    int fd = open(path, O_RDONLY), n;
+
+    if (fd < 0)
+        return 0;
+    n = read(fd, buf, len);
+    close(fd);
+    return n;
+}
+
+/* Everything a vendor kernel's board string leaves to be worked out. */
+static bool anyka_full_model(char *chip_name, uint32_t id) {
     /* As wide as chip_name, since that is where it lands. */
-    char machine[128] = "", compat[32] = "";
-    uint32_t reg;
+    char machine[128], compat[32];
 
-    bool by_machine =
-        anyka_machine_name("/proc/cpuinfo", machine, sizeof(machine));
-    /* OpenIPC's kernels name the part in the device tree too; a board string
-     * is then not needed to claim the SoC. */
-    if (!line_from_file("/proc/device-tree/compatible", "^anyka,(.*)", compat,
-                        sizeof(compat)) &&
-        !by_machine)
-        return false;
+    machine[0] = compat[0] = '\0';
+    anyka_machine_name("/proc/cpuinfo", machine, sizeof(machine));
+    line_from_file("/proc/device-tree/compatible", "^anyka,(ak.*)", compat,
+                   sizeof(compat));
     compat[sizeof(compat) - 1] = '\0';
-
-    /* Only ever a refinement: the board already named the part, and a kernel
-     * built with strict devmem filtering can refuse the window outright. The
-     * AV130 keeps its ID at the far end of the same block. */
-    if (mem_reg(AK_REG_CHIP_ID, &reg, OP_READ)) {
-        anyka_chip_id = reg;
-        chip_generation = anyka_generation(reg);
-        if (!chip_generation && mem_reg(AK_REG_CHIP_ID_AV, &reg, OP_READ) &&
-            anyka_generation(reg) == AK39_AV130) {
-            anyka_chip_id = reg;
-            chip_generation = AK39_AV130;
-        }
-    }
 
     /* 0x20120100 is also the Aimer39 AK3918's, a generation of its own. Its
      * boards and device trees name a bare part, "Aimer39_AK3918_MB_V1.0.0"
      * and "anyka,ak3918", where an EV200's carry more. */
-    if (anyka_chip_id == 0x20120100 &&
-        (is_bare_part(machine) || is_bare_part(compat)))
+    if (id == 0x20120100 && (is_bare_part(machine) || is_bare_part(compat)))
         chip_generation = AK39_EV1;
 
-    anyka_model_name(by_machine ? machine : NULL, compat, chip_generation,
-                     chip_name, 128);
+    anyka_model_name(machine, compat, chip_generation, chip_name, 128);
     return *chip_name != '\0';
+}
+#endif
+
+bool anyka_detect_cpu(char *chip_name) {
+    uint32_t reg = 0;
+
+    /* OpenIPC's kernels name the exact part in the device tree, so a board
+     * string is then not needed to claim the SoC. */
+    if (!line_from_file("/proc/device-tree/compatible",
+                        "^anyka,(ak[0-9]{4}[ae]v.*)", chip_name, 128) &&
+        !anyka_machine_name("/proc/cpuinfo", chip_name, 128))
+        return false;
+
+    /* Only ever a refinement: the board already named the part, and a kernel
+     * built with strict devmem filtering can refuse the window outright. */
+    if (mem_reg(AK_REG_CHIP_ID, &reg, OP_READ))
+        chip_generation = anyka_generation(reg);
+
+#ifndef STANDALONE_LIBRARY
+    /* The AV130 keeps its ID at the far end of the same block. */
+    uint32_t av;
+    if (reg && !chip_generation && mem_reg(AK_REG_CHIP_ID_AV, &av, OP_READ) &&
+        anyka_generation(av) == AK39_AV130) {
+        reg = av;
+        chip_generation = AK39_AV130;
+    }
+    anyka_chip_id = reg;
+    return anyka_full_model(chip_name, reg);
+#else
+    return true;
+#endif
 }
 
 #ifndef STANDALONE_LIBRARY
-static size_t read_file(const char *path, char *buf, size_t len) {
-    FILE *f = fopen(path, "rb");
-    size_t n;
-
-    if (!f)
-        return 0;
-    n = fread(buf, 1, len, f);
-    fclose(f);
-    return n;
-}
-
 /* Total DRAM is not something Linux can always see here. A vendor boot
  * loader keeps the foot of the bank for the ISP and the encoder and hands the
  * kernel only what is left -- 37 MB of a 64 MB part on the camera in issue
@@ -241,7 +255,7 @@ unsigned long anyka_media_mem(const char *cmdline, const char *iomem) {
 unsigned long anyka_dt_memsize(const char *reg_path) {
     unsigned char cells[8];
 
-    if (read_file(reg_path, (char *)cells, sizeof(cells)) != sizeof(cells))
+    if (read_file(reg_path, cells, sizeof(cells)) != (int)sizeof(cells))
         return 0;
     uint32_t size = (uint32_t)cells[4] << 24 | (uint32_t)cells[5] << 16 |
                     (uint32_t)cells[6] << 8 | cells[7];
@@ -277,7 +291,6 @@ static void anyka_chip_properties(cJSON *j_inner) {
 }
 #endif
 
-#ifndef STANDALONE_LIBRARY
 /*
  * The sensor answers I2C only while it is clocked and out of reset, and on
  * these SoCs that is only while the camera driver is using it: it powers the
@@ -290,76 +303,69 @@ static void anyka_chip_properties(cJSON *j_inner) {
  * device tree names. Measured on an AK3918EV200 (SC1345): the sensor reads
  * 0xffff before and its chip ID after.
  *
+ * ipcinfo, in every image, starts the clock alone: the sensor drivers' power
+ * off leaves those pins as inputs, not held asserted, and the SC1345 answers
+ * with just the clock. ipctool also pulses the pins.
+ *
  * Nothing is touched when the clock is already running: then a pipeline may
  * be streaming, the sensor already answers, and a reset would stop it. What
- * is touched is put back by anyka_hal_cleanup(), bit for bit, and only that.
+ * is touched is put back by anyka_hal_cleanup(), and only that.
  */
 #define AK_REG_PERI_PLL1 (AK_PA_SYSCTRL + 0x14)
 #define AK_REG_PERI_PLL2 (AK_PA_SYSCTRL + 0x18)
-#define AK_PA_GPIO 0x20170000
-#define AK_GPIO_DIR(pin) (AK_PA_GPIO + 0x00 + ((pin) >> 5) * 4)
-#define AK_GPIO_OUT(pin) (AK_PA_GPIO + 0x0c + ((pin) >> 5) * 4)
-#define AK_CIS_MCLK_MHZ 24
+#define AK_GPIO_DIR 0x20170000
+#define AK_GPIO_OUT 0x2017000c
 
-struct anyka_pin {
-    int pin;    /* -1: none */
-    bool active_low;
-    bool saved_dir, saved_out;
-};
+/* The CIS clock divider field for 24 MHz from the peripheral PLL register,
+ * 12 * M / (N * 2^OD) MHz over 24, minus one; 0 for a register the camera
+ * drivers would refuse. Counted up to keep division out of the binary. */
+unsigned anyka_cis_divider(uint32_t pll1) {
+    unsigned m = pll1 & 0xff, n = pll1 >> 8 & 0xf, od = pll1 >> 12 & 0x3, d = 0;
 
+    if (!od || n - 2 > 4)
+        return 0;
+    while ((2 * (d + 2) * n << od) <= m)
+        d++;
+    return d;
+}
+
+/* What each register held before the power-up first wrote it: the PLL's two
+ * and, in ipctool, direction and level for each of a camera's two pins.
+ * Restored in one write each: replaying every write to the PLL register left
+ * its latch bit set on an AK3918EV200. */
+#ifdef STANDALONE_LIBRARY
+#define AK_UNDO_MAX 2
+#else
+#define AK_UNDO_MAX 6
+#endif
 static struct {
-    bool armed;
-    uint32_t pll1, pll2;
-    struct anyka_pin reset, pwdn;
-} anyka_power;
+    uint32_t addr, val;
+} anyka_undo[AK_UNDO_MAX];
+static int anyka_undo_n;
 
-/* <phandle pin flags> of a camera node's reset-gpio or pwdn-gpio. The
- * pattern must match one node: with several, which camera's pins these are
- * is not known, and none is touched. The AK39 device trees have one GPIO
- * controller, so the phandle is not followed; flags bit 0 is
- * GPIO_ACTIVE_LOW. */
-bool anyka_dt_gpio(const char *pattern, int *pin, bool *active_low) {
-    glob_t g;
-    unsigned char cells[12];
-    bool ok = false;
+static void anyka_rmw(uint32_t addr, uint32_t clear, uint32_t set) {
+    uint32_t v = 0;
 
-    if (glob(pattern, 0, NULL, &g))
-        return false;
-    if (g.gl_pathc == 1 &&
-        read_file(g.gl_pathv[0], (char *)cells, sizeof(cells)) == 12) {
-        *pin = cells[6] << 8 | cells[7];
-        *active_low = cells[11] & 1;
-        ok = *pin < 128;
-    }
-    globfree(&g);
-    return ok;
+    mem_reg(addr, &v, OP_READ);
+    v = (v & ~clear) | set;
+    mem_reg(addr, &v, OP_WRITE);
 }
 
-static bool gpio_bit(uint32_t reg, int pin, bool *val) {
-    uint32_t v;
-
-    if (!mem_reg(reg, &v, OP_READ))
-        return false;
-    *val = v >> (pin & 31) & 1;
-    return true;
+/* anyka_rmw() for a register's first write, remembering what it held. */
+static void anyka_poke(uint32_t addr, uint32_t clear, uint32_t set) {
+    anyka_undo[anyka_undo_n].addr = addr;
+    mem_reg(addr, &anyka_undo[anyka_undo_n++].val, OP_READ);
+    anyka_rmw(addr, clear, set);
 }
 
-static void gpio_set_bit(uint32_t reg, int pin, bool val) {
-    uint32_t v;
-
-    if (!mem_reg(reg, &v, OP_READ))
-        return;
-    v = val ? v | 1u << (pin & 31) : v & ~(1u << (pin & 31));
-    mem_reg(reg, &v, OP_WRITE);
-}
-
+#ifndef STANDALONE_LIBRARY
 /* The camera nodes under the I2C adapter being probed: its device tree node
  * is what /sys/bus/i2c/devices/i2c-N/of_node points at. A kernel that does
- * not link it leaves the glob over every adapter, which anyka_dt_gpio()
- * accepts only when it finds a single camera. */
-static void camera_pattern(char *out, size_t len, const char *prop) {
+ * not link it leaves the glob over every adapter, which is used only when it
+ * finds a single camera. */
+static void camera_gpio_pattern(char *out, size_t len) {
     char link[64], node[256];
-    const char *base = "/sys/firmware/devicetree/base/";
+    const char *rel;
     ssize_t n;
 
     snprintf(link, sizeof(link), "/sys/bus/i2c/devices/i2c-%d/of_node",
@@ -367,66 +373,62 @@ static void camera_pattern(char *out, size_t len, const char *prop) {
     n = readlink(link, node, sizeof(node) - 1);
     if (n > 0) {
         node[n] = '\0';
-        char *rel = strstr(node, "devicetree/base/");
+        rel = strstr(node, "devicetree/base/");
         if (rel) {
-            snprintf(out, len, "%s%s/camera@*/%s", base,
-                     rel + strlen("devicetree/base/"), prop);
+            snprintf(out, len, "/sys/firmware/%s/camera@*/*-gpio", rel);
             return;
         }
     }
-    snprintf(out, len, "/proc/device-tree/soc/i2c*/camera@*/%s", prop);
+    snprintf(out, len, "/proc/device-tree/soc/i2c*/camera@*/*-gpio");
 }
 
-static void claim_pin(struct anyka_pin *p, const char *prop) {
+/* <phandle pin flags> of each GPIO property of the camera node; flags bit 0
+ * is GPIO_ACTIVE_LOW. The AK39 device trees have one GPIO controller, so the
+ * phandle is not followed. More matches than one camera has -- whose pins
+ * they are is then not known -- and none is touched. Power down is released
+ * and reset asserted, then reset released. */
+static void anyka_pulse_camera_pins(void) {
+    uint32_t rst_reg = 0, rst_bit = 0, rst_val = 0;
     char pattern[320];
+    glob_t g;
 
-    camera_pattern(pattern, sizeof(pattern), prop);
-    if (!anyka_dt_gpio(pattern, &p->pin, &p->active_low) ||
-        !gpio_bit(AK_GPIO_DIR(p->pin), p->pin, &p->saved_dir) ||
-        !gpio_bit(AK_GPIO_OUT(p->pin), p->pin, &p->saved_out))
-        p->pin = -1;
-}
-
-/* Drive a pin to its asserted (on) or released (off) level. */
-static void drive_pin(struct anyka_pin *p, bool assert) {
-    if (p->pin < 0)
+    camera_gpio_pattern(pattern, sizeof(pattern));
+    if (glob(pattern, 0, NULL, &g))
         return;
-    gpio_set_bit(AK_GPIO_OUT(p->pin), p->pin, assert == p->active_low ? 0 : 1);
-    gpio_set_bit(AK_GPIO_DIR(p->pin), p->pin, 1);
-}
+    for (size_t i = 0; g.gl_pathc <= 2 && i < g.gl_pathc; i++) {
+        unsigned char c[12];
 
-static void restore_pin(struct anyka_pin *p) {
-    if (p->pin < 0)
-        return;
-    gpio_set_bit(AK_GPIO_DIR(p->pin), p->pin, p->saved_dir);
-    gpio_set_bit(AK_GPIO_OUT(p->pin), p->pin, p->saved_out);
-}
+        if (read_file(g.gl_pathv[i], c, sizeof(c)) != sizeof(c) || c[7] > 127)
+            continue;
+        uint32_t bank = (c[7] >> 5) * 4, bit = 1u << (c[7] & 31);
+        bool low = c[11] & 1, reset = strstr(g.gl_pathv[i], "reset");
 
-/* Peripheral PLL in MHz, as the camera drivers compute it, or 0 when the
- * register holds something they would refuse. */
-unsigned anyka_peri_pll_mhz(uint32_t pll1) {
-    unsigned m = pll1 & 0xff, n = pll1 >> 8 & 0xf, od = pll1 >> 12 & 0x3;
-
-    if (od < 1 || n < 2 || n > 6 || m < 84 || m > 254)
-        return 0;
-    return 12 * m / (n * (1u << od));
+        anyka_poke(AK_GPIO_OUT + bank, bit, reset != low ? bit : 0);
+        anyka_poke(AK_GPIO_DIR + bank, 0, bit);
+        if (reset) {
+            rst_reg = AK_GPIO_OUT + bank;
+            rst_bit = bit;
+            rst_val = low ? bit : 0;
+        }
+    }
+    globfree(&g);
+    usleep(10000);
+    if (rst_reg)
+        anyka_rmw(rst_reg, rst_bit, rst_val);
 }
+#endif
 
 static void anyka_enable_sensor_clock() {
-    uint32_t pll1, pll2, v;
-    unsigned pll;
+    uint32_t pll1, pll2;
+    unsigned div;
 
-    if (anyka_power.armed)
+    if (anyka_undo_n || (chip_generation | 0x100) != AK39_EV3 ||
+        !mem_reg(AK_REG_PERI_PLL1, &pll1, OP_READ) ||
+        !mem_reg(AK_REG_PERI_PLL2, &pll2, OP_READ) ||
+        pll2 & 1u << 18) /* running: leave it to whoever runs it */
         return;
-    if (chip_generation != AK39_EV2 && chip_generation != AK39_EV3)
-        return;
-    if (!mem_reg(AK_REG_PERI_PLL1, &pll1, OP_READ) ||
-        !mem_reg(AK_REG_PERI_PLL2, &pll2, OP_READ))
-        return;
-    if (pll2 & 1u << 18)
-        return; /* running: leave it to whoever runs it */
-    pll = anyka_peri_pll_mhz(pll1);
-    if (!pll)
+    div = anyka_cis_divider(pll1);
+    if (!div)
         return;
 
     /* The probe calls hal_cleanup() only after it has opened the bus, so a
@@ -436,46 +438,31 @@ static void anyka_enable_sensor_clock() {
         return;
     close_sensor_fd(fd);
 
-    anyka_power.pll1 = pll1;
-    anyka_power.pll2 = pll2;
-    anyka_power.armed = true;
+    if (pll1 & 1u << 25)
+        anyka_poke(AK_REG_PERI_PLL1, 1u << 25, 0);
+    anyka_poke(AK_REG_PERI_PLL2, 0x3fu << 10, div << 10 | 1u << 19);
+    anyka_rmw(AK_REG_PERI_PLL2, 0, 1u << 18);
 
-    claim_pin(&anyka_power.reset, "reset-gpio");
-    claim_pin(&anyka_power.pwdn, "pwdn-gpio");
-
-    v = pll1 & ~(1u << 25);
-    if (v != pll1)
-        mem_reg(AK_REG_PERI_PLL1, &v, OP_WRITE);
-    v = (pll2 & ~(0x3fu << 10)) | (pll / AK_CIS_MCLK_MHZ - 1) << 10 | 1u << 19;
-    mem_reg(AK_REG_PERI_PLL2, &v, OP_WRITE);
-    v |= 1u << 18;
-    mem_reg(AK_REG_PERI_PLL2, &v, OP_WRITE);
-
-    drive_pin(&anyka_power.pwdn, false);
-    drive_pin(&anyka_power.reset, true);
-    usleep(10000);
-    drive_pin(&anyka_power.reset, false);
+#ifndef STANDALONE_LIBRARY
+    anyka_pulse_camera_pins();
+#endif
     usleep(20000);
 }
 
 static void anyka_hal_cleanup() {
-    if (anyka_power.armed) {
-        restore_pin(&anyka_power.reset);
-        restore_pin(&anyka_power.pwdn);
-        mem_reg(AK_REG_PERI_PLL2, &anyka_power.pll2, OP_WRITE);
-        mem_reg(AK_REG_PERI_PLL1, &anyka_power.pll1, OP_WRITE);
-        anyka_power.armed = false;
+    while (anyka_undo_n) {
+        anyka_undo_n--;
+        mem_reg(anyka_undo[anyka_undo_n].addr, &anyka_undo[anyka_undo_n].val,
+                OP_WRITE);
     }
     restore_printk();
 }
 
-#endif /* !STANDALONE_LIBRARY */
-
 void anyka_setup_hal() {
     possible_i2c_addrs = anyka_possible_i2c_addrs;
-#ifndef STANDALONE_LIBRARY
     hal_enable_sensor_clock = anyka_enable_sensor_clock;
     hal_cleanup = anyka_hal_cleanup;
+#ifndef STANDALONE_LIBRARY
     hal_totalmem = anyka_totalmem;
     hal_chip_properties = anyka_chip_properties;
 #endif

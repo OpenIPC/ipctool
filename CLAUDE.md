@@ -121,8 +121,8 @@ CMake knobs worth knowing:
   than `assert()`: the release flags carry `-DNDEBUG`, so an `assert()`-based
   test compiles away to nothing and passes unconditionally.
 - `./build/anyka_test`: the Anyka HAL's parsers -- the `/proc/cpuinfo`
-  machine string, the device tree's compatible, `/memory` and camera GPIO
-  cells, the chip-ID table, the model naming, the peripheral-PLL decode and
+  machine string, the device tree's `/memory` cells, the chip-ID table, the
+  model naming, the CIS clock divider and
   the media-memory arithmetic -- fed fixture files through the path arguments
   `src/hal/anyka.h` exposes for the purpose, with inputs taken from real boot
   logs. Same `CHECK` macro as `longse_test`. The detection itself, including
@@ -226,11 +226,15 @@ reset/power-down GPIOs the device tree names for the camera node, and
 `hal_cleanup` puts back exactly what it changed. It touches nothing when the
 clock is already running, which is a pipeline streaming.
 
-That power-up, and the PrimeSensor and BYD detectors only Anyka boards use,
-are `ipctool`-only (`#ifndef STANDALONE_LIBRARY`): `ipcinfo` is in every
-camera image and the size check holds it to 1 KiB of growth per PR. So
-`ipcinfo -s` finds an Anyka sensor only while something is already clocking
-it. The part name stays in `ipcinfo`, because `ipcinfo -c` has to be right.
+`ipcinfo` is in every camera image and the size check holds it to 1 KiB of
+growth per PR, so it carries the least that works, behind
+`#ifndef STANDALONE_LIBRARY` for the rest. It starts the CIS clock and takes
+the part from the device tree; the sensor drivers' power-off leaves reset an
+input, so that is enough where the camera node has no `pwdn-gpio` (those
+drivers do assert power-down, on a board that has the pin). Only `ipctool`
+pulses the GPIOs, works a part number out of a vendor kernel's board string,
+and knows the PrimeSensor and BYD sensors, which have no tuning in the firmware
+package.
 
 Ambarella (`src/hal/ambarella.c`) stops at the machine string on purpose. The
 exact part (S3L33M, S3L55M, S3L66, ...) is a word the DSP firmware writes,

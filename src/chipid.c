@@ -338,8 +338,12 @@ const char *getchipfamily() {
         return "rv1106";
 #endif
 #ifdef IPCHW_VENDOR_ANYKA
+#ifndef STANDALONE_LIBRARY
     case AK39_EV1:
         return "ak3918";
+    case AK39_AV130:
+        return "ak3918av130";
+#endif
     case AK39_EV2:
         return "ak3918ev200";
     case AK39_EV3:
@@ -350,8 +354,6 @@ const char *getchipfamily() {
         return "ak3918ev300l";
     case AK39_AV100:
         return "ak3918av100";
-    case AK39_AV130:
-        return "ak3918av130";
     case AK37_D:
         return "ak37d";
     case AK37_E:

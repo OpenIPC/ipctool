@@ -167,29 +167,29 @@ static void expect_model(const char *machine, const char *compat,
  * (0x20160100), and EV330 vendor kernels, which carry a device tree. */
 static void model_names(void) {
     expect_model("AK3918E80PIN", "ak3918ev200", AK39_EV2, "AK3918EV200");
-    expect_model("AK3918E80PIN", NULL, AK39_EV2, "AK3918EV200");
-    expect_model("AK3918E80PIN", NULL, AK39_EV3, "AK3918EV300");
-    expect_model("AK3918E", NULL, AK39_EV2, "AK3918EV200");
-    expect_model("AK3918EV200", NULL, AK39_EV2, "AK3918EV200");
-    expect_model("AK3918EV300", NULL, AK39_EV3, "AK3918EV300");
+    expect_model("AK3918E80PIN", "", AK39_EV2, "AK3918EV200");
+    expect_model("AK3918E80PIN", "", AK39_EV3, "AK3918EV300");
+    expect_model("AK3918E", "", AK39_EV2, "AK3918EV200");
+    expect_model("AK3918EV200", "", AK39_EV2, "AK3918EV200");
+    expect_model("AK3918EV300", "", AK39_EV3, "AK3918EV300");
     expect_model("AK39EV330", "ak3919ev330", AK39_EV330, "AK3919EV330");
     /* Only the generation-wide compatible: name the generation, as the
      * vendor banner does ("ANYKA CPU AK39XXEV330"), not the board's short
      * form. */
     expect_model("AK39EV330", "ak39ev330", AK39_EV330, "AK39XXEV330");
-    expect_model("AK39EV330", NULL, AK39_EV330, "AK39XXEV330");
+    expect_model("AK39EV330", "", AK39_EV330, "AK39XXEV330");
     /* Aimer39 has no suffix, and a generation nobody can name adds none. */
-    expect_model("AK3918", NULL, AK39_EV1, "AK3918");
-    expect_model("AK3918E80PIN", NULL, 0, "AK3918E80PIN");
-    expect_model("AK3918AV130", NULL, AK39_AV130, "AK3918AV130");
+    expect_model("AK3918", "", AK39_EV1, "AK3918");
+    expect_model("AK3918E80PIN", "", 0, "AK3918E80PIN");
+    expect_model("AK3918AV130", "", AK39_AV130, "AK3918AV130");
     /* The suffix comes out of the generation constant. */
-    expect_model("AK3918E80PIN", NULL, AK39_AV130, "AK3918AV130");
-    expect_model("AK3918E80PIN", NULL, AK39_AV100, "AK3918AV100");
-    expect_model("AK3918E80PIN", NULL, AK39_EV300L, "AK3918E80PIN");
+    expect_model("AK3918E80PIN", "", AK39_AV130, "AK3918AV130");
+    expect_model("AK3918E80PIN", "", AK39_AV100, "AK3918AV100");
+    expect_model("AK3918E80PIN", "", AK39_EV300L, "AK3918E80PIN");
     /* AK37 constants spell no AK39 suffix. */
-    expect_model("AK3760", NULL, AK37_D, "AK3760");
+    expect_model("AK3760", "", AK37_D, "AK3760");
     /* Device tree alone, no board string to go on. */
-    expect_model(NULL, "ak3918ev200", 0, "AK3918EV200");
+    expect_model("", "ak3918ev200", 0, "AK3918EV200");
 }
 
 static const char *binary_fixture(const unsigned char *data, size_t len) {
@@ -212,21 +212,13 @@ static void device_tree(void) {
 
     /* reset-gpio = <&gpio 0 GPIO_ACTIVE_LOW>, the gwell camera's. */
     static const unsigned char gpio[] = {0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 1};
-    int pin = -1;
-    bool active_low = false;
-    path = binary_fixture(gpio, sizeof(gpio));
-    CHECK(anyka_dt_gpio(path, &pin, &active_low));
-    CHECK(pin == 0 && active_low);
-    unlink(path);
-    CHECK(!anyka_dt_gpio("/nonexistent/*/reset-gpio", &pin, &active_low));
-
-    /* The EV200's peripheral PLL, 0x00a512c8: M 200, N 2, OD 1 -> 600 MHz.
-     * Values the camera drivers refuse give 0. */
-    CHECK(anyka_peri_pll_mhz(0x00a512c8) == 600);
-    CHECK(anyka_peri_pll_mhz(0x00000000) == 0);
+    /* The EV200's peripheral PLL, 0x00a512c8: M 200, N 2, OD 1 -> 600 MHz,
+     * and 600 / 24 - 1 = 24. Values the camera drivers refuse give 0. */
+    CHECK(anyka_cis_divider(0x00a512c8) == 24);
+    CHECK(anyka_cis_divider(0x00000000) == 0);
     /* OD 0, and N 1: both outside what the drivers accept. */
-    CHECK(anyka_peri_pll_mhz(0x000002c8) == 0);
-    CHECK(anyka_peri_pll_mhz(0x000011c8) == 0);
+    CHECK(anyka_cis_divider(0x000002c8) == 0);
+    CHECK(anyka_cis_divider(0x000011c8) == 0);
 }
 
 static void media_mem(void) {
