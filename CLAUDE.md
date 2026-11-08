@@ -120,12 +120,13 @@ CMake knobs worth knowing:
   the project has a Longse camera. Note it uses a local `CHECK` macro rather
   than `assert()`: the release flags carry `-DNDEBUG`, so an `assert()`-based
   test compiles away to nothing and passes unconditionally.
-- `./build/anyka_test`: the Anyka HAL's three parsers -- the `/proc/cpuinfo`
-  machine string, the chip-ID table and the media-memory arithmetic -- fed
-  fixture files through the path arguments `src/hal/anyka.h` exposes for the
-  purpose. Same situation as `longse_test` and the same `CHECK` macro: nobody
-  on the project has an Anyka camera, so this is all the verification that
-  code gets until a reporter runs it.
+- `./build/anyka_test`: the Anyka HAL's parsers -- the `/proc/cpuinfo`
+  machine string, the device tree's compatible, `/memory` and camera GPIO
+  cells, the chip-ID table, the model naming, the peripheral-PLL decode and
+  the media-memory arithmetic -- fed fixture files through the path arguments
+  `src/hal/anyka.h` exposes for the purpose, with inputs taken from real boot
+  logs. Same `CHECK` macro as `longse_test`. The detection itself, including
+  the sensor power-up, was run on an AK3918EV200 with OpenIPC's kernel.
 - `./build/ambarella_test`: the `/proc/cpuinfo` machine string the Ambarella
   HAL parses, same `CHECK` macro and same reason.
 - `tools/test_pipeline.sh`: hardware-free end-to-end check of the sensor
@@ -204,16 +205,26 @@ per-generation tables in each subcommand that should support it. Adding a new
 vendor also needs an entry in `IPCHW_OPTIONAL_VENDORS` in `CMakeLists.txt`, an
 include in `hal/common.h`, and a guarded row in `manufacturers[]`.
 
-Anyka (`src/hal/anyka.c`) is the smallest worked example of that whole shape,
-and the one that shows what to do when the SoC hands you no clean key: its
-kernels have no device tree and register no UART with `/proc/iomem`, so the
-`/proc/cpuinfo` machine string is what names the part
+Anyka (`src/hal/anyka.c`) shows what to do when the SoC hands you no clean
+key. The vendor 3.4 kernels have no device tree and register no UART with
+`/proc/iomem`, so the `/proc/cpuinfo` machine string is what names the part
 (`CLOUD39EV3_AK3918EV300_MNBD`), while the chip-ID word at `0x08000000` names
 only the generation -- one vendor kernel prints the same `0x20160100` as
 AK3916, AK3918 or AK3919 depending on which `CONFIG_CPU_AK39xx` it was built
-with. Reading the register is therefore a refinement and never the gate, which
-is also what lets detection survive a kernel that will not hand over
-`/dev/mem`.
+with, and `0x20120100` is both the Aimer39 AK3918's and some EV200s'. Board
+strings often carry only the package (`AK3918E80PIN` is an EV200 on one board
+and an EV300 on another), so the generation completes the name; a device
+tree's root compatible (OpenIPC's and the EV330 vendor kernels) names the part
+outright and wins. The AV130 keeps its ID at `0x080003fc` instead. Reading the
+registers is a refinement and never the gate, which is also what lets
+detection survive a kernel that will not hand over `/dev/mem`.
+
+Anyka sensors answer I2C only while the camera driver has them clocked and
+out of reset, so on EV200/EV300 `hal_enable_sensor_clock` starts the CIS
+clock (SYSCTRL `0x18`, from the peripheral PLL in `0x14`) and pulses the
+reset/power-down GPIOs the device tree names for the camera node, and
+`hal_cleanup` puts back exactly what it changed. It touches nothing when the
+clock is already running, which is a pipeline streaming.
 
 Ambarella (`src/hal/ambarella.c`) stops at the machine string on purpose. The
 exact part (S3L33M, S3L55M, S3L66, ...) is a word the DSP firmware writes,
