@@ -11,19 +11,29 @@
  * "akpcm_AnalogCtrlRegs" -- so it has to be spelled out here. */
 #define AK_PA_SYSCTRL 0x08000000
 #define AK_REG_CHIP_ID (AK_PA_SYSCTRL + 0x00)
+/* The AK3918AV130 keeps its ID at the far end of the same block
+ * (mach-ak3918av130.c: AK_VA_SYSCTRL + 0x3FC). */
+#define AK_REG_CHIP_ID_AV (AK_PA_SYSCTRL + 0x3FC)
 
 /* chip_generation values. The ID word names a generation, never the exact
  * part: a vendor kernel compares it against the single constant picked by its
  * CONFIG_CPU_AK39xx and prints whichever name it was built for, so the same
  * 0x20160100 is announced as AK3916, AK3918 or AK3919 by three different
  * boards. The part number comes from the machine string instead. */
+/* The first generation, Aimer39 (AK3918, AK3916, AK3910): its 0x20120100 is
+ * shared with some AK3918EV200 boards, so the board string decides. */
+/* A constant whose low nibble is 0 spells its part's suffix in its low 16
+ * bits, 0xE200 being EV200, and anyka_model_name() prints it; the others have
+ * none to give. */
+#define AK39_EV1 0x3918E101
 #define AK39_EV2 0x3918E200
 #define AK39_EV3 0x3918E300
 #define AK39_EV330 0x3939E330
 #define AK39_EV300L 0x3918E30C
 #define AK39_AV100 0x3918A100
-#define AK37_D 0x3737D000
-#define AK37_E 0x3737E000
+#define AK39_AV130 0x3918A130
+#define AK37_D 0x3737D001
+#define AK37_E 0x3737E001
 
 bool anyka_detect_cpu(char *chip_name);
 void anyka_setup_hal();
@@ -34,6 +44,10 @@ void anyka_setup_hal();
  * /proc paths. */
 bool anyka_machine_name(const char *cpuinfo, char *out, size_t outlen);
 int anyka_generation(uint32_t chip_id);
+void anyka_model_name(const char *machine, const char *compat, int generation,
+                      char *out, size_t outlen);
 unsigned long anyka_media_mem(const char *cmdline, const char *iomem);
+unsigned long anyka_dt_memsize(const char *reg_path);
+unsigned anyka_cis_divider(uint32_t pll1);
 
 #endif /* HAL_ANYKA_H */

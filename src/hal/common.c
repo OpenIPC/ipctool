@@ -89,19 +89,23 @@ int universal_i2c_write_register(int fd, unsigned char i2c_addr,
                                  unsigned int reg_addr, unsigned int reg_width,
                                  unsigned int data, unsigned int data_width) {
     (void)i2c_addr;
-    (void)data;
-    char buf[2];
+    unsigned char buf[4];
+    int len = 0;
 
-    if (reg_width == 2) {
-        buf[0] = (reg_addr >> 8) & 0xff;
-        buf[1] = reg_addr & 0xff;
-    } else {
-        buf[0] = reg_addr & 0xff;
-    }
+    /* The register address, then the value, both most significant byte
+     * first: one I2C write. This used to send `data_width` bytes of the
+     * address alone, so every write through it -- `ipctool i2cset`, the
+     * SuperPix page select -- stored nothing, and with two-byte addresses
+     * not even the whole address went out. */
+    if (reg_width == 2)
+        buf[len++] = (reg_addr >> 8) & 0xff;
+    buf[len++] = reg_addr & 0xff;
+    if (data_width == 2)
+        buf[len++] = (data >> 8) & 0xff;
+    buf[len++] = data & 0xff;
 
-    if (write(fd, buf, data_width) != (int)data_width) {
+    if (write(fd, buf, len) != len)
         return -1;
-    }
     return 0;
 }
 

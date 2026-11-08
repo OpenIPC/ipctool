@@ -533,11 +533,11 @@ static int detect_smartsens_sensor(sensor_ctx_t *ctx, int fd,
         break;
     case 0x1235:
         break;
-    case 0x1245: {
-        int sw = i2c_read_register(fd, i2c_addr, 0x3020, 2, 1);
-        sprintf(ctx->sensor_id, "SC2145H_%c", sw == 2 ? 'A' : 'B');
+    case 0x1245:
+        /* 0x3020 tells two silicon revisions apart (the Anyka driver picks
+         * its init variant by it, 2 or 3); it is not a different part. */
+        strcpy(ctx->sensor_id, "SC2145H");
         return true;
-    }
     case 0x2032:
         res = 0x2035;
         break;
@@ -1201,6 +1201,72 @@ static int detect_cvsens_sensor(sensor_ctx_t *ctx, int fd,
     }
 }
 
+#ifndef STANDALONE_LIBRARY
+/* PrimeSensor PS52xx, as the Anyka EV200/EV300 drivers read it: the ID is in
+ * bank 0, registers 0x00/0x01, byte addresses, and the bank is selected
+ * through 0xef. The bank is put back as it was found, like the SuperPix page:
+ * a streamer driving the sensor writes its exposure to another bank. */
+static int detect_primesensor_sensor(sensor_ctx_t *ctx, int fd,
+                                     unsigned char i2c_addr) {
+    if (i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    int bank = i2c_read_register(fd, i2c_addr, 0xef, 1, 1);
+    if (bank == -1 || bank == 0xff)
+        return false;
+    /* A bank that cannot be selected would make the ID reads come from the
+     * wrong one: give up rather than name the sensor from them. */
+    if (bank && i2c_write_register(fd, i2c_addr, 0xef, 1, 0x00, 1) < 0)
+        return false;
+    int msb = i2c_read_register(fd, i2c_addr, 0x00, 1, 1);
+    int lsb = i2c_read_register(fd, i2c_addr, 0x01, 1, 1);
+    /* Retried once: a streamer driving this sensor writes to the bank it
+     * left selected. */
+    if (bank && i2c_write_register(fd, i2c_addr, 0xef, 1, bank, 1) < 0)
+        i2c_write_register(fd, i2c_addr, 0xef, 1, bank, 1);
+    if (msb == -1 || lsb == -1)
+        return false;
+
+    int res = msb << 8 | lsb;
+    switch (res) {
+    case 0x5250:
+    case 0x5260:
+    case 0x5268:
+    case 0x5270:
+    case 0x5280:
+        sprintf(ctx->sensor_id, "PS%04x", res);
+        return true;
+    default:
+        SENSOR_ERR("PrimeSensor", res);
+        return false;
+    }
+}
+
+/* BYD BF3703 (VGA, Anyka EV200 SDK), ID at byte registers 0xfc/0xfd. */
+static int detect_byd_sensor(sensor_ctx_t *ctx, int fd,
+                             unsigned char i2c_addr) {
+    if (i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    int msb = i2c_read_register(fd, i2c_addr, 0xfc, 1, 1);
+    if (msb == -1)
+        return false;
+    int lsb = i2c_read_register(fd, i2c_addr, 0xfd, 1, 1);
+    if (lsb == -1)
+        return false;
+
+    int res = msb << 8 | lsb;
+    switch (res) {
+    case 0x3703:
+        sprintf(ctx->sensor_id, "BF%04x", res);
+        return true;
+    default:
+        SENSOR_ERR("BYD", res);
+        return false;
+    }
+}
+#endif /* !STANDALONE_LIBRARY */
+
 static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int (*detect_fn)(sensor_ctx_t *ctx, int,
                                                     unsigned char),
@@ -1287,6 +1353,18 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
                                        SENSOR_CVSENS)) {
         strcpy(ctx->vendor, "CVSENS");
         detected = true;
+#ifndef STANDALONE_LIBRARY
+    } else if (detect_possible_sensors(ctx, fd, detect_primesensor_sensor,
+                                       SENSOR_PRIMESENSOR)) {
+        strcpy(ctx->vendor, "PrimeSensor");
+        ctx->reg_width = 1;
+        detected = true;
+    } else if (detect_possible_sensors(ctx, fd, detect_byd_sensor,
+                                       SENSOR_BYD)) {
+        strcpy(ctx->vendor, "BYD");
+        ctx->reg_width = 1;
+        detected = true;
+#endif
     }
 exit:
     close_sensor_fd(fd);

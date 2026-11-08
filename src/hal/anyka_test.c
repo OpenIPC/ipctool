@@ -137,12 +137,88 @@ static void chip_ids(void) {
     CHECK(anyka_generation(0x53533542) == AK39_AV100);
     CHECK(anyka_generation(0x53543400) == AK39_EV300L);
 
+    /* AK3918AV130 revisions A and B, at SYSCTRL + 0x3FC. */
+    CHECK(anyka_generation(0x56573500) == AK39_AV130);
+    CHECK(anyka_generation(0x56573502) == AK39_AV130);
+
     /* A shifted row must not swallow a raw one, or an EV300 would report as
      * whatever 0x201601.. happened to be listed. */
     CHECK(anyka_generation(0x20160102) == 0);
     CHECK(anyka_generation(0x20120101) == 0);
     CHECK(anyka_generation(0x00000000) == 0);
     CHECK(anyka_generation(0xffffffff) == 0);
+}
+
+
+static void expect_model(const char *machine, const char *compat,
+                         int generation, const char *want) {
+    char got[128];
+
+    anyka_model_name(machine, compat, generation, got, sizeof(got));
+    CHECK(!strcmp(got, want));
+    if (strcmp(got, want))
+        fprintf(stderr, "    (wanted \"%s\", got \"%s\")\n", want, got);
+}
+
+/* "AK3918E80PIN" is a package: an EV200's on one board, an EV300's on
+ * another, so the generation completes it. The boot logs these come from:
+ * OpenIPC's EV200 kernel, a V380E2 and a gwell AK3918EV200 (vendor 3.4.35,
+ * ID 0x20150200), an AK3916EV301 camera whose vendor kernel says EV300
+ * (0x20160100), and EV330 vendor kernels, which carry a device tree. */
+static void model_names(void) {
+    expect_model("AK3918E80PIN", "ak3918ev200", AK39_EV2, "AK3918EV200");
+    expect_model("AK3918E80PIN", "", AK39_EV2, "AK3918EV200");
+    expect_model("AK3918E80PIN", "", AK39_EV3, "AK3918EV300");
+    expect_model("AK3918E", "", AK39_EV2, "AK3918EV200");
+    expect_model("AK3918EV200", "", AK39_EV2, "AK3918EV200");
+    expect_model("AK3918EV300", "", AK39_EV3, "AK3918EV300");
+    expect_model("AK39EV330", "ak3919ev330", AK39_EV330, "AK3919EV330");
+    /* Only the generation-wide compatible: name the generation, as the
+     * vendor banner does ("ANYKA CPU AK39XXEV330"), not the board's short
+     * form. */
+    expect_model("AK39EV330", "ak39ev330", AK39_EV330, "AK39XXEV330");
+    expect_model("AK39EV330", "", AK39_EV330, "AK39XXEV330");
+    /* Aimer39 has no suffix, and a generation nobody can name adds none. */
+    expect_model("AK3918", "", AK39_EV1, "AK3918");
+    expect_model("AK3918E80PIN", "", 0, "AK3918E80PIN");
+    expect_model("AK3918AV130", "", AK39_AV130, "AK3918AV130");
+    /* The suffix comes out of the generation constant. */
+    expect_model("AK3918E80PIN", "", AK39_AV130, "AK3918AV130");
+    expect_model("AK3918E80PIN", "", AK39_AV100, "AK3918AV100");
+    expect_model("AK3918E80PIN", "", AK39_EV300L, "AK3918E80PIN");
+    /* AK37 constants spell no AK39 suffix. */
+    expect_model("AK3760", "", AK37_D, "AK3760");
+    /* Device tree alone, no board string to go on. */
+    expect_model("", "ak3918ev200", 0, "AK3918EV200");
+}
+
+static const char *binary_fixture(const unsigned char *data, size_t len) {
+    const char *path = fixture("");
+    FILE *f = fopen(path, "wb");
+
+    if (f) {
+        fwrite(data, 1, len, f);
+        fclose(f);
+    }
+    return path;
+}
+
+static void device_tree(void) {
+    /* OpenIPC's EV200: /memory reg = <0x80000000 0x04000000>. */
+    static const unsigned char mem[] = {0x80, 0, 0, 0, 0x04, 0, 0, 0};
+    const char *path = binary_fixture(mem, sizeof(mem));
+    CHECK(anyka_dt_memsize(path) == 64 * 1024);
+    unlink(path);
+
+    /* reset-gpio = <&gpio 0 GPIO_ACTIVE_LOW>, the gwell camera's. */
+    static const unsigned char gpio[] = {0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 1};
+    /* The EV200's peripheral PLL, 0x00a512c8: M 200, N 2, OD 1 -> 600 MHz,
+     * and 600 / 24 - 1 = 24. Values the camera drivers refuse give 0. */
+    CHECK(anyka_cis_divider(0x00a512c8) == 24);
+    CHECK(anyka_cis_divider(0x00000000) == 0);
+    /* OD 0, and N 1: both outside what the drivers accept. */
+    CHECK(anyka_cis_divider(0x000002c8) == 0);
+    CHECK(anyka_cis_divider(0x000011c8) == 0);
 }
 
 static void media_mem(void) {
@@ -177,6 +253,8 @@ static void media_mem(void) {
 int main(void) {
     machine_names();
     chip_ids();
+    model_names();
+    device_tree();
     media_mem();
 
     if (failures) {
