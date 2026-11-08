@@ -1,4 +1,3 @@
-#define _GNU_SOURCE /* memmem() */
 #include "hal/anyka.h"
 
 #include <ctype.h>
@@ -27,8 +26,10 @@ static unsigned char omni_addrs[] = {0x6c, 0x60, 0};
 static unsigned char gc_addrs[] = {0x42, 0x6e, 0x78, 0x52, 0};
 static unsigned char superpix_addrs[] = {0x7a, 0x78, 0};
 static unsigned char imagedesign_addrs[] = {0x60, 0};
+#ifndef STANDALONE_LIBRARY
 static unsigned char primesensor_addrs[] = {0x90, 0};
 static unsigned char byd_addrs[] = {0xdc, 0};
+#endif
 
 static sensor_addr_t anyka_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},
@@ -39,8 +40,10 @@ static sensor_addr_t anyka_possible_i2c_addrs[] = {
     {SENSOR_GALAXYCORE, gc_addrs},
     {SENSOR_SUPERPIX, superpix_addrs},
     {SENSOR_IMAGEDESIGN, imagedesign_addrs},
+#ifndef STANDALONE_LIBRARY
     {SENSOR_PRIMESENSOR, primesensor_addrs},
     {SENSOR_BYD, byd_addrs},
+#endif
     {0, NULL}};
 
 /* Raw chip ID as it was read, kept so the report can show the number the
@@ -84,8 +87,8 @@ int anyka_generation(uint32_t chip_id) {
  * issue #134 has no /proc/device-tree at all -- and the SoC registers no UART
  * with /proc/iomem, so the machine string is the one signal that every
  * kernel gives without /dev/mem. Every Anyka camera board spells a part
- * number into it: "CLOUD39EV3_AK3918EV300_MNBD", "Cloud39EV2_AK3918E80PIN_MNBD",
- * "AK3918EV200_GWELL_V1", "Cloud39E_AK3918E+H42_V1.0.2",
+ * number into it: "CLOUD39EV3_AK3918EV300_MNBD",
+ * "Cloud39EV2_AK3918E80PIN_MNBD", "AK3918EV200_GWELL_V1", "Cloud39E_AK3918E+H42_V1.0.2",
  * "Aimer39_AK3918_MB_V1.0.0", "AK39EV330". */
 bool anyka_machine_name(const char *cpuinfo, char *out, size_t outlen) {
     if (!line_from_file(cpuinfo, "Hardware.*:.*([Aa][Kk]3[0-9][0-9A-Za-z]*)",
@@ -98,128 +101,64 @@ bool anyka_machine_name(const char *cpuinfo, char *out, size_t outlen) {
     return true;
 }
 
-static const char *generation_suffix(int generation) {
-    switch (generation) {
-    case AK39_EV2:
-        return "EV200";
-    case AK39_EV3:
-        return "EV300";
-    case AK39_EV330:
-        return "EV330";
-    case AK39_AV100:
-        return "AV100";
-    case AK39_AV130:
-        return "AV130";
-    default:
-        return "";
-    }
-}
-
-/* Is s "AK" + two family digits + two part digits, e.g. AK3918? */
+/* Is s "AK" + four digits, e.g. AK3918? */
 static bool is_part_base(const char *s) {
-    return (s[0] == 'A' || s[0] == 'a') && (s[1] == 'K' || s[1] == 'k') &&
-           isdigit((unsigned char)s[2]) && isdigit((unsigned char)s[3]) &&
-           isdigit((unsigned char)s[4]) && isdigit((unsigned char)s[5]);
+    return (s[0] | 32) == 'a' && (s[1] | 32) == 'k' && isdigit(s[2]) &&
+           isdigit(s[3]) && isdigit(s[4]) && isdigit(s[5]);
 }
 
-/* ...followed by EVnnn or AVnnn: the whole part number, AK3918EV200. */
+static bool is_bare_part(const char *s) {
+    return is_part_base(s) && !s[6];
+}
+
+/* ...followed by EVnnn or AVnnn: the whole part number, AK3918EV200. A
+ * package, "AK3918E80PIN", has no V there. */
 static bool is_full_part(const char *s) {
-    return is_part_base(s) && (toupper(s[6]) == 'E' || toupper(s[6]) == 'A') &&
-           toupper(s[7]) == 'V' && isdigit((unsigned char)s[8]) &&
-           isdigit((unsigned char)s[9]) && isdigit((unsigned char)s[10]);
+    return is_part_base(s) && s[6] && (s[7] | 32) == 'v' && isdigit(s[8]);
 }
 
-/* The part a device tree's root compatible names, "anyka,ak3918ev330" ->
- * "AK3918EV330", skipping the generation-wide "anyka,ak39ev330". The list is
- * NUL-separated, as /proc/device-tree/compatible holds it. */
-bool anyka_compatible_part(const char *compat, size_t len, char *out,
-                           size_t outlen) {
-    for (size_t i = 0; i < len; i += strlen(compat + i) + 1) {
-        const char *c = compat + i;
+/* The model to report. `compat` is what follows "anyka," in the device tree's
+ * root compatible, whose first entry is the most specific: the exact part
+ * where the tree has one. Otherwise the board string names it when it carries
+ * a whole part number. Where it carries only the package -- "AK3918E80PIN" is
+ * an EV200 on one board and an EV300 on another -- the chip ID's generation
+ * completes it, and its constant spells the suffix: 0x3918E200 is EV200.
+ * Aimer39 has no suffix and the EV300L's constant spells none. EV330 boards
+ * say only "AK39EV330", which is no part: that one is named as the vendor
+ * kernel's CPU banner names it. */
+void anyka_model_name(const char *machine, const char *compat, int generation,
+                      char *out, size_t outlen) {
+    const char *part = compat;
 
-        if (strncmp(c, "anyka,", 6) || !is_full_part(c + 6))
-            continue;
-        size_t n = 0;
-        for (const char *p = c + 6; *p && n + 1 < outlen; p++)
-            out[n++] = toupper((unsigned char)*p);
-        out[n] = '\0';
-        return true;
+    if (!part || !is_full_part(part)) {
+        part = machine ? machine : "";
+        if (generation == AK39_EV330 && !is_full_part(part))
+            part = "AK39XXEV330";
     }
-    return false;
-}
-
-/* The first AK39 generation's device trees name a bare part -- "anyka,ak3918",
- * "anyka,ak3916", "anyka,ak3910" -- where the later ones carry EVnnn. */
-bool anyka_is_aimer39_dt(const char *compat, size_t len) {
-    for (size_t i = 0; i < len; i += strlen(compat + i) + 1) {
-        const char *c = compat + i;
-
-        if (!strncmp(c, "anyka,", 6) && is_part_base(c + 6) && !c[12])
-            return true;
-    }
-    return false;
-}
-
-/* The model to report. The device tree names the exact part where there is
- * one (OpenIPC and the EV330 vendor kernels). Otherwise the board string
- * does when it carries a whole part number. Where it carries only the
- * package -- "AK3918E80PIN" is an EV200 on one board and an EV300 on another,
- * "AK3918E" a V380's EV200 -- the chip ID's generation completes it. */
-void anyka_model_name(const char *machine, const char *compat,
-                      size_t compat_len, int generation, char *out,
-                      size_t outlen) {
-    if (compat && anyka_compatible_part(compat, compat_len, out, outlen))
-        return;
-
-    /* EV330 boards say only "AK39EV330", which is no part: name the
-     * generation as the vendor kernel's CPU banner does. */
-    if (generation == AK39_EV330 && !(machine && is_full_part(machine))) {
-        snprintf(out, outlen, "AK39XXEV330");
-        return;
-    }
-
-    if (!machine || !*machine) {
-        out[0] = '\0';
-        return;
-    }
-    if (is_full_part(machine) || !is_part_base(machine) ||
-        !*generation_suffix(generation)) {
-        snprintf(out, outlen, "%s", machine);
-        for (char *p = out; *p; p++)
-            *p = toupper((unsigned char)*p);
-        return;
-    }
-    snprintf(out, outlen, "AK%.4s%s", machine + 2,
-             generation_suffix(generation));
-}
-
-static size_t read_file(const char *path, char *buf, size_t len) {
-    FILE *f = fopen(path, "rb");
-    size_t n;
-
-    if (!f)
-        return 0;
-    n = fread(buf, 1, len, f);
-    fclose(f);
-    return n;
+    if (is_part_base(part) && !is_full_part(part) && generation >> 24 == 0x39 &&
+        generation != AK39_EV1 && !(generation & 0xf))
+        snprintf(out, outlen, "AK%.4s%XV%03X", part + 2, generation >> 12 & 0xf,
+                 generation & 0xfff);
+    else
+        snprintf(out, outlen, "%s", part);
+    for (char *p = out; *p; p++)
+        *p = toupper((unsigned char)*p);
 }
 
 bool anyka_detect_cpu(char *chip_name) {
     /* As wide as chip_name, since that is where it lands. */
-    char machine[128] = "", compat[512];
-    size_t compat_len;
+    char machine[128] = "", compat[32] = "";
     uint32_t reg;
-
-    compat_len = read_file("/proc/device-tree/compatible", compat,
-                           sizeof(compat) - 1);
-    compat[compat_len] = '\0';
 
     bool by_machine =
         anyka_machine_name("/proc/cpuinfo", machine, sizeof(machine));
     /* OpenIPC's kernels name the part in the device tree too; a board string
      * is then not needed to claim the SoC. */
-    if (!by_machine && !memmem(compat, compat_len, "anyka,", 6))
+    if (!line_from_file("/proc/device-tree/compatible", "^anyka,(.*)", compat,
+                        sizeof(compat)) &&
+        !by_machine)
         return false;
+    compat[sizeof(compat) - 1] = '\0';
 
     /* Only ever a refinement: the board already named the part, and a kernel
      * built with strict devmem filtering can refuse the window outright. The
@@ -234,23 +173,30 @@ bool anyka_detect_cpu(char *chip_name) {
         }
     }
 
-    /* 0x20120100 is also the Aimer39 AK3918's, which is a generation of its
-     * own: the board string or the device tree says which this is. */
-    if (anyka_chip_id == 0x20120100) {
-        char aimer[16];
+    /* 0x20120100 is also the Aimer39 AK3918's, a generation of its own. Its
+     * boards and device trees name a bare part, "Aimer39_AK3918_MB_V1.0.0"
+     * and "anyka,ak3918", where an EV200's carry more. */
+    if (anyka_chip_id == 0x20120100 &&
+        (is_bare_part(machine) || is_bare_part(compat)))
+        chip_generation = AK39_EV1;
 
-        if (line_from_file("/proc/cpuinfo", "Hardware.*:.*(Aimer39)", aimer,
-                           sizeof(aimer)) ||
-            anyka_is_aimer39_dt(compat, compat_len))
-            chip_generation = AK39_EV1;
-    }
-
-    anyka_model_name(by_machine ? machine : NULL, compat, compat_len,
-                     chip_generation, chip_name, 128);
+    anyka_model_name(by_machine ? machine : NULL, compat, chip_generation,
+                     chip_name, 128);
     return *chip_name != '\0';
 }
 
 #ifndef STANDALONE_LIBRARY
+static size_t read_file(const char *path, char *buf, size_t len) {
+    FILE *f = fopen(path, "rb");
+    size_t n;
+
+    if (!f)
+        return 0;
+    n = fread(buf, 1, len, f);
+    fclose(f);
+    return n;
+}
+
 /* Total DRAM is not something Linux can always see here. A vendor boot
  * loader keeps the foot of the bank for the ISP and the encoder and hands the
  * kernel only what is left -- 37 MB of a 64 MB part on the camera in issue
@@ -331,6 +277,7 @@ static void anyka_chip_properties(cJSON *j_inner) {
 }
 #endif
 
+#ifndef STANDALONE_LIBRARY
 /*
  * The sensor answers I2C only while it is clocked and out of reset, and on
  * these SoCs that is only while the camera driver is using it: it powers the
@@ -522,11 +469,13 @@ static void anyka_hal_cleanup() {
     restore_printk();
 }
 
+#endif /* !STANDALONE_LIBRARY */
+
 void anyka_setup_hal() {
     possible_i2c_addrs = anyka_possible_i2c_addrs;
+#ifndef STANDALONE_LIBRARY
     hal_enable_sensor_clock = anyka_enable_sensor_clock;
     hal_cleanup = anyka_hal_cleanup;
-#ifndef STANDALONE_LIBRARY
     hal_totalmem = anyka_totalmem;
     hal_chip_properties = anyka_chip_properties;
 #endif

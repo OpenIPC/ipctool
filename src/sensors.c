@@ -1201,6 +1201,7 @@ static int detect_cvsens_sensor(sensor_ctx_t *ctx, int fd,
     }
 }
 
+#ifndef STANDALONE_LIBRARY
 /* PrimeSensor PS52xx, as the Anyka EV200/EV300 drivers read it: the ID is in
  * bank 0, registers 0x00/0x01, byte addresses, and the bank is selected
  * through 0xef. The bank is put back as it was found, like the SuperPix page:
@@ -1264,6 +1265,7 @@ static int detect_byd_sensor(sensor_ctx_t *ctx, int fd,
         return false;
     }
 }
+#endif /* !STANDALONE_LIBRARY */
 
 static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int (*detect_fn)(sensor_ctx_t *ctx, int,
@@ -1351,6 +1353,7 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
                                        SENSOR_CVSENS)) {
         strcpy(ctx->vendor, "CVSENS");
         detected = true;
+#ifndef STANDALONE_LIBRARY
     } else if (detect_possible_sensors(ctx, fd, detect_primesensor_sensor,
                                        SENSOR_PRIMESENSOR)) {
         strcpy(ctx->vendor, "PrimeSensor");
@@ -1361,6 +1364,7 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
         strcpy(ctx->vendor, "BYD");
         ctx->reg_width = 1;
         detected = true;
+#endif
     }
 exit:
     close_sensor_fd(fd);

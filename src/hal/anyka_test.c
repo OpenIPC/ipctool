@@ -151,11 +151,10 @@ static void chip_ids(void) {
 
 
 static void expect_model(const char *machine, const char *compat,
-                         size_t compat_len, int generation, const char *want) {
+                         int generation, const char *want) {
     char got[128];
 
-    anyka_model_name(machine, compat, compat_len, generation, got,
-                     sizeof(got));
+    anyka_model_name(machine, compat, generation, got, sizeof(got));
     CHECK(!strcmp(got, want));
     if (strcmp(got, want))
         fprintf(stderr, "    (wanted \"%s\", got \"%s\")\n", want, got);
@@ -167,36 +166,30 @@ static void expect_model(const char *machine, const char *compat,
  * ID 0x20150200), an AK3916EV301 camera whose vendor kernel says EV300
  * (0x20160100), and EV330 vendor kernels, which carry a device tree. */
 static void model_names(void) {
-    static const char ev200_dt[] = "anyka,ak3918ev200";
-    static const char ev330_dt[] = "anyka,ak3919ev330\0anyka,ak39ev330";
-    static const char generic_dt[] = "anyka,ak39ev330";
-
-    expect_model("AK3918E80PIN", ev200_dt, sizeof(ev200_dt), AK39_EV2,
-                 "AK3918EV200");
-    expect_model("AK3918E80PIN", NULL, 0, AK39_EV2, "AK3918EV200");
-    expect_model("AK3918E80PIN", NULL, 0, AK39_EV3, "AK3918EV300");
-    expect_model("AK3918E", NULL, 0, AK39_EV2, "AK3918EV200");
-    expect_model("AK3918EV200", NULL, 0, AK39_EV2, "AK3918EV200");
-    expect_model("AK3918EV300", NULL, 0, AK39_EV3, "AK3918EV300");
-    expect_model("AK39EV330", ev330_dt, sizeof(ev330_dt), AK39_EV330,
-                 "AK3919EV330");
+    expect_model("AK3918E80PIN", "ak3918ev200", AK39_EV2, "AK3918EV200");
+    expect_model("AK3918E80PIN", NULL, AK39_EV2, "AK3918EV200");
+    expect_model("AK3918E80PIN", NULL, AK39_EV3, "AK3918EV300");
+    expect_model("AK3918E", NULL, AK39_EV2, "AK3918EV200");
+    expect_model("AK3918EV200", NULL, AK39_EV2, "AK3918EV200");
+    expect_model("AK3918EV300", NULL, AK39_EV3, "AK3918EV300");
+    expect_model("AK39EV330", "ak3919ev330", AK39_EV330, "AK3919EV330");
     /* Only the generation-wide compatible: name the generation, as the
      * vendor banner does ("ANYKA CPU AK39XXEV330"), not the board's short
      * form. */
-    expect_model("AK39EV330", generic_dt, sizeof(generic_dt), AK39_EV330,
-                 "AK39XXEV330");
-    expect_model("AK39EV330", NULL, 0, AK39_EV330, "AK39XXEV330");
+    expect_model("AK39EV330", "ak39ev330", AK39_EV330, "AK39XXEV330");
+    expect_model("AK39EV330", NULL, AK39_EV330, "AK39XXEV330");
     /* Aimer39 has no suffix, and a generation nobody can name adds none. */
-    expect_model("AK3918", NULL, 0, AK39_EV1, "AK3918");
-    expect_model("AK3918E80PIN", NULL, 0, 0, "AK3918E80PIN");
-    expect_model("AK3918AV130", NULL, 0, AK39_AV130, "AK3918AV130");
+    expect_model("AK3918", NULL, AK39_EV1, "AK3918");
+    expect_model("AK3918E80PIN", NULL, 0, "AK3918E80PIN");
+    expect_model("AK3918AV130", NULL, AK39_AV130, "AK3918AV130");
+    /* The suffix comes out of the generation constant. */
+    expect_model("AK3918E80PIN", NULL, AK39_AV130, "AK3918AV130");
+    expect_model("AK3918E80PIN", NULL, AK39_AV100, "AK3918AV100");
+    expect_model("AK3918E80PIN", NULL, AK39_EV300L, "AK3918E80PIN");
+    /* AK37 constants spell no AK39 suffix. */
+    expect_model("AK3760", NULL, AK37_D, "AK3760");
     /* Device tree alone, no board string to go on. */
-    expect_model(NULL, ev200_dt, sizeof(ev200_dt), 0, "AK3918EV200");
-
-    static const char aimer_dt[] = "anyka,ak3918";
-    CHECK(anyka_is_aimer39_dt(aimer_dt, sizeof(aimer_dt)));
-    CHECK(!anyka_is_aimer39_dt(ev200_dt, sizeof(ev200_dt)));
-    CHECK(!anyka_is_aimer39_dt(generic_dt, sizeof(generic_dt)));
+    expect_model(NULL, "ak3918ev200", 0, "AK3918EV200");
 }
 
 static const char *binary_fixture(const unsigned char *data, size_t len) {

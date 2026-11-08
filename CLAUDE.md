@@ -226,6 +226,12 @@ reset/power-down GPIOs the device tree names for the camera node, and
 `hal_cleanup` puts back exactly what it changed. It touches nothing when the
 clock is already running, which is a pipeline streaming.
 
+That power-up, and the PrimeSensor and BYD detectors only Anyka boards use,
+are `ipctool`-only (`#ifndef STANDALONE_LIBRARY`): `ipcinfo` is in every
+camera image and the size check holds it to 1 KiB of growth per PR. So
+`ipcinfo -s` finds an Anyka sensor only while something is already clocking
+it. The part name stays in `ipcinfo`, because `ipcinfo -c` has to be right.
+
 Ambarella (`src/hal/ambarella.c`) stops at the machine string on purpose. The
 exact part (S3L33M, S3L55M, S3L66, ...) is a word the DSP firmware writes,
 reachable only through `/dev/iav`, so the report says `S3L`, plus `family: S3Lm`
