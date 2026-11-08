@@ -180,9 +180,12 @@ static void model_names(void) {
     expect_model("AK3918EV300", NULL, 0, AK39_EV3, "AK3918EV300");
     expect_model("AK39EV330", ev330_dt, sizeof(ev330_dt), AK39_EV330,
                  "AK3919EV330");
-    /* Only the generation-wide compatible: keep the board's word. */
+    /* Only the generation-wide compatible: name the generation, as the
+     * vendor banner does ("ANYKA CPU AK39XXEV330"), not the board's short
+     * form. */
     expect_model("AK39EV330", generic_dt, sizeof(generic_dt), AK39_EV330,
-                 "AK39EV330");
+                 "AK39XXEV330");
+    expect_model("AK39EV330", NULL, 0, AK39_EV330, "AK39XXEV330");
     /* Aimer39 has no suffix, and a generation nobody can name adds none. */
     expect_model("AK3918", NULL, 0, AK39_EV1, "AK3918");
     expect_model("AK3918E80PIN", NULL, 0, 0, "AK3918E80PIN");

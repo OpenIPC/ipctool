@@ -171,6 +171,13 @@ void anyka_model_name(const char *machine, const char *compat,
     if (compat && anyka_compatible_part(compat, compat_len, out, outlen))
         return;
 
+    /* EV330 boards say only "AK39EV330", which is no part: name the
+     * generation as the vendor kernel's CPU banner does. */
+    if (generation == AK39_EV330 && !(machine && is_full_part(machine))) {
+        snprintf(out, outlen, "AK39XXEV330");
+        return;
+    }
+
     if (!machine || !*machine) {
         out[0] = '\0';
         return;
