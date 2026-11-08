@@ -1213,11 +1213,15 @@ static int detect_primesensor_sensor(sensor_ctx_t *ctx, int fd,
     int bank = i2c_read_register(fd, i2c_addr, 0xef, 1, 1);
     if (bank == -1 || bank == 0xff)
         return false;
-    if (bank)
-        i2c_write_register(fd, i2c_addr, 0xef, 1, 0x00, 1);
+    /* A bank that cannot be selected would make the ID reads come from the
+     * wrong one: give up rather than name the sensor from them. */
+    if (bank && i2c_write_register(fd, i2c_addr, 0xef, 1, 0x00, 1) < 0)
+        return false;
     int msb = i2c_read_register(fd, i2c_addr, 0x00, 1, 1);
     int lsb = i2c_read_register(fd, i2c_addr, 0x01, 1, 1);
-    if (bank)
+    /* Retried once: a streamer driving this sensor writes to the bank it
+     * left selected. */
+    if (bank && i2c_write_register(fd, i2c_addr, 0xef, 1, bank, 1) < 0)
         i2c_write_register(fd, i2c_addr, 0xef, 1, bank, 1);
     if (msb == -1 || lsb == -1)
         return false;

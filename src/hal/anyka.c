@@ -366,9 +366,11 @@ static struct {
     struct anyka_pin reset, pwdn;
 } anyka_power;
 
-/* <phandle pin flags> of the first camera node's reset-gpio or pwdn-gpio.
- * The AK39 device trees have one GPIO controller, so the phandle is not
- * followed; flags bit 0 is GPIO_ACTIVE_LOW. */
+/* <phandle pin flags> of a camera node's reset-gpio or pwdn-gpio. The
+ * pattern must match one node: with several, which camera's pins these are
+ * is not known, and none is touched. The AK39 device trees have one GPIO
+ * controller, so the phandle is not followed; flags bit 0 is
+ * GPIO_ACTIVE_LOW. */
 bool anyka_dt_gpio(const char *pattern, int *pin, bool *active_low) {
     glob_t g;
     unsigned char cells[12];
@@ -376,7 +378,7 @@ bool anyka_dt_gpio(const char *pattern, int *pin, bool *active_low) {
 
     if (glob(pattern, 0, NULL, &g))
         return false;
-    if (g.gl_pathc &&
+    if (g.gl_pathc == 1 &&
         read_file(g.gl_pathv[0], (char *)cells, sizeof(cells)) == 12) {
         *pin = cells[6] << 8 | cells[7];
         *active_low = cells[11] & 1;
@@ -404,11 +406,34 @@ static void gpio_set_bit(uint32_t reg, int pin, bool val) {
     mem_reg(reg, &v, OP_WRITE);
 }
 
-static void claim_pin(struct anyka_pin *p, const char *prop) {
-    char pattern[96];
+/* The camera nodes under the I2C adapter being probed: its device tree node
+ * is what /sys/bus/i2c/devices/i2c-N/of_node points at. A kernel that does
+ * not link it leaves the glob over every adapter, which anyka_dt_gpio()
+ * accepts only when it finds a single camera. */
+static void camera_pattern(char *out, size_t len, const char *prop) {
+    char link[64], node[256];
+    const char *base = "/sys/firmware/devicetree/base/";
+    ssize_t n;
 
-    snprintf(pattern, sizeof(pattern),
-             "/proc/device-tree/soc/i2c*/camera@*/%s", prop);
+    snprintf(link, sizeof(link), "/sys/bus/i2c/devices/i2c-%d/of_node",
+             i2c_adapter_nr);
+    n = readlink(link, node, sizeof(node) - 1);
+    if (n > 0) {
+        node[n] = '\0';
+        char *rel = strstr(node, "devicetree/base/");
+        if (rel) {
+            snprintf(out, len, "%s%s/camera@*/%s", base,
+                     rel + strlen("devicetree/base/"), prop);
+            return;
+        }
+    }
+    snprintf(out, len, "/proc/device-tree/soc/i2c*/camera@*/%s", prop);
+}
+
+static void claim_pin(struct anyka_pin *p, const char *prop) {
+    char pattern[320];
+
+    camera_pattern(pattern, sizeof(pattern), prop);
     if (!anyka_dt_gpio(pattern, &p->pin, &p->active_low) ||
         !gpio_bit(AK_GPIO_DIR(p->pin), p->pin, &p->saved_dir) ||
         !gpio_bit(AK_GPIO_OUT(p->pin), p->pin, &p->saved_out))
@@ -456,6 +481,13 @@ static void anyka_enable_sensor_clock() {
     pll = anyka_peri_pll_mhz(pll1);
     if (!pll)
         return;
+
+    /* The probe calls hal_cleanup() only after it has opened the bus, so a
+     * power-up for a bus that will not open would never be undone. */
+    int fd = open_i2c_sensor_fd(i2c_adapter_nr);
+    if (fd < 0)
+        return;
+    close_sensor_fd(fd);
 
     anyka_power.pll1 = pll1;
     anyka_power.pll2 = pll2;
