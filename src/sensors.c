@@ -1201,6 +1201,66 @@ static int detect_cvsens_sensor(sensor_ctx_t *ctx, int fd,
     }
 }
 
+/* PrimeSensor PS52xx, as the Anyka EV200/EV300 drivers read it: the ID is in
+ * bank 0, registers 0x00/0x01, byte addresses, and the bank is selected
+ * through 0xef. The bank is put back as it was found, like the SuperPix page:
+ * a streamer driving the sensor writes its exposure to another bank. */
+static int detect_primesensor_sensor(sensor_ctx_t *ctx, int fd,
+                                     unsigned char i2c_addr) {
+    if (i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    int bank = i2c_read_register(fd, i2c_addr, 0xef, 1, 1);
+    if (bank == -1 || bank == 0xff)
+        return false;
+    if (bank)
+        i2c_write_register(fd, i2c_addr, 0xef, 1, 0x00, 1);
+    int msb = i2c_read_register(fd, i2c_addr, 0x00, 1, 1);
+    int lsb = i2c_read_register(fd, i2c_addr, 0x01, 1, 1);
+    if (bank)
+        i2c_write_register(fd, i2c_addr, 0xef, 1, bank, 1);
+    if (msb == -1 || lsb == -1)
+        return false;
+
+    int res = msb << 8 | lsb;
+    switch (res) {
+    case 0x5250:
+    case 0x5260:
+    case 0x5268:
+    case 0x5270:
+    case 0x5280:
+        sprintf(ctx->sensor_id, "PS%04x", res);
+        return true;
+    default:
+        SENSOR_ERR("PrimeSensor", res);
+        return false;
+    }
+}
+
+/* BYD BF3703 (VGA, Anyka EV200 SDK), ID at byte registers 0xfc/0xfd. */
+static int detect_byd_sensor(sensor_ctx_t *ctx, int fd,
+                             unsigned char i2c_addr) {
+    if (i2c_change_addr(fd, i2c_addr) < 0)
+        return false;
+
+    int msb = i2c_read_register(fd, i2c_addr, 0xfc, 1, 1);
+    if (msb == -1)
+        return false;
+    int lsb = i2c_read_register(fd, i2c_addr, 0xfd, 1, 1);
+    if (lsb == -1)
+        return false;
+
+    int res = msb << 8 | lsb;
+    switch (res) {
+    case 0x3703:
+        sprintf(ctx->sensor_id, "BF%04x", res);
+        return true;
+    default:
+        SENSOR_ERR("BYD", res);
+        return false;
+    }
+}
+
 static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
                                    int (*detect_fn)(sensor_ctx_t *ctx, int,
                                                     unsigned char),
@@ -1286,6 +1346,16 @@ static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
     } else if (detect_possible_sensors(ctx, fd, detect_cvsens_sensor,
                                        SENSOR_CVSENS)) {
         strcpy(ctx->vendor, "CVSENS");
+        detected = true;
+    } else if (detect_possible_sensors(ctx, fd, detect_primesensor_sensor,
+                                       SENSOR_PRIMESENSOR)) {
+        strcpy(ctx->vendor, "PrimeSensor");
+        ctx->reg_width = 1;
+        detected = true;
+    } else if (detect_possible_sensors(ctx, fd, detect_byd_sensor,
+                                       SENSOR_BYD)) {
+        strcpy(ctx->vendor, "BYD");
+        ctx->reg_width = 1;
         detected = true;
     }
 exit:
