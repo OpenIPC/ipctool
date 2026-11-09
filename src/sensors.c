@@ -230,6 +230,17 @@ static int detect_sony_sensor(sensor_ctx_t *ctx, int fd,
         return true;
     }
 
+    // Sony IMX662 (Starvis 2). 0x3B00 reads 0x41 at power-on reset -- the
+    // state at boot-time auto-detection -- and the standard init sets it to
+    // 0x39 ("Set to 39h", IMX662 Standard Register Setting v2.0); both are
+    // distinct from IMX415's 0x2E/0x28 ruled out just above. 0x341C=0x01
+    // (IMX334 reads 0x47 there) holds in either state and guards a stray
+    // 0x3B00 match. Verified on a live IMX662 on a Hi3516CV610.
+    if ((r3B00 == 0x41 || r3B00 == 0x39) && READ(0x41C) == 0x01) {
+        sprintf(ctx->sensor_id, "IMX662");
+        return true;
+    }
+
     // HINT: possible check 0x3015 == 0x3c
     int r33B4 = READ(0x3B4);
     if (r33B4 == 0x96 || r33B4 == 0xFE) {
