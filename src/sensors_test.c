@@ -369,6 +369,29 @@ static void check_sony(void) {
     mock_set(0x316a, 2, 1, 0x7e);
     mock_set(0x3b00, 2, 1, -1);
     CHECK(!detect_sony_sensor(&ctx, 0, mock_addr));
+
+    /* IMX662 (Starvis 2): 0x3b00 is 0x41 at power-on reset -- what boot-time
+     * auto-detection sees -- and the standard init sets it to 0x39; both are
+     * distinct from IMX415's 0x2e/0x28. 0x341c=0x01 (IMX334 reads 0x47)
+     * confirms, and 0x316a=0x00 keeps the IMX335 path from firing. */
+    memset(&ctx, 0, sizeof(ctx));
+    mock_clear();
+    mock_set(0x316a, 2, 1, 0x00);
+    mock_set(0x3b00, 2, 1, 0x41);
+    mock_set(0x341c, 2, 1, 0x01);
+    CHECK(detect_sony_sensor(&ctx, 0, mock_addr));
+    CHECK(!strcmp(ctx.sensor_id, "IMX662"));
+    if (strcmp(ctx.sensor_id, "IMX662"))
+        fprintf(stderr, "    (IMX662 reset default: got \"%s\")\n",
+                ctx.sensor_id);
+
+    memset(&ctx, 0, sizeof(ctx));
+    mock_clear();
+    mock_set(0x316a, 2, 1, 0x00);
+    mock_set(0x3b00, 2, 1, 0x39);
+    mock_set(0x341c, 2, 1, 0x01);
+    CHECK(detect_sony_sensor(&ctx, 0, mock_addr));
+    CHECK(!strcmp(ctx.sensor_id, "IMX662"));
 }
 
 /* TechPoint is a rule, not a table: it whitelists nothing and turns any
