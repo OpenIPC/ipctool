@@ -1,5 +1,5 @@
-/* NA51089's direct temperature read, driven against a model of the eFuse
- * controller and the SAR ADC.
+/* The NA51055/NA51084/NA51089 direct temperature read, driven against a model
+ * of the eFuse controller and the SAR ADC.
  *
  * The model answers the way the lab NT98566 did: the ADC gated and idle from
  * boot, its thermal average reading 0 until channel 3 is converting, and eFuse
@@ -64,8 +64,8 @@ static void fresh(void) {
 }
 
 static bool converting(void) {
-    const uint32_t on = NA51089_ADC_AIN3_MODE | NA51089_ADC_EN;
-    return (M.cg_en1 & NA51089_CG_ADC) && (M.adc_ctrl & on) == on;
+    const uint32_t on = NVT_ADC_AIN3_MODE | NVT_ADC_EN;
+    return (M.cg_en1 & NVT_CG_ADC) && (M.adc_ctrl & on) == on;
 }
 
 static void complete_read(void) {
@@ -85,13 +85,13 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
         if (addr == EFUSE_STS && M.pending && !--M.pending)
             complete_read();
         switch (addr) {
-        case NA51089_CG_CLK_EN1:
+        case NVT_CG_CLK_EN1:
             *data = M.cg_en1;
             return true;
-        case NA51089_ADC_CTRL:
+        case NVT_ADC_CTRL:
             *data = M.adc_ctrl;
             return true;
-        case NA51089_ADC_THERMAL:
+        case NVT_ADC_THERMAL:
             *data = 0x30 | (converting() ? M.code << 16 : 0);
             return true;
         case EFUSE_MODE:
@@ -115,13 +115,13 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
 
     const uint32_t v = *data;
     switch (addr) {
-    case NA51089_CG_CLK_EN1:
+    case NVT_CG_CLK_EN1:
         cg_writes++;
         if (M.cg_en1 & ~v)
             illegal = "gated a clock that was running";
         M.cg_en1 = v;
         return true;
-    case NA51089_ADC_CTRL:
+    case NVT_ADC_CTRL:
         adc_writes++;
         if (M.adc_ctrl & ~v)
             illegal = "cleared an ADC control bit that was set";
@@ -180,22 +180,27 @@ static bool efuse_closed(void) {
     return !(M.efuse_ctrl & 1) && !(M.efuse_sts & 1) && M.efuse_row == 0;
 }
 
-/* (code - trim) * 1.319 + 30 */
+/* (code - trim) * 1.319 + 30, NA51084 and NA51089 */
 static bool near(float t, int code, int trim) {
     return fabsf(t - ((code - trim) * 1.319f + 30)) < 0.01f;
+}
+
+/* (code - trim) * 1.3 + 30, NA51055 */
+static bool near55(float t, int code, int trim) {
+    return fabsf(t - ((code - trim) * 1.3f + 30)) < 0.01f;
 }
 
 int main(void) {
     /* novatek_setup_hal() is what installs the reader, so go through it. */
     fresh();
     novatek_setup_hal();
-    CHECK(hal_temperature == na51089_get_temp);
+    CHECK(hal_temperature == nvt_get_temp);
 
     /* The lab camera: ADC gated and idle, trim 0xE4 fused. Started as the
      * RTOS side starts it, read, eFuse left closed: 78.80 degC. */
     float t = hal_temperature();
     CHECK(near(t, 265, 228));
-    CHECK(M.cg_en1 == (0xB0440FF1 | NA51089_CG_ADC));
+    CHECK(M.cg_en1 == (0xB0440FF1 | NVT_CG_ADC));
     CHECK(M.adc_ctrl == 0x5080F008);
     CHECK(efuse_closed());
     CHECK(illegal == NULL);
@@ -209,18 +214,18 @@ int main(void) {
     /* An ADC someone else runs is read, not reconfigured: the vendor driver
      * leaves clkdiv 1 and all four channels continuous. */
     fresh();
-    M.cg_en1 |= NA51089_CG_ADC;
+    M.cg_en1 |= NVT_CG_ADC;
     M.adc_ctrl = 0x5080100F;
-    t = na51089_get_temp();
+    t = nvt_get_temp();
     CHECK(near(t, 265, 228));
     CHECK(cg_writes == 0 && adc_writes == 0);
     CHECK(illegal == NULL);
 
     /* Converting but with channel 3 one-shot: only ain3_mode is added. */
     fresh();
-    M.cg_en1 |= NA51089_CG_ADC;
+    M.cg_en1 |= NVT_CG_ADC;
     M.adc_ctrl = 0x50801007;
-    t = na51089_get_temp();
+    t = nvt_get_temp();
     CHECK(near(t, 265, 228));
     CHECK(M.adc_ctrl == 0x5080100F);
     CHECK(illegal == NULL);
@@ -228,25 +233,25 @@ int main(void) {
     /* An unfused die gets nvt_adc's default. */
     fresh();
     M.fuse[6] = 0;
-    CHECK(near(na51089_get_temp(), 265, NA51089_DEFAULT_TRIM));
+    CHECK(near(nvt_get_temp(), 265, NVT_DEFAULT_TRIM));
 
     /* The first copy invalidated (bit 14): the second one is used. */
     fresh();
     M.fuse[6] = (0x80E0u << 16) | 0xC0E4;
-    CHECK(near(na51089_get_temp(), 265, 0xE0));
+    CHECK(near(nvt_get_temp(), 265, 0xE0));
 
     /* Neither copy good: the default, not a stray 14-bit value. */
     fresh();
     M.fuse[6] = (0xC0E0u << 16) | 0x40E4;
-    CHECK(near(na51089_get_temp(), 265, NA51089_DEFAULT_TRIM));
+    CHECK(near(nvt_get_temp(), 265, NVT_DEFAULT_TRIM));
 
     /* The kernel mid-sequence: the controller is left alone entirely, and
      * the reading falls back to the default trim rather than failing. */
     fresh();
     M.efuse_ctrl = 1;
     M.efuse_sts |= 1;
-    t = na51089_get_temp();
-    CHECK(near(t, 265, NA51089_DEFAULT_TRIM));
+    t = nvt_get_temp();
+    CHECK(near(t, 265, NVT_DEFAULT_TRIM));
     CHECK(efuse_writes == 0);
 
     /* A read-done bit someone left standing, with their row still in DATA:
@@ -254,14 +259,14 @@ int main(void) {
     fresh();
     M.efuse_sts |= 2;
     M.efuse_data = 0x00008007; /* row 7, IDDQ: a "valid" trim of 7 */
-    CHECK(near(na51089_get_temp(), 265, 228));
+    CHECK(near(nvt_get_temp(), 265, 228));
     CHECK(illegal == NULL);
 
     /* Two reads that disagree are someone else's sequence interleaved with
      * ours: no calibration rather than the wrong one. */
     fresh();
     M.second_read = 0x000080F0;
-    CHECK(near(na51089_get_temp(), 265, NA51089_DEFAULT_TRIM));
+    CHECK(near(nvt_get_temp(), 265, NVT_DEFAULT_TRIM));
     CHECK(M.reads_of_row6 == 2);
 
     /* /dev/mem withheld: the vendor driver's thermal zone, if there is one,
@@ -269,9 +274,9 @@ int main(void) {
     fresh();
     mmio_fails = true;
     sysfs = "66";
-    CHECK(na51089_get_temp() == 66.0f);
+    CHECK(nvt_get_temp() == 66.0f);
     sysfs = NULL;
-    CHECK(isnan(na51089_get_temp()));
+    CHECK(isnan(nvt_get_temp()));
 
     /* A kernel without nvt_pinmux: the device tree names the die, and that
      * is enough to install the direct reader. */
@@ -284,20 +289,58 @@ int main(void) {
     CHECK(chip_generation == CHIP_NA51089);
     hal_temperature = NULL;
     novatek_setup_hal();
-    CHECK(hal_temperature == na51089_get_temp);
+    CHECK(hal_temperature == nvt_get_temp);
 
     /* A converter that never produces a sample is no reading. */
     fresh();
     M.code = 0;
-    CHECK(isnan(na51089_get_temp()));
+    CHECK(isnan(nvt_get_temp()));
 
-    /* Every other die keeps the sysfs reader, if the host even has a
-     * thermal zone; the registers above are NA51089's alone. */
+    /* NA51084 shares NA51089's formula and default; the SDK's default trim
+     * is even named for the NT98528. */
+    fresh();
+    chip_generation = CHIP_NA51084;
+    hal_temperature = NULL;
+    novatek_setup_hal();
+    CHECK(hal_temperature == nvt_get_temp);
+    CHECK(near(hal_temperature(), 265, 228));
+    M.fuse[6] = 0;
+    CHECK(near(nvt_get_temp(), 265, NVT_DEFAULT_TRIM));
+
+    /* NA51055 has its own slope and default: 1.3 degC per code, trim 259. */
     fresh();
     chip_generation = CHIP_NA51055;
     hal_temperature = NULL;
     novatek_setup_hal();
-    CHECK(hal_temperature != na51089_get_temp);
+    CHECK(hal_temperature == nvt_get_temp);
+    CHECK(near55(hal_temperature(), 265, 228));
+    M.fuse[6] = 0;
+    CHECK(near55(nvt_get_temp(), 265, NA51055_DEFAULT_TRIM));
+    CHECK(illegal == NULL);
+
+    /* Their device-tree names set the ID as NA51089's does. */
+    fresh();
+    chip_generation = 0;
+    dt_model = "NA51084";
+    CHECK(novatek_detect_cpu(name));
+    CHECK(chip_generation == CHIP_NA51084);
+    fresh();
+    chip_generation = 0;
+    dt_model = "NA51055";
+    CHECK(novatek_detect_cpu(name));
+    CHECK(chip_generation == CHIP_NA51055);
+
+    /* Every other die keeps the sysfs reader, if the host even has a
+     * thermal zone: NA51090's peripherals sit at 0x2F0000000 (novatek.h),
+     * NA51023's TOP at 0xC0000000, and NA51103 is in no SDK we have. */
+    const int others[] = {CHIP_NA51090, CHIP_NA51103, CHIP_NA51023};
+    for (unsigned i = 0; i < sizeof others / sizeof *others; i++) {
+        fresh();
+        chip_generation = others[i];
+        hal_temperature = NULL;
+        novatek_setup_hal();
+        CHECK(hal_temperature != nvt_get_temp);
+    }
 
     if (failures)
         fprintf(stderr, "novatek_test: %d failure(s)\n", failures);
