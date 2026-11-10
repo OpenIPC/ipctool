@@ -510,6 +510,14 @@ if(NOT ONLY_LIBRARY)
                              IPCHW_HISI_V5 IPCHW_HISI_GOKE7206)
   target_link_libraries(hal_hisi_test m Threads::Threads)
 
+  # The same arrangement for NA51089's direct temperature read: novatek.c is
+  # included for its file-statics and the test models the eFuse controller and
+  # the ADC behind its own mem_reg().
+  add_executable(novatek_test src/hal/novatek_test.c src/hal/common.c)
+  target_include_directories(novatek_test PRIVATE include src)
+  target_compile_definitions(novatek_test PRIVATE STANDALONE_LIBRARY)
+  target_link_libraries(novatek_test m Threads::Threads)
+
   # Parsing only: longse.c itself pulls in cJSON and the HAL, and the part
   # worth testing off a camera is the version extraction, which is standalone.
   add_executable(longse_test src/boards/longse_test.c src/boards/longse.c

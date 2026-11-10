@@ -148,7 +148,7 @@ jobs:
           cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release
           cmake --build build --target cYAML_test reginfo_test longse_test \
                                       sensors_test anyka_test ambarella_test \
-                                      hal_hisi_test \
+                                      hal_hisi_test novatek_test \
                                       report_test http_test mtd_alias_test \
                                       nand_layout_test upgrade_env_test \
                                       jffs2_test raw_image_test
@@ -165,6 +165,7 @@ jobs:
           ./build/anyka_test
           ./build/ambarella_test
           ./build/hal_hisi_test
+          ./build/novatek_test
           # Run from the tree root: the fingerprint it compares against is
           # src/sensors_golden.txt, and a sensor that stopped being identified
           # has to fail here rather than be noticed on a camera in a ceiling.
