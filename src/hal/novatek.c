@@ -94,10 +94,14 @@ bool novatek_detect_cpu(char *chip_name) {
             return false;
         strcpy(buf, "NA51055");
     }
-    /* A kernel with no nvt_pinmux still names the die in its model, and
-     * NA51089 is the one whose temperature reader keys on the ID. */
+    /* A kernel with no nvt_pinmux still names the die in its model, and the
+     * temperature reader keys on the ID. */
     if (!strcmp(buf, "NA51089"))
         chip_generation = CHIP_NA51089;
+    else if (!strcmp(buf, "NA51084"))
+        chip_generation = CHIP_NA51084;
+    else if (!strcmp(buf, "NA51055"))
+        chip_generation = CHIP_NA51055;
 
     strcpy(chip_name, buf);
 
@@ -128,33 +132,38 @@ float novatek_get_temp() {
     return NAN;
 }
 
-/* NA51089's die thermometer is channel 3 of the SAR ADC, averaged by the ADC
- * into its own register. OpenIPC's kernel builds no nvt_adc driver, so the ADC
- * is found gated and idle, and is started here the way the RTOS side's
- * thermal_channel_init() does: clock on, channel 3 continuous, converter on.
- * Both are left running, as the vendor driver leaves them; turning a clock off
- * is how a probe takes a peripheral away from its owner
- * (OpenIPC/firmware#2439). */
-#define NA51089_CG_CLK_EN1 0xF0020074
-#define NA51089_CG_ADC (1u << 13)
-#define NA51089_ADC_CTRL 0xF0260000
-#define NA51089_ADC_AIN3_MODE (1u << 3)
-#define NA51089_ADC_EN (1u << 23)
-#define NA51089_ADC_THERMAL 0xF0260040 /* bits [24:16], the average */
+/* The die thermometer of NA51055, NA51084 and NA51089 -- one SAR ADC, clock
+ * gate and eFuse block at the same addresses on all three, per the SDK's
+ * plat-na51055 (which serves NA51055 and NA51084) and plat-na51089 -- is
+ * channel 3 of the ADC, averaged by the ADC into its own register. OpenIPC's
+ * kernel builds no nvt_adc driver, so the ADC is found gated and idle, and is
+ * started here the way the RTOS side's thermal_channel_init() does: clock on,
+ * channel 3 continuous, converter on. Both are left running, as the vendor
+ * driver leaves them; turning a clock off is how a probe takes a peripheral
+ * away from its owner (OpenIPC/firmware#2439). */
+#define NVT_CG_CLK_EN1 0xF0020074
+#define NVT_CG_ADC (1u << 13)
+#define NVT_ADC_CTRL 0xF0260000
+#define NVT_ADC_AIN3_MODE (1u << 3)
+#define NVT_ADC_EN (1u << 23)
+#define NVT_ADC_THERMAL 0xF0260040 /* bits [24:16], the average */
 
 /* The per-die calibration is eFuse row 6 (EFUSE_THERMAL_TRIM_DATA). Its read
- * sequence lives only in the SDK's binary otp_protected.o_shipped; this is
- * that blob's efuse_open(0, 0, 0) / efuse_read() / efuse_close(), read mode
- * throughout, so nothing here can program a fuse. */
-#define NA51089_EFUSE 0xF0660000
-#define EFUSE_MODE (NA51089_EFUSE + 0x00)
-#define EFUSE_ROW (NA51089_EFUSE + 0x04)
-#define EFUSE_DATA (NA51089_EFUSE + 0x08)
-#define EFUSE_CTRL (NA51089_EFUSE + 0x20) /* bit 0 open, bit 4 read */
-#define EFUSE_STS (NA51089_EFUSE + 0x30)  /* bit 0 opened, bit 1 read done */
-#define NA51089_THERMAL_TRIM_ROW 6
-/* nvt_adc's DEFAULT_THERMAL_528_LEVEL, for a die with no trim fused */
-#define NA51089_DEFAULT_TRIM 231
+ * sequence lives only in the SDK's binary otp_protected.o_shipped, one per
+ * platform; this is efuse_open(0, 0, 0) / efuse_read() / efuse_close(), the
+ * same register for register in both, read mode throughout, so nothing here
+ * can program a fuse. */
+#define NVT_EFUSE 0xF0660000
+#define EFUSE_MODE (NVT_EFUSE + 0x00)
+#define EFUSE_ROW (NVT_EFUSE + 0x04)
+#define EFUSE_DATA (NVT_EFUSE + 0x08)
+#define EFUSE_CTRL (NVT_EFUSE + 0x20) /* bit 0 open, bit 4 read */
+#define EFUSE_STS (NVT_EFUSE + 0x30)  /* bit 0 opened, bit 1 read done */
+#define NVT_THERMAL_TRIM_ROW 6
+/* nvt_adc's defaults for a die with no trim fused: DEFAULT_THERMAL_LEVEL for
+ * NA51055, DEFAULT_THERMAL_528_LEVEL (the NT98528, an NA51084) for the rest */
+#define NA51055_DEFAULT_TRIM 259
+#define NVT_DEFAULT_TRIM 231
 
 /* A failed read reads as 0, which no wait below accepts and no trim
  * decodes, so the eFuse path needs no error handling of its own. */
@@ -214,52 +223,55 @@ static bool nvt_efuse_row(uint32_t row, uint32_t *data) {
  * out the kernel or a second ipctool, and a sequence one of them interleaved
  * with comes back as a different word, which costs the calibration and
  * nothing else. */
-static int na51089_thermal_trim() {
+static int nvt_thermal_trim() {
     uint32_t row, again;
-    if (nvt_efuse_row(NA51089_THERMAL_TRIM_ROW, &row) &&
-        nvt_efuse_row(NA51089_THERMAL_TRIM_ROW, &again) && row == again)
+    if (nvt_efuse_row(NVT_THERMAL_TRIM_ROW, &row) &&
+        nvt_efuse_row(NVT_THERMAL_TRIM_ROW, &again) && row == again)
         for (int half = 0; half < 2; half++) {
             const uint32_t w = (row >> (16 * half)) & 0xffff;
             if ((w & 0xc000) == 0x8000)
                 return w & 0x3fff;
         }
-    return NA51089_DEFAULT_TRIM;
+    return chip_generation == CHIP_NA51055 ? NA51055_DEFAULT_TRIM
+                                           : NVT_DEFAULT_TRIM;
 }
 
-static float na51089_read_temp() {
+static float nvt_read_temp() {
     uint32_t val;
 
     /* The one checked read: it tells a kernel that withholds /dev/mem from
      * an ADC that is merely idle. A write that fails after it leaves the
      * average at 0, which the poll below turns into no reading. */
-    if (!mem_reg(NA51089_CG_CLK_EN1, &val, OP_READ))
+    if (!mem_reg(NVT_CG_CLK_EN1, &val, OP_READ))
         return NAN;
-    if (!(val & NA51089_CG_ADC))
-        nvt_wr(NA51089_CG_CLK_EN1, val | NA51089_CG_ADC);
+    if (!(val & NVT_CG_ADC))
+        nvt_wr(NVT_CG_CLK_EN1, val | NVT_CG_ADC);
 
     /* adc_en alone converts nothing: channel 3 must be in continuous mode. */
-    const uint32_t on = NA51089_ADC_AIN3_MODE | NA51089_ADC_EN;
-    val = nvt_rd(NA51089_ADC_CTRL);
+    const uint32_t on = NVT_ADC_AIN3_MODE | NVT_ADC_EN;
+    val = nvt_rd(NVT_ADC_CTRL);
     if ((val & on) != on)
-        nvt_wr(NA51089_ADC_CTRL, val | on);
+        nvt_wr(NVT_ADC_CTRL, val | on);
 
     /* The average reads 0 until the first conversion, well under 1 ms. */
     uint32_t code = 0;
     for (int i = 0; i < 50 && !code; i++) {
-        code = (nvt_rd(NA51089_ADC_THERMAL) >> 16) & 0x1ff;
+        code = (nvt_rd(NVT_ADC_THERMAL) >> 16) & 0x1ff;
         if (!code)
             usleep(1000);
     }
     if (!code)
         return NAN;
 
-    /* nvt_adc's formula for every die but NA51055: 1.319 degC per code */
-    return ((int)code - na51089_thermal_trim()) * 1.319f + 30;
+    /* nvt_adc's thermal_get_temp(): 1.3 degC per code on NA51055, 1.319 on
+     * every later die */
+    const float slope = chip_generation == CHIP_NA51055 ? 1.3f : 1.319f;
+    return ((int)code - nvt_thermal_trim()) * slope + 30;
 }
 
 /* A kernel that withholds /dev/mem may still carry the vendor driver. */
-static float na51089_get_temp() {
-    const float t = na51089_read_temp();
+static float nvt_get_temp() {
+    const float t = nvt_read_temp();
     return isnan(t) ? novatek_get_temp() : t;
 }
 
@@ -282,8 +294,9 @@ void novatek_setup_hal() {
     possible_i2c_addrs = novatek_possible_i2c_addrs;
     i2c_change_addr = i2c_changenshift_addr;
     open_i2c_sensor_fd = novatek_open_i2c_fd;
-    if (chip_generation == CHIP_NA51089)
-        hal_temperature = na51089_get_temp;
+    if (chip_generation == CHIP_NA51055 || chip_generation == CHIP_NA51084 ||
+        chip_generation == CHIP_NA51089)
+        hal_temperature = nvt_get_temp;
     else if (!access("/sys/class/thermal/thermal_zone0/temp", R_OK))
         hal_temperature = novatek_get_temp;
 #ifndef STANDALONE_LIBRARY
