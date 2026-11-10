@@ -38,10 +38,15 @@ static struct {
     uint32_t efuse_mode, efuse_row, efuse_data, efuse_ctrl, efuse_sts;
     uint32_t fuse[32];
     uint32_t code; /* what channel 3 averages to once it converts */
+    int pending;   /* STS reads until a triggered read completes */
+    int reads_of_row6;
+    uint32_t second_read; /* if set, what an interleaved second read sees */
 } M;
 
 static int efuse_writes, adc_writes, cg_writes;
 static const char *illegal;
+static bool mmio_fails;              /* /dev/mem withheld */
+static const char *dt_model, *sysfs; /* line_from_file's answers */
 
 static void fresh(void) {
     memset(&M, 0, sizeof M);
@@ -53,6 +58,8 @@ static void fresh(void) {
     M.code = 265;
     efuse_writes = adc_writes = cg_writes = 0;
     illegal = NULL;
+    mmio_fails = false;
+    dt_model = sysfs = NULL;
     chip_generation = CHIP_NA51089;
 }
 
@@ -61,8 +68,22 @@ static bool converting(void) {
     return (M.cg_en1 & NA51089_CG_ADC) && (M.adc_ctrl & on) == on;
 }
 
+static void complete_read(void) {
+    const uint32_t row = M.efuse_row & 0x1f;
+    M.efuse_data = M.fuse[row];
+    if (row == 6 && M.reads_of_row6++ && M.second_read)
+        M.efuse_data = M.second_read;
+    M.efuse_sts |= 2;
+}
+
 bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
+    if (mmio_fails)
+        return false;
     if (op == OP_READ) {
+        /* The read takes a few polls to land, as a real one does, so a
+         * read-done bit already standing is not this read's. */
+        if (addr == EFUSE_STS && M.pending && !--M.pending)
+            complete_read();
         switch (addr) {
         case NA51089_CG_CLK_EN1:
             *data = M.cg_en1;
@@ -126,10 +147,8 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
             illegal = "eFuse triggered outside read mode";
         M.efuse_ctrl = v & ~0x10u; /* the trigger is self-clearing */
         M.efuse_sts = (M.efuse_sts & ~1u) | (v & 1);
-        if (v & 0x10) {
-            M.efuse_data = M.fuse[M.efuse_row & 0x1f];
-            M.efuse_sts |= 2;
-        }
+        if (v & 0x10)
+            M.pending = 3;
         return true;
     case EFUSE_STS:
         M.efuse_sts &= ~(v & 2); /* write-one-to-clear */
@@ -141,11 +160,16 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
 /* The rest of novatek.c's externals. disable_printk() is not optional: the
  * real one silences the host's kernel log if this ever runs as root. */
 bool line_from_file(const char *filename, const char *re, char *buf, size_t n) {
-    (void)filename;
     (void)re;
-    (void)buf;
-    (void)n;
-    return false;
+    const char *ans = NULL;
+    if (!strcmp(filename, "/proc/device-tree/model"))
+        ans = dt_model;
+    else if (!strcmp(filename, "/sys/class/thermal/thermal_zone0/temp"))
+        ans = sysfs;
+    if (!ans)
+        return false;
+    snprintf(buf, n, "%s", ans);
+    return true;
 }
 void disable_printk(void) {}
 void restore_printk(void) {}
@@ -224,6 +248,43 @@ int main(void) {
     t = na51089_get_temp();
     CHECK(near(t, 265, NA51089_DEFAULT_TRIM));
     CHECK(efuse_writes == 0);
+
+    /* A read-done bit someone left standing, with their row still in DATA:
+     * that word is not row 6, and must not be taken for it. */
+    fresh();
+    M.efuse_sts |= 2;
+    M.efuse_data = 0x00008007; /* row 7, IDDQ: a "valid" trim of 7 */
+    CHECK(near(na51089_get_temp(), 265, 228));
+    CHECK(illegal == NULL);
+
+    /* Two reads that disagree are someone else's sequence interleaved with
+     * ours: no calibration rather than the wrong one. */
+    fresh();
+    M.second_read = 0x000080F0;
+    CHECK(near(na51089_get_temp(), 265, NA51089_DEFAULT_TRIM));
+    CHECK(M.reads_of_row6 == 2);
+
+    /* /dev/mem withheld: the vendor driver's thermal zone, if there is one,
+     * still answers -- and with none, there is no reading. */
+    fresh();
+    mmio_fails = true;
+    sysfs = "66";
+    CHECK(na51089_get_temp() == 66.0f);
+    sysfs = NULL;
+    CHECK(isnan(na51089_get_temp()));
+
+    /* A kernel without nvt_pinmux: the device tree names the die, and that
+     * is enough to install the direct reader. */
+    fresh();
+    chip_generation = 0;
+    dt_model = "NA51089";
+    char name[128] = "";
+    CHECK(novatek_detect_cpu(name));
+    CHECK(!strcmp(name, "NA51089"));
+    CHECK(chip_generation == CHIP_NA51089);
+    hal_temperature = NULL;
+    novatek_setup_hal();
+    CHECK(hal_temperature == na51089_get_temp);
 
     /* A converter that never produces a sample is no reading. */
     fresh();

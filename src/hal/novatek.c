@@ -94,6 +94,10 @@ bool novatek_detect_cpu(char *chip_name) {
             return false;
         strcpy(buf, "NA51055");
     }
+    /* A kernel with no nvt_pinmux still names the die in its model, and
+     * NA51089 is the one whose temperature reader keys on the ID. */
+    if (!strcmp(buf, "NA51089"))
+        chip_generation = CHIP_NA51089;
 
     strcpy(chip_name, buf);
 
@@ -152,61 +156,68 @@ float novatek_get_temp() {
 /* nvt_adc's DEFAULT_THERMAL_528_LEVEL, for a die with no trim fused */
 #define NA51089_DEFAULT_TRIM 231
 
+/* A failed read reads as 0, which no wait below accepts and no trim
+ * decodes, so the eFuse path needs no error handling of its own. */
+static uint32_t nvt_rd(uint32_t addr) {
+    uint32_t val = 0;
+    mem_reg(addr, &val, OP_READ);
+    return val;
+}
+
+static void nvt_wr(uint32_t addr, uint32_t val) {
+    mem_reg(addr, &val, OP_WRITE);
+}
+
 static bool nvt_wait(uint32_t addr, uint32_t mask, uint32_t want) {
-    uint32_t val;
-    for (int i = 0; i < 1000; i++) {
-        if (!mem_reg(addr, &val, OP_READ))
-            return false;
-        if ((val & mask) == want)
+    for (int i = 0; i < 1000; i++)
+        if ((nvt_rd(addr) & mask) == want)
             return true;
-    }
     return false;
 }
 
 static bool nvt_efuse_row(uint32_t row, uint32_t *data) {
-    uint32_t val;
-    bool ok = false;
-
     /* The kernel serialises this block with a semaphore we cannot take. If
      * it is open, someone is mid-sequence: leave it to them. */
-    if (!mem_reg(EFUSE_CTRL, &val, OP_READ) || (val & 1))
+    const uint32_t ctrl = nvt_rd(EFUSE_CTRL);
+    if (ctrl & 1)
         return false;
-    val |= 1;
-    if (!mem_reg(EFUSE_CTRL, &val, OP_WRITE))
-        return false;
-    if (!nvt_wait(EFUSE_STS, 1, 1))
-        goto close;
+    nvt_wr(EFUSE_CTRL, ctrl | 1);
 
-    val = 0;
-    mem_reg(EFUSE_MODE, &val, OP_WRITE);
-    mem_reg(EFUSE_ROW, &row, OP_WRITE);
-    if (!mem_reg(EFUSE_CTRL, &val, OP_READ))
-        goto close;
-    val |= 0x10;
-    mem_reg(EFUSE_CTRL, &val, OP_WRITE);
-    if (!nvt_wait(EFUSE_CTRL, 0x10, 0) || !nvt_wait(EFUSE_STS, 2, 2))
-        goto close;
-    if (mem_reg(EFUSE_STS, &val, OP_READ))
-        mem_reg(EFUSE_STS, &val, OP_WRITE); /* write-one-to-clear */
-    ok = mem_reg(EFUSE_DATA, data, OP_READ);
-
-close:
-    val = 0;
-    mem_reg(EFUSE_ROW, &val, OP_WRITE);
-    if (mem_reg(EFUSE_CTRL, &val, OP_READ)) {
-        val &= ~1u;
-        mem_reg(EFUSE_CTRL, &val, OP_WRITE);
-        nvt_wait(EFUSE_STS, 1, 0);
+    bool ok = false;
+    if (nvt_wait(EFUSE_STS, 1, 1)) {
+        nvt_wr(EFUSE_MODE, 0);
+        nvt_wr(EFUSE_ROW, row);
+        /* A read-done left by the last reader would pass the wait below
+         * while DATA still holds that reader's row. Write one to clear. */
+        nvt_wr(EFUSE_STS, 2);
+        if (nvt_wait(EFUSE_STS, 2, 0)) {
+            nvt_wr(EFUSE_CTRL, nvt_rd(EFUSE_CTRL) | 0x10);
+            if (nvt_wait(EFUSE_CTRL, 0x10, 0) && nvt_wait(EFUSE_STS, 2, 2)) {
+                nvt_wr(EFUSE_STS, 2);
+                *data = nvt_rd(EFUSE_DATA);
+                ok = true;
+            }
+        }
     }
+
+    nvt_wr(EFUSE_ROW, 0);
+    nvt_wr(EFUSE_CTRL, nvt_rd(EFUSE_CTRL) & ~1u);
+    nvt_wait(EFUSE_STS, 1, 0);
     return ok;
 }
 
 /* A row holds two copies, as efuse_readParamOps() reads them: bits [15:0]
  * first, then [31:16]. In each, bit 15 says programmed and bit 14 says
- * invalidated; the trim is the low 14 bits of the first good one. */
+ * invalidated; the trim is the low 14 bits of the first good one.
+ *
+ * The row is read twice and taken only if both agree. Nothing here can lock
+ * out the kernel or a second ipctool, and a sequence one of them interleaved
+ * with comes back as a different word, which costs the calibration and
+ * nothing else. */
 static int na51089_thermal_trim() {
-    uint32_t row;
-    if (nvt_efuse_row(NA51089_THERMAL_TRIM_ROW, &row))
+    uint32_t row, again;
+    if (nvt_efuse_row(NA51089_THERMAL_TRIM_ROW, &row) &&
+        nvt_efuse_row(NA51089_THERMAL_TRIM_ROW, &again) && row == again)
         for (int half = 0; half < 2; half++) {
             const uint32_t w = (row >> (16 * half)) & 0xffff;
             if ((w & 0xc000) == 0x8000)
@@ -215,33 +226,27 @@ static int na51089_thermal_trim() {
     return NA51089_DEFAULT_TRIM;
 }
 
-static float na51089_get_temp() {
+static float na51089_read_temp() {
     uint32_t val;
 
+    /* The one checked read: it tells a kernel that withholds /dev/mem from
+     * an ADC that is merely idle. A write that fails after it leaves the
+     * average at 0, which the poll below turns into no reading. */
     if (!mem_reg(NA51089_CG_CLK_EN1, &val, OP_READ))
         return NAN;
-    if (!(val & NA51089_CG_ADC)) {
-        val |= NA51089_CG_ADC;
-        if (!mem_reg(NA51089_CG_CLK_EN1, &val, OP_WRITE))
-            return NAN;
-    }
+    if (!(val & NA51089_CG_ADC))
+        nvt_wr(NA51089_CG_CLK_EN1, val | NA51089_CG_ADC);
 
     /* adc_en alone converts nothing: channel 3 must be in continuous mode. */
     const uint32_t on = NA51089_ADC_AIN3_MODE | NA51089_ADC_EN;
-    if (!mem_reg(NA51089_ADC_CTRL, &val, OP_READ))
-        return NAN;
-    if ((val & on) != on) {
-        val |= on;
-        if (!mem_reg(NA51089_ADC_CTRL, &val, OP_WRITE))
-            return NAN;
-    }
+    val = nvt_rd(NA51089_ADC_CTRL);
+    if ((val & on) != on)
+        nvt_wr(NA51089_ADC_CTRL, val | on);
 
     /* The average reads 0 until the first conversion, well under 1 ms. */
     uint32_t code = 0;
     for (int i = 0; i < 50 && !code; i++) {
-        if (!mem_reg(NA51089_ADC_THERMAL, &val, OP_READ))
-            return NAN;
-        code = (val >> 16) & 0x1ff;
+        code = (nvt_rd(NA51089_ADC_THERMAL) >> 16) & 0x1ff;
         if (!code)
             usleep(1000);
     }
@@ -250,6 +255,12 @@ static float na51089_get_temp() {
 
     /* nvt_adc's formula for every die but NA51055: 1.319 degC per code */
     return ((int)code - na51089_thermal_trim()) * 1.319f + 30;
+}
+
+/* A kernel that withholds /dev/mem may still carry the vendor driver. */
+static float na51089_get_temp() {
+    const float t = na51089_read_temp();
+    return isnan(t) ? novatek_get_temp() : t;
 }
 
 static int novatek_open_i2c_fd(int i2c_adapter_nr) {
