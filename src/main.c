@@ -43,6 +43,7 @@
 
 #include "boards/buildroot.h"
 #include "boards/common.h"
+#include "boards/xm.h"
 
 #define RESET_CL "\x1b[0m"
 #define FG_RED "\x1b[31m"
@@ -160,6 +161,30 @@ void add_yaml_fragment(cJSON *root, const char *key, cJSON *json) {
     cJSON_AddItemToObject(root, key, json);
 }
 
+/* A V1 XM board whose sensor bus gives nothing back still names its sensor in
+ * the factory HWID, which is what the vendor firmware itself goes by. Marked
+ * as such: nothing was read from the part. */
+static cJSON *detect_sensors_or_hwid() {
+    cJSON *j = detect_sensors();
+    if (j)
+        return j;
+
+    const char *vendor, *model, *control;
+    if (!xm_hwid_sensor(&vendor, &model, &control))
+        return NULL;
+
+    j = cJSON_CreateArray();
+    cJSON *j_sensor = cJSON_CreateObject();
+    cJSON_AddItemToArray(j, j_sensor);
+    cJSON_AddStringToObject(j_sensor, "vendor", vendor);
+    cJSON_AddStringToObject(j_sensor, "model", model);
+    cJSON *j_control = cJSON_CreateObject();
+    cJSON_AddItemToObject(j_sensor, "control", j_control);
+    cJSON_AddStringToObject(j_control, "type", control);
+    cJSON_AddStringToObject(j_sensor, "source", "xm-hwid");
+    return j;
+}
+
 static cJSON *build_yaml() {
     if (!getchipname()) {
         explain_unknown_chip();
@@ -173,7 +198,7 @@ static cJSON *build_yaml() {
     add_yaml_fragment(root, "rom", get_mtd_info());
     add_yaml_fragment(root, "ram", detect_ram());
     add_yaml_fragment(root, "firmware", detect_firmare());
-    add_yaml_fragment(root, "sensors", detect_sensors());
+    add_yaml_fragment(root, "sensors", detect_sensors_or_hwid());
     add_yaml_fragment(root, "clocks", clocks_build_json(true));
 
     return root;
@@ -284,6 +309,11 @@ int main(int argc, char *argv[]) {
         case '2':
         case 's': {
             const char *sensor = getsensoridentity();
+            const char *vendor, *model, *control;
+            if (!sensor && xm_hwid_sensor(&vendor, &model, &control)) {
+                printf("%s_%s\n", model, control);
+                return EXIT_SUCCESS;
+            }
             if (!sensor) {
                 if (!getchipname())
                     explain_unknown_chip();

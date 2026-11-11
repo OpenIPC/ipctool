@@ -7,6 +7,8 @@
 
 bool gather_xm_board_info(cJSON *j_inner);
 bool is_xm_board();
+bool xm_hwid_sensor(const char **vendor, const char **model,
+                    const char **control);
 bool xm_spiflash_unlock_and_erase(int fd, uint32_t offset, uint32_t size);
 bool xm_flash_init(int fd);
 bool xm_kill_stuff(bool force);
