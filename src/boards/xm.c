@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -266,10 +267,14 @@ bool xm_hwid_sensor(const char **vendor, const char **model,
     if (!hwid)
         return false;
 
-    char *end;
-    unsigned long long v = strtoull(hwid, &end, 16);
-    if (end == hwid || *end)
+    /* save_dvrHWInfo() writes all 16 digits; anything shorter (HWID=0, a
+     * hand-set value) would otherwise decode as sensor 0, the OV9712. */
+    if (strlen(hwid) != 16)
         return false;
+    for (int i = 0; i < 16; i++)
+        if (!isxdigit((unsigned char)hwid[i]))
+            return false;
+    unsigned long long v = strtoull(hwid, NULL, 16);
 
     unsigned idx = (v >> 20) & 0xf;
     if (idx >= sizeof(xm_v1_hwid_sensors) / sizeof(*xm_v1_hwid_sensors) ||
