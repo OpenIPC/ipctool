@@ -18,6 +18,7 @@
 #include "firmware.h"
 #include "hal/hisi/hal_hisi.h"
 #include "tools.h"
+#include "uboot.h"
 
 bool is_xm_board() {
     // crucial to keep detection status in memory for deal with XM flash ops
@@ -230,6 +231,55 @@ bailout:
     free(config);
     if (json)
         cJSON_Delete(json);
+}
+
+/* The Hi3518/Hi3516C V1 Sofia firmware never probes its sensor: libdvr's
+ * save_dvrHWInfo() unpacks the factory HWID (U-Boot env, 16 hex digits read
+ * as one little-endian u64) into g_hwinfo, and Sofia brings up whatever
+ * sensor the build was made for. get_hwinfo(5), "forward video chip" in
+ * libdvr's SYSTEM INFO dump, is the high nibble of byte 2; the names are that
+ * dump's. Only V1 is decoded: later libdvr generations were not checked. */
+static const struct {
+    const char *vendor, *model, *control;
+} xm_v1_hwid_sensors[] = {
+    {"OmniVision", "OV9712", "i2c"},
+    {NULL, NULL, NULL}, /* "External Signal" */
+    {"Sony", "IMX138", "spi"},
+    {"Sony", "IMX104", "spi"},
+    {"Sony", "IMX122", "spi"},
+    {"Sony", "IMX136", "spi"},
+    {"ON Semiconductor", "MT9P006", "i2c"},
+    {"ON Semiconductor", "AR0130", "i2c"},
+    {"ON Semiconductor", "AR0140", "i2c"},
+    {"Silicon Optronics", "H22", "i2c"},
+    {"ON Semiconductor", "AR0141", "i2c"},
+    {"BYD", "BF3116", "i2c"},
+    {"PrimeSensor", "PS1210K", "i2c"},
+};
+
+bool xm_hwid_sensor(const char **vendor, const char **model,
+                    const char **control) {
+    if (!is_xm_board() || !getchipname() || chip_generation != HISI_V1)
+        return false;
+
+    const char *hwid = uboot_getenv("HWID");
+    if (!hwid)
+        return false;
+
+    char *end;
+    unsigned long long v = strtoull(hwid, &end, 16);
+    if (end == hwid || *end)
+        return false;
+
+    unsigned idx = (v >> 20) & 0xf;
+    if (idx >= sizeof(xm_v1_hwid_sensors) / sizeof(*xm_v1_hwid_sensors) ||
+        !xm_v1_hwid_sensors[idx].model)
+        return false;
+
+    *vendor = xm_v1_hwid_sensors[idx].vendor;
+    *model = xm_v1_hwid_sensors[idx].model;
+    *control = xm_v1_hwid_sensors[idx].control;
+    return true;
 }
 
 bool gather_xm_board_info(cJSON *j_inner) {

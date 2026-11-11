@@ -198,6 +198,7 @@ bailout:
 enum {
     OP_PRINTENV = 0,
     OP_SETENV,
+    OP_LOAD,
 };
 
 typedef struct {
@@ -227,6 +228,9 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
                 uboot_setenv_cb(i, u_off, addr + u_off, c->key, c->value,
                                 mtd->erasesize, c->fop);
                 break;
+            case OP_LOAD:
+                uboot_copyenv_int(addr + u_off);
+                break;
             }
             close(fd);
             return false;
@@ -240,6 +244,19 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
 char *uboot_fullenv(size_t *len) {
     *len = env_len;
     return uenv;
+}
+
+/* uboot_env_get_param() only sees an environment some earlier MTD walk copied
+ * in (the report's rom scan does). This one fetches it itself, for callers
+ * such as `ipctool -s` that never walk the flash. */
+const char *uboot_getenv(const char *name) {
+    if (!uenv) {
+        ctx_uboot_t ctx = {
+            .op = OP_LOAD,
+        };
+        enum_mtd_info(&ctx, cb_uboot_env);
+    }
+    return uboot_env_get_param(name);
 }
 
 int cmd_printenv() {

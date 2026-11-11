@@ -7,6 +7,7 @@
 
 int uboot_detect_env(void *buf, size_t size, size_t erasesize);
 const char *uboot_env_get_param(const char *name);
+const char *uboot_getenv(const char *name);
 void uboot_copyenv_int(const void *buf);
 char *uboot_fullenv(size_t *len);
 
