@@ -4591,12 +4591,16 @@ static int gpio_dump_cmd(int argc, char **argv) {
                            out ? "out" : "in", level);
                 printf("}");
             } else {
-                printf("%-8s pad %-4d %-20s", gpio, pad, func ? func : "-");
+                /* Pad the function column only when a state follows it, so
+                 * no line ends in spaces and two dumps diff cleanly. */
+                printf("%-8s pad %-4d ", gpio, pad);
                 if (show)
-                    printf(" %-3s %d", out ? "out" : "in", level);
+                    printf("%-20s %-3s %d\n", func ? func : "-",
+                           out ? "out" : "in", level);
                 else if (is_gpio)
-                    printf(" bank unreadable");
-                printf("\n");
+                    printf("%-20s bank unreadable\n", func ? func : "-");
+                else
+                    printf("%s\n", func ? func : "-");
             }
             first = false;
         }
