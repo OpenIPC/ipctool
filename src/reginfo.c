@@ -4551,6 +4551,14 @@ static int gpio_dump_cmd(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    /* No pin-mux table at all: every pad would come back unclassified, and
+     * a dump that cannot say which pins are GPIOs is not one. */
+    if (ipchw_padmux_by_prefix("", NULL, 0) < 0) {
+        fprintf(stderr, "gpio dump: no pin-mux table for this SoC\n");
+        return EXIT_FAILURE;
+    }
+
+    bool failed = false;
     if (json)
         printf("[");
     bool first = true;
@@ -4561,26 +4569,55 @@ static int gpio_dump_cmd(int argc, char **argv) {
          * reads all eight pins at once. */
         bool readable = mem_reg(bank + 0x400, &dir, OP_READ) &&
                         mem_reg(bank + 0x3fc, &data, OP_READ);
+        if (!readable) {
+            fprintf(stderr, "gpio dump: GPIO%d bank at %#zx unreadable\n",
+                    group, bank);
+            failed = true;
+        }
 
         for (int pin = 0; pin < 8; pin++) {
             int pad = group * 8 + pin;
             char gpio[16];
             snprintf(gpio, sizeof(gpio), "GPIO%d_%d", group, pin);
 
+            /* What the pad carries, per ipchw_padmux_get():
+             *   1        a named row; the GPIO one is flagged F_GPIO
+             *   0        a selector the table does not name: unknown, and
+             *            certainly not proof of GPIO
+             *   NO_PAD   the table has no row for the pad, so nothing can
+             *            select another function onto it: it is the GPIO
+             *   other <0 the mux register could not be read */
             ipchw_padmux_t now;
             int got = ipchw_padmux_get(pad, &now);
-            /* No row: the table does not name the pad, so nothing can select
-             * another function onto it and the pin is the GPIO. */
-            const char *func = got == 1   ? now.func_name
-                               : got == 0 ? NULL
-                                          : "unreadable";
-            bool is_gpio = got == 0 || (got == 1 && !strcmp(func, gpio));
+            const char *mux, *func;
+            bool is_gpio;
+            if (got == 1) {
+                is_gpio = now.flags & IPCHW_PADMUX_F_GPIO;
+                mux = is_gpio ? "gpio" : "function";
+                func = now.func_name;
+            } else if (got == 0) {
+                is_gpio = false;
+                mux = "unknown";
+                func = NULL;
+            } else if (got == IPCHW_PADMUX_NO_PAD) {
+                is_gpio = true;
+                mux = "none";
+                func = NULL;
+            } else {
+                is_gpio = false;
+                mux = "unreadable";
+                func = NULL;
+                fprintf(stderr, "gpio dump: %s pad mux unreadable (%d)\n", gpio,
+                        got);
+                failed = true;
+            }
             bool show = readable && is_gpio;
             int out = dir >> pin & 1, level = data >> pin & 1;
 
             if (json) {
-                printf("%s\n  {\"gpio\": \"%s\", \"pad\": %d, \"function\": ",
-                       first ? "" : ",", gpio, pad);
+                printf("%s\n  {\"gpio\": \"%s\", \"pad\": %d, \"mux\": \"%s\", "
+                       "\"function\": ",
+                       first ? "" : ",", gpio, pad, mux);
                 if (func)
                     printf("\"%s\"", func);
                 else
@@ -4589,18 +4626,25 @@ static int gpio_dump_cmd(int argc, char **argv) {
                 if (show)
                     printf(", \"dir\": \"%s\", \"value\": %d",
                            out ? "out" : "in", level);
+                else if (is_gpio)
+                    printf(", \"error\": \"bank unreadable\"");
                 printf("}");
             } else {
-                /* Pad the function column only when a state follows it, so
-                 * no line ends in spaces and two dumps diff cleanly. */
+                /* The function, or the mux state in brackets when there is
+                 * no named function. Pad the column only when a state follows
+                 * it, so no line ends in spaces and two dumps diff cleanly. */
+                char label[40];
+                if (func)
+                    snprintf(label, sizeof(label), "%s", func);
+                else
+                    snprintf(label, sizeof(label), "[%s]", mux);
                 printf("%-8s pad %-4d ", gpio, pad);
                 if (show)
-                    printf("%-20s %-3s %d\n", func ? func : "-",
-                           out ? "out" : "in", level);
+                    printf("%-20s %-3s %d\n", label, out ? "out" : "in", level);
                 else if (is_gpio)
-                    printf("%-20s bank unreadable\n", func ? func : "-");
+                    printf("%-20s bank unreadable\n", label);
                 else
-                    printf("%s\n", func ? func : "-");
+                    printf("%s\n", label);
             }
             first = false;
         }
@@ -4608,7 +4652,9 @@ static int gpio_dump_cmd(int argc, char **argv) {
     if (json)
         printf("\n]\n");
 
-    return EXIT_SUCCESS;
+    /* A partial dump is still printed, well-formed, but never reported as a
+     * complete one. */
+    return failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 int gpio_cmd(int argc, char **argv) {
