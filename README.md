@@ -139,7 +139,8 @@ Where:
                             dump data from I2C/SPI device
   i2cdetect [-b, --bus]     attempt to detect devices on I2C bus
   reginfo [--script]        dump current status of pinmux registers
-  gpio (scan|mux)           GPIO utilities
+  gpio (dump|scan|mux)      GPIO utilities; dump [--json] prints
+                            every pin's mux and level, read-only
   trace [--skip=usleep] <full/path/to/executable> [program arguments]
                             dump original firmware calls and data structures
   -h, --help                this help

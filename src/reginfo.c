@@ -4508,9 +4508,110 @@ static int gpio_scan_cmd() {
     return EXIT_SUCCESS;
 }
 
+/* `ipctool gpio dump [--json]`: every GPIO pin of the SoC, once -- the
+ * function its pad carries now and, where that is the GPIO, the direction
+ * and level.
+ *
+ * `gpio scan` answers "what changes", loops until Ctrl-C and prints only
+ * pins already muxed to GPIO; `gpio mux` writes. Neither answers "what is
+ * this board's GPIO state", which is the question when one firmware drives
+ * a peripheral and another does not: dump both and diff. Nothing here
+ * writes a register, and it exits on its own, so it runs under the bare
+ * busybox of a stock firmware with no `timeout` to stop it. */
+static int gpio_dump_cmd(int argc, char **argv) {
+    const struct option long_options[] = {
+        {"json", no_argument, NULL, 'j'},
+        {NULL, 0, NULL, 0},
+    };
+    bool json = false;
+    int res;
+
+    optind = 1;
+    while ((res = getopt_long_only(argc, argv, "j", long_options, NULL)) !=
+           -1) {
+        switch (res) {
+        case 'j':
+            json = true;
+            break;
+        default:
+            fprintf(stderr, "Usage: ipctool gpio dump [--json]\n");
+            return EXIT_FAILURE;
+        }
+    }
+
+    getchipname();
+    int GPIO_Groups = 0;
+    size_t GPIO_Base = 0;
+    size_t GPIO_Offset = 0;
+    /* SigmaStar and Novatek keep their GPIO state elsewhere than the PL061
+     * banks walked below; refuse rather than print a plausible lie. */
+    if (sstar_gpio_supported() || novatek_gpio_supported() ||
+        !get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups)) {
+        fprintf(stderr, "gpio dump: not supported on this SoC yet\n");
+        return EXIT_FAILURE;
+    }
+
+    if (json)
+        printf("[");
+    bool first = true;
+    for (int group = 0; group < GPIO_Groups; group++) {
+        size_t bank = GPIO_Base + group * GPIO_Offset;
+        uint32_t dir = 0, data = 0;
+        /* PL061: the data register is masked by address bits 9..2, so +0x3fc
+         * reads all eight pins at once. */
+        bool readable = mem_reg(bank + 0x400, &dir, OP_READ) &&
+                        mem_reg(bank + 0x3fc, &data, OP_READ);
+
+        for (int pin = 0; pin < 8; pin++) {
+            int pad = group * 8 + pin;
+            char gpio[16];
+            snprintf(gpio, sizeof(gpio), "GPIO%d_%d", group, pin);
+
+            ipchw_padmux_t now;
+            int got = ipchw_padmux_get(pad, &now);
+            /* No row: the table does not name the pad, so nothing can select
+             * another function onto it and the pin is the GPIO. */
+            const char *func = got == 1   ? now.func_name
+                               : got == 0 ? NULL
+                                          : "unreadable";
+            bool is_gpio = got == 0 || (got == 1 && !strcmp(func, gpio));
+            bool show = readable && is_gpio;
+            int out = dir >> pin & 1, level = data >> pin & 1;
+
+            if (json) {
+                printf("%s\n  {\"gpio\": \"%s\", \"pad\": %d, \"function\": ",
+                       first ? "" : ",", gpio, pad);
+                if (func)
+                    printf("\"%s\"", func);
+                else
+                    printf("null");
+                printf(", \"gpio_muxed\": %s", is_gpio ? "true" : "false");
+                if (show)
+                    printf(", \"dir\": \"%s\", \"value\": %d",
+                           out ? "out" : "in", level);
+                printf("}");
+            } else {
+                printf("%-8s pad %-4d %-20s", gpio, pad, func ? func : "-");
+                if (show)
+                    printf(" %-3s %d", out ? "out" : "in", level);
+                else if (is_gpio)
+                    printf(" bank unreadable");
+                printf("\n");
+            }
+            first = false;
+        }
+    }
+    if (json)
+        printf("\n]\n");
+
+    return EXIT_SUCCESS;
+}
+
 int gpio_cmd(int argc, char **argv) {
     if (argc > 1) {
-        if (!strcmp(argv[1], "scan"))
+        if (!strcmp(argv[1], "dump"))
+            return gpio_dump_cmd(argc - 1, argv + 1);
+        else if (!strcmp(argv[1], "scan"))
             return gpio_scan_cmd();
         else if (!strcmp(argv[1], "mux"))
             return gpio_mux_cmd(argc - 1, argv + 1);
