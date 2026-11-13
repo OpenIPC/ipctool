@@ -98,6 +98,33 @@ void uboot_printenv_cb(const char *env) {
     }
 }
 
+/* What `printenv <name>...` prints, with fw_printenv's output: "name=value"
+ * per variable, or the bare value when value_only. A name that is not set is
+ * reported on err and makes the result nonzero, but the rest are still
+ * printed. A name is matched whole: "bootcmd" is not "bootcmdnor". */
+int uboot_print_vars(FILE *out, FILE *err, const char *env, int nnames,
+                     char **names, bool value_only) {
+    int missing = 0;
+    for (int i = 0; i < nnames; i++) {
+        size_t len = strlen(names[i]);
+        const char *ptr = env + CRC_SZ;
+        bool found = false;
+        while (*ptr) {
+            if (!strncmp(ptr, names[i], len) && ptr[len] == '=') {
+                fprintf(out, "%s\n", value_only ? ptr + len + 1 : ptr);
+                found = true;
+                break;
+            }
+            ptr += strlen(ptr) + 1;
+        }
+        if (!found) {
+            fprintf(err, "## Error: \"%s\" not defined\n", names[i]);
+            missing++;
+        }
+    }
+    return missing ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
 static void *uenv;
 void uboot_copyenv_int(const void *buf) {
     if (!uenv) {
@@ -206,6 +233,14 @@ typedef struct {
     const char *key;
     const char *value;
     enum FLASH_OP fop;
+    // OP_PRINTENV: the variables to show (none: all of them)
+    int nnames;
+    char **names;
+    bool value_only;
+    // OP_PRINTENV: the status of the command, and whether the environment
+    // was found to be asked at all
+    int rc;
+    bool found;
 } ctx_uboot_t;
 
 static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
@@ -222,7 +257,13 @@ static bool cb_uboot_env(int i, const char *name, struct mtd_info_user *mtd,
         if (u_off != -1) {
             switch (c->op) {
             case OP_PRINTENV:
-                uboot_printenv_cb(addr + u_off);
+                c->found = true;
+                if (c->nnames)
+                    c->rc = uboot_print_vars(stdout, stderr, addr + u_off,
+                                             c->nnames, c->names,
+                                             c->value_only);
+                else
+                    uboot_printenv_cb(addr + u_off);
                 break;
             case OP_SETENV:
                 uboot_setenv_cb(i, u_off, addr + u_off, c->key, c->value,
@@ -259,12 +300,32 @@ const char *uboot_getenv(const char *name) {
     return uboot_env_get_param(name);
 }
 
-int cmd_printenv() {
+int cmd_printenv(int argc, char **argv) {
+    bool value_only = false;
+    int first = 1;
+    if (first < argc && !strcmp(argv[first], "-n")) {
+        value_only = true;
+        first++;
+    }
+    int nnames = argc - first;
+    if (value_only && nnames != 1) {
+        fprintf(stderr, "Usage: ipctool printenv [-n] [<name>...]\n"
+                        "       -n needs exactly one name\n");
+        return EXIT_FAILURE;
+    }
+
     ctx_uboot_t ctx = {
         .op = OP_PRINTENV,
+        .nnames = nnames,
+        .names = argv + first,
+        .value_only = value_only,
     };
     enum_mtd_info(&ctx, cb_uboot_env);
-    return EXIT_SUCCESS;
+    if (nnames && !ctx.found) {
+        fprintf(stderr, "U-Boot environment not found\n");
+        return EXIT_FAILURE;
+    }
+    return ctx.rc;
 }
 
 void set_env_param_ram(const char *key, const char *value) {

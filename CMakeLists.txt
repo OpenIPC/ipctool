@@ -571,4 +571,8 @@ if(NOT ONLY_LIBRARY)
   # What restore --raw decides before it touches the flash.
   add_executable(raw_image_test src/raw_image_test.c src/raw_image.c)
   target_include_directories(raw_image_test PRIVATE include src)
+
+  # What printenv prints, against a stub flash holding one environment.
+  add_executable(uboot_test src/uboot_test.c src/uboot.c)
+  target_include_directories(uboot_test PRIVATE include src)
 endif()

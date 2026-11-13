@@ -125,7 +125,8 @@ Where:
   upgrade <bundle>          upgrade to OpenIPC firmware
                             (experimental! use only on cameras with UART)
      [-f, --force]          enforce
-  printenv                  drop-in replacement for fw_printenv
+  printenv [-n] [name...]   drop-in replacement for fw_printenv;
+                            -n prints just the value of one name
   setenv <key> <value>      drop-in replacement for fw_setenv
   dmesg                     drop-in replacement for dmesg
   i2cget <device address> <register>
@@ -397,6 +398,8 @@ sent. Scripts and agents choose up front:
 
     ```console
     # ipctool printenv | grep bootargs
+    # ipctool printenv bootargs baudrate
+    # ipctool printenv -n ipaddr
     # ipctool setenv bootargs "mem=\${osmem} mtdparts=hi_sfc:256k(boot),64k(env),2048k(kernel),5120k(rootfs),-(rootfs_data)"
     ```
 
