@@ -129,6 +129,10 @@ CMake knobs worth knowing:
   the sensor power-up, was run on an AK3918EV200 with OpenIPC's kernel.
 - `./build/ambarella_test`: the `/proc/cpuinfo` machine string the Ambarella
   HAL parses, same `CHECK` macro and same reason.
+- `./build/sstar_test`: the model name `sstar_detect_cpu()` gives each
+  SigmaStar generation register value, answered by the test's own `mem_reg()`
+  (sstar.c is included, as novatek.c is). The family names those generations
+  print are checked at the end of `reginfo_test`.
 - `tools/test_pipeline.sh`: hardware-free end-to-end check of the sensor
   driver extraction pipeline (`trace_segment.py` -> `trace_to_driver.py` ->
   `gcc -fsyntax-only` -> `trace_diff.py`), plus the `--selftest` of every

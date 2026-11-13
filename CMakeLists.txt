@@ -518,6 +518,14 @@ if(NOT ONLY_LIBRARY)
   target_compile_definitions(novatek_test PRIVATE STANDALONE_LIBRARY)
   target_link_libraries(novatek_test m Threads::Threads)
 
+  # The generation register's names, the one input sstar_detect_cpu() has,
+  # answered by the test's own mem_reg(); sstar.c is included for the same
+  # reason novatek.c is.
+  add_executable(sstar_test src/hal/sstar_test.c src/hal/common.c)
+  target_include_directories(sstar_test PRIVATE include src)
+  target_compile_definitions(sstar_test PRIVATE STANDALONE_LIBRARY)
+  target_link_libraries(sstar_test m Threads::Threads)
+
   # Parsing only: longse.c itself pulls in cJSON and the HAL, and the part
   # worth testing off a camera is the version extraction, which is standalone.
   add_executable(longse_test src/boards/longse_test.c src/boards/longse.c

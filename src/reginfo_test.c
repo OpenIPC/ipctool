@@ -1670,6 +1670,35 @@ static void test_xm(void) {
 }
 #endif
 
+#ifdef IPCHW_VENDOR_SSTAR
+/* The family the report prints for each SigmaStar generation that has one.
+ * getchipfamily() asks getchipname() first, which on a host finds no vendor
+ * and leaves chip_generation alone; the switch then answers from it. Runs
+ * last, since that detection attempt rewrites chip_name. */
+static void test_sstar_families(void) {
+    static const struct {
+        int generation;
+        const char *family;
+    } want[] = {
+        {INFINITY2M, "infinity2m"}, {INFINITY3, "infinity3"},
+        {INFINITY5, "infinity5"},   {INFINITY6, "infinity6"},
+        {INFINITY6B, "infinity6b0"}, {INFINITY6C, "infinity6c"},
+        {INFINITY6E, "infinity6e"},
+    };
+
+    puts("SigmaStar: family names");
+    for (size_t i = 0; i < sizeof(want) / sizeof(*want); i++) {
+        as_chip(want[i].generation, "unknown");
+        const char *got = getchipfamily();
+        if (!got || strcmp(got, want[i].family)) {
+            fprintf(stderr, "  FAIL 0x%02X: %s, want %s\n", want[i].generation,
+                    got ? got : "(null)", want[i].family);
+            failures++;
+        }
+    }
+}
+#endif
+
 int main(void) {
     /* Every register the tests below touch is one of these, not a camera's. */
     padmux_set_io(&FAKE_IO);
@@ -1719,6 +1748,9 @@ int main(void) {
 #endif
     test_refusals_do_not_exit();
     test_table_integrity();
+#ifdef IPCHW_VENDOR_SSTAR
+    test_sstar_families();
+#endif
 
     if (failures) {
         fprintf(stderr, "\n%d check(s) failed\n", failures);
