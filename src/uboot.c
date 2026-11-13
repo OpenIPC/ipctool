@@ -108,14 +108,21 @@ int uboot_print_vars(FILE *out, FILE *err, const char *env, int nnames,
     for (int i = 0; i < nnames; i++) {
         size_t len = strlen(names[i]);
         const char *ptr = env + CRC_SZ;
+        const char *end = env + env_len;
         bool found = false;
-        while (*ptr) {
-            if (!strncmp(ptr, names[i], len) && ptr[len] == '=') {
+        /* The CRC does not promise the list is terminated, so never scan
+         * past the environment. */
+        while (ptr < end && *ptr) {
+            const char *nul = memchr(ptr, 0, end - ptr);
+            if (!nul)
+                break;
+            if ((size_t)(nul - ptr) > len && !memcmp(ptr, names[i], len) &&
+                ptr[len] == '=') {
                 fprintf(out, "%s\n", value_only ? ptr + len + 1 : ptr);
                 found = true;
                 break;
             }
-            ptr += strlen(ptr) + 1;
+            ptr = nul + 1;
         }
         if (!found) {
             fprintf(err, "## Error: \"%s\" not defined\n", names[i]);

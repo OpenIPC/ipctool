@@ -80,7 +80,7 @@ bool mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
 }
 
 /* Evaluate expr with stdout and stderr captured into out and err. */
-#define CAPTURE(rc, out, outsz, err, errsz, expr)                                            \
+#define CAPTURE(rc, out, outsz, err, errsz, expr)                              \
     do {                                                                       \
         fflush(stdout);                                                        \
         fflush(stderr);                                                        \
@@ -97,8 +97,8 @@ bool mtd_write(int mtd, uint32_t offset, uint32_t erasesize, const char *data,
         close(se);                                                             \
         rewind(fo);                                                            \
         rewind(fe);                                                            \
-        size_t no = fread(out, 1, (outsz) - 1, fo);                        \
-        size_t ne = fread(err, 1, (errsz) - 1, fe);                        \
+        size_t no = fread(out, 1, (outsz) - 1, fo);                            \
+        size_t ne = fread(err, 1, (errsz) - 1, fe);                            \
         (out)[no] = 0;                                                         \
         (err)[ne] = 0;                                                         \
         fclose(fo);                                                            \
@@ -193,6 +193,18 @@ int main(void) {
         rc = run(out, sizeof(out), err, sizeof(err), 4, argv2);
         CHECK(rc == 1, "rc %d", rc);
         CHECK(!*out && *err, "out '%s' err '%s'", out, err);
+    }
+
+    /* A CRC-valid payload with no terminator is read only up to its end. */
+    {
+        memset(flash + 4, 'x', ENV_SIZE - 4);
+        uint32_t crc = crc32_ref(flash + 4, ENV_SIZE - 4);
+        memcpy(flash, &crc, 4);
+        char *argv[] = {"printenv", "x"};
+        rc = run(out, sizeof(out), err, sizeof(err), 2, argv);
+        CHECK(rc == 1, "rc %d", rc);
+        CHECK(!*out && *err, "out '%s' err '%s'", out, err);
+        make_env(vars);
     }
 
     /* Asked for a name and no environment exists: a failure, said so. */
