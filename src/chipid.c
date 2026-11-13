@@ -282,6 +282,10 @@ const char *getchipfamily() {
         return "infinity3";
 #endif
 #ifdef IPCHW_VENDOR_SSTAR
+    case INFINITY2M:
+        return "infinity2m";
+#endif
+#ifdef IPCHW_VENDOR_SSTAR
     case INFINITY5:
         return "infinity5";
 #endif
