@@ -56,6 +56,13 @@ bool sstar_detect_cpu(char *chip_name) {
         chip_generation = val;
 
         switch (val) {
+        case INFINITY2M:
+            /* SSD201/SSD202 and the SSR62x NVR parts are one generation and
+             * nothing read here tells them apart, so the name is the group's,
+             * as for the others. An SSR621Q (Jooan JA-8108 NVR) with the BROM
+             * tag ...I2m_ROM... was reported as "unknown" before this case. */
+            strcpy(chip_name, "SSD20X");
+            break;
         case INFINITY5:
             strcpy(chip_name, "SSC32X");
             break;
