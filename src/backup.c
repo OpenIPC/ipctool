@@ -104,7 +104,8 @@ static bool cb_mtd_backup(int i, const char *name, struct mtd_info_user *mtd,
      * the mapping, and fwrite() stopped short there -- the partition cut,
      * every later one shifted in the file, exit status 0, and an upload
      * broken off as "Could not reach" the server (#283). /dev/mtdN hands
-     * the page over; open_mtd_read() has the rest. */
+     * the page over; open_mtd_read() has the rest, and a read that fails
+     * all the same now stops the backup by name. */
     char devpath[32];
     int fd = open_mtd_read(i, devpath, sizeof(devpath));
     char *path = fd >= 0 ? strdup(devpath) : NULL;
