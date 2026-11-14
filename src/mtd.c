@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <regex.h>
 #include <stdint.h>
@@ -124,6 +125,36 @@ char *open_mtdblock(int i, int *fd, uint32_t size, int flags) {
     }
 
     return addr;
+}
+
+/*
+ * /dev/mtdN first. A NAND page that ECC cannot correct fails mtd_read()
+ * with -EBADMSG though its data was read: mtdchar's read() hands the data
+ * over, mtdblock makes it an I/O error -- a short read, or SIGBUS through
+ * a mapping (#283). mtdblock is for a /dev without the character nodes.
+ */
+int open_mtd_read(int i, char *path, size_t path_len) {
+    const char *kinds[] = {"/dev/mtd%d", "/dev/mtdblock%d"};
+    int fd = -1;
+    for (size_t k = 0; k < sizeof(kinds) / sizeof(*kinds) && fd < 0; k++) {
+        snprintf(path, path_len, kinds[k], i);
+        fd = open(path, O_RDONLY);
+    }
+    return fd;
+}
+
+// All `size` bytes, or false.
+static bool read_full(int fd, char *buf, size_t size) {
+    while (size) {
+        ssize_t n = read(fd, buf, size);
+        if (n < 0 && errno == EINTR)
+            continue;
+        if (n <= 0)
+            return false;
+        buf += n;
+        size -= (size_t)n;
+    }
+    return true;
 }
 
 int find_ubi_for_mtd(int mtd_num) {
@@ -256,11 +287,33 @@ static bool examine_part(int part_num, size_t size, size_t erasesize,
     if (size > 0x1000000)
         return res;
 
-    int fd;
-    char *addr = open_mtdblock(
-        part_num, &fd, size, MAP_POPULATE /* causes read-ahead on the file */);
-    if (!addr)
+    char path[32];
+    int fd = open_mtd_read(part_num, path, sizeof(path));
+    if (fd < 0)
         return res;
+
+    /* Read, not mapped (open_mtd_read() says why). The first two
+     * partitions are searched for the U-Boot environment and XM's crypto
+     * block, so they are read whole; the rest only feed the hash, a piece
+     * at a time, so RAM holds no partition beyond the boot ones. */
+    char *addr = NULL;
+    SHA1_CTX sha;
+    SHA1Init(&sha);
+    if (part_num < 2) {
+        addr = malloc(size);
+        if (!addr || !read_full(fd, addr, size))
+            goto bailout;
+        SHA1Update(&sha, (const unsigned char *)addr, size);
+    } else {
+        static char piece[65536];
+        for (size_t left = size; left;) {
+            size_t n = left < sizeof(piece) ? left : sizeof(piece);
+            if (!read_full(fd, piece, n))
+                goto bailout;
+            SHA1Update(&sha, (const unsigned char *)piece, n);
+            left -= n;
+        }
+    }
 
     if (part_num == 0 && is_xm_board()) {
         int off = size - 0x400 /* crypto size */;
@@ -294,12 +347,15 @@ static bool examine_part(int part_num, size_t size, size_t erasesize,
         }
     }
 
-    char digest[21] = {0};
-    SHA1(digest, addr, size);
-    *sha1 = ntohl(*(uint32_t *)&digest);
+    unsigned char digest[20];
+    SHA1Final(digest, &sha);
+    uint32_t head;
+    memcpy(&head, digest, sizeof(head));
+    *sha1 = ntohl(head);
 
     res = true;
 bailout:
+    free(addr);
     close(fd);
     return res;
 }

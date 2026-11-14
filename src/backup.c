@@ -99,18 +99,27 @@ static bool cb_mtd_backup(int i, const char *name, struct mtd_info_user *mtd,
         c->missed++;
         return true;
     }
-    int fd;
-    char *addr = open_mtdblock(i, &fd, mtd->size, 0);
-    if (!addr) {
-        fprintf(stderr, "  %s (/dev/mtdblock%d): %s\n", name, i,
-                strerror(errno));
+    /* Streamed as it is written or sent, not mapped from /dev/mtdblockN:
+     * a NAND page ECC cannot correct was an I/O error at that page through
+     * the mapping, and fwrite() stopped short there -- the partition cut,
+     * every later one shifted in the file, exit status 0, and an upload
+     * broken off as "Could not reach" the server (#283). /dev/mtdN hands
+     * the page over; open_mtd_read() has the rest. */
+    char devpath[32];
+    int fd = open_mtd_read(i, devpath, sizeof(devpath));
+    char *path = fd >= 0 ? strdup(devpath) : NULL;
+    if (!path) {
+        fprintf(stderr, "  %s (/dev/mtd%d): %s\n", name, i, strerror(errno));
+        if (fd >= 0)
+            close(fd);
         c->missed++;
         return true;
     }
+    close(fd);
 
-    c->blocks[c->count].data = addr;
+    c->blocks[c->count].data = NULL;
     c->blocks[c->count].len = mtd->size;
-    c->blocks[c->count].path = NULL;
+    c->blocks[c->count].path = path;
     c->count++;
     return true;
 }
@@ -151,7 +160,7 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
         }
 
         if (blocks[i].path) {
-            // A UBI volume, streamed as the upload streams it.
+            // A partition or a UBI volume, streamed as the upload sends it.
             static char piece[65536];
             FILE *src = fopen(blocks[i].path, "rb");
             size_t left = blocks[i].len;
@@ -160,6 +169,10 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
                 size_t n = fread(
                     piece, 1, left < sizeof(piece) ? left : sizeof(piece), src);
                 if (!n) {
+                    fprintf(stderr, "'%s' ended at %zu of %zu bytes%s%s\n",
+                            blocks[i].path, blocks[i].len - left, blocks[i].len,
+                            ferror(src) ? ": " : "",
+                            ferror(src) ? strerror(errno) : "");
                     failed = blocks[i].path;
                     break;
                 }
@@ -179,16 +192,17 @@ int save_file(const char *filename, span_t blocks[MAX_MTDBLOCKS + 1],
             }
             continue;
         }
-        int nbytes = fwrite(blocks[i].data, 1, blocks[i].len, fp);
-        if (nbytes == -1)
-            break;
-#if 0
-        printf("[%d] written %d bytes\n", i, nbytes);
-#endif
+        if (fwrite(blocks[i].data, 1, blocks[i].len, fp) != blocks[i].len) {
+            fprintf(stderr, "Error writing '%s', aborting\n", filename);
+            fclose(fp);
+            return 1;
+        }
     }
 
-    fclose(fp);
-
+    if (fclose(fp)) {
+        fprintf(stderr, "Error writing '%s', aborting\n", filename);
+        return 1;
+    }
     return 0;
 }
 
