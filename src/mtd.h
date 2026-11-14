@@ -9,6 +9,9 @@ typedef bool (*cb_mtd)(int i, const char *name, struct mtd_info_user *mtd,
 
 cJSON *get_mtd_info();
 char *open_mtdblock(int i, int *fd, uint32_t size, int flags);
+// Partition i opened for reading its bytes, through /dev/mtdN (the path goes
+// to `path`); -1 with errno when it does not open.
+int open_mtd_read(int i, char *path, size_t path_len);
 void enum_mtd_info(void *ctx, cb_mtd cb);
 // How much flash the partitions of the last enum_mtd_info() cover, each byte
 // once. Partitions can nest, so adding up what it hands out overstates it.

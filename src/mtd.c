@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <regex.h>
 #include <stdint.h>
@@ -126,6 +127,35 @@ char *open_mtdblock(int i, int *fd, uint32_t size, int flags) {
     return addr;
 }
 
+/*
+ * /dev/mtdN, not /dev/mtdblockN. A NAND page that ECC cannot correct fails
+ * mtd_read() with -EBADMSG though its data was read: mtdchar's read()
+ * hands the data over, mtdblock makes it an I/O error -- a short read, or
+ * SIGBUS through a mapping (#283). No fallback to mtdblock is needed:
+ * enum_mtd_info() lists only partitions whose /dev/mtdN answers.
+ */
+int open_mtd_read(int i, char *path, size_t path_len) {
+    snprintf(path, path_len, "/dev/mtd%d", i);
+    return open(path, O_RDONLY);
+}
+
+// All `size` bytes, or false with errno (0 for an early end of file).
+static bool read_full(int fd, char *buf, size_t size) {
+    while (size) {
+        ssize_t n = read(fd, buf, size);
+        if (n < 0 && errno == EINTR)
+            continue;
+        if (n <= 0) {
+            if (!n)
+                errno = 0;
+            return false;
+        }
+        buf += n;
+        size -= (size_t)n;
+    }
+    return true;
+}
+
 int find_ubi_for_mtd(int mtd_num) {
     DIR *d = opendir("/sys/class/ubi");
     if (!d)
@@ -250,17 +280,46 @@ bool sha1_ubi_volume(int ubi_num, int vol_id, size_t data_bytes,
 
 static bool uenv_detected;
 
+/* False when the partition is not hashed: too big to, or it could not be
+ * read, and then `why` says so -- a partition left out on purpose and one
+ * the flash would not give up look different in the report. */
 static bool examine_part(int part_num, size_t size, size_t erasesize,
-                         uint32_t *sha1, cJSON **contains) {
+                         uint32_t *sha1, cJSON **contains, char *why,
+                         size_t why_len) {
     bool res = false;
+    *why = '\0';
     if (size > 0x1000000)
         return res;
 
-    int fd;
-    char *addr = open_mtdblock(
-        part_num, &fd, size, MAP_POPULATE /* causes read-ahead on the file */);
-    if (!addr)
+    char path[32];
+    int fd = open_mtd_read(part_num, path, sizeof(path));
+    if (fd < 0) {
+        snprintf(why, why_len, "%s: %s", path, strerror(errno));
         return res;
+    }
+    size_t at = 0;
+
+    /* Read, not mapped (open_mtd_read() says why). The first two
+     * partitions are searched for the U-Boot environment and XM's crypto
+     * block, so they are read whole; the rest only feed the hash, a piece
+     * at a time, so RAM holds no partition beyond the boot ones. */
+    char *addr = NULL;
+    if (part_num < 2 && !(addr = malloc(size))) {
+        snprintf(why, why_len, "no memory to read %zu bytes", size);
+        goto bailout;
+    }
+    SHA1_CTX sha;
+    SHA1Init(&sha);
+    static char piece[65536];
+    for (size_t left = size; left;) {
+        size_t n = left < sizeof(piece) ? left : sizeof(piece);
+        char *to = addr ? addr + at : piece;
+        if (!read_full(fd, to, n))
+            goto unread;
+        SHA1Update(&sha, (const unsigned char *)to, n);
+        left -= n;
+        at += n;
+    }
 
     if (part_num == 0 && is_xm_board()) {
         int off = size - 0x400 /* crypto size */;
@@ -294,12 +353,20 @@ static bool examine_part(int part_num, size_t size, size_t erasesize,
         }
     }
 
-    char digest[21] = {0};
-    SHA1(digest, addr, size);
-    *sha1 = ntohl(*(uint32_t *)&digest);
+    unsigned char digest[20];
+    SHA1Final(digest, &sha);
+    uint32_t head;
+    memcpy(&head, digest, sizeof(head));
+    *sha1 = ntohl(head);
 
     res = true;
+    goto bailout;
+unread:
+    // A piece runs from `at`; the bad page is somewhere in it.
+    snprintf(why, why_len, "%s: %s in the 64K from 0x%zx", path,
+             errno ? strerror(errno) : "ended early", at);
 bailout:
+    free(addr);
     close(fd);
     return res;
 }
@@ -380,11 +447,15 @@ static bool cb_mtd_info(int i, const char *name, struct mtd_info_user *mtd,
     } else if (!c->mpoints[i].rw) {
         cJSON *contains = NULL;
         uint32_t sha1 = 0;
-        if (examine_part(i, mtd->size, mtd->erasesize, &sha1, &contains)) {
+        char why[128];
+        if (examine_part(i, mtd->size, mtd->erasesize, &sha1, &contains, why,
+                         sizeof(why))) {
             ADD_PARAM_FMT("sha1", "%.8x", sha1);
             if (contains) {
                 cJSON_AddItemToObject(j_inner, "contains", contains);
             }
+        } else if (*why) {
+            ADD_PARAM("read_error", why);
         }
     }
     if (mtd->type == MTD_NORFLASH || mtd->type == MTD_NANDFLASH)
