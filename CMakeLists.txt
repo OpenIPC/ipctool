@@ -580,3 +580,9 @@ if(NOT ONLY_LIBRARY)
   add_executable(raw_image_test src/raw_image_test.c src/raw_image.c)
   target_include_directories(raw_image_test PRIVATE include src)
 endif()
+
+# Optional standalone diagnostics; the default does not enable ASM or cross checks.
+option(BUILD_NT98513_DIAGNOSTICS "Build source-owned NT98513 Linux MIPS diagnostics" OFF)
+if(BUILD_NT98513_DIAGNOSTICS)
+  add_subdirectory(tools/nt98513)
+endif()
