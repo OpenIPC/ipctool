@@ -183,6 +183,12 @@ static int get_cpu_id() {
             return 26;
         case 0x4444:
             return 27;
+        case 0xAAAA:
+            /* A T41NQ that reports the T40 family's SoC ID (0x10040003),
+             * measured on an owner's camera (OpenIPC/majestic#376); no T40
+             * grade uses this code */
+            chip_generation = 0x41;
+            return 34;
         default:
             return -1;
         }
