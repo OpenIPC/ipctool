@@ -186,7 +186,14 @@ static int get_cpu_id() {
         case 0xAAAA:
             /* A T41NQ that reports the T40 family's SoC ID (0x10040003),
              * measured on an owner's camera (OpenIPC/majestic#376); no T40
-             * grade uses this code */
+             * grade uses this code.
+             *
+             * As a T41 it has no pad table (ingenic_soc() knows T21, T23,
+             * T31 and T40), so pad lookups answer "no table" for it.
+             * Before, it came out "unknown" with chip_generation still
+             * 0x40, and pad lookups quietly used T40's table: a pin muxed
+             * by name would have been set from T40's function list on a
+             * T41. A T41 table is the fix for that, not this branch. */
             chip_generation = 0x41;
             return 34;
         default:
