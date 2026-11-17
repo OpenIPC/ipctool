@@ -221,8 +221,14 @@ static int get_cpu_id() {
             return 33;
         case 0xAAAA:
             return 34;
+        /* 0x6666 and 0x4444 as the T41 SDK's own SPL names them (Ingenic
+         * SDK 1.2.0, u-boot common/spl/spl.c), and as OpenIPC/u-boot's
+         * openipc-ingenic SPL prints them. The SDK gives the T41XQ no
+         * code of its own; its U-Boot is the T41ZX's. */
         case 0x6666:
             return 35;
+        case 0x4444:
+            return 38;
         default:
             return -1;
         }
@@ -303,11 +309,13 @@ static const char *ingenic_cpu_name() {
     case 34:
         return "T41NQ";
     case 35:
-        return "T41X";
+        return "T41ZX";
     case 36:
         return "T23N";
     case 37:
         return "T23X";
+    case 38:
+        return "T41A";
     }
     return "unknown";
 }
