@@ -17,6 +17,10 @@ static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char gc_addrs[] = {0x6e, 0x52, 0x42, 0};
 static unsigned char soi_addrs[] = {0x60, 0x80, 0};
 static unsigned char superpix_addrs[] = {0x78, 0};
+/* MIS parts sit at 0x30 (7-bit), like SmartSens: openingenic carries mis2003
+ * for T21, mis2006/2008/4001/5001 for T31 and mis4001 for T41, all probed
+ * there by their 0x3000/0x3001 ID. */
+static unsigned char imagedesign_addrs[] = {0x60, 0};
 
 static sensor_addr_t ingenic_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},
@@ -26,6 +30,7 @@ static sensor_addr_t ingenic_possible_i2c_addrs[] = {
     {SENSOR_GALAXYCORE, gc_addrs},
     {SENSOR_SOI, soi_addrs},
     {SENSOR_SUPERPIX, superpix_addrs},
+    {SENSOR_IMAGEDESIGN, imagedesign_addrs},
     {0, NULL}};
 
 typedef unsigned char uint8;
@@ -188,12 +193,10 @@ static int get_cpu_id() {
              * measured on an owner's camera (OpenIPC/majestic#376); no T40
              * grade uses this code.
              *
-             * As a T41 it has no pad table (ingenic_soc() knows T21, T23,
-             * T31 and T40), so pad lookups answer "no table" for it.
-             * Before, it came out "unknown" with chip_generation still
-             * 0x40, and pad lookups quietly used T40's table: a pin muxed
-             * by name would have been set from T40's function list on a
-             * T41. A T41 table is the fix for that, not this branch. */
+             * chip_generation 0x41 is what gives it T41's pad table. Before,
+             * it came out "unknown" with chip_generation still 0x40, and pad
+             * lookups quietly used T40's table: a pin muxed by name would
+             * have been set from T40's function list on a T41. */
             chip_generation = 0x41;
             return 34;
         default:

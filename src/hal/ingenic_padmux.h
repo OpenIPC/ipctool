@@ -10,7 +10,8 @@
  *       --soc T31 --spec T31_H.3_gpio_spec.pdf \
  *       --soc T21 --spec platform.h \
  *       --soc T23 --spec platform.h \
- *       --soc T40 --spec t40-pinctrl.dtsi
+ *       --soc T40 --spec t40-pinctrl.dtsi \
+ *       --soc T41 --spec 'T41_IP Camera Solution GPIO Recommended Allocation Table_V1.3_20230107.xlsx'
  */
 
 #ifndef HAL_INGENIC_PADMUX_H
@@ -426,5 +427,108 @@ static const ingenic_pad_t T40_pads[] = {
 };
 
 static const ingenic_soc_t T40_padmux = {T40_pads, 100};
+
+/* T41: 88 pads named, of 128 in the SoC's 4 ports. A pad no source
+ * names is not here at all, which is a different answer from one
+ * whose four functions are all unused.
+ *
+ * From the HDK's GPIO allocation workbook, its IO function
+ * list: FUNC0..3 per pad, named per wire. It leaves out the
+ * static-memory function the data sheet gives PA06..PA19, and
+ * PA10/PA11 altogether.
+ *   9859bb472e8fe440  T41_IP Camera Solution GPIO Recommended Allocation Table_V1.3_20230107.xlsx
+ */
+static const ingenic_pad_t T41_pads[] = {
+    {6, PMX_PA06, {PMX_reserved, PMX_DVP_D6, PMX_SSI0_CLK, PMX_reserved}},
+    {7, PMX_PA07, {PMX_reserved, PMX_DVP_D7, PMX_SSI0_CE0, PMX_reserved}},
+    {8, PMX_PA08, {PMX_reserved, PMX_DVP_D8, PMX_SSI0_DT, PMX_reserved}},
+    {9, PMX_PA09, {PMX_reserved, PMX_DVP_D9, PMX_SSI0_DR, PMX_reserved}},
+    {12, PMX_PA12, {PMX_reserved, PMX_I2C0_SDA, PMX_reserved, PMX_reserved}},
+    {13, PMX_PA13, {PMX_reserved, PMX_I2C0_SCL, PMX_reserved, PMX_reserved}},
+    {14, PMX_PA14, {PMX_reserved, PMX_DVP_PCLK, PMX_DMIC_CLK, PMX_reserved}},
+    {15, PMX_PA15, {PMX_reserved, PMX_DVP_MCLK, PMX_reserved, PMX_reserved}},
+    {16, PMX_PA16, {PMX_reserved, PMX_DVP_HSYNC, PMX_DMIC_DAT0, PMX_reserved}},
+    {17, PMX_PA17, {PMX_reserved, PMX_DVP_VSYNC, PMX_DMIC_DAT1, PMX_reserved}},
+    {18, PMX_PA18, {PMX_reserved, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {19, PMX_PA19, {PMX_reserved, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {20, PMX_PA20, {PMX_SSI1_DT, PMX_SFC1_DT, PMX_reserved, PMX_reserved}},
+    {21, PMX_PA21, {PMX_SSI1_DR, PMX_SFC1_DR, PMX_reserved, PMX_reserved}},
+    {22, PMX_PA22, {PMX_SSI1_CLK, PMX_SFC1_CLK, PMX_reserved, PMX_reserved}},
+    {23, PMX_PA23, {PMX_reserved, PMX_SFC0_DT, PMX_reserved, PMX_reserved}},
+    {24, PMX_PA24, {PMX_reserved, PMX_SFC0_DR, PMX_reserved, PMX_reserved}},
+    {25, PMX_PA25, {PMX_reserved, PMX_SFC0_GPC, PMX_reserved, PMX_reserved}},
+    {26, PMX_PA26, {PMX_reserved, PMX_SFC0_CE1, PMX_reserved, PMX_reserved}},
+    {27, PMX_PA27, {PMX_reserved, PMX_SFC0_CLK, PMX_reserved, PMX_reserved}},
+    {28, PMX_PA28, {PMX_reserved, PMX_SFC0_CE0, PMX_reserved, PMX_reserved}},
+    {29, PMX_PA29, {PMX_SSI1_CE0, PMX_SFC1_CE0, PMX_reserved, PMX_reserved}},
+    {30, PMX_PA30, {PMX_SSI1_CE1, PMX_SFC1_CE1, PMX_reserved, PMX_reserved}},
+    {31, PMX_PA31, {PMX_SSI1_GPC, PMX_SFC1_GPC, PMX_reserved, PMX_reserved}},
+    {32, PMX_PB00, {PMX_MSC0_D0, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {33, PMX_PB01, {PMX_MSC0_D1, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {34, PMX_PB02, {PMX_MSC0_D2, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {35, PMX_PB03, {PMX_MSC0_D3, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {36, PMX_PB04, {PMX_MSC0_CLK, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {37, PMX_PB05, {PMX_MSC0_CMD, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {38, PMX_PB06, {PMX_GMAC_TXCLK, PMX_UART5_TXD, PMX_reserved, PMX_reserved}},
+    {39, PMX_PB07, {PMX_GMAC_PHY_CLK, PMX_UART5_RXD, PMX_reserved, PMX_reserved}},
+    {40, PMX_PB08, {PMX_GMAC_TXEN, PMX_I2S_DAC_BCLK, PMX_PWM2, PMX_reserved}},
+    {41, PMX_PB09, {PMX_GMAC_RXDV, PMX_I2S_DAC_LRCK, PMX_PWM3, PMX_reserved}},
+    {42, PMX_PB10, {PMX_GMAC_MDCK, PMX_I2S_RMCLK, PMX_I2C2_SCL, PMX_reserved}},
+    {43, PMX_PB11, {PMX_GMAC_MDIO, PMX_I2S_TMCLK, PMX_I2C2_SDA, PMX_reserved}},
+    {45, PMX_PB13, {PMX_GMAC_TXD0, PMX_I2S_ADC_BCLK, PMX_PWM4, PMX_reserved}},
+    {46, PMX_PB14, {PMX_GMAC_TXD1, PMX_I2S_ADC_LRCK, PMX_PWM5, PMX_reserved}},
+    {47, PMX_PB15, {PMX_GMAC_RXD0, PMX_I2S_SDTI, PMX_PWM6, PMX_reserved}},
+    {48, PMX_PB16, {PMX_GMAC_RXD1, PMX_I2S_SDTO, PMX_PWM7, PMX_reserved}},
+    {49, PMX_PB17, {PMX_PWM0, PMX_MSC1_D0, PMX_reserved, PMX_reserved}},
+    {50, PMX_PB18, {PMX_PWM1, PMX_MSC1_D1, PMX_reserved, PMX_reserved}},
+    {51, PMX_PB19, {PMX_UART0_RXD, PMX_MSC1_CMD, PMX_reserved, PMX_reserved}},
+    {52, PMX_PB20, {PMX_UART0_CTS, PMX_MSC1_CLK, PMX_TCK, PMX_reserved}},
+    {53, PMX_PB21, {PMX_UART0_RTS, PMX_MSC1_D2, PMX_TMS, PMX_reserved}},
+    {54, PMX_PB22, {PMX_UART0_TXD, PMX_MSC1_D3, PMX_reserved, PMX_reserved}},
+    {55, PMX_PB23, {PMX_UART1_TXD, PMX_reserved, PMX_TDO, PMX_reserved}},
+    {56, PMX_PB24, {PMX_UART1_RXD, PMX_reserved, PMX_TDI, PMX_reserved}},
+    {57, PMX_PB25, {PMX_I2C1_SDA, PMX_UART3_TXD, PMX_SSI1_CE1, PMX_reserved}},
+    {58, PMX_PB26, {PMX_I2C1_SCL, PMX_UART3_RXD, PMX_SSI1_GPC, PMX_reserved}},
+    {59, PMX_PB27, {PMX_DRV_VBUS, PMX_I2C2_SDA, PMX_SSI1_DT, PMX_reserved}},
+    {60, PMX_PB28, {PMX_DMIC_CLK, PMX_I2C2_SCL, PMX_SSI1_CLK, PMX_reserved}},
+    {61, PMX_PB29, {PMX_DMIC_DAT0, PMX_UART4_TXD, PMX_SSI1_DR, PMX_reserved}},
+    {62, PMX_PB30, {PMX_DMIC_DAT1, PMX_UART4_RXD, PMX_SSI1_CE0, PMX_reserved}},
+    {63, PMX_PB31, {PMX_reserved, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {64, PMX_PC00, {PMX_BOOT_SEL0, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {65, PMX_PC01, {PMX_BOOT_SEL1, PMX_reserved, PMX_reserved, PMX_reserved}},
+    {66, PMX_PC02, {PMX_MSC1_CLK, PMX_SSI0_CLK, PMX_reserved, PMX_reserved}},
+    {67, PMX_PC03, {PMX_MSC1_CMD, PMX_SSI0_CE0, PMX_reserved, PMX_reserved}},
+    {68, PMX_PC04, {PMX_MSC1_D0, PMX_SSI0_DT, PMX_reserved, PMX_reserved}},
+    {69, PMX_PC05, {PMX_MSC1_D1, PMX_SSI0_DR, PMX_reserved, PMX_reserved}},
+    {70, PMX_PC06, {PMX_MSC1_D2, PMX_SSI0_GPC, PMX_reserved, PMX_reserved}},
+    {71, PMX_PC07, {PMX_MSC1_D3, PMX_SSI0_CE1, PMX_reserved, PMX_reserved}},
+    {72, PMX_PC08, {PMX_UART0_TXD, PMX_I2C2_SDA, PMX_reserved, PMX_reserved}},
+    {73, PMX_PC09, {PMX_UART0_RXD, PMX_I2C2_SCL, PMX_reserved, PMX_reserved}},
+    {75, PMX_PC11, {PMX_UART0_CTS, PMX_I2S_TMCLK, PMX_reserved, PMX_reserved}},
+    {76, PMX_PC12, {PMX_UART0_RTS, PMX_I2S_RMCLK, PMX_reserved, PMX_reserved}},
+    {77, PMX_PC13, {PMX_UART2_TXD, PMX_I2S_ADC_BCLK, PMX_reserved, PMX_reserved}},
+    {78, PMX_PC14, {PMX_UART2_RXD, PMX_I2S_ADC_LRCK, PMX_reserved, PMX_reserved}},
+    {79, PMX_PC15, {PMX_SSI_SLV_CLK, PMX_I2S_DAC_BCLK, PMX_PWM0, PMX_EXCLK}},
+    {80, PMX_PC16, {PMX_SSI_SLV_CE0, PMX_I2S_DAC_LRCK, PMX_PWM1, PMX_RTC32K}},
+    {81, PMX_PC17, {PMX_SSI_SLV_DT, PMX_I2S_SDTO, PMX_PWM2, PMX_reserved}},
+    {82, PMX_PC18, {PMX_SSI_SLV_DR, PMX_I2S_SDTI, PMX_PWM3, PMX_reserved}},
+    {83, PMX_PC19, {PMX_UART2_CTS, PMX_I2C1_SDA, PMX_reserved, PMX_reserved}},
+    {84, PMX_PC20, {PMX_UART2_RTS, PMX_I2C1_SCL, PMX_reserved, PMX_reserved}},
+    {96, PMX_PD00, {PMX_SLCD_D0, PMX_BT656_0_D0, PMX_UART3_TXD, PMX_reserved}},
+    {97, PMX_PD01, {PMX_SLCD_D1, PMX_BT656_0_D1, PMX_UART3_RXD, PMX_reserved}},
+    {98, PMX_PD02, {PMX_SLCD_D2, PMX_BT656_0_D2, PMX_UART4_TXD, PMX_reserved}},
+    {99, PMX_PD03, {PMX_SLCD_D3, PMX_BT656_0_D3, PMX_UART4_RXD, PMX_reserved}},
+    {100, PMX_PD04, {PMX_SLCD_D4, PMX_BT656_0_D4, PMX_UART5_TXD, PMX_reserved}},
+    {101, PMX_PD05, {PMX_SLCD_D5, PMX_BT656_0_D5, PMX_UART5_RXD, PMX_reserved}},
+    {102, PMX_PD06, {PMX_SLCD_D6, PMX_BT656_0_D6, PMX_I2C1_SDA, PMX_reserved}},
+    {103, PMX_PD07, {PMX_SLCD_D7, PMX_BT656_0_D7, PMX_I2C1_SCL, PMX_reserved}},
+    {104, PMX_PD08, {PMX_SLCD_WR, PMX_BT656_0_PCLK, PMX_reserved, PMX_reserved}},
+    {105, PMX_PD09, {PMX_SLCD_TE, PMX_UART2_CTS, PMX_PWM4, PMX_reserved}},
+    {106, PMX_PD10, {PMX_SLCD_CS, PMX_UART2_RTS, PMX_PWM5, PMX_reserved}},
+    {107, PMX_PD11, {PMX_SLCD_DC, PMX_UART2_TXD, PMX_PWM6, PMX_reserved}},
+    {108, PMX_PD12, {PMX_SLCD_RDY, PMX_UART2_RXD, PMX_PWM7, PMX_reserved}},
+};
+
+static const ingenic_soc_t T41_padmux = {T41_pads, 88};
 
 #endif /* HAL_INGENIC_PADMUX_H */

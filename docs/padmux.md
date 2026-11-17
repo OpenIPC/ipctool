@@ -465,6 +465,7 @@ tools/gen_ingenic_padmux.py \
     --soc T21 --spec .../soc-t21/include/mach/platform.h \
     --soc T23 --spec .../soc-t23/include/mach/platform.h \
     --soc T40 --spec .../boot/dts/ingenic/t40-pinctrl.dtsi \
+    --soc T41 --spec '.../T41_IP Camera Solution GPIO Recommended Allocation Table_V1.3_20230107.xlsx' \
     > src/hal/ingenic_padmux.h
 ```
 
@@ -542,17 +543,29 @@ at its inner `)` and yields an expression that will not evaluate, and a
 register dropped that way shrinks a pad's MISC set until the pad stops being
 checked at all.
 
-Ingenic parts do not share a source, and the three kinds are not equally good:
+Ingenic parts do not share a source, and the four kinds are not equally good:
 
 | kind | source | names | covers |
 |---|---|---|---|
 | `spec` (T31) | the GPIO spec's port summary tables | per **wire** -- `UART1_RXD` | every pad the package brings out |
+| `sheet` (T41) | the "T41 IO function list" sheet of the HDK's GPIO Recommended Allocation Table | per **wire** -- `UART2_TXD` | every pad it names: 88, less PA00..PA05 (analog MIPI) and PA10/PA11 |
 | `dt` (T40) | `boot/dts/ingenic/<soc>-pinctrl.dtsi` | per **device and port** -- `UART0_PC` | every routing the devicetree describes |
 | `platform` (T21, T23) | `soc-<x>/include/mach/platform.h` | per **device** -- `UART0_PORTB` | only what the board file wires up |
 
 Only T31 has a GPIO spec; only T40 has a pinctrl devicetree. `T40GPIO.xlsx`,
 which sits beside the T40 SDK and looks like the T31 spec, is a net list for
 one reference board and is not a source for this.
+
+T41's workbook is the other kind: it ships in the T41 HDK
+(`Hardware design guide/Design guide Files/`), and its "T41 IO function list"
+sheet gives FUNC0..FUNC3 for every pad of the SoC. T41 has a pinctrl
+devicetree too, and the sheet is preferred to it: the devicetree names a
+device and a port rather than a wire, and its three `vic_pa_*` nodes put the
+DVP bus on FUNCTION0, where both the sheet and the T41L data sheet have it on
+FUNCTION1 (FUNCTION0 is the static-memory bus) -- a T40 copy. Every other
+routing in `t41-pinctrl.dtsi` agrees with the sheet, 152 pins of them. The
+sheet leaves FUNCTION0 of PA06..PA19 blank where the data sheet has that
+static-memory bus, and skips PA10/PA11; the header says so.
 
 Both take `--verify <header>` to re-derive and diff without writing, so a
 maintainer with the sources can prove the checked-in file still matches. Both
@@ -585,8 +598,8 @@ in.
   the backend ALBANY and UTMI0; nothing needs it yet.
 - **Ingenic pads the package does not bring out** are absent from the table
   rather than present and empty.
-- **Other Ingenic parts.** T21, T23, T31 and T40 have tables. T10, T20, T30 and
-  T41 do not, and would each need a source of one of the three kinds above --
+- **Other Ingenic parts.** T21, T23, T31, T40 and T41 have tables. T10, T20 and
+  T30 do not, and would each need a source of one of the three kinds above --
   which, for the parts checked so far, does not exist in the vendor releases.
 - **NA51090 (NT98636) and NA51103 (NT98332G).** Recognised, no table. Neither
   driver is in the NA51089 SDK nor anywhere public that was found; u-boot
@@ -608,7 +621,7 @@ in.
   host. On top of that, HiSilicon, SigmaStar infinity6/6b0/6c, and Ingenic
   T21, T23, T31 and SigmaStar infinity6e have been run on real cameras and
   checked against an independent decode of their live registers. Ingenic T40
-  has not: nobody has had one.
+  and T41 have not: nobody has had one.
 
   Novatek NA51089 has, on the reporter's NT98566 in #237: `reginfo --pads`
   agreed on every pad with `/proc/nvt_info/nvt_pinmux/pinmux_summary`, the
