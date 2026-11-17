@@ -16,6 +16,7 @@ peripherals that board happens to wire up.
 
 Usage:
     gen_ingenic_padmux.py --spec T31_H.3_gpio_spec.pdf --soc T31
+    gen_ingenic_padmux.py --spec "T41_IP Camera Solution GPIO ...xlsx" --soc T41
     gen_ingenic_padmux.py --spec extracted.txt --soc T31 --verify <header>
 
 A .pdf is run through `pdftotext -layout`; anything else is read as that
@@ -32,6 +33,7 @@ import argparse
 import hashlib
 import os
 import re
+import shlex
 import subprocess
 import sys
 
@@ -66,6 +68,11 @@ PINS_PER_PORT = 32
 #             device-level naming as "platform", better structured, and the
 #             label distinguishes routings that a board file's .name does not.
 #
+#   "sheet"    the "T41 IO function list" sheet of the GPIO Recommended
+#             Allocation Table in the T41 HDK -- FUNC0..FUNC3 per pad, the
+#             whole SoC, named per wire like a GPIO spec. Not T40GPIO.xlsx's
+#             kind: that one is a reference board's net list.
+#
 # The second is weaker and it is what exists for T21 and T23. It is still worth
 # having: measured against the live registers on a T21 it names 80 of 97 pads
 # and on a T23 26 of 67, where the alternative is answering nothing at all.
@@ -74,6 +81,7 @@ SOCS = {
     "T21": ("T21", 6, "platform"),
     "T23": ("T23", 3, "platform"),
     "T40": ("T40", 4, "dt"),
+    "T41": ("T41", 4, "sheet"),
 }
 
 
@@ -205,6 +213,77 @@ DT_GROUP_RE = re.compile(r"(\w+)\s*:\s*[\w-]+\s*\{([^{}]*?)\}", re.S)
 DT_PINMUX_RE = re.compile(r"ingenic,pinmux\s*=\s*<\s*&gp([a-g])\s+(\d+)\s+(\d+)\s*>")
 DT_FUNC_RE = re.compile(
     r"ingenic,pinmux-funcsel\s*=\s*<\s*PINCTL_FUNCTION(\w+)\s*>")
+
+
+SHEET = "T41 IO function list"
+SHEET_PAD_RE = re.compile(r"^P([A-D])(\d\d)$")
+
+
+def sheet_name(cell):
+    """A FUNCn cell as the rest of the table spells it.
+
+    The sheet writes an active-low signal with a trailing underscore
+    (SFC0_CE0_), a direction as a suffix (EXCLK_O, BT656_0_D0_out) and mixes
+    case (UART0_RxD). None of that is part of the name.
+    """
+    name = cell.strip().rstrip("_")
+    name = re.sub(r"_(out|in|o|i)$", "", name, flags=re.I)
+    return normalise(name) if name else EMPTY
+
+
+def parse_sheet(path, soc):
+    """The T41 HDK's IO function list: one row per pad, FUNC0..FUNC3.
+
+    Columns are found by their header text, per port group, rather than by
+    letter. A row with no PXnn in the pad column is not a pad -- the sheet
+    lists the six analog MIPI/DVP pins at the top of port A that way, with
+    no GPIO name -- and neither is one whose GPIO column is not "GPIO"
+    (PD31 is the wake-up input). Both are left out, as any pad no source
+    names is.
+    """
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import xlsx_min
+    _, nports, _ = SOCS[soc]
+    del CONFLICTS[:]
+    del OVERFLOWS[:]
+
+    try:
+        rows = xlsx_min.sheets(path)[SHEET]
+    except KeyError:
+        raise Refusal("no %r sheet -- is this the GPIO Recommended Allocation "
+                      "Table?" % SHEET)
+
+    pads, cols = {}, None
+    for row in rows:
+        cells = {k: v.strip() for k, v in row.items() if v and v.strip()}
+        heads = {v.upper(): k for k, v in cells.items()}
+        if all(("FUNC%d" % n) in heads for n in range(4)) and "GPIO" in heads:
+            cols = (heads["GPIO"], [heads["FUNC%d" % n] for n in range(4)])
+            pad_col = chr(ord(cols[0]) - 1)
+            continue
+        if cols is None:
+            continue
+        m = SHEET_PAD_RE.match(cells.get(pad_col, ""))
+        if not m or cells.get(cols[0], "").upper() != "GPIO":
+            continue
+        port, pin = m.group(1), int(m.group(2))
+        if ord(port) - ord("A") >= nports or pin >= PINS_PER_PORT:
+            raise Refusal("P%s%02d is not a pad of a %d-port SoC"
+                          % (port, pin, nports))
+
+        funcs = [sheet_name(cells.get(c, "")) for c in cols[1]]
+        named = [f for f in funcs if f != EMPTY]
+        if len(set(named)) != len(named):
+            raise Refusal("P%s%02d names the same function twice: %s"
+                          % (port, pin, funcs))
+        pad = (ord(port) - ord("A")) * PINS_PER_PORT + pin
+        if pad in pads:
+            raise Refusal("P%s%02d appears twice in the sheet" % (port, pin))
+        pads[pad] = ("P%s%02d" % (port, pin), funcs)
+
+    if not pads:
+        raise Refusal("found no pad rows in %r" % SHEET)
+    return pads
 
 
 def parse_dt(text, soc):
@@ -436,6 +515,11 @@ def emit(socs, argv):
         if kind == "spec":
             w(" * From the GPIO spec's port summary tables: FUNCTION0..3 per")
             w(" * pad, named per wire.")
+        elif kind == "sheet":
+            w(" * From the HDK's GPIO allocation workbook, its IO function")
+            w(" * list: FUNC0..3 per pad, named per wire. It leaves out the")
+            w(" * static-memory function the data sheet gives PA06..PA19, and")
+            w(" * PA10/PA11 altogether.")
         elif kind == "dt":
             w(" * From the pinctrl devicetree, one node per routing: a port, a")
             w(" * pin range and a function code, named for the device and the")
@@ -496,9 +580,11 @@ def main():
 
     socs, argv = [], ["tools/gen_ingenic_padmux.py"]
     for soc, spec in zip(args.soc, args.spec):
-        text = spec_text(spec)
         kind = SOCS[soc][2]
-        if kind == "platform":
+        text = None if kind == "sheet" else spec_text(spec)
+        if kind == "sheet":
+            pads = parse_sheet(spec, soc)
+        elif kind == "platform":
             pads = parse_platform(text, soc)
         elif kind == "dt":
             pads = parse_dt(text, soc)
@@ -506,7 +592,8 @@ def main():
             pads = parse(text, soc)
         socs.append((soc, pads, [(os.path.basename(spec), sha256(spec))],
                      list(OVERFLOWS), list(CONFLICTS)))
-        argv += ["--soc", soc, "--spec", os.path.basename(spec)]
+        # quoted: the T41 workbook's name has spaces in it
+        argv += ["--soc", soc, "--spec", shlex.quote(os.path.basename(spec))]
 
     text = emit(socs, argv)
 

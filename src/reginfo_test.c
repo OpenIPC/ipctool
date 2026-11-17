@@ -892,6 +892,35 @@ static void test_ingenic(void) {
     CHECK(ipchw_padmux_by_func("PWM0_PC", rows, 8) == 1);
     CHECK(ipchw_padmux_by_func("PWM_PC", rows, 8) == 0);
 
+    puts("Ingenic: T41 has four ports and comes from the HDK workbook");
+    as_chip(T41, "T41N");
+
+    CHECK(ipchw_padmux_get(128, &r23) == IPCHW_PADMUX_NO_PAD);
+
+    /* Named per wire, like T31's spec, so a PWM channel is one name on each
+     * pad that can carry it: PWM0 on PB17 at FUNCTION0 and on PC15 at
+     * FUNCTION2. PC15 is what openingenic's sample_pwm drives on T41. */
+    CHECK(ipchw_padmux_by_func("PWM0", rows, 8) == 2);
+    n = ipchw_padmux_by_pad(79, rows, 8); /* PC15 */
+    CHECK(n == 5); /* GPIO and all four functions */
+    if (n == 5) {
+        CHECK(!strcmp(rows[0].gpio_name, "PC15"));
+        CHECK(!strcmp(rows[3].func_name, "PWM0") && rows[3].func == 2);
+        CHECK(!strcmp(rows[4].func_name, "EXCLK") && rows[4].func == 3);
+    }
+
+    /* The sensor bus: I2C0 on PA12/PA13 at FUNCTION1 -- the devicetree's
+     * i2c0_pa agrees, and the data sheet puts the static-memory bus on
+     * FUNCTION0, which the workbook leaves blank. */
+    CHECK(ipchw_padmux_by_func("I2C0_SDA", rows, 8) == 1);
+    if (ipchw_padmux_by_func("I2C0_SDA", rows, 8) == 1)
+        CHECK(rows[0].gpio_pad == 12 && rows[0].func == 1);
+
+    /* Pads the workbook does not name are not in the table: the analog
+     * MIPI pins PA00..PA05, and PA10/PA11. */
+    CHECK(ipchw_padmux_by_pad(0, rows, 8) <= 0);
+    CHECK(ipchw_padmux_by_pad(10, rows, 8) <= 0);
+
     as_chip(T31, "T31");
 }
 #endif
@@ -1372,6 +1401,7 @@ static void test_table_integrity(void) {
         {T23, "T23N"},
         {T31, "T31"},
         {T40, "T40"},
+        {T41, "T41N"},
 #endif
 #ifdef IPCHW_PADMUX_NOVATEK
         {CHIP_NA51089, "NT98566"},

@@ -3438,6 +3438,7 @@ static const muxctrl_reg_t **dump_regs_by_chip(void) {
     case T21:
         return T21_regs; /* six ports */
     case T40:
+    case T41:
         return T40_regs; /* four */
     case T23:
     case T31:
@@ -3476,6 +3477,7 @@ static uint32_t dump_mask(void) {
     case T23:
     case T31:
     case T40:
+    case T41:
     case CHIP_NA51055:
     case CHIP_NA51084:
     case CHIP_NA51089:
