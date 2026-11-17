@@ -17,6 +17,10 @@ static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char gc_addrs[] = {0x6e, 0x52, 0x42, 0};
 static unsigned char soi_addrs[] = {0x60, 0x80, 0};
 static unsigned char superpix_addrs[] = {0x78, 0};
+/* MIS parts sit at 0x30 (7-bit), like SmartSens: openingenic carries mis2003
+ * for T21, mis2006/2008/4001/5001 for T31 and mis4001 for T41, all probed
+ * there by their 0x3000/0x3001 ID. */
+static unsigned char imagedesign_addrs[] = {0x60, 0};
 
 static sensor_addr_t ingenic_possible_i2c_addrs[] = {
     {SENSOR_SONY, sony_addrs},
@@ -26,6 +30,7 @@ static sensor_addr_t ingenic_possible_i2c_addrs[] = {
     {SENSOR_GALAXYCORE, gc_addrs},
     {SENSOR_SOI, soi_addrs},
     {SENSOR_SUPERPIX, superpix_addrs},
+    {SENSOR_IMAGEDESIGN, imagedesign_addrs},
     {0, NULL}};
 
 typedef unsigned char uint8;
