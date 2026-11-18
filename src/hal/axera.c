@@ -1,5 +1,6 @@
 #include "hal/axera.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -23,17 +24,36 @@ static sensor_addr_t axera_possible_i2c_addrs[] = {
  * kernel's root compatible names the die. AX620U's own devicetree (real
  * deployed firmware) says "axera,ax620x", AX620E/AX630C/AX620Q's say
  * "axera,ax620e", so map the AX620U spelling to the family OpenIPC builds.
+ * The property is a list of NUL-separated strings and a board string
+ * usually comes first ("xm,ipc", "axera,ax620e"), so every entry is
+ * checked, not just the first.
  */
 bool axera_detect_cpu(char *chip_name) {
-    char buf[64];
+    char compat[512];
+    size_t len, off;
+    FILE *f = fopen("/proc/device-tree/compatible", "r");
 
-    if (!line_from_file("/proc/device-tree/compatible", "axera,(ax[0-9a-z]+)",
-                        buf, sizeof(buf)))
+    if (!f)
         return false;
-    if (!strcmp(buf, "ax620x"))
-        strcpy(buf, "ax620u");
-    strcpy(chip_name, buf);
-    return true;
+    len = fread(compat, 1, sizeof(compat) - 1, f);
+    fclose(f);
+    compat[len] = '\0';
+
+    for (off = 0; off < len; off += strlen(compat + off) + 1) {
+        const char *c = compat + off;
+
+        if (strncmp(c, "axera,ax", 8) || strlen(c + 6) >= 16)
+            continue;
+        strcpy(chip_name, c + 6);
+        if (!strcmp(chip_name, "ax620x"))
+            strcpy(chip_name, "ax620u");
+        /* chip_generation stays 0 on purpose, as for Ambarella: it keys
+         * the pad-mux, clock and boot ROM tables, and ipctool has none for
+         * Axera, so 0 sends those paths to their no-table answer and
+         * getchipfamily() back to the name. */
+        return true;
+    }
+    return false;
 }
 
 /*
