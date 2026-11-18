@@ -430,7 +430,8 @@ static void v3_ensure_sensor_enabled() {
 
 #endif /* IPCHW_HISI_V3 */
 
-#if defined(IPCHW_HISI_V4) || defined(IPCHW_HISI_V5)
+#if defined(IPCHW_HISI_V4) || defined(IPCHW_HISI_V5) ||                     \
+    defined(IPCHW_HISI_GOKE7206)
 /* Ungating the sensor's clock for a probe, and putting it back afterwards.
  *
  * NOT a snapshot -- an ENTITLEMENT. What this used to keep was the register as
@@ -532,7 +533,25 @@ static void sensor_crg_restore(sensor_crg_t *st, uint32_t addr) {
 
     mem_reg(addr, &st->found, OP_WRITE);
 }
-#endif /* V4 || V5 */
+#endif /* V4 || V5 || GOKE7206 */
+
+#ifdef IPCHW_HISI_GOKE7206
+/* GK7206V1x: sensor 0's clock enable and reset are bits 0 and 1 of CRG 0xF0,
+ * where the EV300 has them (the SDK's sys_hal_set_sensor_cken and
+ * sys_hal_sensor_reset write bit 8n and 8n+1 there for sensor n). With the
+ * clock gated, as it is until a streamer starts, the sensor does not answer
+ * on I2C and ipctool reported none. */
+static sensor_crg_t gk7206_crg;
+
+static void gk7206_ensure_sensor_enabled() {
+    sensor_crg_enable(&gk7206_crg, EV300_PERI_CRG60_ADDR,
+        EV300_PERI_CRG60_SENSOR0_CKEN, EV300_PERI_CRG60_SENSOR0_SRST);
+}
+
+static void gk7206_ensure_sensor_restored() {
+    sensor_crg_restore(&gk7206_crg, EV300_PERI_CRG60_ADDR);
+}
+#endif /* IPCHW_HISI_GOKE7206 */
 
 #ifdef IPCHW_HISI_V4
 static sensor_crg_t v4_crg;
@@ -599,6 +618,11 @@ static void hisi_ensure_sensor_enabled() {
         ot_ensure_sensor_enabled();
         break;
 #endif
+#ifdef IPCHW_HISI_GOKE7206
+    case GOKE_7206:
+        gk7206_ensure_sensor_enabled();
+        break;
+#endif
     default:
         break;
     }
@@ -614,6 +638,11 @@ static void hisi_hal_cleanup() {
 #ifdef IPCHW_HISI_V5
     case HISI_OT:
         ot_ensure_sensor_restored();
+        break;
+#endif
+#ifdef IPCHW_HISI_GOKE7206
+    case GOKE_7206:
+        gk7206_ensure_sensor_restored();
         break;
 #endif
     default:
