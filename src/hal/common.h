@@ -10,6 +10,7 @@
 #include "hal/allwinner.h"
 #include "hal/ambarella.h"
 #include "hal/anyka.h"
+#include "hal/axera.h"
 #include "hal/bcm.h"
 #include "hal/fh.h"
 #include "hal/gm.h"

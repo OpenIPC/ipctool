@@ -80,6 +80,9 @@ static const manufacturers_t manufacturers[] = {
 #ifdef IPCHW_VENDOR_ANYKA
     {NULL /* Generic */, anyka_detect_cpu, VENDOR_ANYKA, anyka_setup_hal},
 #endif
+#ifdef IPCHW_VENDOR_AXERA
+    {NULL /* Generic */, axera_detect_cpu, VENDOR_AXERA, axera_setup_hal},
+#endif
 #ifdef IPCHW_VENDOR_ROCKCHIP
     {NULL /* Generic */, rockchip_detect_cpu, VENDOR_ROCKCHIP,
      rockchip_setup_hal},
@@ -97,6 +100,10 @@ static const manufacturers_t manufacturers[] = {
 #if defined(__aarch64__) || defined(_M_ARM64)
 #ifdef IPCHW_VENDOR_NOVATEK
     {NULL, novatek_detect_cpu, VENDOR_NOVATEK, novatek_setup_hal},
+#endif
+#ifdef IPCHW_VENDOR_AXERA
+    /* AX620E/AX630C run an arm64 kernel */
+    {NULL /* Generic */, axera_detect_cpu, VENDOR_AXERA, axera_setup_hal},
 #endif
 #ifdef IPCHW_VENDOR_TEGRA
     {NULL, tegra_detect_cpu, "Nvidia", tegra_setup_hal},

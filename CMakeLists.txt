@@ -51,7 +51,7 @@ include_directories(./src/)
 # directly rather than through the table. Affects libipchw only; the ipctool
 # executable is a diagnostic tool and always carries every vendor.
 set(IPCHW_OPTIONAL_VENDORS
-    allwinner ambarella anyka bcm fh gm ingenic novatek rockchip sstar tegra xilinx xm)
+    allwinner ambarella anyka axera bcm fh gm ingenic novatek rockchip sstar tegra xilinx xm)
 set(IPCHW_VENDORS "all" CACHE STRING
     "Vendor HALs to compile into libipchw: 'all', 'none', or a ;-separated \
 subset of: ${IPCHW_OPTIONAL_VENDORS}")
