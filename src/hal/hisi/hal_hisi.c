@@ -1017,6 +1017,67 @@ static const char *get_chip_V3(uint8_t scsysid0) {
 }
 #endif /* IPCHW_HISI_V3 */
 
+#ifdef IPCHW_HISI_GOKE7206
+/* The GK7206 family (SDK names: V10, V10B, V11, V11A, V11AT, V12A) is told
+ * apart by the model code in the low byte of eFuse word 0x10090030, whose high
+ * half is "GK" (0x474B); V11 and V11A, at least, share chip ID 0x72060110.
+ * The vendor modules accept 0x474B00B7..BD, C7..CD and D7..DD (xm_common),
+ * and xm_vi/xm_venc sort them into capability classes: {B7, BC, C7, CC} with
+ * 3840x2160 and a 3840 line, {CA, D8..DB, DD} with 3840x2160 and a 4032 line,
+ * and every other code with 3840x3840.
+ *
+ * Nothing in the SDK or in XM's firmware names the codes. Only 0xCA is
+ * confirmed (an IVG-K8, XM IPC_GK7206V11A). THE REST IS GUESSED from that
+ * pattern: the high nibble taken as the DDR tier the SDK's load script gives
+ * each part (B 64 MB: V10, V10B; C 128 MB: V11, V11A, V11AT; D 256 MB: V12A),
+ * the low nibble 7 as the base part, C as the tier's other part, A as the A
+ * part. The 3840x3840 class matches no SDK part and is left to the chip ID.
+ *
+ * The eFuse reads 0x2 until its clock (CRG 0x1BC bit 1) is on; it is turned
+ * back off if it was off. */
+#define GK7206_CRG_OTP 0x120101BC
+#define GK7206_CRG_OTP_CKEN (1u << 1)
+#define GK7206_EFUSE_MODEL 0x10090030
+
+static const char *gk7206_variant(const char *by_chip_id) {
+    uint32_t crg, on, cur, word = 0;
+
+    if (!mem_reg(GK7206_CRG_OTP, &crg, OP_READ))
+        return by_chip_id;
+    on = crg | GK7206_CRG_OTP_CKEN;
+    if (on != crg && !mem_reg(GK7206_CRG_OTP, &on, OP_WRITE))
+        return by_chip_id;
+    mem_reg(GK7206_EFUSE_MODEL, &word, OP_READ);
+    /* Undo only our own ungate: if the register changed meanwhile, whoever
+     * changed it owns it now (as sensor_crg_restore() does). */
+    if (on != crg && mem_reg(GK7206_CRG_OTP, &cur, OP_READ) && cur == on)
+        mem_reg(GK7206_CRG_OTP, &crg, OP_WRITE);
+
+    if (word >> 16 != 0x474B)
+        return by_chip_id;
+    switch (word & 0xff) {
+    case 0xB7: /* guessed */
+        return "7206V10";
+    case 0xBC: /* guessed */
+        return "7206V10B";
+    case 0xC7: /* guessed */
+        return "7206V11";
+    case 0xCA: /* confirmed: IVG-K8 (XM IPC_GK7206V11A), 0x474B00CA */
+        return "7206V11A";
+    case 0xCC: /* guessed */
+        return "7206V11AT";
+    case 0xD8: /* guessed, all five */
+    case 0xD9:
+    case 0xDA:
+    case 0xDB:
+    case 0xDD:
+        return "7206V12A";
+    default:
+        return by_chip_id;
+    }
+}
+#endif
+
 static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
     switch (family_id) {
 #ifdef IPCHW_HISI_V2A
@@ -1203,14 +1264,14 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
     case 0x72060100:
         // expected by the SDK's numbering (XM7605V11 is 0x76050110), unseen
         chip_generation = GOKE_7206;
-        return "7206V10";
+        return gk7206_variant("7206V10");
     case 0x72060110:
         chip_generation = GOKE_7206;
-        return "7206V11";
+        return gk7206_variant("7206V11");
     case 0x72060120:
         // expected by the SDK's numbering, unseen
         chip_generation = GOKE_7206;
-        return "7206V12";
+        return gk7206_variant("7206V12");
 #endif
 
     default:
