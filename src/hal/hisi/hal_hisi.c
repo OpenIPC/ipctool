@@ -1011,17 +1011,17 @@ static const char *get_chip_V3(uint8_t scsysid0) {
 #define GK7206_EFUSE_MODEL 0x10090030
 
 static const char *gk7206_variant(const char *by_chip_id) {
-    uint32_t crg, word = 0;
+    uint32_t crg, on, cur, word = 0;
 
     if (!mem_reg(GK7206_CRG_OTP, &crg, OP_READ))
         return by_chip_id;
-    if (!(crg & GK7206_CRG_OTP_CKEN)) {
-        uint32_t on = crg | GK7206_CRG_OTP_CKEN;
-        if (!mem_reg(GK7206_CRG_OTP, &on, OP_WRITE))
-            return by_chip_id;
-    }
+    on = crg | GK7206_CRG_OTP_CKEN;
+    if (on != crg && !mem_reg(GK7206_CRG_OTP, &on, OP_WRITE))
+        return by_chip_id;
     mem_reg(GK7206_EFUSE_MODEL, &word, OP_READ);
-    if (!(crg & GK7206_CRG_OTP_CKEN))
+    /* Undo only our own ungate: if the register changed meanwhile, whoever
+     * changed it owns it now (as sensor_crg_restore() does). */
+    if (on != crg && mem_reg(GK7206_CRG_OTP, &cur, OP_READ) && cur == on)
         mem_reg(GK7206_CRG_OTP, &crg, OP_WRITE);
 
     if (word >> 16 != 0x474B)
