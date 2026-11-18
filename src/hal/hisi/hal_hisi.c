@@ -988,6 +988,43 @@ static const char *get_chip_V3(uint8_t scsysid0) {
 }
 #endif /* IPCHW_HISI_V3 */
 
+#ifdef IPCHW_HISI_GOKE7206
+/* GK7206V11 and V11A share the chip ID 0x72060110. What tells them apart is
+ * the model code in the low byte of eFuse word 0x10090030, whose high half is
+ * "GK" (0x474B). The vendor modules check it (xm_common refuses a word outside
+ * 0x474B00B7..0x474B00DD; xm_vi and xm_venc single out 0xCA among others), but
+ * nothing in the SDK or XM's firmware names the codes, so only the ones read
+ * on a known part are listed. The eFuse reads 0x2 until its clock (CRG 0x1BC
+ * bit 1) is on; it is turned back off if it was off. */
+#define GK7206_CRG_OTP 0x120101BC
+#define GK7206_CRG_OTP_CKEN (1u << 1)
+#define GK7206_EFUSE_MODEL 0x10090030
+
+static const char *gk7206_v11_variant() {
+    uint32_t crg, word = 0;
+
+    if (!mem_reg(GK7206_CRG_OTP, &crg, OP_READ))
+        return "7206V11";
+    if (!(crg & GK7206_CRG_OTP_CKEN)) {
+        uint32_t on = crg | GK7206_CRG_OTP_CKEN;
+        if (!mem_reg(GK7206_CRG_OTP, &on, OP_WRITE))
+            return "7206V11";
+    }
+    mem_reg(GK7206_EFUSE_MODEL, &word, OP_READ);
+    if (!(crg & GK7206_CRG_OTP_CKEN))
+        mem_reg(GK7206_CRG_OTP, &crg, OP_WRITE);
+
+    if (word >> 16 != 0x474B)
+        return "7206V11";
+    switch (word & 0xff) {
+    case 0xCA: /* IVG-K8 (XM IPC_GK7206V11A), 0x474B00CA */
+        return "7206V11A";
+    default:
+        return "7206V11";
+    }
+}
+#endif
+
 static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
     switch (family_id) {
 #ifdef IPCHW_HISI_V2A
@@ -1177,7 +1214,7 @@ static const char *get_hisi_chip_id(uint32_t family_id, uint8_t scsysid0) {
         return "7206V10";
     case 0x72060110:
         chip_generation = GOKE_7206;
-        return "7206V11";
+        return gk7206_v11_variant();
     case 0x72060120:
         // expected by the SDK's numbering, unseen
         chip_generation = GOKE_7206;

@@ -421,6 +421,28 @@ int main(void) {
     seed(GK7206_TSENSOR_RECORD, 0);
     CHECK(isnan(hisi_get_temp()));
 
+    /* GK7206V11 vs V11A: one chip ID, told apart by the eFuse model code.
+     * The eFuse clock is turned on to read it and off again if it was off. */
+    fresh(GK7206_CRG_OTP, 0x284, GOKE_7206);
+    seed(GK7206_EFUSE_MODEL, 0x474B00CA);
+    CHECK(strcmp(get_hisi_chip_id(0x72060110, 0), "7206V11A") == 0);
+    CHECK(peek(GK7206_CRG_OTP) == 0x284);
+    CHECK(illegal == NULL);
+
+    fresh(GK7206_CRG_OTP, 0x286, GOKE_7206); /* clock already on: left on */
+    seed(GK7206_EFUSE_MODEL, 0x474B00CA);
+    CHECK(strcmp(get_hisi_chip_id(0x72060110, 0), "7206V11A") == 0);
+    CHECK(peek(GK7206_CRG_OTP) == 0x286);
+    CHECK(writes == 0);
+
+    fresh(GK7206_CRG_OTP, 0x284, GOKE_7206); /* a code not yet seen */
+    seed(GK7206_EFUSE_MODEL, 0x474B00B7);
+    CHECK(strcmp(get_hisi_chip_id(0x72060110, 0), "7206V11") == 0);
+
+    fresh(GK7206_CRG_OTP, 0x284, GOKE_7206); /* gated read, no "GK" */
+    seed(GK7206_EFUSE_MODEL, 0x2);
+    CHECK(strcmp(get_hisi_chip_id(0x72060110, 0), "7206V11") == 0);
+
     if (failures)
         fprintf(stderr, "hal_hisi_test: %d failure(s)\n", failures);
     else
