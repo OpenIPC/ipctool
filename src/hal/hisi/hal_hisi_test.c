@@ -421,8 +421,8 @@ int main(void) {
     seed(GK7206_TSENSOR_RECORD, 0);
     CHECK(isnan(hisi_get_temp()));
 
-    /* GK7206V11 vs V11A: one chip ID, told apart by the eFuse model code.
-     * The eFuse clock is turned on to read it and off again if it was off. */
+    /* GK7206 variants by the eFuse model code. The eFuse clock is turned on
+     * to read it and off again if it was off. */
     fresh(GK7206_CRG_OTP, 0x284, GOKE_7206);
     seed(GK7206_EFUSE_MODEL, 0x474B00CA);
     CHECK(strcmp(get_hisi_chip_id(0x72060110, 0), "7206V11A") == 0);
@@ -435,13 +435,27 @@ int main(void) {
     CHECK(peek(GK7206_CRG_OTP) == 0x286);
     CHECK(writes == 0);
 
-    fresh(GK7206_CRG_OTP, 0x284, GOKE_7206); /* a code not yet seen */
-    seed(GK7206_EFUSE_MODEL, 0x474B00B7);
-    CHECK(strcmp(get_hisi_chip_id(0x72060110, 0), "7206V11") == 0);
-
-    fresh(GK7206_CRG_OTP, 0x284, GOKE_7206); /* gated read, no "GK" */
-    seed(GK7206_EFUSE_MODEL, 0x2);
-    CHECK(strcmp(get_hisi_chip_id(0x72060110, 0), "7206V11") == 0);
+    static const struct {
+        uint32_t chip_id, efuse;
+        const char *model;
+    } gk7206[] = {
+        {0x72060110, 0x474B00B7, "7206V10"},   /* guessed codes */
+        {0x72060110, 0x474B00BC, "7206V10B"},
+        {0x72060110, 0x474B00C7, "7206V11"},
+        {0x72060110, 0x474B00CC, "7206V11AT"},
+        {0x72060120, 0x474B00DA, "7206V12A"},
+        {0x72060110, 0x474B00DD, "7206V12A"},
+        {0x72060110, 0x474B00BB, "7206V11"},   /* 3840x3840 class: chip ID */
+        {0x72060100, 0x474B00C8, "7206V10"},
+        {0x72060120, 0x2, "7206V12"},          /* gated read, no "GK" */
+    };
+    for (size_t i = 0; i < ARRCNT(gk7206); i++) {
+        fresh(GK7206_CRG_OTP, 0x284, GOKE_7206);
+        seed(GK7206_EFUSE_MODEL, gk7206[i].efuse);
+        CHECK(strcmp(get_hisi_chip_id(gk7206[i].chip_id, 0),
+                     gk7206[i].model) == 0);
+        CHECK(peek(GK7206_CRG_OTP) == 0x284);
+    }
 
     if (failures)
         fprintf(stderr, "hal_hisi_test: %d failure(s)\n", failures);
