@@ -102,6 +102,13 @@ static const manufacturers_t manufacturers[] = {
     {NULL, tegra_detect_cpu, "Nvidia", tegra_setup_hal},
 #endif
 #endif
+#if defined(IPCHW_VENDOR_AXERA) &&                                            \
+    (defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64))
+    /* One entry for both ABIs: AX620U runs a 32-bit ARM kernel, AX620E an
+     * arm64 one. Their /proc/iomem names no UART, so this generic path is
+     * the one taken; the eFuse and bond registers name the part. */
+    {NULL /* Generic */, axera_detect_cpu, VENDOR_AXERA, axera_setup_hal},
+#endif
     /* Sentinel, so the array stays well-formed when every optional vendor is
      * compiled out; generic_detect_cpu() skips entries without a detect_fn. */
     {NULL, NULL, NULL, NULL},
@@ -362,6 +369,13 @@ const char *getchipfamily() {
         return "ak37d";
     case AK37_E:
         return "ak37e";
+#endif
+#if defined(IPCHW_VENDOR_AXERA) &&                                            \
+    (defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64))
+    case AXERA_AX620E:
+        return "ax620e";
+    case AXERA_AX620U:
+        return "ax620u";
 #endif
 
     default:
