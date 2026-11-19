@@ -548,6 +548,14 @@ if(NOT ONLY_LIBRARY)
   target_include_directories(ambarella_test PRIVATE include src)
   target_link_libraries(ambarella_test m Threads::Threads)
 
+  # The Axera part naming, BL1's eFuse decode and ax_hwinfo.ko's bond rule,
+  # off a camera; linked the way anyka_test is.
+  add_executable(axera_test src/hal/axera_test.c src/hal/axera.c
+                            src/hal/common.c src/tools.c src/cjson/cJSON.c
+                            ${VERSION_OBJ})
+  target_include_directories(axera_test PRIVATE include src)
+  target_link_libraries(axera_test m Threads::Threads)
+
   # The body `ipctool upload` sends: part framing, the backup's layout and
   # the length that must match it, and openipc.org's answer. Off a camera,
   # like the others.
