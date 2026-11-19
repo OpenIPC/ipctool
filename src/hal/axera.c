@@ -1,7 +1,6 @@
 #include "hal/axera.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -32,10 +31,11 @@ static sensor_addr_t axera_possible_i2c_addrs[] = {
 #define AX620E_EFSC0_SHADOW_BLK2 (0x02200000 + 0x58 + 2 * 4)
 #define AX620E_DUMMY_SW9 (0x02340000 + 0x220)
 
-/* boot/bl1/board/include/boot_mode.h chip_type_e */
-static const char *const ax620e_names[] = {
-    NULL,     "ax620q",  "ax620qx", "ax620v200", "ax630c",
-    "ax631",  "ax620qz", "ax620qp", "ax620qe",   "ax620qf",
+/* boot/bl1/board/include/boot_mode.h chip_type_e. Inline arrays, not
+ * pointers: a pointer table costs a relocation per entry in ipcinfo. */
+static const char ax620e_names[][10] = {
+    "ax620e", "ax620q",  "ax620qx", "ax620v200", "ax630c",
+    "ax631", "ax620qz", "ax620qp", "ax620qe",   "ax620qf",
 };
 #define AX630C_CHIP 4
 
@@ -55,8 +55,12 @@ static const char *const ax620e_names[] = {
 #define AX620U_BOND_AX620D 0x00191800
 
 /* hanming_decode_74() from board.c: bits 6:3 carry the type, bits 2:0 the
- * parity; a single flipped bit is corrected the way BL1 corrects it. */
-int axera_hamming74_decode(uint8_t code) {
+ * parity; a single flipped bit is corrected the way BL1 corrects it. The
+ * code is systematic, so on a clean fuse the type is bits 6:3 verbatim, and
+ * that is all ipcinfo, held to its size budget, reads; ipctool corrects. */
+static int axera_hamming74_decode(uint8_t code) {
+#ifndef STANDALONE_LIBRARY
+    /* column[bit] is the syndrome a flip of that bit gives */
     static const uint8_t column[7] = {1, 2, 4, 3, 5, 6, 7};
     uint8_t syndrome = 0;
     int bit;
@@ -64,16 +68,17 @@ int axera_hamming74_decode(uint8_t code) {
     for (bit = 0; bit < 7; bit++)
         if (code & (1 << bit))
             syndrome ^= column[bit];
-    for (bit = 0; bit < 7; bit++)
-        if (syndrome && column[bit] == syndrome && bit >= 3)
-            code ^= 1 << bit;
+    /* syndromes 3, 5, 6, 7 name data bits 3..6; 1, 2, 4 are parity */
+    if (syndrome & (syndrome - 1))
+        code ^= 1 << (syndrome == 3 ? 3 : syndrome - 1);
+#endif
     return (code >> 3) & 0x0f;
 }
 
 /* The eFuse decides; DUMMY_SW9 only answers when the eFuse word reads 0,
  * which is also what a shadow register closed to the normal world looks
  * like. Both 0 is an unfused part, which BL1 boots as AX630C. */
-const char *axera_ax620e_name(uint32_t efuse_blk2, uint32_t dummy_sw9) {
+static const char *axera_ax620e_name(uint32_t efuse_blk2, uint32_t dummy_sw9) {
     uint8_t code = efuse_blk2 >> 24;
     int type;
 
@@ -85,10 +90,11 @@ const char *axera_ax620e_name(uint32_t efuse_blk2, uint32_t dummy_sw9) {
         type = 0;
     if (!type)
         type = AX630C_CHIP;
-    return type < (int)ARRCNT(ax620e_names) ? ax620e_names[type] : NULL;
+    /* A type the SDK does not list is named by its family, entry 0. */
+    return ax620e_names[type < (int)ARRCNT(ax620e_names) ? type : 0];
 }
 
-const char *axera_ax620u_name(uint32_t ddrmc_2068, uint32_t bond_opt) {
+static const char *axera_ax620u_name(uint32_t ddrmc_2068, uint32_t bond_opt) {
     if (!(ddrmc_2068 & AX620U_DDR_BITS))
         return "ax620u";
     if ((bond_opt & AX620U_BOND_AX620D) == AX620U_BOND_AX620D)
@@ -96,25 +102,26 @@ const char *axera_ax620u_name(uint32_t ddrmc_2068, uint32_t bond_opt) {
     return "ax620a";
 }
 
-/* Names the part from its registers; without /dev/mem, or for a type code
- * the SDK does not list, the family name is the answer. */
-static bool axera_identify(char *chip_name, int family) {
+/* Names the part from its registers. Without /dev/mem (mem_reg fails for
+ * both words alike) the family name is the answer: AX620U's rule gives it
+ * for the zeros left unread, AX620E's needs the check. The sensor bus is the
+ * one the boards' own devicetrees and sensor libraries use: AX620U's on i2c8
+ * (OS04A10 at 0x36 on the JFtech A8 board), AX620E's on i2c6 (SC450AI at
+ * 0x30 on the Xiongmai IVG-A6, i2c@4856000); the fallback opener takes the
+ * number, so the sweep in sensors.c still reaches the other buses. */
+static bool axera_identify(char *chip_name, bool e) {
+    static const uint32_t regs[2][2] = {
+        {AX620U_DDRMC_2068, AX620U_BOND_OPT},
+        {AX620E_EFSC0_SHADOW_BLK2, AX620E_DUMMY_SW9}};
     uint32_t a = 0, b = 0;
-    const char *name = NULL;
+    bool read = mem_reg(regs[e][0], &a, OP_READ);
 
-    chip_generation = family;
-    if (family == AXERA_AX620E) {
-        bool efuse = mem_reg(AX620E_EFSC0_SHADOW_BLK2, &a, OP_READ);
-        bool sw9 = mem_reg(AX620E_DUMMY_SW9, &b, OP_READ);
-        if (efuse || sw9)
-            name = axera_ax620e_name(a, b);
-    } else if (mem_reg(AX620U_DDRMC_2068, &a, OP_READ) &&
-               mem_reg(AX620U_BOND_OPT, &b, OP_READ)) {
-        name = axera_ax620u_name(a, b);
-    }
-    if (!name)
-        name = family == AXERA_AX620E ? "ax620e" : "ax620u";
-    strcpy(chip_name, name);
+    mem_reg(regs[e][1], &b, OP_READ);
+    chip_generation = e ? AXERA_AX620E : AXERA_AX620U;
+    i2c_adapter_nr = e ? 6 : 8;
+    strcpy(chip_name, !e     ? axera_ax620u_name(a, b)
+                      : read ? axera_ax620e_name(a, b)
+                             : ax620e_names[0]);
     return true;
 }
 
@@ -123,44 +130,30 @@ static bool axera_identify(char *chip_name, int family) {
  * ("axera,ax620e", or "axera,ax620x" on AX620U) -- every AX620E-family part
  * says "axera,ax620e" -- so it gates the register reads and the registers
  * name the part. The property is a list of NUL-separated strings and a
- * board string usually comes first ("xm,ipc", "axera,ax620e").
+ * board string usually comes first ("xm,ipc", "axera,ax620e"). Read with
+ * open/read, which ipcinfo already imports, rather than stdio's fread.
  */
 bool axera_detect_cpu(char *chip_name) {
     char compat[512];
-    size_t len, off;
-    FILE *f = fopen("/proc/device-tree/compatible", "r");
+    int fd = open("/proc/device-tree/compatible", O_RDONLY), len;
+    const char *c;
 
-    if (!f)
+    if (fd < 0)
         return false;
-    len = fread(compat, 1, sizeof(compat) - 1, f);
-    fclose(f);
+    len = read(fd, compat, sizeof(compat) - 1);
+    close(fd);
+    if (len <= 0)
+        return false;
     compat[len] = '\0';
 
-    for (off = 0; off < len; off += strlen(compat + off) + 1) {
-        const char *c = compat + off;
-
-        if (!strcmp(c, "axera,ax620e"))
-            return axera_identify(chip_name, AXERA_AX620E);
-        if (!strcmp(c, "axera,ax620x"))
-            return axera_identify(chip_name, AXERA_AX620U);
-    }
+    /* "axera,ax620e" or "axera,ax620x", the whole entry */
+    for (c = compat; c < compat + len; c += strlen(c) + 1)
+        if (!strncmp(c, "axera,ax620", 11) && (c[11] == 'e' || c[11] == 'x') &&
+            !c[12])
+            return axera_identify(chip_name, c[11] == 'e');
     return false;
-}
-
-/*
- * The sensor bus as the boards' own devicetrees and sensor libraries use it:
- * AX620U's on i2c8 (OS04A10 at 0x36 on the JFtech A8 board), AX620E's on
- * i2c6 (SC450AI at 0x30 on the Xiongmai IVG-A6, i2c@4856000).
- */
-static int axera_open_i2c_fd() {
-    char adapter_name[FILENAME_MAX];
-
-    i2c_adapter_nr = chip_generation == AXERA_AX620U ? 8 : 6;
-    snprintf(adapter_name, sizeof(adapter_name), "/dev/i2c-%d", i2c_adapter_nr);
-    return universal_open_sensor_fd(adapter_name);
 }
 
 void axera_setup_hal() {
     possible_i2c_addrs = axera_possible_i2c_addrs;
-    open_i2c_sensor_fd = axera_open_i2c_fd;
 }

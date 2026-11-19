@@ -549,8 +549,10 @@ if(NOT ONLY_LIBRARY)
   target_link_libraries(ambarella_test m Threads::Threads)
 
   # The Axera part naming, BL1's eFuse decode and ax_hwinfo.ko's bond rule,
-  # off a camera; linked the way anyka_test is.
-  add_executable(axera_test src/hal/axera_test.c src/hal/axera.c
+  # off a camera. axera.c is included, as novatek.c is in novatek_test, for
+  # its file-statics; no STANDALONE_LIBRARY, so this is ipctool's decode, the
+  # one that corrects a flipped fuse bit as BL1 does.
+  add_executable(axera_test src/hal/axera_test.c
                             src/hal/common.c src/tools.c src/cjson/cJSON.c
                             ${VERSION_OBJ})
   target_include_directories(axera_test PRIVATE include src)

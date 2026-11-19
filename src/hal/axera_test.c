@@ -8,7 +8,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "hal/axera.h"
+/* axera.c is included for its file-statics, as novatek_test.c includes
+ * novatek.c: static, the decode folds into axera_detect_cpu() and costs
+ * ipcinfo no function frames of its own. */
+#include "hal/axera.c"
 
 int chip_generation;
 char chip_name[128];
@@ -112,8 +115,8 @@ int main() {
     expect_e(0, 9, "ax620qf");
     expect_e(0, 0, "ax630c");
     expect_e(0, 0xdead, "ax630c");
-    /* A type the SDK does not list. */
-    expect_e((uint32_t)encode(12) << 24, 0, NULL);
+    /* A type the SDK does not list: the family name. */
+    expect_e((uint32_t)encode(12) << 24, 0, "ax620e");
 
     CHECK(!strcmp(axera_ax620u_name(0, 0), "ax620u"));
     CHECK(!strcmp(axera_ax620u_name(0xfeffffff, 0xffffffff), "ax620u"));
