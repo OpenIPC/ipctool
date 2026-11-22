@@ -3411,6 +3411,7 @@ static int novatek_gpio_getset(char **argv, bool set_op);
 static int novatek_gpio_scan_cmd(void);
 static char *novatek_gpio_possible_ircut(char *outbuf, size_t outlen);
 static int anyka_gpio_getset(char **argv, bool set_op);
+static bool gpio_set_force;
 static int anyka_gpio_scan_cmd(void);
 static char *anyka_gpio_possible_ircut(char *outbuf, size_t outlen);
 
@@ -3764,11 +3765,15 @@ static int gpio_get_cmd(int argc, char **argv) {
 }
 
 static int gpio_set_cmd(int argc, char **argv) {
-    if (argc != 3) {
+    /* --force last: drive a pad the kernel holds (Anyka). */
+    gpio_set_force = argc == 4 && !strcmp(argv[3], "--force");
+    if (argc != 3 && !gpio_set_force) {
         printf(
-            "Usage: ipctool gpio %s <gpio number>%s\n%s", "set", " <value>",
+            "Usage: ipctool gpio %s <gpio number>%s\n%s", "set",
+            " <value> [--force]",
             "where: <gpio number> is 46, 5_6 on HiSilicon, or the pad's name "
-            "(P_GPIO22 on Novatek)\n");
+            "(P_GPIO22 on Novatek)\n"
+            "       --force drives a pad the kernel holds\n");
         return EXIT_FAILURE;
     }
 
@@ -4277,6 +4282,16 @@ static int anyka_gpio_getset(char **argv, bool set_op) {
         return EXIT_FAILURE;
     }
 
+    /* The controller's bit reaches the pin only when the pad is a GPIO;
+     * under SPI0 or RMII it is a latch nobody reads, and printing it as the
+     * pin's level would be a plausible lie. Moving the pad is the mux
+     * command's call. */
+    if (!padmux_pad_is_gpio(pad)) {
+        fprintf(stderr, "GPIO %s is not muxed to GPIO; see `gpio mux %s`\n",
+                gpio_num, gpio_num);
+        return EXIT_FAILURE;
+    }
+
     if (set_op) {
         /* Refused before any register changes. */
         unsigned level;
@@ -4284,13 +4299,14 @@ static int anyka_gpio_getset(char **argv, bool set_op) {
             fprintf(stderr, "Level '%s' is not 0 or 1\n", argv[2]);
             return EXIT_FAILURE;
         }
-        /* The pad has to be a GPIO for its level to reach the pin; driving
-         * the controller's bit under SPI0 or RMII does nothing there, and
-         * moving the pad off them is the mux command's call, with --force. */
-        if (!padmux_pad_is_gpio(pad)) {
+        /* A pad the kernel holds -- the PHY's reset, the SD card's detect,
+         * a sensor's reset -- is driven only on purpose. */
+        char who[64];
+        if (!gpio_set_force && anyka_gpio_owner(pad, who, sizeof who)) {
             fprintf(stderr,
-                    "GPIO %s is not muxed to GPIO; see `gpio mux %s`\n",
-                    gpio_num, gpio_num);
+                    "GPIO %s is held by the kernel (%s); driving it takes "
+                    "that away. Add --force if you are sure\n",
+                    gpio_num, who);
             return EXIT_FAILURE;
         }
         if (!anyka_gpio_write(pad, level)) {
@@ -4330,7 +4346,11 @@ static char *anyka_gpio_possible_ircut(char *outbuf, size_t outlen) {
 
     int output_count = 0;
     for (int pad = 0; pad < AK_GPIO_NPADS; pad++) {
-        if (!anyka_gpio_valid(pad) || !padmux_pad_is_gpio(pad))
+        char who[64];
+        /* A pad the kernel holds is not the IR-cut's: those coils are
+         * driven by the streamer, never by a driver. */
+        if (!anyka_gpio_valid(pad) || !padmux_pad_is_gpio(pad) ||
+            anyka_gpio_owner(pad, who, sizeof who))
             continue;
         bool output;
         if (!anyka_gpio_read(pad, &output, &level[pad])) {
@@ -4383,9 +4403,12 @@ static int anyka_gpio_scan_cmd(void) {
         }
         watch[pad] = true;
         listed++;
-        printf("Pad:%3d GPIO%-3d Dir:0x%08x bit %2d, Level:%d, Dir:%s\n", pad,
-               pad, anyka_gpio_reg(pad, AK_GPIO_DIR), pad & 31, state[pad],
-               output ? "Output" : "Input");
+        char who[64];
+        bool held = anyka_gpio_owner(pad, who, sizeof who);
+        printf("Pad:%3d GPIO%-3d Dir:0x%08x bit %2d, Level:%d, Dir:%s%s%s\n",
+               pad, pad, anyka_gpio_reg(pad, AK_GPIO_DIR), pad & 31,
+               state[pad], output ? "Output" : "Input",
+               held ? ", held by " : "", held ? who : "");
     }
     if (listed == 0) {
         fprintf(stderr, "Platform is not supported\n");

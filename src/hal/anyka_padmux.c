@@ -19,8 +19,9 @@
  * GPIO37 and GPIO50 are GPIO and nothing else: the driver has no field for
  * them and writes nothing (func_mux_max 1). They are in the table, as rows
  * without IPCHW_PADMUX_F_RMW (no address, func -1), so a lookup knows them
- * and a write of GPIO to them is the no-op it is. GPIO80/81 are the power-management block's and are left out, as the
- * driver leaves them out of the share-pin registers (pin_pmc()).
+ * and a write of GPIO to them is the no-op it is. GPIO80/81 belong to the
+ * power-management block and are left out, as the driver leaves them out of
+ * the share-pin registers (pin_pmc()).
  *
  * Only the selector is written. Input enable, pull and drive strength are the
  * pad's electrical settings, which the kernel sets from the device tree, not
@@ -28,12 +29,15 @@
  * enables are in a register of their own (AK_PIN_MIPI_REG); this does not
  * touch them either.
  *
- * WHAT A BOARD RUNS FROM. The serial NOR is on SPI0 (GPIO42..47 as SPI0_*),
- * and the Ethernet MAC is RMII on GPIO0..8, GPIO11 and GPIO23. Driving any
- * of those as a GPIO loses the flash or the network -- on a camera at the
- * end of an SSH session that looks like a hang (OpenIPC/majestic#380). So a
- * pad carrying an SPI0, RMII or OPCLK function is in_use(), and moving it takes
- * ipchw_padmux_set_forced(). */
+ * WHAT A BOARD RUNS FROM. The serial NOR is on SPI0 (SPI0_* on GPIO42..47)
+ * and the Ethernet MAC on RMII_* (GPIO1..8, GPIO11) with its reference clock
+ * on OPCLK1 (GPIO0). Moving any of those loses the flash or the network --
+ * on a camera at the end of an SSH session that looks like a hang
+ * (OpenIPC/majestic#380). So a pad carrying an SPI0_*, RMII_* or OPCLK*
+ * function is in_use(). So is any pad the kernel holds, whatever it carries
+ * (anyka_gpio_owner()): GPIO23 is muxed as a GPIO and owned by the MAC on
+ * that camera, GPIO71 is its PHY's reset-gpios, GPIO37 the SD card's. Moving
+ * either kind takes ipchw_padmux_set_forced(). */
 
 #include <errno.h>
 #include <stdio.h>
@@ -42,6 +46,7 @@
 
 #include "chipid.h"
 #include "hal/anyka.h"
+#include "hal/anyka_gpio.h"
 #include "hal/anyka_padmux.h"
 #include "padmux.h"
 
@@ -205,15 +210,18 @@ static int ak_set(int pad, const char *func_name, const padmux_io_t *io) {
     return 0;
 }
 
-/* The boot flash and the network. Asked only after the front door has read
- * the pad successfully, so a failed read is never reported as one of these. */
+/* The boot flash, the network and whatever else the kernel holds. Asked only
+ * after the front door has read the pad successfully, so a failed read is
+ * never reported as one of these. */
 static bool ak_in_use(int pad, const padmux_io_t *io) {
     ipchw_padmux_t now;
     if (ak_get(pad, &now, io) != 1)
         return false;
+    char who[64];
     return !strncmp(now.func_name, "SPI0_", 5) ||
            !strncmp(now.func_name, "RMII_", 5) ||
-           !strncmp(now.func_name, "OPCLK", 5);
+           !strncmp(now.func_name, "OPCLK", 5) ||
+           anyka_gpio_owner(pad, who, sizeof who);
 }
 
 /* "GPIO16" or "16". HiSilicon's "5_2" is refused: Anyka does not number its

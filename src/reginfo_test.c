@@ -7,6 +7,8 @@
  * an edit that moves PWM1 off 0x100C0010 fails here rather than on a bench. */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
 #include <string.h>
 
 #include "chipid.h"
@@ -17,6 +19,7 @@
 #include "hal/sstar.h"
 #include "hal/sstar_gpio.h"
 #include "hal/anyka.h"
+#include "hal/anyka_gpio.h"
 #include "hal/fh.h"
 #include "hal/xm.h"
 #include "ipchw.h"
@@ -1599,9 +1602,96 @@ static void test_anyka(void) {
     CHECK(ipchw_padmux_set(37, IPCHW_PADMUX_GPIO) == 0);
     CHECK(ipchw_padmux_set(37, "PWM0") == IPCHW_PADMUX_NO_FUNC);
 
-    /* A selector the binding header has no name for. */
+    /* A selector the binding header has no name for: readable as unknown,
+     * and not overwritten without being told to. */
     fake_write(0x0800017C, 7u << 21, 32);
     CHECK(ipchw_padmux_get(16, &r) == 0);
+    CHECK(ipchw_padmux_set(16, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_IN_USE);
+    CHECK(reg_of(0x0800017C) == 7u << 21);
+    CHECK(ipchw_padmux_set_forced(16, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0x0800017C) == 0);
+
+    /* What the kernel holds, from that camera's debugfs and device tree:
+     * pad 23 muxed as a GPIO and owned by the MAC, the sensor resets handed
+     * to a driver, the PHY's reset-gpios on 71. A pad the user exported is
+     * not the kernel's, nor is a pin in a disabled node or the vendor's
+     * 0xffff "no pin". */
+    {
+        char dir[] = "/tmp/anyka_owner_XXXXXX";
+        CHECK(mkdtemp(dir) != NULL);
+        char path[256], who[64];
+        const char *tree[] = {"/sys", "/sys/kernel", "/sys/kernel/debug",
+                              "/sys/kernel/debug/pinctrl",
+                              "/sys/kernel/debug/pinctrl/20170000.gpio",
+                              "/proc", "/proc/device-tree",
+                              "/proc/device-tree/soc",
+                              "/proc/device-tree/soc/ethernet@20300000",
+                              "/proc/device-tree/leds"};
+        for (size_t i = 0; i < sizeof tree / sizeof *tree; i++) {
+            snprintf(path, sizeof path, "%s%s", dir, tree[i]);
+            mkdir(path, 0700);
+        }
+        FILE *f;
+        snprintf(path, sizeof path,
+                 "%s/sys/kernel/debug/pinctrl/20170000.gpio/pinmux-pins", dir);
+        f = fopen(path, "w");
+        fputs("Pinmux settings per pin\n"
+              "pin 22 (gpio22): 21200000.vi0 (GPIO UNCLAIMED) function func1 "
+              "group gpio22\n"
+              "pin 23 (gpio23): 20300000.ethernet (GPIO UNCLAIMED) function "
+              "default func group gpio23\n"
+              "pin 25 (gpio25): (MUX UNCLAIMED) (GPIO UNCLAIMED)\n",
+              f);
+        fclose(f);
+        snprintf(path, sizeof path, "%s/sys/kernel/debug/gpio", dir);
+        f = fopen(path, "w");
+        fputs("GPIOs 0-104, platform/20170000.gpio, ak-pinctrl:\n"
+              " gpio-18  (                    |sensor-reset        ) out hi\n"
+              " gpio-25  (                    |sysfs               ) out hi\n",
+              f);
+        fclose(f);
+        static const unsigned char reset71[] = {0, 0, 0, 4, 0, 0, 0, 71,
+                                                0, 0, 0, 1};
+        snprintf(path, sizeof path,
+                 "%s/proc/device-tree/soc/ethernet@20300000/reset-gpios", dir);
+        f = fopen(path, "wb");
+        fwrite(reset71, 1, sizeof reset71, f);
+        fclose(f);
+        static const unsigned char none[] = {0, 0, 0, 4, 0, 0, 0xff, 0xff,
+                                             0, 0, 0, 1};
+        snprintf(path, sizeof path,
+                 "%s/proc/device-tree/soc/ethernet@20300000/pwdn-gpio", dir);
+        f = fopen(path, "wb");
+        fwrite(none, 1, sizeof none, f);
+        fclose(f);
+        static const unsigned char led16[] = {0, 0, 0, 4, 0, 0, 0, 16,
+                                              0, 0, 0, 0};
+        snprintf(path, sizeof path, "%s/proc/device-tree/leds/gpios", dir);
+        f = fopen(path, "wb");
+        fwrite(led16, 1, sizeof led16, f);
+        fclose(f);
+        snprintf(path, sizeof path, "%s/proc/device-tree/leds/status", dir);
+        f = fopen(path, "wb");
+        fwrite("disable", 1, 8, f);
+        fclose(f);
+
+        anyka_gpio_set_root(dir);
+        CHECK(anyka_gpio_owner(23, who, sizeof who) &&
+              !strcmp(who, "20300000.ethernet"));
+        CHECK(anyka_gpio_owner(18, who, sizeof who) &&
+              !strcmp(who, "sensor-reset"));
+        CHECK(anyka_gpio_owner(71, who, sizeof who) &&
+              !strcmp(who, "ethernet@20300000 reset-gpios"));
+        CHECK(!anyka_gpio_owner(25, who, sizeof who)); /* the user's export */
+        CHECK(!anyka_gpio_owner(16, who, sizeof who)); /* a disabled node */
+        CHECK(!anyka_gpio_owner(0xffff, who, sizeof who));
+
+        /* Pad 23 is a GPIO the MAC holds: not moved without --force. */
+        fake_write(0x08000180, 0, 32);
+        CHECK(ipchw_padmux_set(23, "CSI_D4") == IPCHW_PADMUX_IN_USE);
+        CHECK(ipchw_padmux_set(25, "SPI1_CLK") == 0);
+        anyka_gpio_set_root(NULL);
+    }
 
     puts("Anyka AK3918AV100: the same layout, more pads");
     as_chip(AK39_AV100, "AK3918AV100");
@@ -1683,6 +1773,11 @@ static void test_fh(void) {
     /* A selector the table has no function for. */
     fake_write(0xF0000138, 0x0F000000, 32);
     CHECK(ipchw_padmux_get(9, &r) == 0);
+    /* ...is a state nobody can vouch for, so it is moved off only when
+     * told to. */
+    CHECK(ipchw_padmux_set(9, "UART1_TX") == IPCHW_PADMUX_IN_USE);
+    CHECK(reg_of(0xF0000138) == 0x0F000000);
+    CHECK(ipchw_padmux_set_forced(9, "UART1_TX") == 0);
 
     /* SSI0_TXD on GPIO7, as a Tenda IC7-L reads it. Moving it off is
      * refused and writes nothing; writing what it carries is not moving it;

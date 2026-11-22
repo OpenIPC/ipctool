@@ -2,6 +2,7 @@
 #define HAL_ANYKA_GPIO_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /* The AK3918AV100-family GPIO controller (AV100, AV100X, EV300L). Pads are
@@ -33,5 +34,21 @@ bool anyka_gpio_window(uint32_t *base, uint32_t *len);
  * contract. */
 bool anyka_gpio_read(int pad, bool *output, bool *level);
 bool anyka_gpio_write(int pad, bool level);
+
+/* Who in the kernel holds `pad`, written to `who` (a device or consumer
+ * name), or false when nothing visible does. Asked of three places, any of
+ * which may be missing: the pinctrl mux owner in debugfs
+ * (pinctrl/<dev>/pinmux-pins: pad 23 is "20300000.ethernet" while muxed as
+ * a GPIO), the GPIOs the kernel has handed to a driver (debugfs gpio:
+ * "sensor-reset", "switch0_gpio"; a pad the user exported through sysfs is
+ * not counted), and the *-gpio / *-gpios properties of the enabled
+ * device-tree nodes (the PHY's reset-gpios, GPIO71 on #380's camera, which
+ * the MAC driver releases after its reset pulse). Driving such a pad takes
+ * away what uses it: the network, the SD card, the sensor. */
+bool anyka_gpio_owner(int pad, char *who, size_t len);
+
+/* A directory standing in for / in anyka_gpio_owner(), or NULL for /. A
+ * test seam, not API. */
+void anyka_gpio_set_root(const char *root);
 
 #endif /* HAL_ANYKA_GPIO_H */

@@ -443,16 +443,28 @@ muxable pads.
 - **Only the selector is written.** Input enable, pull and drive strength are
   left as the kernel set them from the device tree.
 
-The serial NOR is on SPI0 (GPIO42..47) and the Ethernet MAC is RMII on
-GPIO0..8, GPIO11 and GPIO23, so driving those as GPIOs takes the flash or the
-network away -- on a camera at the end of an SSH session that looks like a
-hang. `ipchw_padmux_set()` refuses to move a pad off any `SPI0_*`, `RMII_*` or
-`OPCLK*` function, as it does for Fullhan's flash lines.
+The serial NOR is on SPI0 (`SPI0_*` on GPIO42..47) and the Ethernet MAC on
+`RMII_*` (GPIO1..8, GPIO11) with its reference clock on `OPCLK1` (GPIO0), so
+moving those takes the flash or the network away -- on a camera at the end of
+an SSH session that looks like a hang. A board also hands pads to drivers
+that the mux cannot see: the MAC owns GPIO23 muxed as a GPIO, the PHY's
+`reset-gpios` is GPIO71, the SD card's detect GPIO37. `anyka_gpio_owner()`
+finds those in the kernel's own reports -- debugfs `pinctrl/*/pinmux-pins`,
+debugfs `gpio` (a pad the user exported through sysfs does not count) and the
+`*-gpio`/`*-gpios` properties of the enabled device-tree nodes.
+`ipchw_padmux_set()` refuses to move a pad on any `SPI0_*`, `RMII_*` or
+`OPCLK*` function, or one the kernel holds, as it does for Fullhan's flash
+lines; `gpio set` refuses to drive a held pad without `--force`.
+
+On every backend that guards pads (Anyka and Fullhan), a pad whose selector
+the table has no name for is not moved without `--force` either: nobody can
+say what it is carrying.
 
 The GPIO controller is at `0x20170000`: `DIR` (1 is output), `OUT` and `IN`
 banks at `+0x00`, `+0x14` and `+0x28`, a word per 32 pads. `gpio get`, `gpio
 set` and `gpio scan` use it on the two chips with a table, and only for pads
-muxed to GPIO. `chip_generation` is `AK39_AV100` or `AK39_EV300L`; the other
+muxed to GPIO; `gpio scan` says which of those the kernel holds, and the
+IR-cut guess leaves them out. `chip_generation` is `AK39_AV100` or `AK39_EV300L`; the other
 Anyka generations have other pinctrl drivers and answer "no table".
 
 ## Pad numbers and names

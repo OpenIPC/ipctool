@@ -218,8 +218,12 @@ static int padmux_set(int pad, const char *func_name, bool force) {
         const int got = ops->get(pad, &now, IO);
         if (got < 0)
             return got;
-        if (got == 1 && strcmp(now.func_name, func_name) != 0 &&
-            ops->in_use(pad, IO))
+        /* A selector the table has no name for is a state nobody here can
+         * vouch for; on a backend that guards anything, it is not moved off
+         * without being told to. */
+        if (got == 0)
+            return IPCHW_PADMUX_IN_USE;
+        if (strcmp(now.func_name, func_name) != 0 && ops->in_use(pad, IO))
             return IPCHW_PADMUX_IN_USE;
     }
 
