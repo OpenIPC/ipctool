@@ -16,6 +16,7 @@
 #include "hal/novatek_gpio.h"
 #include "hal/sstar.h"
 #include "hal/sstar_gpio.h"
+#include "hal/anyka.h"
 #include "hal/fh.h"
 #include "hal/xm.h"
 #include "ipchw.h"
@@ -1416,6 +1417,10 @@ static void test_table_integrity(void) {
         {CHIP_FH8852V200, "FH8852V200"},
         {CHIP_FH8852V100, "FH8852V100"},
 #endif
+#ifdef IPCHW_PADMUX_ANYKA
+        {AK39_AV100, "AK3918AV100"},
+        {AK39_EV300L, "AK3918EV300L"},
+#endif
     };
 
     for (size_t c = 0; c < sizeof(chips) / sizeof(*chips); c++) {
@@ -1526,6 +1531,88 @@ static void test_gpio_windows_in_mapping(void) {
     CHECK(gpio_windows_in_mapping(0x1300, 0x100, base, stride, 3) == 0x0);
     CHECK(gpio_windows_in_mapping(0x1250, 0x20, base, stride, 3) == 0x4);
 }
+
+#ifdef IPCHW_PADMUX_ANYKA
+static void test_anyka(void) {
+    ipchw_padmux_t r;
+
+    /* An AK3918EV300L with two SC1346 behind a MIPI switch
+     * (OpenIPC/majestic#380). The kernel's pinmux-pins on that tree: pad 16
+     * is pwm0 at func2, pads 0..8 and 11 are the Ethernet MAC's, 42..47
+     * spi0's. Driving 0..11 as GPIOs hung the camera's network. */
+    puts("Anyka AK3918EV300L: three bits per pad in the share-pin registers");
+    as_chip(AK39_EV300L, "AK3918EV300L");
+    CHECK(padmux_parse_pad("16") == 16);
+    CHECK(padmux_parse_pad("GPIO16") == 16);
+    CHECK(padmux_parse_pad("2_0") == -1);      /* HiSilicon's banking */
+    CHECK(padmux_parse_pad("38") == -1);       /* the AV100's, not bonded */
+    CHECK(padmux_parse_pad("80") == -1);       /* the PMU's */
+    CHECK(padmux_parse_pad("4294967312") == -1); /* 2^32 + 16 */
+    CHECK(ipchw_padmux_get(12, &r) == IPCHW_PADMUX_NO_PAD);
+
+    CHECK(ipchw_padmux_by_pad(16, NULL, 0) == 4);
+    CHECK(ipchw_padmux_by_func("PWM0", &r, 1) >= 1);
+    CHECK(ipchw_padmux_by_pad(16, &r, 1) >= 1 && r.address == 0x0800017C);
+    {
+        ipchw_padmux_t rows[8];
+        int n = ipchw_padmux_by_pad(16, rows, 8), pwm = -1;
+        for (int i = 0; i < n && i < 8; i++)
+            if (!strcmp(rows[i].func_name, "PWM0"))
+                pwm = i;
+        CHECK(pwm >= 0 && rows[pwm].func_mask == 0x00E00000 &&
+              rows[pwm].func == 0x00400000 && rows[pwm].gpio_func == 0 &&
+              padmux_func_number(&rows[pwm]) == 2);
+    }
+
+    regs_reset();
+    fake_write(0x0800017C, 0x00400000, 32); /* pad 16 at PWM0 */
+    CHECK(ipchw_padmux_get(16, &r) == 1 && !strcmp(r.func_name, "PWM0"));
+    CHECK(!padmux_pad_is_gpio(16));
+    CHECK(ipchw_padmux_set(16, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0x0800017C) == 0);
+    CHECK(ipchw_padmux_get(16, &r) == 1 && (r.flags & IPCHW_PADMUX_F_GPIO));
+    CHECK(!strcmp(r.func_name, "GPIO16"));
+
+    /* Pad 22 boots as the sensor clock; its GPIO is selector 3. */
+    fake_write(0x08000180, 1u << 9, 32);
+    CHECK(ipchw_padmux_get(22, &r) == 1 && !strcmp(r.func_name, "CSI0_SCLK"));
+    CHECK(r.gpio_func == 3 << 9);
+    CHECK(ipchw_padmux_set(22, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0x08000180) == 3u << 9);
+
+    /* The network and the flash are not moved off without being told to. */
+    fake_write(0x08000178, 3u << 0, 32); /* pad 0 at OPCLK1 */
+    CHECK(ipchw_padmux_set(0, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_IN_USE);
+    CHECK(reg_of(0x08000178) == 3u);
+    fake_write(0x08000178, 3u << 3, 32); /* pad 1 at RMII_RXER */
+    CHECK(ipchw_padmux_set(1, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_IN_USE);
+    CHECK(ipchw_padmux_set_forced(1, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(reg_of(0x08000178) == 0);
+    IO_FAILS = true;
+    CHECK(ipchw_padmux_set(0, IPCHW_PADMUX_GPIO) == IPCHW_PADMUX_IO);
+    IO_FAILS = false;
+
+    /* GPIO37 has no field: GPIO is all it is, and writing it changes
+     * nothing. */
+    CHECK(ipchw_padmux_get(37, &r) == 1 && (r.flags & IPCHW_PADMUX_F_GPIO));
+    CHECK(!(r.flags & IPCHW_PADMUX_F_RMW) && r.func == -1);
+    CHECK(ipchw_padmux_set(37, IPCHW_PADMUX_GPIO) == 0);
+    CHECK(ipchw_padmux_set(37, "PWM0") == IPCHW_PADMUX_NO_FUNC);
+
+    /* A selector the binding header has no name for. */
+    fake_write(0x0800017C, 7u << 21, 32);
+    CHECK(ipchw_padmux_get(16, &r) == 0);
+
+    puts("Anyka AK3918AV100: the same layout, more pads");
+    as_chip(AK39_AV100, "AK3918AV100");
+    CHECK(padmux_parse_pad("38") == 38);
+    CHECK(ipchw_padmux_by_pad(12, &r, 1) >= 1);
+
+    /* Recognised, but its pinctrl driver is another one. */
+    as_chip(AK39_EV330, "AK39EV330");
+    CHECK(ipchw_padmux_get(16, &r) == IPCHW_PADMUX_NO_TABLE);
+}
+#endif
 
 #ifdef IPCHW_PADMUX_FH
 static void test_fh(void) {
@@ -1775,6 +1862,9 @@ int main(void) {
 #endif
 #ifdef IPCHW_PADMUX_FH
     test_fh();
+#endif
+#ifdef IPCHW_PADMUX_ANYKA
+    test_anyka();
 #endif
     test_refusals_do_not_exit();
     test_table_integrity();

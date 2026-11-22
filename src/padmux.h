@@ -108,6 +108,9 @@ extern const padmux_ops_t PADMUX_OPS_XM;
 #ifdef IPCHW_PADMUX_FH
 extern const padmux_ops_t PADMUX_OPS_FH;
 #endif
+#ifdef IPCHW_PADMUX_ANYKA
+extern const padmux_ops_t PADMUX_OPS_ANYKA;
+#endif
 
 /* The backend for the SoC that has been detected, or NULL when this build
  * carries no pad-mux table that could serve it. */

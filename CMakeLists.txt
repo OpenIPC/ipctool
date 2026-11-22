@@ -72,7 +72,7 @@ endif()
 # Same shape as IPCHW_VENDORS above, and for the same reason -- set(... CACHE)
 # here means a parent project has to FORCE it.
 set(IPCHW_PADMUX_FAMILIES v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d sstar
-    ingenic novatek xm fh)
+    ingenic novatek xm fh anyka)
 set(IPCHW_PADMUX "all" CACHE STRING
     "Pad-mux tables compiled into libipchw: 'all', 'none', or a subset of ${IPCHW_PADMUX_FAMILIES}")
 
@@ -112,6 +112,11 @@ if("fh" IN_LIST _padmux_selected AND NOT "fh" IN_LIST _ipchw_selected)
   list(REMOVE_ITEM _padmux_selected fh)
   list(REMOVE_ITEM IPCHW_PADMUX_DEFS IPCHW_PADMUX_FH)
 endif()
+# Anyka's likewise: only hal/anyka.c sets the chip_generation that reaches it.
+if("anyka" IN_LIST _padmux_selected AND NOT "anyka" IN_LIST _ipchw_selected)
+  list(REMOVE_ITEM _padmux_selected anyka)
+  list(REMOVE_ITEM IPCHW_PADMUX_DEFS IPCHW_PADMUX_ANYKA)
+endif()
 message(STATUS "libipchw pad-mux tables: ${_padmux_selected}")
 
 # The vendors whose pad-mux is its own backend rather than a table in
@@ -121,13 +126,14 @@ message(STATUS "libipchw pad-mux tables: ${_padmux_selected}")
 # SigmaStar tables in a build that detects nothing else, which is exactly what
 # reginfo_test does.
 set(IPCHW_PADMUX_BACKENDS "")
-foreach(_f sstar ingenic novatek xm fh)
+foreach(_f sstar ingenic novatek xm fh anyka)
   if(_f IN_LIST _padmux_selected)
     list(APPEND IPCHW_PADMUX_BACKENDS src/hal/${_f}_padmux.c)
   endif()
 endforeach()
 set(IPCHW_PADMUX_BACKENDS_ALL src/hal/sstar_padmux.c src/hal/ingenic_padmux.c
-    src/hal/novatek_padmux.c src/hal/xm_padmux.c src/hal/fh_padmux.c)
+    src/hal/novatek_padmux.c src/hal/xm_padmux.c src/hal/fh_padmux.c
+    src/hal/anyka_padmux.c)
 
 # Which HiSilicon generations libipchw can identify. IPCHW_VENDORS does not
 # reach the CODE: chipid.c dispatches to the HiSilicon HAL directly rather
@@ -295,7 +301,8 @@ set(_common_lib_src_tail
 set(COMMON_LIB_SRC_ALL ${_common_lib_src_head} ${IPCHW_HISI_SRC_ALL}
     ${_common_lib_src_tail} ${IPCHW_PADMUX_BACKENDS_ALL}
     src/hal/sstar_gpio.c src/hal/sstar_gpio.h
-    src/hal/novatek_gpio.c src/hal/novatek_gpio.h)
+    src/hal/novatek_gpio.c src/hal/novatek_gpio.h
+    src/hal/anyka_gpio.c src/hal/anyka_gpio.h)
 foreach(_v IN LISTS IPCHW_OPTIONAL_VENDORS)
   list(APPEND COMMON_LIB_SRC_ALL src/hal/${_v}.c src/hal/${_v}.h)
   string(TOUPPER ${_v} _V)
@@ -317,6 +324,9 @@ foreach(_v IN LISTS _ipchw_selected)
   endif()
   if(_v STREQUAL "novatek")
     list(APPEND COMMON_LIB_SRC src/hal/novatek_gpio.c src/hal/novatek_gpio.h)
+  endif()
+  if(_v STREQUAL "anyka")
+    list(APPEND COMMON_LIB_SRC src/hal/anyka_gpio.c src/hal/anyka_gpio.h)
   endif()
   string(TOUPPER ${_v} _V)
   list(APPEND IPCHW_VENDOR_DEFS IPCHW_VENDOR_${_V})

@@ -1,5 +1,6 @@
 #include "reginfo.h"
 #include "chipid.h"
+#include "hal/anyka_gpio.h"
 #include "hal/hisi/hal_hisi.h"
 #include "hal/ingenic.h"
 #include "hal/novatek.h"
@@ -3409,6 +3410,9 @@ static char *sstar_gpio_possible_ircut(char *outbuf, size_t outlen);
 static int novatek_gpio_getset(char **argv, bool set_op);
 static int novatek_gpio_scan_cmd(void);
 static char *novatek_gpio_possible_ircut(char *outbuf, size_t outlen);
+static int anyka_gpio_getset(char **argv, bool set_op);
+static int anyka_gpio_scan_cmd(void);
+static char *anyka_gpio_possible_ircut(char *outbuf, size_t outlen);
 
 static void show_function(const uint16_t *func, unsigned val) {
     for (size_t i = 0; func[i]; i++)
@@ -3685,6 +3689,8 @@ static int gpio_manipulate(char **argv, bool set_op) {
         return sstar_gpio_getset(argv, set_op);
     if (novatek_gpio_supported())
         return novatek_gpio_getset(argv, set_op);
+    if (anyka_gpio_supported())
+        return anyka_gpio_getset(argv, set_op);
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups)) {
         fprintf(stderr, "Chip is not supported\n");
         return EXIT_FAILURE;
@@ -3791,8 +3797,9 @@ static int padmux_refuse(int code, const char *pad_spec, const char *func) {
         break;
     case IPCHW_PADMUX_IN_USE:
         fprintf(stderr,
-                "GPIO %s is carrying a line the board runs from (the boot "
-                "flash); not moving it. Add --force if you are sure\n",
+                "GPIO %s is carrying a line the board runs from (its boot "
+                "flash or network); not moving it. Add --force if you are "
+                "sure\n",
                 pad_spec);
         break;
     default:
@@ -4009,6 +4016,8 @@ char *gpio_possible_ircut(char *outbuf, size_t outlen) {
         return sstar_gpio_possible_ircut(outbuf, outlen);
     if (novatek_gpio_supported())
         return novatek_gpio_possible_ircut(outbuf, outlen);
+    if (anyka_gpio_supported())
+        return anyka_gpio_possible_ircut(outbuf, outlen);
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
         return NULL;
 
@@ -4254,6 +4263,160 @@ static int sstar_gpio_scan_cmd(void) {
     return EXIT_SUCCESS;
 }
 
+/* `gpio get/set <pad>` on Anyka (AV100 family): the pad is the Linux GPIO
+ * number, with or without "GPIO". The mux line is printed first, as on the
+ * other vendors. */
+static int anyka_gpio_getset(char **argv, bool set_op) {
+    const char *gpio_num = argv[1];
+
+    gpio_mux_by(gpio_num, -1, NULL, false);
+
+    int pad = padmux_parse_pad(gpio_num);
+    if (!anyka_gpio_valid(pad)) {
+        fprintf(stderr, "GPIO %s is out of range\n", gpio_num);
+        return EXIT_FAILURE;
+    }
+
+    if (set_op) {
+        /* Refused before any register changes. */
+        unsigned level;
+        if (!parse_gpio_level(argv[2], &level)) {
+            fprintf(stderr, "Level '%s' is not 0 or 1\n", argv[2]);
+            return EXIT_FAILURE;
+        }
+        /* The pad has to be a GPIO for its level to reach the pin; driving
+         * the controller's bit under SPI0 or RMII does nothing there, and
+         * moving the pad off them is the mux command's call, with --force. */
+        if (!padmux_pad_is_gpio(pad)) {
+            fprintf(stderr,
+                    "GPIO %s is not muxed to GPIO; see `gpio mux %s`\n",
+                    gpio_num, gpio_num);
+            return EXIT_FAILURE;
+        }
+        if (!anyka_gpio_write(pad, level)) {
+            fprintf(stderr, "write reg %#x error\n",
+                    anyka_gpio_reg(pad, AK_GPIO_OUT));
+            return EXIT_FAILURE;
+        }
+        return EXIT_SUCCESS;
+    }
+
+    bool output, level;
+    if (!anyka_gpio_read(pad, &output, &level)) {
+        fprintf(stderr, "read reg %#x error\n",
+                anyka_gpio_reg(pad, AK_GPIO_DIR));
+        return EXIT_FAILURE;
+    }
+    printf("%d\n", level);
+    return EXIT_SUCCESS;
+}
+
+static bool anyka_gpio_streamer_mapped(void) {
+    uint32_t base, len;
+    if (!anyka_gpio_window(&base, &len))
+        return false;
+    return dev_mem_windows_marked(base, len, 1) != 0;
+}
+
+/* The IR-cut question on Anyka, the Novatek heuristic: output pads muxed to
+ * GPIO, all of them when a daemon holds the controller and drives at most
+ * two, otherwise the ones standing low. */
+static char *anyka_gpio_possible_ircut(char *outbuf, size_t outlen) {
+    if (ipchw_padmux_by_prefix("", NULL, 0) < 0)
+        return NULL;
+
+    bool level[AK_GPIO_NPADS], is_out[AK_GPIO_NPADS];
+    memset(is_out, 0, sizeof(is_out));
+
+    int output_count = 0;
+    for (int pad = 0; pad < AK_GPIO_NPADS; pad++) {
+        if (!anyka_gpio_valid(pad) || !padmux_pad_is_gpio(pad))
+            continue;
+        bool output;
+        if (!anyka_gpio_read(pad, &output, &level[pad])) {
+            fprintf(stderr, "Error at %#x\n", anyka_gpio_reg(pad, AK_GPIO_DIR));
+            return NULL;
+        }
+        is_out[pad] = output;
+        if (output)
+            output_count++;
+    }
+
+    bool streamer = anyka_gpio_streamer_mapped();
+    char *ptr = outbuf;
+
+    for (int pad = 0; pad < AK_GPIO_NPADS; pad++) {
+        if (!is_out[pad])
+            continue;
+        if (streamer && output_count > 2)
+            continue;
+        if (!streamer && level[pad])
+            continue;
+
+        int nlen = snprintf(ptr, outlen, ",%d", pad);
+        if (nlen < 0 || (size_t)nlen >= outlen)
+            break;
+        outlen -= nlen;
+        ptr += nlen;
+    }
+
+    if (strlen(outbuf) > 0)
+        return outbuf + 1;
+    return NULL;
+}
+
+/* `gpio scan` on Anyka: watch every pad muxed to plain GPIO, one line per
+ * pad. A pad carrying SPI0 (the boot flash) or RMII (the network) is never
+ * GPIO, so it is never listed -- driving those is what hangs a camera. */
+static int anyka_gpio_scan_cmd(void) {
+    bool watch[AK_GPIO_NPADS], state[AK_GPIO_NPADS];
+    memset(watch, 0, sizeof(watch));
+
+    int listed = 0;
+    for (int pad = 0; pad < AK_GPIO_NPADS; pad++) {
+        if (!anyka_gpio_valid(pad) || !padmux_pad_is_gpio(pad))
+            continue;
+        bool output;
+        if (!anyka_gpio_read(pad, &output, &state[pad])) {
+            fprintf(stderr, "Error at %#x\n", anyka_gpio_reg(pad, AK_GPIO_DIR));
+            return EXIT_FAILURE;
+        }
+        watch[pad] = true;
+        listed++;
+        printf("Pad:%3d GPIO%-3d Dir:0x%08x bit %2d, Level:%d, Dir:%s\n", pad,
+               pad, anyka_gpio_reg(pad, AK_GPIO_DIR), pad & 31, state[pad],
+               output ? "Output" : "Input");
+    }
+    if (listed == 0) {
+        fprintf(stderr, "Platform is not supported\n");
+        return EXIT_FAILURE;
+    }
+
+    print_line(86);
+    printf("Waiting for while something changes...\n");
+    while (1) {
+        for (int pad = 0; pad < AK_GPIO_NPADS; pad++) {
+            if (!watch[pad])
+                continue;
+            bool output, level;
+            if (!anyka_gpio_read(pad, &output, &level)) {
+                /* A /dev/mem that has stopped reading will not start again. */
+                fprintf(stderr, "Error at %#x\n",
+                        anyka_gpio_reg(pad, AK_GPIO_DIR));
+                return EXIT_FAILURE;
+            }
+            if (level == state[pad])
+                continue;
+            printf("Pad:%d GPIO%d, %d --> %d, Dir:%s\n", pad, pad, state[pad],
+                   level, output ? "Output" : "Input");
+            state[pad] = level;
+        }
+        usleep(100000);
+    }
+
+    return EXIT_SUCCESS;
+}
+
 /* `gpio get/set <pad>` on Novatek: the pad is the Linux GPIO number or its
  * kernel name, and its bit sits in one word of each of the controller's four
  * banks. The mux line is printed first, as on the other vendors. */
@@ -4422,6 +4585,8 @@ static int gpio_scan_cmd() {
         return sstar_gpio_scan_cmd();
     if (novatek_gpio_supported())
         return novatek_gpio_scan_cmd();
+    if (anyka_gpio_supported())
+        return anyka_gpio_scan_cmd();
     if (!get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups))
         return EXIT_FAILURE;
 
@@ -4545,9 +4710,10 @@ static int gpio_dump_cmd(int argc, char **argv) {
     int GPIO_Groups = 0;
     size_t GPIO_Base = 0;
     size_t GPIO_Offset = 0;
-    /* SigmaStar and Novatek keep their GPIO state elsewhere than the PL061
-     * banks walked below; refuse rather than print a plausible lie. */
+    /* SigmaStar, Novatek and Anyka keep their GPIO state elsewhere than the
+     * PL061 banks walked below; refuse rather than print a plausible lie. */
     if (sstar_gpio_supported() || novatek_gpio_supported() ||
+        anyka_gpio_supported() ||
         !get_chip_gpio_adress(&GPIO_Base, &GPIO_Offset, &GPIO_Groups)) {
         fprintf(stderr, "gpio dump: not supported on this SoC yet\n");
         return EXIT_FAILURE;

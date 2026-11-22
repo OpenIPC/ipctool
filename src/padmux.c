@@ -12,6 +12,7 @@
 #include "padmux.h"
 
 #include "chipid.h"
+#include "hal/anyka.h"
 #include "hal/fh.h"
 #include "hal/ingenic.h"
 #include "hal/novatek.h"
@@ -91,6 +92,20 @@ const padmux_ops_t *padmux_ops(void) {
     case CHIP_FH8856V201:
     case CHIP_FH8858V201:
         return &PADMUX_OPS_FH;
+#endif
+#ifdef IPCHW_PADMUX_ANYKA
+    /* The other Anyka generations too, so their answer is the backend's "no
+     * table" rather than the HiSilicon fallback's. */
+    case AK39_EV1:
+    case AK39_EV2:
+    case AK39_EV3:
+    case AK39_EV330:
+    case AK39_EV300L:
+    case AK39_AV100:
+    case AK39_AV130:
+    case AK37_D:
+    case AK37_E:
+        return &PADMUX_OPS_ANYKA;
 #endif
     default:
         break;
