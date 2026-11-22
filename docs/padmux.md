@@ -420,6 +420,53 @@ pad). So `ipchw_padmux_set()` refuses, with `IPCHW_PADMUX_IN_USE` and nothing
 written, to move a pad off any `SSI0_*` function. `ipchw_padmux_set_forced()`
 and `gpio mux <pad> <function> --force` are for whoever knows the board.
 
+### Anyka -- three bits per pad in shared registers
+
+The AK3918AV100 family (AV100, AV100X, EV300L) selects a pad's function with a
+three-bit field in one of the SYSCTRL share-pin registers, `0x08000178 + 4 *
+reg`, ten pads to a word. Which register and offset belong to a pad is the
+vendor kernel's `ak_sharepin[]` (`drivers/pinctrl/anyka/ak_3918av100_pinctrl.c`),
+and what each value selects is the device-tree binding header the board trees
+use (`XGPIO_016_FUNC_PWM0` is 2). Both are generated into
+`src/hal/anyka_padmux.h`, one table per machine, because the driver picks its
+rows with `#ifdef CONFIG_MACH_*`: the EV300L package has 59 of the AV100's 93
+muxable pads.
+
+- **A pad is addressed by its GPIO number**, which is also its pad number:
+  pad 16 is `/sys/class/gpio/gpio16`. The `5_2` spelling is refused.
+- **GPIO is not always selector 0.** Pad 22 boots as `CSI0_SCLK` with GPIO at
+  3; pad 98 is `SYS_RSTN_OUT` with GPIO at 1. The GPIO row is found by name.
+- **GPIO37 and GPIO50 have no field**: the driver writes nothing for them. Their
+  row has no address and no `IPCHW_PADMUX_F_RMW`, and writing GPIO to them is a
+  no-op. GPIO80/81 belong to the power-management block and are not in the
+  table.
+- **Only the selector is written.** Input enable, pull and drive strength are
+  left as the kernel set them from the device tree.
+
+The serial NOR is on SPI0 (`SPI0_*` on GPIO42..47) and the Ethernet MAC on
+`RMII_*` (GPIO1..8, GPIO11) with its reference clock on `OPCLK1` (GPIO0), so
+moving those takes the flash or the network away -- on a camera at the end of
+an SSH session that looks like a hang. A board also hands pads to drivers
+that the mux cannot see: the MAC owns GPIO23 muxed as a GPIO, the PHY's
+`reset-gpios` is GPIO71, the SD card's detect GPIO37. `anyka_gpio_owner()`
+finds those in the kernel's own reports -- debugfs `pinctrl/*/pinmux-pins`,
+debugfs `gpio` (a pad the user exported through sysfs does not count) and the
+`*-gpio`/`*-gpios` properties of the enabled device-tree nodes.
+`ipchw_padmux_set()` refuses to move a pad on any `SPI0_*`, `RMII_*` or
+`OPCLK*` function, or one the kernel holds, as it does for Fullhan's flash
+lines; `gpio set` refuses to drive a held pad without `--force`.
+
+On every backend that guards pads (Anyka and Fullhan), a pad whose selector
+the table has no name for is not moved without `--force` either: nobody can
+say what it is carrying.
+
+The GPIO controller is at `0x20170000`: `DIR` (1 is output), `OUT` and `IN`
+banks at `+0x00`, `+0x14` and `+0x28`, a word per 32 pads. `gpio get`, `gpio
+set` and `gpio scan` use it on the two chips with a table, and only for pads
+muxed to GPIO; `gpio scan` says which of those the kernel holds, and the
+IR-cut guess leaves them out. `chip_generation` is `AK39_AV100` or `AK39_EV300L`; the other
+Anyka generations have other pinctrl drivers and answer "no table".
+
 ## Pad numbers and names
 
 `gpio_pad` is the number the kernel uses, and it is the number to speak to
@@ -434,6 +481,7 @@ every consumer:
 | Xiongmai XM530/XM550 | the pad, as the vendor's `GPIO N` | `"GPIO43"` |
 | Xiongmai XM510 | `port * 8 + pin` | `"GPIO8_1"` |
 | Fullhan | the GPIO number the kernel exports, not the pad id | `"GPIO9"` |
+| Anyka | the GPIO number, which is the pad number | `"GPIO16"` |
 
 Function names are the vendor's own and are **not portable**, not even within
 HiSilicon: `PWM_OUT0` on V1, `PWM0` from V2, `PWM0_OUT1` on V5. `"PWM"` also
@@ -480,6 +528,16 @@ tools/gen_fh_padmux.py \
     --table V200=<fullhan-fh8852v200>/arch/arm/mach-fh/fh8852v200/iopad.h,... \
     --table V100=<fullhan-fh8852v100>/arch/arm/mach-fh/include/mach/fh8852_iopad.h,... \
     > src/hal/fh_padmux.h
+```
+
+Anyka, from the vendor kernel's pinctrl driver and binding headers, one
+`--table` per machine the driver's `#ifdef`s distinguish:
+
+```sh
+tools/gen_anyka_padmux.py \
+    --table AV100=AK3918AV100:<anyka-ak3918av100>/drivers/pinctrl/anyka/ak_3918av100_pinctrl.c:<anyka-ak3918av100>/include/dt-bindings/pinctrl/ak3918av100_pinctrl.h \
+    --table EV300L=AK3918EV300L:<anyka-ak3918av100>/drivers/pinctrl/anyka/ak_3918av100_pinctrl.c:<anyka-ak3918av100>/include/dt-bindings/pinctrl/ak3918ev300l_pinctrl.h \
+    > src/hal/anyka_padmux.h
 ```
 
 Novatek is generated differently, because its source is code and not a table:

@@ -228,7 +228,7 @@ jobs:
         run: |
           status=0
           for fam in all none v1 v2 v2a v3 v3a v4 v4a v5 3536c 3536d \
-                     sstar ingenic "v4;sstar"; do
+                     sstar ingenic anyka "v4;sstar"; do
             dir=build-padmux-$(echo "$fam" | tr -d ';')
             if cmake -H. -B"$dir" -DCMAKE_BUILD_TYPE=Release \
                      -DIPCHW_PADMUX="$fam" > "$dir.log" 2>&1 \
