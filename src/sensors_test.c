@@ -702,7 +702,8 @@ static dev_t sweep_adapter(int fd) {
 }
 
 static int sweep_bus_read_mock(int fd, unsigned char addr, uint32_t reg,
-                          unsigned int reg_width, unsigned int data_width) {
+                               unsigned int reg_width,
+                               unsigned int data_width) {
     (void)addr;
     (void)reg_width;
     (void)data_width;
@@ -788,6 +789,15 @@ static void check_bus_sweep(void) {
     CHECK(!strcmp(ctx.sensor_id, "IMX415"));
     CHECK(sweep_reads[2] == SWEEP_BUS_TIMEOUTS);
     CHECK(i2c_adapter_nr == 4);
+    CHECK(i2c_read_register == sweep_bus_read_mock);
+
+    /* Another thread is mid-sweep, with the reader borrowed: it is not taken
+     * for the HAL's own, which would recurse until the stack ran out. */
+    i2c_read_register = sweep_read_register;
+    i2c_adapter_nr = 1;
+    sweep_err[1] = EREMOTEIO;
+    memset(&ctx, 0, sizeof(ctx));
+    CHECK(!get_sensor_id_on_swept_bus(&ctx));
     CHECK(i2c_read_register == sweep_bus_read_mock);
 
     i2c_adapter_nr = 0;

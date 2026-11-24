@@ -1490,7 +1490,11 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
  * given back as the HAL left it. */
 static bool get_sensor_id_on_swept_bus(sensor_ctx_t *ctx) {
     sweep_timeouts = 0;
-    sweep_bus_read = i2c_read_register;
+    /* getsensorid() takes no lock. A second thread that finds the reader already
+     * borrowed must not save it as the HAL's: it would then call itself. */
+    const read_register_t reader = i2c_read_register;
+    if (reader != sweep_read_register)
+        sweep_bus_read = reader;
     i2c_read_register = sweep_read_register;
 
     const bool found = get_sensor_id_i2c(ctx);
