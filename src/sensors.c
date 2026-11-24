@@ -806,11 +806,16 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
         if (i2c_read_register(fd, i2c_addr, 0x1C, 1, 1) != 0x7F ||
             i2c_read_register(fd, i2c_addr, 0x1D, 1, 1) != 0xA2)
             return false;
-        // 0x21 is the OV7725, 0x20 the OV7720
-        sprintf(ctx->sensor_id, "OV77%02x",
-                (i2c_read_register(fd, i2c_addr, 0x0B, 1, 1) & 0xff) == 0x21
-                    ? 0x25
-                    : 0x20);
+        switch (i2c_read_register(fd, i2c_addr, 0x0B, 1, 1)) {
+        case 0x21:
+            sprintf(ctx->sensor_id, "OV7725");
+            break;
+        case 0x20:
+            sprintf(ctx->sensor_id, "OV7720");
+            break;
+        default:
+            return false;
+        }
         ctx->reg_width = 1;
         return true;
     }

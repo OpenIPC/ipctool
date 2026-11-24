@@ -35,8 +35,8 @@ bool gm_detect_cpu(char *chip_name) {
 bool gm_dt_detect_cpu(char *chip_name) {
     char buf[256];
 
-    if (!line_from_file("/proc/device-tree/compatible",
-                        "^grainmedia,gm([0-9]+)", buf, sizeof(buf)))
+    if (!dts_items_by_regex("/proc/device-tree/compatible",
+                        "grainmedia,gm([0-9]+)", buf, sizeof(buf)))
         return false;
     sprintf(chip_name, "GM%.4s", buf);
     return true;
