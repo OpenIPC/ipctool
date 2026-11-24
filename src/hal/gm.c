@@ -1,5 +1,6 @@
 #include "hal/gm.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,13 +34,24 @@ bool gm_detect_cpu(char *chip_name) {
 
 /* A mainline kernel: no /proc/pmu, the device tree names the chip. */
 bool gm_dt_detect_cpu(char *chip_name) {
+    static const char prefix[] = "grainmedia,gm";
     char buf[256];
 
-    if (!dts_items_by_regex("/proc/device-tree/compatible",
-                        "grainmedia,gm([0-9]+)", buf, sizeof(buf)))
+    FILE *f = fopen("/proc/device-tree/compatible", "r");
+    if (!f)
         return false;
-    sprintf(chip_name, "GM%.4s", buf);
-    return true;
+    size_t len = fread(buf, 1, sizeof(buf) - 1, f);
+    fclose(f);
+    buf[len] = 0;
+
+    /* NUL-separated strings, the board's before the chip's */
+    for (char *s = buf; s < buf + len; s += strlen(s) + 1) {
+        if (!strncmp(s, prefix, sizeof(prefix) - 1)) {
+            sprintf(chip_name, "GM%.4s", s + sizeof(prefix) - 1);
+            return true;
+        }
+    }
+    return false;
 }
 
 static unsigned long gm_media_mem() {
