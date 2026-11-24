@@ -798,6 +798,25 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
+#if defined(IPCHW_VENDOR_GM) && !defined(STANDALONE_LIBRARY)
+    // The OV77xx have one-byte registers: the manufacturer's ID at 0x1C, the
+    // product's at 0x0A, whose low byte is the version. The last one read
+    // tells the OV7725 (0x21) from the OV7720 (0x20).
+    if (i2c_addr == 0x42) {
+        static const unsigned char id[][2] = {
+            {0x1C, 0x7F}, {0x1D, 0xA2}, {0x0A, 0x77}};
+        for (int i = 0; i < 3; i++)
+            if (i2c_read_register(fd, i2c_addr, id[i][0], 1, 1) != id[i][1])
+                return false;
+        res = i2c_read_register(fd, i2c_addr, 0x0B, 1, 1);
+        if ((res | 1) != 0x21)
+            return false;
+        strcpy(ctx->sensor_id, res & 1 ? "OV7725" : "OV7720");
+        ctx->reg_width = 1;
+        return true;
+    }
+#endif
+
     // HISI_V2 needs width 2. Old OmniVision sensors do not provide mfg_id
     // register.
     prod_msb = i2c_read_register(fd, i2c_addr, 0x300A, 2, 1);
