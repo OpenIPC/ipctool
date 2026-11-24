@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 bool gm_detect_cpu(char *chip_name);
+bool gm_dt_detect_cpu(char *chip_name);
 unsigned long gm_totalmem(unsigned long *media_mem);
 void gm_setup_hal();
 

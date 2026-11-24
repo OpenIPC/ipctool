@@ -10,7 +10,8 @@
 
 static unsigned char sony_addrs[] = {0x34, 0};
 static unsigned char ssens_addrs[] = {0x60, 0};
-static unsigned char omni_addrs[] = {0x6c, 0};
+/* 0x42: the OV77xx, on GM8126 cameras */
+static unsigned char omni_addrs[] = {0x6c, 0x42, 0};
 static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char gc_addrs[] = {0x6e, 0};
 
@@ -25,6 +26,17 @@ bool gm_detect_cpu(char *chip_name) {
     char chip[256];
 
     if (!line_from_file("/proc/pmu/chipver", "([0-9]+)", buf, sizeof(buf)))
+        return false;
+    sprintf(chip_name, "GM%.4s", buf);
+    return true;
+}
+
+/* A mainline kernel: no /proc/pmu, the device tree names the chip. */
+bool gm_dt_detect_cpu(char *chip_name) {
+    char buf[256];
+
+    if (!line_from_file("/proc/device-tree/compatible",
+                        "^grainmedia,gm([0-9]+)", buf, sizeof(buf)))
         return false;
     sprintf(chip_name, "GM%.4s", buf);
     return true;

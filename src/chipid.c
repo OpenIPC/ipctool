@@ -70,6 +70,7 @@ static const manufacturers_t manufacturers[] = {
 #endif
 #ifdef IPCHW_VENDOR_GM
     {"Grain", gm_detect_cpu, VENDOR_GM, gm_setup_hal},
+    {NULL /* Generic */, gm_dt_detect_cpu, VENDOR_GM, gm_setup_hal},
 #endif
 #ifdef IPCHW_VENDOR_FH
     {"FH", fh_detect_cpu, VENDOR_FH, fh_setup_hal},
