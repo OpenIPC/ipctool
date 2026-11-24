@@ -43,6 +43,12 @@ struct CV610_PERI_CRG8464 {
 /* And the same for OT, where the two fields sit in different places. */
 #define CV610_PERI_CRG_SENSOR0_SRST 0x1u
 #define CV610_PERI_CRG_SENSOR0_CKEN 0x10u
+/* sensorN_cksel [15:12]. The reset value 0 is 74.25 MHz on both CV610 and
+ * DV500 (data sheets, PERI_CRG8464/8472), above the 27 MHz an OS08A10/A20 or
+ * the 36 MHz an OS04A10 accepts; 4 is 24 MHz, which every sensor we probe
+ * takes. */
+#define CV610_PERI_CRG_SENSOR_CKSEL_MASK 0xF000u
+#define CV610_PERI_CRG_SENSOR_CKSEL_24M 0x4000u
 
 const char *hisi_detect_fmc();
 void hisi_chip_properties(cJSON *j_inner);

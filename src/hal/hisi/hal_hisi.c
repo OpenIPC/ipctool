@@ -473,8 +473,13 @@ typedef struct {
     bool owed;      /* an undo is outstanding */
 } sensor_crg_t;
 
-static void sensor_crg_enable(
-    sensor_crg_t *st, uint32_t addr, uint32_t cken, uint32_t srst) {
+/* sel_mask/sel_safe: a clock-select field and the value to put in it when
+ * we ungate a clock whose select still holds its reset value (0). Only a
+ * clock we find gated gets one: a running clock was set up by somebody, at
+ * whatever rate they chose. Pass 0/0 where the register has no such field. */
+static void sensor_crg_enable(sensor_crg_t *st, uint32_t addr, uint32_t cken,
+                              uint32_t srst, uint32_t sel_mask,
+                              uint32_t sel_safe) {
     uint32_t cur;
 
     /* A read that failed taught us nothing. Drop any entitlement rather than
@@ -486,7 +491,9 @@ static void sensor_crg_enable(
         return;
     }
 
-    const uint32_t want = (cur | cken) & ~srst;
+    uint32_t want = (cur | cken) & ~srst;
+    if (sel_mask && !(cur & cken) && !(cur & sel_mask))
+        want = (want & ~sel_mask) | sel_safe;
     if (want == cur) {
         /* Already fit for a probe, so this arm takes nothing -- and drops
          * anything an earlier one held.
@@ -545,7 +552,8 @@ static sensor_crg_t gk7206_crg;
 
 static void gk7206_ensure_sensor_enabled() {
     sensor_crg_enable(&gk7206_crg, EV300_PERI_CRG60_ADDR,
-        EV300_PERI_CRG60_SENSOR0_CKEN, EV300_PERI_CRG60_SENSOR0_SRST);
+                      EV300_PERI_CRG60_SENSOR0_CKEN,
+                      EV300_PERI_CRG60_SENSOR0_SRST, 0, 0);
 }
 
 static void gk7206_ensure_sensor_restored() {
@@ -558,7 +566,8 @@ static sensor_crg_t v4_crg;
 
 static void v4_ensure_sensor_enabled() {
     sensor_crg_enable(&v4_crg, EV300_PERI_CRG60_ADDR,
-        EV300_PERI_CRG60_SENSOR0_CKEN, EV300_PERI_CRG60_SENSOR0_SRST);
+                      EV300_PERI_CRG60_SENSOR0_CKEN,
+                      EV300_PERI_CRG60_SENSOR0_SRST, 0, 0);
 }
 
 static void v4_ensure_sensor_restored() {
@@ -575,15 +584,89 @@ static const uint32_t ot_crg_addr[2] = {
 };
 static sensor_crg_t ot_crg[2];
 
+/* Hi3519DV500/Hi3516DV500: the SENSOR1 connector of the reference design is
+ * controlled over I2C5, whose pads are SPI1_SCLK (iocfg_reg109) and SPI1_SDO
+ * (iocfg_reg110) -- function 0 GPIO1_0/GPIO1_1, 1 SPI1, 2 I2C5 (data sheet
+ * pin table). The vendor sys_config.ko only muxes them when built with
+ * I2C_EX_EN, which the stock SDK is not, so on a stock board /dev/i2c-5
+ * exists, every transfer on it times out, and a sensor on SENSOR1 is
+ * invisible. Measured on a Taobao DV500 kit with an OS08A20 there.
+ *
+ * Same rules as the clock above. We switch a pad to I2C5 only while it is an
+ * unclaimed GPIO input -- never one in SPI1 mode, never a GPIO the board
+ * drives as an output -- and put back exactly what we found, and only if the
+ * pad still holds what we left in it. */
+#define DV500_IOCFG_SPI1_SCLK 0x0EFF0024u
+#define DV500_IOCFG_SPI1_SDO 0x0EFF0028u
+#define DV500_GPIO1_DIR 0x11091400u /* PL061 GPIODIR, bank 1 */
+#define DV500_IOCFG_FUNC_MASK 0xFu
+#define DV500_IOCFG_FUNC_GPIO 0x0u
+#define DV500_IOCFG_FUNC_I2C5 0x2u
+
+static const uint32_t dv500_i2c5_pad[2] = {
+    DV500_IOCFG_SPI1_SCLK, /* GPIO1_0 */
+    DV500_IOCFG_SPI1_SDO,  /* GPIO1_1 */
+};
+static sensor_crg_t dv500_i2c5[2];
+
+static bool is_dv500(void) { return strstr(chip_name, "DV500") != NULL; }
+
+static void dv500_i2c5_enable(void) {
+    uint32_t cur[2], dir;
+
+    if (!mem_reg(dv500_i2c5_pad[0], &cur[0], OP_READ) ||
+        !mem_reg(dv500_i2c5_pad[1], &cur[1], OP_READ) ||
+        !mem_reg(DV500_GPIO1_DIR, &dir, OP_READ)) {
+        for (size_t i = 0; i < ARRCNT(dv500_i2c5); i++)
+            dv500_i2c5[i].owed = false; /* we no longer know what is there */
+        return;
+    }
+
+    /* An undo outlives a re-arm only while the pad still holds our word. The
+     * clock above cannot do this -- its word is the SDK's word too -- but
+     * ours keeps the found drive/pull bits and changes only the function,
+     * while the vendor's I2C5 setup writes its own (0x1752), so "still ours"
+     * is readable here. Without it the arm that follows the SPI probe, which
+     * has no cleanup of its own, would find I2C5 already set, take nothing,
+     * and leave the pads switched after we exit. */
+    for (size_t i = 0; i < 2; i++)
+        if (dv500_i2c5[i].owed && cur[i] != dv500_i2c5[i].wrote)
+            dv500_i2c5[i].owed = false;
+
+    for (size_t i = 0; i < 2; i++) {
+        const uint32_t func = cur[i] & DV500_IOCFG_FUNC_MASK;
+        if (func == DV500_IOCFG_FUNC_I2C5)
+            continue;
+        if (func != DV500_IOCFG_FUNC_GPIO || (dir & (1u << i)))
+            return; /* somebody's SPI1 or GPIO output: not ours, either pad */
+    }
+
+    for (size_t i = 0; i < 2; i++) {
+        if ((cur[i] & DV500_IOCFG_FUNC_MASK) == DV500_IOCFG_FUNC_I2C5)
+            continue;
+        sensor_crg_t *st = &dv500_i2c5[i];
+        st->found = cur[i];
+        st->wrote = (cur[i] & ~DV500_IOCFG_FUNC_MASK) | DV500_IOCFG_FUNC_I2C5;
+        if (mem_reg(dv500_i2c5_pad[i], &st->wrote, OP_WRITE))
+            st->owed = true;
+    }
+}
+
 static void ot_ensure_sensor_enabled(void) {
     for (size_t i = 0; i < ARRCNT(ot_crg_addr); i++)
-        sensor_crg_enable(&ot_crg[i], ot_crg_addr[i],
-            CV610_PERI_CRG_SENSOR0_CKEN, CV610_PERI_CRG_SENSOR0_SRST);
+        sensor_crg_enable(
+            &ot_crg[i], ot_crg_addr[i], CV610_PERI_CRG_SENSOR0_CKEN,
+            CV610_PERI_CRG_SENSOR0_SRST, CV610_PERI_CRG_SENSOR_CKSEL_MASK,
+            CV610_PERI_CRG_SENSOR_CKSEL_24M);
+    if (is_dv500())
+        dv500_i2c5_enable();
 }
 
 static void ot_ensure_sensor_restored() {
     for (size_t i = 0; i < ARRCNT(ot_crg_addr); i++)
         sensor_crg_restore(&ot_crg[i], ot_crg_addr[i]);
+    for (size_t i = 0; i < ARRCNT(dv500_i2c5); i++)
+        sensor_crg_restore(&dv500_i2c5[i], dv500_i2c5_pad[i]);
 }
 
 /* Installed as hal_enable_sensor_clock so the bus sweep in getsensorid() can

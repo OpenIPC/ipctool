@@ -46,6 +46,9 @@
  * bits[9:0]) is surfaced through the standard hpm_info table.
  */
 
+#include <string.h>
+
+#include "chipid.h"
 #include "cjson/cJSON.h"
 #include "clocks.h"
 #include "hal/hisi/hal_hisi.h"
@@ -159,12 +162,65 @@ static const char *v5_dram_type_name(uint32_t t) {
 
 /* Decode the actual DDR data rate.  The chain is:
  *   ddr_cksel    (CRG+0x2000 bits [18:16])  -- 0 = 24 MHz, 1 = clk_dpll_pst
- *   DPLL VCO     (CRG+0x180 / 0x184, post-divided)  -- already decoded as
- * ddr_pll dficlk_ratio (DDR_PHY0+0x78 bits [1:0]) -- 0=1:1, 1=1:2, 2=1:4 DRAM
- * data rate (MT/s) = phy_clk_mhz * (1 << dficlk_ratio).  In the typical config
- * (DDR3/DDR4 -> 1:2, LPDDR4 -> 1:4) the multiplier matches the DDR burst
- * factor, so this is also "post-divided PLL frequency times the bus
- * double-data-rate". */
+ *   DPLL VCO     (CRG+0x180 / 0x184, post-divided)  -- the DFI clock
+ *   dficlk_ratio (DDR_PHY0+0x78 bits [1:0]) -- DFI:DRAM clock, 0=1:1, 1=1:2,
+ *                2=1:4, so the DRAM clock is DFI * (1 << dficlk_ratio)
+ * and the data rate is twice the DRAM clock, data being moved on both edges:
+ *   data rate (MT/s) = phy_clk_mhz * (1 << dficlk_ratio) * 2.
+ * The Hi3519DV500 data sheet's clock tree runs the DPLL at 667 MHz for its
+ * "up to 2666 Mbps DDR4"; a Taobao DV500 kit whose boot table is
+ * ..._DDR4_2666M-4GB reads DPLL 664 MHz, ratio 1:2 -> 2656 MT/s. Without the
+ * final factor of two this reported the DRAM clock, 1328, as the rate. */
+/* Hi3519DV500/Hi3516DV500 A55 core clock: PERI_CRG2064 (CRG+0x2040)
+ * a55_cksel [10:8] picks one of seven sources, and only one of them is the
+ * APLL -- so "cpu_pll" above is not the CPU's frequency. Encoding from the
+ * DV500 data sheet; 6 (1000 MHz) needs cpu_cksel_limit_en=0xA. A Taobao
+ * DV500 kit reads 0x2600: a55_cksel 6, the CPU at 1 GHz with the APLL at
+ * 750 MHz beside it. The CV610's single A7 has a different register, so this
+ * is DV500-only. */
+static void v5_dv500_cpu(cJSON *root, bool brief) {
+    static const unsigned fixed_mhz[8] = {24, 675, 0, 792, 833, 900, 1000, 0};
+    uint32_t crg2064, apll0, apll1;
+
+    if (!strstr(chip_name, "DV500") ||
+        !mem_reg(V5_CRG_BASE + 0x2040, &crg2064, OP_READ))
+        return;
+
+    const unsigned sel = (crg2064 >> 8) & 0x7;
+    double mhz = fixed_mhz[sel];
+    const char *source = "fixed";
+    if (sel == 2) {
+        if (!mem_reg(V5_CRG_BASE + 0x000, &apll0, OP_READ) ||
+            !mem_reg(V5_CRG_BASE + 0x004, &apll1, OP_READ))
+            return;
+        unsigned fbdiv = apll1 & 0xFFF;
+        unsigned refdiv = (apll1 >> 12) & 0x3F;
+        unsigned p1 = (apll0 >> 24) & 0x7;
+        unsigned p2 = (apll0 >> 28) & 0x7;
+        if (!refdiv)
+            refdiv = 1;
+        if (!p1)
+            p1 = 1;
+        if (!p2)
+            p2 = 1;
+        mhz = 24.0 * (fbdiv + (double)(apll0 & 0xFFFFFF) / (double)(1u << 24)) /
+              (double)(refdiv * p1 * p2);
+        source = "cpu_pll";
+    }
+    if (mhz == 0)
+        return; /* 7: reserved */
+
+    cJSON *cpu = cJSON_CreateObject();
+    cJSON *j_inner = cpu;
+    ADD_PARAM_NUM("freq_mhz", mhz);
+    ADD_PARAM("source", source);
+    if (!brief) {
+        ADD_PARAM_FMT("crg2064", "0x%08x", crg2064);
+        ADD_PARAM_NUM("a55_cksel", sel);
+    }
+    cJSON_AddItemToObject(root, "cpu", cpu);
+}
+
 static void v5_extra(cJSON *root, bool brief) {
     uint32_t crg_cksel = 0;
     uint32_t phy_ctrl0 = 0;
@@ -199,7 +255,7 @@ static void v5_extra(cJSON *root, bool brief) {
     /* Source: at boot/training time ddr_cksel can momentarily switch to
      * 24 MHz; in normal operation it stays on the DPLL post-divider. */
     double phy_clk_mhz = (ddr_cksel == 0) ? 24.0 : dpll_mhz;
-    double data_rate_mtps = phy_clk_mhz * (double)(1u << dficlk_ratio);
+    double data_rate_mtps = phy_clk_mhz * (double)(1u << dficlk_ratio) * 2.0;
 
     cJSON *ddr = cJSON_CreateObject();
     cJSON *j_inner = ddr;
@@ -215,6 +271,8 @@ static void v5_extra(cJSON *root, bool brief) {
                                              : "unknown");
     }
     cJSON_AddItemToObject(root, "ddr", ddr);
+
+    v5_dv500_cpu(root, brief);
 
     /* SSMOD (DPLL spread-spectrum) status. */
     uint32_t ssmod_raw = 0;
