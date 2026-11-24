@@ -798,7 +798,7 @@ static int detect_omni_sensor(sensor_ctx_t *ctx, int fd,
     if (i2c_change_addr(fd, i2c_addr) < 0)
         return false;
 
-#ifdef IPCHW_VENDOR_GM
+#if defined(IPCHW_VENDOR_GM) && !defined(STANDALONE_LIBRARY)
     // The OV77xx have one-byte registers: the manufacturer's ID at 0x1C, the
     // product's at 0x0A, whose low byte is the version. The last one read
     // tells the OV7725 (0x21) from the OV7720 (0x20).

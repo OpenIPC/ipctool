@@ -11,8 +11,12 @@
 
 static unsigned char sony_addrs[] = {0x34, 0};
 static unsigned char ssens_addrs[] = {0x60, 0};
+#ifndef STANDALONE_LIBRARY
 /* 0x42: the OV77xx, on GM8126 cameras */
 static unsigned char omni_addrs[] = {0x6c, 0x42, 0};
+#else
+static unsigned char omni_addrs[] = {0x6c, 0};
+#endif
 static unsigned char onsemi_addrs[] = {0x20, 0};
 static unsigned char gc_addrs[] = {0x6e, 0};
 
@@ -32,7 +36,9 @@ bool gm_detect_cpu(char *chip_name) {
     return true;
 }
 
-/* A mainline kernel: no /proc/pmu, the device tree names the chip. */
+#ifndef STANDALONE_LIBRARY
+/* A mainline kernel: no /proc/pmu, the device tree names the chip. The
+ * GM8126 is old and rare: only ipctool knows it, not ipcinfo. */
 bool gm_dt_detect_cpu(char *chip_name) {
     static const char prefix[] = "grainmedia,gm";
     char buf[256];
@@ -53,6 +59,7 @@ bool gm_dt_detect_cpu(char *chip_name) {
     }
     return false;
 }
+#endif
 
 static unsigned long gm_media_mem() {
     char buf[256];
