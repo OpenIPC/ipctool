@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +10,8 @@
 #include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -1322,6 +1325,33 @@ static int detect_possible_sensors(sensor_ctx_t *ctx, int fd,
     return false;
 }
 
+/* A bus the HAL did not nominate is left alone once transfers on it keep
+ * timing out. A controller with nothing on its pads can wait out its whole
+ * timeout on every transfer where a working bus would say NACK at once: on an
+ * NT98566 two such buses, one second a transfer, held `ipcinfo` for 27 s at
+ * boot (OpenIPC/firmware#1889). Only a timeout counts, and only several in a
+ * row, so an empty bus is still probed in full and one hiccup costs nothing.
+ * After that every read fails without touching the bus; the write that puts a
+ * register page back does not come through here and still goes out. */
+#define SWEEP_BUS_TIMEOUTS 2
+static read_register_t sweep_bus_read;
+static int sweep_timeouts;
+
+static int sweep_read_register(int fd, unsigned char i2c_addr,
+                               unsigned int reg_addr, unsigned int reg_width,
+                               unsigned int data_width) {
+    if (sweep_timeouts >= SWEEP_BUS_TIMEOUTS)
+        return -1;
+
+    errno = 0;
+    int val = sweep_bus_read(fd, i2c_addr, reg_addr, reg_width, data_width);
+    if (val == -1 && errno == ETIMEDOUT)
+        sweep_timeouts++;
+    else
+        sweep_timeouts = 0;
+    return val;
+}
+
 static bool get_sensor_id_i2c(sensor_ctx_t *ctx) {
     bool detected = false;
     int fd = open_i2c_sensor_fd(i2c_adapter_nr);
@@ -1455,6 +1485,38 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
     return res;
 }
 
+/* get_sensor_id_i2c() with the reader above in place. The probes call
+ * i2c_read_register by that name, so it is the global that is borrowed, and
+ * given back as the HAL left it. */
+static bool get_sensor_id_on_swept_bus(sensor_ctx_t *ctx) {
+    sweep_timeouts = 0;
+    sweep_bus_read = i2c_read_register;
+    i2c_read_register = sweep_read_register;
+
+    const bool found = get_sensor_id_i2c(ctx);
+
+    i2c_read_register = sweep_bus_read;
+    sensor_read_register = i2c_read_register;
+    return found;
+}
+
+/* Which i2c adapter a descriptor is on, 0 if that is not known. Some HAL
+ * openers answer several numbers with one bus -- Novatek's gives /dev/i2c-0 for
+ * 5, and /dev/i2c-1 for every number on some dies -- and the sweep probed it
+ * again each time. Only an i2c-dev node (major 89) is proof of the adapter: a
+ * vendor's own sensor-bus device takes the number some other way. */
+#define I2C_DEV_MAJOR 89
+static dev_t i2c_adapter_of_fd(int fd) {
+    struct stat st;
+
+    if (fstat(fd, &st) || !S_ISCHR(st.st_mode) ||
+        major(st.st_rdev) != I2C_DEV_MAJOR)
+        return 0;
+    return st.st_rdev;
+}
+/* A seam: the test has no i2c adapters. */
+static dev_t (*i2c_fd_adapter)(int fd) = i2c_adapter_of_fd;
+
 /* Is the bus there at all? A liveness check and nothing more: the probes below
  * (get_sensor_id_i2c) open the adapter again and close what they opened, so the
  * descriptor taken here has no further use.
@@ -1470,11 +1532,12 @@ static bool get_sensor_id_spi(sensor_ctx_t *ctx) {
  * The test is `fd < 0`, not the `!fd` it replaces: open() reports failure as
  * -1, so the old form read a failed open as success and only the impossible
  * descriptor 0 as failure. */
-static bool i2c_bus_openable(int adapter_nr) {
+static bool i2c_bus_openable(int adapter_nr, dev_t *dev) {
     int fd = open_i2c_sensor_fd(adapter_nr);
     if (fd < 0)
         return false;
 
+    *dev = i2c_fd_adapter(fd);
     close_sensor_fd(fd);
     return true;
 }
@@ -1513,6 +1576,9 @@ static bool probe_sensor(sensor_ctx_t *ctx) {
         return false;
 
     const int preferred_adapter = i2c_adapter_nr;
+    dev_t probed[7] = {0}; /* the preferred bus and the sweep's six */
+    int nprobed = 0;
+    dev_t dev = 0;
     probed_preferred_adapter = preferred_adapter;
     found_by_sweep = false;
 
@@ -1523,9 +1589,12 @@ static bool probe_sensor(sensor_ctx_t *ctx) {
     /* The bus the HAL nominated, first. A missing adapter is no longer the end
      * of the probe: the sweep below can still find the sensor elsewhere. */
     arm_sensor_clock();
-    if (i2c_bus_openable(i2c_adapter_nr) && get_sensor_id_i2c(ctx)) {
-        strcpy(ctx->control, "i2c");
-        return true;
+    if (i2c_bus_openable(i2c_adapter_nr, &dev)) {
+        probed[nprobed++] = dev;
+        if (get_sensor_id_i2c(ctx)) {
+            strcpy(ctx->control, "i2c");
+            return true;
+        }
     }
 
     /* SPI once, not once per i2c bus: open_spi_sensor_fd() takes no adapter
@@ -1546,15 +1615,23 @@ static bool probe_sensor(sensor_ctx_t *ctx) {
             continue;
 
         i2c_adapter_nr = i;
-        if (!i2c_bus_openable(i2c_adapter_nr))
+        if (!i2c_bus_openable(i2c_adapter_nr, &dev))
             continue;
+
+        bool again = false;
+        for (int j = 0; dev && j < nprobed; j++)
+            again |= probed[j] == dev;
+        if (again)
+            continue;
+        probed[nprobed++] = dev;
 
         // Use common settings as default
         ctx->data_width = 1;
         ctx->reg_width = 2;
 
         arm_sensor_clock();
-        if (get_sensor_id_i2c(ctx)) {
+        const bool found = get_sensor_id_on_swept_bus(ctx);
+        if (found) {
             strcpy(ctx->control, "i2c");
             found_by_sweep = true;
             return true;
@@ -1665,7 +1742,8 @@ cJSON *detect_sensors() {
         /* Before the open: the HAL openers take no argument and open the
          * adapter this global names. */
         i2c_adapter_nr = bus;
-        if (!i2c_bus_openable(bus))
+        dev_t dev;
+        if (!i2c_bus_openable(bus, &dev))
             continue;
 
         sensor_ctx_t more;

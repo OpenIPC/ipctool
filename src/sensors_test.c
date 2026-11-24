@@ -681,6 +681,121 @@ static void check_superpix_spared_by_galaxycore(void) {
     i2c_write_register = mock_write;
 }
 
+/* ---- the bus sweep ----------------------------------------------------- */
+
+/* Buses 0..4 exist and 5 opens bus 0 again, as Novatek's opener has it. A
+ * descriptor says which bus it is on, through the same seam the probe uses. */
+static int sweep_fd_bus[1024];
+static int sweep_reads[5];
+static int sweep_err[5];   /* errno of every read there, 0: an IMX415 answers */
+static int sweep_flaky;    /* bus 2: a NACK between two timeouts, repeating */
+static int sweep_anonymous;
+
+static int sweep_open(int nr) {
+    int fd = universal_open_sensor_fd("/dev/null");
+    sweep_fd_bus[fd] = nr > 4 ? 0 : nr;
+    return fd;
+}
+
+static dev_t sweep_adapter(int fd) {
+    return sweep_anonymous ? 0 : makedev(I2C_DEV_MAJOR, sweep_fd_bus[fd]);
+}
+
+static int sweep_bus_read_mock(int fd, unsigned char addr, uint32_t reg,
+                          unsigned int reg_width, unsigned int data_width) {
+    (void)addr;
+    (void)reg_width;
+    (void)data_width;
+    int bus = sweep_fd_bus[fd];
+    int n = sweep_reads[bus]++;
+
+    errno = sweep_err[bus];
+    if (bus == 2 && sweep_flaky)
+        errno = n % 2 ? EREMOTEIO : ETIMEDOUT;
+    if (errno)
+        return -1;
+    return reg == 0x3b00 ? 0x28 : reg == 0x300b ? 0xa0 : 0;
+}
+
+static bool sweep_run(sensor_ctx_t *ctx) {
+    memset(ctx, 0, sizeof(*ctx));
+    memset(sweep_reads, 0, sizeof(sweep_reads));
+    return getsensorid(ctx);
+}
+
+static void check_bus_sweep(void) {
+    static unsigned char addrs[] = {0x60, 0};
+    /* Several families, so a probe in full is far more than two reads. */
+    static sensor_addr_t table[] = {
+        {SENSOR_SONY, addrs},       {SENSOR_SMARTSENS, addrs},
+        {SENSOR_ONSEMI, addrs},     {SENSOR_OMNIVISION, addrs},
+        {SENSOR_GALAXYCORE, addrs}, {SENSOR_TECHPOINT, addrs},
+        {0, NULL}};
+    sensor_ctx_t ctx;
+
+    setup_hal_fallback();
+    open_i2c_sensor_fd = sweep_open;
+    i2c_read_register = sweep_bus_read_mock;
+    i2c_change_addr = mock_change_addr;
+    i2c_fd_adapter = sweep_adapter;
+    possible_i2c_addrs = table;
+
+    /* Nothing anywhere, every bus says so at once: all probed alike, and bus 0
+     * once although number 5 opens it too. */
+    for (int i = 0; i < 5; i++)
+        sweep_err[i] = EREMOTEIO;
+    CHECK(!sweep_run(&ctx));
+    const int full = sweep_reads[0];
+    CHECK(full > SWEEP_BUS_TIMEOUTS);
+    for (int i = 1; i < 5; i++)
+        CHECK(sweep_reads[i] == full);
+    CHECK(i2c_adapter_nr == 0);
+
+    /* Descriptors whose adapter is not known are never taken for one bus. */
+    sweep_anonymous = 1;
+    CHECK(!sweep_run(&ctx));
+    CHECK(sweep_reads[0] == 2 * full);
+    sweep_anonymous = 0;
+
+    /* The dead buses are left after two timeouts, the others are not. */
+    sweep_err[2] = sweep_err[3] = ETIMEDOUT;
+    CHECK(!sweep_run(&ctx));
+    CHECK(sweep_reads[2] == SWEEP_BUS_TIMEOUTS);
+    CHECK(sweep_reads[3] == SWEEP_BUS_TIMEOUTS);
+    CHECK(sweep_reads[0] == full && sweep_reads[1] == full);
+    CHECK(sweep_reads[4] == full);
+
+    /* Timeouts that do not follow one another do not add up. */
+    sweep_err[2] = EREMOTEIO;
+    sweep_flaky = 1;
+    CHECK(!sweep_run(&ctx));
+    CHECK(sweep_reads[2] == full);
+    sweep_flaky = 0;
+
+    /* The bus the HAL nominated is probed in full whatever it does. */
+    sweep_err[0] = ETIMEDOUT;
+    CHECK(!sweep_run(&ctx));
+    CHECK(sweep_reads[0] == full);
+
+    /* The HAL's reader is back in place once the sweep is over. */
+    CHECK(i2c_read_register == sweep_bus_read_mock);
+    CHECK(sensor_read_register == sweep_bus_read_mock);
+
+    /* A sensor behind a dead bus is still found. */
+    sweep_err[2] = ETIMEDOUT;
+    sweep_err[4] = 0;
+    CHECK(sweep_run(&ctx));
+    CHECK(!strcmp(ctx.sensor_id, "IMX415"));
+    CHECK(sweep_reads[2] == SWEEP_BUS_TIMEOUTS);
+    CHECK(i2c_adapter_nr == 4);
+    CHECK(i2c_read_register == sweep_bus_read_mock);
+
+    i2c_adapter_nr = 0;
+    i2c_fd_adapter = i2c_adapter_of_fd;
+    possible_i2c_addrs = NULL;
+    i2c_read_register = mock_read;
+}
+
 int main(int argc, char **argv) {
     i2c_read_register = mock_read;
     i2c_write_register = mock_write;
@@ -710,6 +825,7 @@ int main(int argc, char **argv) {
     check_galaxycore_reg_width();
     check_probe_restores_console();
     check_superpix_spared_by_galaxycore();
+    check_bus_sweep();
 
     if (failures)
         fprintf(stderr, "sensors_test: %d failure(s)\n", failures);
