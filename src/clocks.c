@@ -45,6 +45,46 @@ static uint32_t extract_field(uint32_t raw, uint8_t shift, uint8_t width) {
     return (raw >> shift) & mask;
 }
 
+/* f = input * (FBDIV + FRACDIV/2^frac_width) / (REFDIV * POSTDIV1 *
+ * POSTDIV2), from the two raw control words. 0 when the fields cannot make a
+ * frequency (FBDIV or a divider of 0). */
+static double pll_freq_from_raw(const struct pll_info *pll, uint32_t raw1,
+                                uint32_t raw2) {
+    uint32_t fracdiv = extract_field(raw1, pll->frac_shift, pll->frac_width);
+    uint32_t pdiv1 =
+        extract_field(raw1, pll->postdiv1_shift, pll->postdiv1_width);
+    uint32_t pdiv2 =
+        extract_field(raw1, pll->postdiv2_shift, pll->postdiv2_width);
+    uint32_t fbdiv = extract_field(raw2, pll->fbdiv_shift, pll->fbdiv_width);
+    uint32_t refdiv = extract_field(raw2, pll->refdiv_shift, pll->refdiv_width);
+    if (pll->postdiv1_width == 0)
+        pdiv1 = 1;
+    if (pll->postdiv2_width == 0)
+        pdiv2 = 1;
+    if (pll->refdiv_width == 0)
+        refdiv = 1;
+
+    uint32_t denom = refdiv * pdiv1 * pdiv2;
+    if (fbdiv == 0 || denom == 0)
+        return 0.0;
+    uint64_t numer_khz = (uint64_t)pll->input_khz * fbdiv;
+    if (pll->frac_width)
+        numer_khz += ((uint64_t)pll->input_khz * fracdiv) >> pll->frac_width;
+    return (double)numer_khz / (double)denom / 1000.0;
+}
+
+bool pll_read_freq_mhz(const struct pll_info *pll, double *mhz) {
+    uint32_t raw1 = 0, raw2;
+    if (!mem_reg(pll->ctrl_reg1, &raw1, OP_READ))
+        return false;
+    raw2 = raw1;
+    if (pll->ctrl_reg2 && pll->ctrl_reg2 != pll->ctrl_reg1 &&
+        !mem_reg(pll->ctrl_reg2, &raw2, OP_READ))
+        return false;
+    *mhz = pll_freq_from_raw(pll, raw1, raw2);
+    return *mhz != 0.0;
+}
+
 static cJSON *decode_pll(const struct pll_info *pll, bool brief) {
     cJSON *j_inner = cJSON_CreateObject();
 
@@ -77,17 +117,7 @@ static cJSON *decode_pll(const struct pll_info *pll, bool brief) {
     if (pll->refdiv_width == 0)
         refdiv = 1;
 
-    /* Compute frequency. f = input * (FBDIV + FRACDIV/2^frac_width) /
-     * (REFDIV * POSTDIV1 * POSTDIV2). */
-    double freq_mhz = 0.0;
-    uint32_t denom = refdiv * pdiv1 * pdiv2;
-    if (fbdiv != 0 && denom != 0) {
-        uint64_t numer_khz = (uint64_t)pll->input_khz * fbdiv;
-        if (pll->frac_width)
-            numer_khz +=
-                ((uint64_t)pll->input_khz * fracdiv) >> pll->frac_width;
-        freq_mhz = (double)numer_khz / (double)denom / 1000.0;
-    }
+    double freq_mhz = pll_freq_from_raw(pll, raw1, raw2);
 
     if (brief) {
         ADD_PARAM_NUM("freq_mhz", freq_mhz);

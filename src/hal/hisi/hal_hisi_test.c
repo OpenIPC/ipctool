@@ -40,7 +40,7 @@ static int failures;
 
 /* ---- the fake register file -------------------------------------------- */
 
-#define SLOTS 4
+#define SLOTS 8
 
 static struct {
     uint32_t addr;
@@ -164,6 +164,7 @@ void restore_printk(void) {}
 /* chipid.c's, normally. Naming it here is what keeps chipid.c and every other
  * vendor HAL out of the link. */
 int chip_generation;
+char chip_name[128];
 
 /* ---- helpers ----------------------------------------------------------- */
 
@@ -172,6 +173,9 @@ static void fresh(uint32_t addr, uint32_t val, int gen) {
     memset(&UNDO, 0, sizeof UNDO);
     memset(&v4_crg, 0, sizeof v4_crg);
     memset(ot_crg, 0, sizeof ot_crg);
+    memset(dv500_i2c5, 0, sizeof dv500_i2c5);
+    hal_sensor_buses = NULL;
+    strcpy(chip_name, gen == HISI_OT ? "3516CV610" : "");
     chip_generation = gen;
     seed(addr, val);
     if (addr == CV610_PERI_CRG8464_ADDR)
@@ -352,6 +356,127 @@ int main(void) {
     hal_cleanup();
     CHECK(peek(CV610_PERI_CRG8464_ADDR)
         == (CV610_PERI_CRG_SENSOR0_CKEN | CV610_PERI_CRG_SENSOR0_SRST));
+
+    /* ---- OT: the clock select a gated clock is given --------------------
+     * PERI_CRG8464/8472 reset to 0x3: cksel 0 = 74.25 MHz, above what an
+     * OS08A/OS04A takes. A clock we ungate from that state gets 24 MHz; the
+     * cleanup puts the reset value back. */
+    fresh(OT, 0x3, HISI_OT);
+    setup_hal_hisi();
+    CHECK(peek(CV610_PERI_CRG8464_ADDR) == 0x4012);
+    CHECK(peek(CV610_PERI_CRG8472_ADDR) == 0x4012);
+    hal_cleanup();
+    CHECK(peek(CV610_PERI_CRG8464_ADDR) == 0x3);
+    CHECK(peek(CV610_PERI_CRG8472_ADDR) == 0x3);
+    CHECK(illegal == NULL);
+
+    /* A gated clock whose select somebody already chose keeps it. */
+    fresh(OT, 0xA003, HISI_OT);
+    setup_hal_hisi();
+    CHECK(peek(CV610_PERI_CRG8464_ADDR) == 0xA012);
+
+    /* A running clock, even at 74.25 MHz, is somebody's: untouched. */
+    fresh(OT, 0x0012, HISI_OT);
+    setup_hal_hisi();
+    reset_counters();
+    sweep();
+    CHECK(writes == 0);
+    CHECK(peek(CV610_PERI_CRG8464_ADDR) == 0x0012);
+
+    /* ---- DV500: the I2C5 pads of the SENSOR1 bus ------------------------ */
+#define SCLK DV500_IOCFG_SPI1_SCLK
+#define SDO DV500_IOCFG_SPI1_SDO
+#define DIR DV500_GPIO1_DIR
+    /* Setup alone -- a chip-name or clocks query, which never reaches a
+     * cleanup -- leaves the pads alone; only a probe's arm switches them.
+     * Stock sys_config leaves them GPIO inputs (0x1300): switched to I2C5,
+     * function bits only, and put back by the cleanup. */
+    fresh(OT, 0x4012, HISI_OT);
+    strcpy(chip_name, "3519DV500");
+    seed(SCLK, 0x1300);
+    seed(SDO, 0x1300);
+    seed(DIR, 0x0);
+    setup_hal_hisi();
+    CHECK(peek(SCLK) == 0x1300);
+    CHECK(peek(SDO) == 0x1300);
+    CHECK(hal_sensor_buses && hal_sensor_buses[0] == 4 &&
+          hal_sensor_buses[1] == 5);
+    hal_enable_sensor_clock();
+    CHECK(peek(SCLK) == 0x1302);
+    CHECK(peek(SDO) == 0x1302);
+    hal_cleanup();
+    CHECK(peek(SCLK) == 0x1300);
+    CHECK(peek(SDO) == 0x1300);
+
+    /* The whole sweep, SPI arm included (no cleanup of its own): the pads
+     * still end where they started. */
+    hal_enable_sensor_clock();
+    hal_cleanup();
+    sweep();
+    CHECK(peek(SCLK) == 0x1300);
+    CHECK(peek(SDO) == 0x1300);
+
+    /* In SPI1 mode they are the SPI controller's: neither pad is touched. */
+    fresh(OT, 0x4012, HISI_OT);
+    strcpy(chip_name, "3519DV500");
+    seed(SCLK, 0x1301);
+    seed(SDO, 0x1300);
+    seed(DIR, 0x0);
+    setup_hal_hisi();
+    hal_enable_sensor_clock();
+    CHECK(peek(SCLK) == 0x1301);
+    CHECK(peek(SDO) == 0x1300);
+
+    /* A GPIO the board drives (an IR-cut, a LED) is not ours either. */
+    fresh(OT, 0x4012, HISI_OT);
+    strcpy(chip_name, "3519DV500");
+    seed(SCLK, 0x1300);
+    seed(SDO, 0x1300);
+    seed(DIR, 0x2); /* GPIO1_1 is an output */
+    setup_hal_hisi();
+    hal_enable_sensor_clock();
+    CHECK(peek(SCLK) == 0x1300);
+    CHECK(peek(SDO) == 0x1300);
+
+    /* Already I2C5 (the board's rcS did it): no write at all, and the
+     * cleanup does not "restore" anything. */
+    fresh(OT, 0x4012, HISI_OT);
+    strcpy(chip_name, "3519DV500");
+    seed(SCLK, 0x1752);
+    seed(SDO, 0x1752);
+    seed(DIR, 0x0);
+    reset_counters();
+    setup_hal_hisi();
+    sweep();
+    CHECK(writes == 0);
+    CHECK(peek(SCLK) == 0x1752);
+
+    /* Re-muxed by somebody else between our arm and our cleanup: theirs. */
+    fresh(OT, 0x4012, HISI_OT);
+    strcpy(chip_name, "3519DV500");
+    seed(SCLK, 0x1300);
+    seed(SDO, 0x1300);
+    seed(DIR, 0x0);
+    setup_hal_hisi();
+    hal_enable_sensor_clock();
+    poke(SCLK, 0x1752);
+    hal_cleanup();
+    CHECK(peek(SCLK) == 0x1752);
+    CHECK(peek(SDO) == 0x1300);
+
+    /* Not a DV500: the pads are not even looked at, and the report stays
+     * single-sensor. */
+    fresh(OT, 0x4012, HISI_OT);
+    seed(SCLK, 0x1300);
+    seed(SDO, 0x1300);
+    seed(DIR, 0x0);
+    setup_hal_hisi();
+    sweep();
+    CHECK(peek(SCLK) == 0x1300);
+    CHECK(hal_sensor_buses == NULL);
+#undef SCLK
+#undef SDO
+#undef DIR
 
     /* V3 ungates without ever restoring, which is exactly why it cannot
      * suffer this. A guard, so it does not grow a restore by symmetry. */

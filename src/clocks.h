@@ -92,6 +92,10 @@ struct clock_family {
  *                   HPM aux register, etc.) -- used by `ipctool clocks`. */
 cJSON *clocks_build_json(bool brief);
 
+/* One PLL's output frequency, read live. False if a register read fails or
+ * the fields make no frequency. */
+bool pll_read_freq_mhz(const struct pll_info *pll, double *mhz);
+
 int clocks_cmd(int argc, char **argv);
 
 #endif /* CLOCKS_H */

@@ -12,6 +12,7 @@
 #include "tools.h"
 
 int i2c_adapter_nr = 0;
+const int *hal_sensor_buses;
 sensor_addr_t *possible_i2c_addrs;
 int (*open_i2c_sensor_fd)();
 int (*open_spi_sensor_fd)();

@@ -1502,11 +1502,19 @@ static void arm_sensor_clock(void) {
         hal_enable_sensor_clock();
 }
 
+/* What the last probe_sensor() already covered, so detect_sensors() does not
+ * probe an empty bus twice -- on a SoC with unmuxed adapters every probe of
+ * one is a run of controller timeouts. */
+static int probed_preferred_adapter = -1;
+static bool found_by_sweep;
+
 static bool probe_sensor(sensor_ctx_t *ctx) {
     if (!getchipname())
         return false;
 
     const int preferred_adapter = i2c_adapter_nr;
+    probed_preferred_adapter = preferred_adapter;
+    found_by_sweep = false;
 
     // Use common settings as default
     ctx->data_width = 1;
@@ -1548,6 +1556,7 @@ static bool probe_sensor(sensor_ctx_t *ctx) {
         arm_sensor_clock();
         if (get_sensor_id_i2c(ctx)) {
             strcpy(ctx->control, "i2c");
+            found_by_sweep = true;
             return true;
         }
     }
@@ -1575,35 +1584,116 @@ bool getsensorid(sensor_ctx_t *ctx) {
 
 #ifndef STANDALONE_LIBRARY
 
+/* Parts that answer with the same ID registers, so a probe cannot tell them
+ * apart. sensor_id keeps the name it always had -- libipchw consumers pick a
+ * driver by it -- and the report says what else it could be. */
+static const char *sensor_id_shared_with(const char *sensor_id) {
+    /* OS08A10 and OS08A20: 0x300A..C = 53 08 41 and 0x302A = 0xB0 in every
+     * revision of both data sheets; the A20 differs only by Nyxel NIR
+     * sensitivity, which no register shows. */
+    if (!strcmp(sensor_id, "OS08A10"))
+        return "OS08A20";
+    return NULL;
+}
+
+static void add_sensor_entry(cJSON *j_sensors, sensor_ctx_t *ctx, int bus,
+                             bool vi_info) {
+    cJSON *j_inner = ctx->j_sensor;
+    cJSON_AddItemToArray(j_sensors, j_inner);
+
+    ADD_PARAM("vendor", ctx->vendor);
+    ADD_PARAM("model", ctx->sensor_id);
+    const char *twin = sensor_id_shared_with(ctx->sensor_id);
+    if (twin)
+        ADD_PARAM("id_shared_with", twin);
+    {
+        cJSON *j_inner = cJSON_CreateObject();
+        cJSON_AddItemToObject(ctx->j_sensor, "control", j_inner);
+        ADD_PARAM_NUM("bus", bus);
+        ADD_PARAM("type", ctx->control);
+        if (ctx->addr)
+            ADD_PARAM_FMT("addr", "0x%x", ctx->addr);
+        if (ctx->j_params)
+            cJSON_AddItemToObject(ctx->j_sensor, "params", ctx->j_params);
+
+        /* The VI/MIPI state in /proc/umap describes the pipeline, not a bus,
+         * so it is reported once, with the first sensor. */
+        if (vi_info)
+            hisi_vi_information(ctx);
+    }
+}
+
+/* Every sensor on the board, not just the first one, where the HAL says the
+ * board family has more than one (hal_sensor_buses: the Hi3519DV500 reference
+ * design's SENSOR0..3 sit on I2C4, I2C5, I2C3 and I2C6). getsensorid() finds
+ * the first, as it always has; then only the listed buses are probed.
+ *
+ * Opt-in, and only the listed buses, because a probe is not a read: the
+ * two-byte register address is a write to a one-byte-address part, and some
+ * families write page registers. Sweeping every adapter after every hit would
+ * do that to whatever codec, PMIC or EEPROM shares a sensor address on any
+ * camera. */
 cJSON *detect_sensors() {
     sensor_ctx_t ctx;
     memset(&ctx, 0, sizeof(ctx));
-
-    cJSON *j_sensors = cJSON_CreateArray();
     ctx.j_sensor = cJSON_CreateObject();
-    cJSON *j_inner = ctx.j_sensor;
-    cJSON_AddItemToArray(j_sensors, j_inner);
 
     if (!getsensorid(&ctx)) {
-        cJSON_Delete(j_sensors);
+        cJSON_Delete(ctx.j_sensor);
         return NULL;
     }
 
-    ADD_PARAM("vendor", ctx.vendor);
-    ADD_PARAM("model", ctx.sensor_id);
-    {
-        cJSON *j_inner = cJSON_CreateObject();
-        cJSON_AddItemToObject(ctx.j_sensor, "control", j_inner);
-        ADD_PARAM_NUM("bus", i2c_adapter_nr);
-        ADD_PARAM("type", ctx.control);
-        if (ctx.addr)
-            ADD_PARAM_FMT("addr", "0x%x", ctx.addr);
-        if (ctx.j_params)
-            cJSON_AddItemToObject(ctx.j_sensor, "params", ctx.j_params);
+    cJSON *j_sensors = cJSON_CreateArray();
+    const int first_bus = i2c_adapter_nr;
+    add_sensor_entry(j_sensors, &ctx, first_bus, true);
 
-        hisi_vi_information(&ctx);
+    /* An SPI sensor leaves i2c_adapter_nr wherever the HAL put it, so there
+     * is no i2c bus to sweep around. */
+    if (!hal_sensor_buses || strcmp(ctx.control, "i2c"))
+        return j_sensors;
+
+    for (const int *b = hal_sensor_buses; *b >= 0; b++) {
+        const int bus = *b;
+        if (bus == first_bus)
+            continue;
+        /* Found by the fallback sweep: the HAL's own bus and every bus below
+         * this one were probed on the way and had nothing. */
+        if (found_by_sweep &&
+            (bus < first_bus || bus == probed_preferred_adapter))
+            continue;
+
+        /* Before the open: the HAL openers take no argument and open the
+         * adapter this global names. */
+        i2c_adapter_nr = bus;
+        if (!i2c_bus_openable(bus))
+            continue;
+
+        sensor_ctx_t more;
+        memset(&more, 0, sizeof(more));
+        more.data_width = 1;
+        more.reg_width = 2;
+        more.j_sensor = cJSON_CreateObject();
+
+        arm_sensor_clock();
+        if (get_sensor_id_i2c(&more)) {
+            strcpy(more.control, "i2c");
+            add_sensor_entry(j_sensors, &more, bus, false);
+        } else {
+            /* get_sensor_id_i2c() returns without a cleanup when its own
+             * open fails, and what the arm switched must go back. A second
+             * cleanup after one that ran is a no-op: each undo is spent. */
+            if (hal_cleanup)
+                hal_cleanup();
+            cJSON_Delete(more.j_sensor);
+            if (more.j_params)
+                cJSON_Delete(more.j_params);
+        }
     }
 
+    /* Process-global, read by `ipctool i2cget` and friends: leave it on the
+     * bus the first sensor was found on, as before. */
+    i2c_adapter_nr = first_bus;
+    restore_printk();
     return j_sensors;
 }
 

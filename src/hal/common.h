@@ -76,6 +76,12 @@ typedef struct {
 } sensor_addr_t;
 
 extern int i2c_adapter_nr;
+/* The i2c buses a board family carries sensors on, -1-terminated, for SoCs
+ * with more than one sensor interface. NULL (the default) means one sensor:
+ * the report stops at the first hit, as it always has. Only set it where
+ * open_i2c_sensor_fd() opens /dev/i2c-<i2c_adapter_nr> as asked, or the
+ * sweep would find one sensor on every number it tries. */
+extern const int *hal_sensor_buses;
 extern sensor_addr_t *possible_i2c_addrs;
 
 typedef int (*read_register_t)(int fd, unsigned char i2c_addr,
