@@ -658,9 +658,11 @@ static void ot_ensure_sensor_enabled(void) {
             &ot_crg[i], ot_crg_addr[i], CV610_PERI_CRG_SENSOR0_CKEN,
             CV610_PERI_CRG_SENSOR0_SRST, CV610_PERI_CRG_SENSOR_CKSEL_MASK,
             CV610_PERI_CRG_SENSOR_CKSEL_24M);
-    if (is_dv500())
-        dv500_i2c5_enable();
 }
+
+/* The vendor SDK's sensor buses on DV500: SENSOR0..3 = I2C4, I2C5, I2C3,
+ * I2C6 (sample_comm_vi.c, sample_vio.c, sample_dis_two_pipe.c). */
+static const int dv500_sensor_buses[] = {4, 5, 3, 6, -1};
 
 static void ot_ensure_sensor_restored() {
     for (size_t i = 0; i < ARRCNT(ot_crg_addr); i++)
@@ -711,6 +713,18 @@ static void hisi_ensure_sensor_enabled() {
     }
 }
 
+/* What a probe arms: the clocks, as setup_hal_hisi() also does, plus on DV500
+ * the I2C5 pads. Those are switched only here, never at setup, because only a
+ * probe is followed by the hal_cleanup() that switches them back -- a
+ * chip-name or clocks query goes through setup and nothing else. */
+static void hisi_ensure_sensor_ready() {
+    hisi_ensure_sensor_enabled();
+#ifdef IPCHW_HISI_V5
+    if (chip_generation == HISI_OT && is_dv500())
+        dv500_i2c5_enable();
+#endif
+}
+
 static void hisi_hal_cleanup() {
     switch (chip_generation) {
 #ifdef IPCHW_HISI_V4
@@ -759,8 +773,12 @@ static void get_hisi_sdk(cJSON *j_inner) {
 #endif
 
 void setup_hal_hisi() {
-    hal_enable_sensor_clock = hisi_ensure_sensor_enabled;
+    hal_enable_sensor_clock = hisi_ensure_sensor_ready;
     hisi_ensure_sensor_enabled();
+#ifdef IPCHW_HISI_V5
+    if (chip_generation == HISI_OT && is_dv500())
+        hal_sensor_buses = dv500_sensor_buses;
+#endif
 
     open_i2c_sensor_fd = hisi_open_i2c_fd;
     open_spi_sensor_fd = hisi_open_spi_fd;

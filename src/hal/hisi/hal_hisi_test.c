@@ -174,6 +174,7 @@ static void fresh(uint32_t addr, uint32_t val, int gen) {
     memset(&v4_crg, 0, sizeof v4_crg);
     memset(ot_crg, 0, sizeof ot_crg);
     memset(dv500_i2c5, 0, sizeof dv500_i2c5);
+    hal_sensor_buses = NULL;
     strcpy(chip_name, gen == HISI_OT ? "3516CV610" : "");
     chip_generation = gen;
     seed(addr, val);
@@ -386,7 +387,9 @@ int main(void) {
 #define SCLK DV500_IOCFG_SPI1_SCLK
 #define SDO DV500_IOCFG_SPI1_SDO
 #define DIR DV500_GPIO1_DIR
-    /* Stock sys_config leaves them GPIO inputs (0x1300): switched to I2C5,
+    /* Setup alone -- a chip-name or clocks query, which never reaches a
+     * cleanup -- leaves the pads alone; only a probe's arm switches them.
+     * Stock sys_config leaves them GPIO inputs (0x1300): switched to I2C5,
      * function bits only, and put back by the cleanup. */
     fresh(OT, 0x4012, HISI_OT);
     strcpy(chip_name, "3519DV500");
@@ -394,6 +397,11 @@ int main(void) {
     seed(SDO, 0x1300);
     seed(DIR, 0x0);
     setup_hal_hisi();
+    CHECK(peek(SCLK) == 0x1300);
+    CHECK(peek(SDO) == 0x1300);
+    CHECK(hal_sensor_buses && hal_sensor_buses[0] == 4 &&
+          hal_sensor_buses[1] == 5);
+    hal_enable_sensor_clock();
     CHECK(peek(SCLK) == 0x1302);
     CHECK(peek(SDO) == 0x1302);
     hal_cleanup();
@@ -415,6 +423,7 @@ int main(void) {
     seed(SDO, 0x1300);
     seed(DIR, 0x0);
     setup_hal_hisi();
+    hal_enable_sensor_clock();
     CHECK(peek(SCLK) == 0x1301);
     CHECK(peek(SDO) == 0x1300);
 
@@ -425,6 +434,7 @@ int main(void) {
     seed(SDO, 0x1300);
     seed(DIR, 0x2); /* GPIO1_1 is an output */
     setup_hal_hisi();
+    hal_enable_sensor_clock();
     CHECK(peek(SCLK) == 0x1300);
     CHECK(peek(SDO) == 0x1300);
 
@@ -448,12 +458,14 @@ int main(void) {
     seed(SDO, 0x1300);
     seed(DIR, 0x0);
     setup_hal_hisi();
+    hal_enable_sensor_clock();
     poke(SCLK, 0x1752);
     hal_cleanup();
     CHECK(peek(SCLK) == 0x1752);
     CHECK(peek(SDO) == 0x1300);
 
-    /* Not a DV500: the pads are not even looked at. */
+    /* Not a DV500: the pads are not even looked at, and the report stays
+     * single-sensor. */
     fresh(OT, 0x4012, HISI_OT);
     seed(SCLK, 0x1300);
     seed(SDO, 0x1300);
@@ -461,6 +473,7 @@ int main(void) {
     setup_hal_hisi();
     sweep();
     CHECK(peek(SCLK) == 0x1300);
+    CHECK(hal_sensor_buses == NULL);
 #undef SCLK
 #undef SDO
 #undef DIR

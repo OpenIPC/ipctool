@@ -1483,11 +1483,6 @@ static void arm_sensor_clock(void) {
         hal_enable_sensor_clock();
 }
 
-/* Highest /dev/i2c-N the sweeps look at. Hi3519DV500 puts sensors 0..3 on
- * I2C4, I2C5, I2C3 and I2C6 in the vendor SDK, so stopping at 5 missed the
- * last of them. A bus that is not there costs one failed open(). */
-#define SENSOR_MAX_I2C_BUS 7
-
 /* What the last probe_sensor() already covered, so detect_sensors() does not
  * probe an empty bus twice -- on a SoC with unmuxed adapters every probe of
  * one is a run of controller timeouts. */
@@ -1527,7 +1522,7 @@ static bool probe_sensor(sensor_ctx_t *ctx) {
      * the numbering, and /dev/i2c-1 is missing on most single-bus boards, so
      * the sweep died one iteration in and never reached the buses behind it.
      * The fallback has been dead on that hardware since it was written. */
-    for (int i = 0; i <= SENSOR_MAX_I2C_BUS; i++) {
+    for (int i = 0; i <= 5; i++) {
         if (i == preferred_adapter)
             continue;
 
@@ -1609,11 +1604,16 @@ static void add_sensor_entry(cJSON *j_sensors, sensor_ctx_t *ctx, int bus,
     }
 }
 
-/* Every sensor on the board, not just the first one: dual-sensor designs
- * (the Hi3519DV500 reference kit's SENSOR0/SENSOR1, stereo rigs) carry one
- * per i2c bus. getsensorid() finds the first, as it always has, and then the
- * remaining buses are probed one by one. A bus with nothing on it costs one
- * probe; it does not end the sweep. */
+/* Every sensor on the board, not just the first one, where the HAL says the
+ * board family has more than one (hal_sensor_buses: the Hi3519DV500 reference
+ * design's SENSOR0..3 sit on I2C4, I2C5, I2C3 and I2C6). getsensorid() finds
+ * the first, as it always has; then only the listed buses are probed.
+ *
+ * Opt-in, and only the listed buses, because a probe is not a read: the
+ * two-byte register address is a write to a one-byte-address part, and some
+ * families write page registers. Sweeping every adapter after every hit would
+ * do that to whatever codec, PMIC or EEPROM shares a sensor address on any
+ * camera. */
 cJSON *detect_sensors() {
     sensor_ctx_t ctx;
     memset(&ctx, 0, sizeof(ctx));
@@ -1628,12 +1628,13 @@ cJSON *detect_sensors() {
     const int first_bus = i2c_adapter_nr;
     add_sensor_entry(j_sensors, &ctx, first_bus, true);
 
-    /* Only for an i2c hit: an SPI sensor leaves i2c_adapter_nr wherever the
-     * HAL put it, and sweeping from there would report nothing new. */
-    if (strcmp(ctx.control, "i2c"))
+    /* An SPI sensor leaves i2c_adapter_nr wherever the HAL put it, so there
+     * is no i2c bus to sweep around. */
+    if (!hal_sensor_buses || strcmp(ctx.control, "i2c"))
         return j_sensors;
 
-    for (int bus = 0; bus <= SENSOR_MAX_I2C_BUS; bus++) {
+    for (const int *b = hal_sensor_buses; *b >= 0; b++) {
+        const int bus = *b;
         if (bus == first_bus)
             continue;
         /* Found by the fallback sweep: the HAL's own bus and every bus below
@@ -1641,6 +1642,10 @@ cJSON *detect_sensors() {
         if (found_by_sweep &&
             (bus < first_bus || bus == probed_preferred_adapter))
             continue;
+
+        /* Before the open: the HAL openers take no argument and open the
+         * adapter this global names. */
+        i2c_adapter_nr = bus;
         if (!i2c_bus_openable(bus))
             continue;
 
@@ -1650,12 +1655,16 @@ cJSON *detect_sensors() {
         more.reg_width = 2;
         more.j_sensor = cJSON_CreateObject();
 
-        i2c_adapter_nr = bus;
         arm_sensor_clock();
         if (get_sensor_id_i2c(&more)) {
             strcpy(more.control, "i2c");
             add_sensor_entry(j_sensors, &more, bus, false);
         } else {
+            /* get_sensor_id_i2c() returns without a cleanup when its own
+             * open fails, and what the arm switched must go back. A second
+             * cleanup after one that ran is a no-op: each undo is spent. */
+            if (hal_cleanup)
+                hal_cleanup();
             cJSON_Delete(more.j_sensor);
             if (more.j_params)
                 cJSON_Delete(more.j_params);

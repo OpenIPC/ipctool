@@ -160,17 +160,6 @@ static const char *v5_dram_type_name(uint32_t t) {
     }
 }
 
-/* Decode the actual DDR data rate.  The chain is:
- *   ddr_cksel    (CRG+0x2000 bits [18:16])  -- 0 = 24 MHz, 1 = clk_dpll_pst
- *   DPLL VCO     (CRG+0x180 / 0x184, post-divided)  -- the DFI clock
- *   dficlk_ratio (DDR_PHY0+0x78 bits [1:0]) -- DFI:DRAM clock, 0=1:1, 1=1:2,
- *                2=1:4, so the DRAM clock is DFI * (1 << dficlk_ratio)
- * and the data rate is twice the DRAM clock, data being moved on both edges:
- *   data rate (MT/s) = phy_clk_mhz * (1 << dficlk_ratio) * 2.
- * The Hi3519DV500 data sheet's clock tree runs the DPLL at 667 MHz for its
- * "up to 2666 Mbps DDR4"; a Taobao DV500 kit whose boot table is
- * ..._DDR4_2666M-4GB reads DPLL 664 MHz, ratio 1:2 -> 2656 MT/s. Without the
- * final factor of two this reported the DRAM clock, 1328, as the rate. */
 /* Hi3519DV500/Hi3516DV500 A55 core clock: PERI_CRG2064 (CRG+0x2040)
  * a55_cksel [10:8] picks one of seven sources, and only one of them is the
  * APLL -- so "cpu_pll" above is not the CPU's frequency. Encoding from the
@@ -180,7 +169,7 @@ static const char *v5_dram_type_name(uint32_t t) {
  * is DV500-only. */
 static void v5_dv500_cpu(cJSON *root, bool brief) {
     static const unsigned fixed_mhz[8] = {24, 675, 0, 792, 833, 900, 1000, 0};
-    uint32_t crg2064, apll0, apll1;
+    uint32_t crg2064;
 
     if (!strstr(chip_name, "DV500") ||
         !mem_reg(V5_CRG_BASE + 0x2040, &crg2064, OP_READ))
@@ -190,21 +179,8 @@ static void v5_dv500_cpu(cJSON *root, bool brief) {
     double mhz = fixed_mhz[sel];
     const char *source = "fixed";
     if (sel == 2) {
-        if (!mem_reg(V5_CRG_BASE + 0x000, &apll0, OP_READ) ||
-            !mem_reg(V5_CRG_BASE + 0x004, &apll1, OP_READ))
+        if (!pll_read_freq_mhz(&v5_plls[0], &mhz)) /* cpu_pll: the APLL */
             return;
-        unsigned fbdiv = apll1 & 0xFFF;
-        unsigned refdiv = (apll1 >> 12) & 0x3F;
-        unsigned p1 = (apll0 >> 24) & 0x7;
-        unsigned p2 = (apll0 >> 28) & 0x7;
-        if (!refdiv)
-            refdiv = 1;
-        if (!p1)
-            p1 = 1;
-        if (!p2)
-            p2 = 1;
-        mhz = 24.0 * (fbdiv + (double)(apll0 & 0xFFFFFF) / (double)(1u << 24)) /
-              (double)(refdiv * p1 * p2);
         source = "cpu_pll";
     }
     if (mhz == 0)
@@ -221,7 +197,22 @@ static void v5_dv500_cpu(cJSON *root, bool brief) {
     cJSON_AddItemToObject(root, "cpu", cpu);
 }
 
+/* Decode the actual DDR data rate.  The chain is:
+ *   ddr_cksel    (CRG+0x2000 bits [18:16])  -- 0 = 24 MHz, 1 = clk_dpll_pst
+ *   DPLL VCO     (CRG+0x180 / 0x184, post-divided)  -- the DFI clock
+ *   dficlk_ratio (DDR_PHY0+0x78 bits [1:0]) -- DFI:DRAM clock, 0=1:1, 1=1:2,
+ *                2=1:4, so the DRAM clock is DFI * (1 << dficlk_ratio)
+ * and the data rate is twice the DRAM clock, data being moved on both edges:
+ *   data rate (MT/s) = phy_clk_mhz * (1 << dficlk_ratio) * 2.
+ * The Hi3519DV500 data sheet's clock tree runs the DPLL at 667 MHz for its
+ * "up to 2666 Mbps DDR4"; a Taobao DV500 kit whose boot table is
+ * ..._DDR4_2666M-4GB reads DPLL 664 MHz, ratio 1:2 -> 2656 MT/s. Without the
+ * final factor of two this reported the DRAM clock, 1328, as the rate. */
 static void v5_extra(cJSON *root, bool brief) {
+    /* First, and on its own registers: a DDR read failing below must not
+     * take the CPU clock with it. */
+    v5_dv500_cpu(root, brief);
+
     uint32_t crg_cksel = 0;
     uint32_t phy_ctrl0 = 0;
     uint32_t phy_dramcfg = 0;
@@ -271,8 +262,6 @@ static void v5_extra(cJSON *root, bool brief) {
                                              : "unknown");
     }
     cJSON_AddItemToObject(root, "ddr", ddr);
-
-    v5_dv500_cpu(root, brief);
 
     /* SSMOD (DPLL spread-spectrum) status. */
     uint32_t ssmod_raw = 0;
