@@ -314,6 +314,13 @@ int main(void) {
     zone[0].temp = "-12";
     CHECK(nvt_get_temp() == -12.0f);
 
+    /* A gap in the numbering: a driver that unregistered its zone. */
+    fresh();
+    zone[1].type = "nvt_thermal";
+    zone[1].temp = "45828";
+    CHECK(fabsf(nvt_get_temp() - 45.828f) < 0.001f);
+    CHECK(mmio_calls == 0);
+
     /* Found by type, not by number. */
     fresh();
     zone[0].type = "cpu_thermal";
@@ -336,9 +343,14 @@ int main(void) {
     zone[0].temp = "99000";
     CHECK(near(nvt_get_temp(), 265, 228));
 
-    /* /dev/mem withheld and no nvt_adc: no reading. */
+    /* /dev/mem withheld and no nvt_adc: some other zone if there is one,
+     * else no reading. */
     fresh();
     mmio_fails = true;
+    zone[0].type = "cpu_thermal";
+    zone[0].temp = "66000";
+    CHECK(nvt_get_temp() == 66.0f);
+    zone[0].type = NULL;
     CHECK(isnan(nvt_get_temp()));
 
     /* A kernel without nvt_pinmux: the device tree names the die, and that

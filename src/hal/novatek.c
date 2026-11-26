@@ -145,14 +145,16 @@ float novatek_get_temp() {
  * it, the ADC and the eFuse are the kernel's: it read the trim once, at
  * probe, under the semaphore that also orders the encoder's eFuse check
  * (kdrv_h26x calls it from kdrv_videoenc_set), and the register path below
- * cannot take that semaphore. So with the zone there, no register is read. */
+ * cannot take that semaphore. So with the zone there, no register is read.
+ * The scan steps over missing numbers: a driver that unregisters its zone
+ * leaves a gap. */
 static bool nvt_zone_temp(float *t) {
     char path[64], type[32];
-    for (int i = 0;; i++) {
+    for (int i = 0; i < 16; i++) {
         snprintf(path, sizeof(path), "/sys/class/thermal/thermal_zone%d/type",
                  i);
         if (!line_from_file(path, "([a-z0-9_]+)", type, sizeof(type)))
-            return false;
+            continue;
         if (!strcmp(type, "nvt_thermal")) {
             snprintf(path, sizeof(path),
                      "/sys/class/thermal/thermal_zone%d/temp", i);
@@ -160,6 +162,7 @@ static bool nvt_zone_temp(float *t) {
             return true;
         }
     }
+    return false;
 }
 
 /* The die thermometer of NA51055, NA51084 and NA51089 -- one SAR ADC, clock
@@ -269,15 +272,16 @@ static int nvt_thermal_trim() {
     if (!nvt_efuse_row(NVT_THERMAL_TRIM_ROW, &row) ||
         !nvt_efuse_row(NVT_THERMAL_TRIM_ROW, &again) || row != again)
         return dflt;
-    nvt_trim = dflt;
+    int trim = dflt;
     for (int half = 0; half < 2; half++) {
         const uint32_t w = (row >> (16 * half)) & 0xffff;
         if ((w & 0xc000) == 0x8000) {
-            nvt_trim = w & 0x3fff;
+            trim = w & 0x3fff;
             break;
         }
     }
-    return nvt_trim;
+    nvt_trim = trim; /* stored once, never half-decided */
+    return trim;
 }
 
 static float nvt_read_temp() {
@@ -315,7 +319,11 @@ static float nvt_read_temp() {
 
 static float nvt_get_temp() {
     float t;
-    return nvt_zone_temp(&t) ? t : nvt_read_temp();
+    if (nvt_zone_temp(&t))
+        return t;
+    t = nvt_read_temp();
+    /* A kernel that withholds /dev/mem may still have a zone of its own. */
+    return isnan(t) ? novatek_get_temp() : t;
 }
 
 static int novatek_open_i2c_fd(int i2c_adapter_nr) {
