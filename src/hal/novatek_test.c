@@ -43,10 +43,13 @@ static struct {
     uint32_t second_read; /* if set, what an interleaved second read sees */
 } M;
 
-static int efuse_writes, adc_writes, cg_writes;
+static int efuse_writes, adc_writes, cg_writes, mmio_calls;
 static const char *illegal;
-static bool mmio_fails;              /* /dev/mem withheld */
-static const char *dt_model, *sysfs; /* line_from_file's answers */
+static bool mmio_fails;      /* /dev/mem withheld */
+static const char *dt_model; /* line_from_file's answers */
+static struct {
+    const char *type, *temp; /* NULL type: no such zone */
+} zone[4];
 
 static void fresh(void) {
     memset(&M, 0, sizeof M);
@@ -56,11 +59,13 @@ static void fresh(void) {
     M.efuse_sts = 0x0000000C;
     M.fuse[6] = 0x000080E4;
     M.code = 265;
-    efuse_writes = adc_writes = cg_writes = 0;
+    efuse_writes = adc_writes = cg_writes = mmio_calls = 0;
     illegal = NULL;
     mmio_fails = false;
-    dt_model = sysfs = NULL;
+    dt_model = NULL;
+    memset(zone, 0, sizeof zone);
     chip_generation = CHIP_NA51089;
+    nvt_trim = -1;
 }
 
 static bool converting(void) {
@@ -77,6 +82,7 @@ static void complete_read(void) {
 }
 
 bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
+    mmio_calls++;
     if (mmio_fails)
         return false;
     if (op == OP_READ) {
@@ -162,10 +168,14 @@ bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
 bool line_from_file(const char *filename, const char *re, char *buf, size_t n) {
     (void)re;
     const char *ans = NULL;
+    int i;
+    char leaf[8];
     if (!strcmp(filename, "/proc/device-tree/model"))
         ans = dt_model;
-    else if (!strcmp(filename, "/sys/class/thermal/thermal_zone0/temp"))
-        ans = sysfs;
+    else if (sscanf(filename, "/sys/class/thermal/thermal_zone%d/%7s", &i,
+                    leaf) == 2 &&
+             i >= 0 && i < 4 && zone[i].type)
+        ans = !strcmp(leaf, "type") ? zone[i].type : zone[i].temp;
     if (!ans)
         return false;
     snprintf(buf, n, "%s", ans);
@@ -205,11 +215,12 @@ int main(void) {
     CHECK(efuse_closed());
     CHECK(illegal == NULL);
 
-    /* A second read touches neither the clock nor the ADC. */
-    cg_writes = adc_writes = 0;
+    /* A second read touches neither the clock nor the ADC, and the trim is
+     * not read again: every sequence is a window on the kernel's readers. */
+    cg_writes = adc_writes = efuse_writes = 0;
     t = hal_temperature();
     CHECK(near(t, 265, 228));
-    CHECK(cg_writes == 0 && adc_writes == 0);
+    CHECK(cg_writes == 0 && adc_writes == 0 && efuse_writes == 0);
 
     /* An ADC someone else runs is read, not reconfigured: the vendor driver
      * leaves clkdiv 1 and all four channels continuous. */
@@ -246,13 +257,17 @@ int main(void) {
     CHECK(near(nvt_get_temp(), 265, NVT_DEFAULT_TRIM));
 
     /* The kernel mid-sequence: the controller is left alone entirely, and
-     * the reading falls back to the default trim rather than failing. */
+     * the reading falls back to the default trim rather than failing -- for
+     * this call only. Once the kernel is done, the fused trim is read. */
     fresh();
     M.efuse_ctrl = 1;
     M.efuse_sts |= 1;
     t = nvt_get_temp();
     CHECK(near(t, 265, NVT_DEFAULT_TRIM));
     CHECK(efuse_writes == 0);
+    M.efuse_ctrl = 0;
+    M.efuse_sts &= ~1u;
+    CHECK(near(nvt_get_temp(), 265, 228));
 
     /* A read-done bit someone left standing, with their row still in DATA:
      * that word is not row 6, and must not be taken for it. */
@@ -268,14 +283,62 @@ int main(void) {
     M.second_read = 0x000080F0;
     CHECK(near(nvt_get_temp(), 265, NVT_DEFAULT_TRIM));
     CHECK(M.reads_of_row6 == 2);
+    M.second_read = 0;
+    CHECK(near(nvt_get_temp(), 265, 228));
 
-    /* /dev/mem withheld: the vendor driver's thermal zone, if there is one,
-     * still answers -- and with none, there is no reading. */
+    /* An unfused die is an answer, not a failure: kept like a fused one. */
+    fresh();
+    M.fuse[6] = 0;
+    CHECK(near(nvt_get_temp(), 265, NVT_DEFAULT_TRIM));
+    efuse_writes = 0;
+    CHECK(near(nvt_get_temp(), 265, NVT_DEFAULT_TRIM));
+    CHECK(efuse_writes == 0);
+
+    /* The kernel carries nvt_adc (OpenIPC/firmware#2950, with the units of
+     * OpenIPC/linux#323): its zone is read, and no register is touched. */
+    fresh();
+    zone[0].type = "nvt_thermal";
+    zone[0].temp = "47147";
+    CHECK(fabsf(nvt_get_temp() - 47.147f) < 0.001f);
+    CHECK(mmio_calls == 0);
+
+    /* The vendor's own kernel, in whole degrees. */
+    zone[0].temp = "52";
+    CHECK(nvt_get_temp() == 52.0f);
+    CHECK(mmio_calls == 0);
+
+    /* Below zero either way: nvt_adc's millidegrees nearest 0 on NA51089
+     * are -337 and 982, both outside the whole-degree window. */
+    zone[0].temp = "-337";
+    CHECK(fabsf(nvt_get_temp() + 0.337f) < 0.001f);
+    zone[0].temp = "-12";
+    CHECK(nvt_get_temp() == -12.0f);
+
+    /* Found by type, not by number. */
+    fresh();
+    zone[0].type = "cpu_thermal";
+    zone[0].temp = "99000";
+    zone[1].type = "nvt_thermal";
+    zone[1].temp = "45828";
+    CHECK(fabsf(nvt_get_temp() - 45.828f) < 0.001f);
+    CHECK(mmio_calls == 0);
+
+    /* The zone is there but will not read: no reading, and still no
+     * register -- the ADC and the eFuse are the kernel's. */
+    fresh();
+    zone[0].type = "nvt_thermal";
+    CHECK(isnan(nvt_get_temp()));
+    CHECK(mmio_calls == 0);
+
+    /* Some other zone only: the registers, as with none. */
+    fresh();
+    zone[0].type = "cpu_thermal";
+    zone[0].temp = "99000";
+    CHECK(near(nvt_get_temp(), 265, 228));
+
+    /* /dev/mem withheld and no nvt_adc: no reading. */
     fresh();
     mmio_fails = true;
-    sysfs = "66";
-    CHECK(nvt_get_temp() == 66.0f);
-    sysfs = NULL;
     CHECK(isnan(nvt_get_temp()));
 
     /* A kernel without nvt_pinmux: the device tree names the die, and that
@@ -305,6 +368,7 @@ int main(void) {
     CHECK(hal_temperature == nvt_get_temp);
     CHECK(near(hal_temperature(), 265, 228));
     M.fuse[6] = 0;
+    nvt_trim = -1; /* another die, so another process */
     CHECK(near(nvt_get_temp(), 265, NVT_DEFAULT_TRIM));
 
     /* NA51055 has its own slope and default: 1.3 degC per code, trim 259. */
@@ -315,6 +379,7 @@ int main(void) {
     CHECK(hal_temperature == nvt_get_temp);
     CHECK(near55(hal_temperature(), 265, 228));
     M.fuse[6] = 0;
+    nvt_trim = -1;
     CHECK(near55(nvt_get_temp(), 265, NA51055_DEFAULT_TRIM));
     CHECK(illegal == NULL);
 
@@ -341,6 +406,16 @@ int main(void) {
         novatek_setup_hal();
         CHECK(hal_temperature != nvt_get_temp);
     }
+
+    /* Their zone is read in whichever unit its driver uses. */
+    fresh();
+    zone[0].type = "thermal";
+    zone[0].temp = "66";
+    CHECK(novatek_get_temp() == 66.0f);
+    zone[0].temp = "45000";
+    CHECK(novatek_get_temp() == 45.0f);
+    zone[0].type = NULL;
+    CHECK(isnan(novatek_get_temp()));
 
     if (failures)
         fprintf(stderr, "novatek_test: %d failure(s)\n", failures);
