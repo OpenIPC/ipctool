@@ -122,25 +122,59 @@ unsigned long novatek_totalmem(unsigned long *media_mem) {
     return *media_mem + kernel_mem();
 }
 
-/* The vendor nvt_adc driver's thermal zone. It reports whole degrees, not the
- * millidegrees the sysfs ABI promises, so the value is taken as it stands. */
+/* A thermal zone in either unit. The vendor nvt_adc driver reports whole
+ * degrees; OpenIPC's reports the millidegrees the sysfs ABI promises
+ * (OpenIPC/linux#323). A die reads -40..125 degC, so whole degrees stay inside
+ * [-100, 200], and nvt_adc's millidegrees -- 30000 + k * 1319, or k * 1300 on
+ * NA51055 -- land in there only at 100: an NA51055 at 0.1 degC. */
+static float zone_celsius(const char *path) {
+    char buf[16], *end;
+    if (!line_from_file(path, "(-?[0-9]+)", buf, sizeof(buf)))
+        return NAN;
+    const long v = strtol(buf, &end, 10);
+    if (end == buf)
+        return NAN;
+    return v < -100 || v > 200 ? v / 1000.0f : v;
+}
+
 float novatek_get_temp() {
-    char buf[16];
-    if (line_from_file("/sys/class/thermal/thermal_zone0/temp", "(.+)", buf,
-                       sizeof(buf)))
-        return strtof(buf, NULL);
-    return NAN;
+    return zone_celsius("/sys/class/thermal/thermal_zone0/temp");
+}
+
+/* nvt_adc's own zone, by type rather than by number. Where the kernel has
+ * it, the ADC and the eFuse are the kernel's: it read the trim once, at
+ * probe, under the semaphore that also orders the encoder's eFuse check
+ * (kdrv_h26x calls it from kdrv_videoenc_set), and the register path below
+ * cannot take that semaphore. So with the zone there, no register is read.
+ * The scan steps over missing numbers: a driver that unregisters its zone
+ * leaves a gap. */
+static bool nvt_zone_temp(float *t) {
+    char path[64], type[32];
+    for (int i = 0; i < 16; i++) {
+        snprintf(path, sizeof(path), "/sys/class/thermal/thermal_zone%d/type",
+                 i);
+        if (!line_from_file(path, "([a-z0-9_]+)", type, sizeof(type)))
+            continue;
+        if (!strcmp(type, "nvt_thermal")) {
+            snprintf(path, sizeof(path),
+                     "/sys/class/thermal/thermal_zone%d/temp", i);
+            *t = zone_celsius(path);
+            return true;
+        }
+    }
+    return false;
 }
 
 /* The die thermometer of NA51055, NA51084 and NA51089 -- one SAR ADC, clock
  * gate and eFuse block at the same addresses on all three, per the SDK's
  * plat-na51055 (which serves NA51055 and NA51084) and plat-na51089 -- is
- * channel 3 of the ADC, averaged by the ADC into its own register. OpenIPC's
- * kernel builds no nvt_adc driver, so the ADC is found gated and idle, and is
- * started here the way the RTOS side's thermal_channel_init() does: clock on,
- * channel 3 continuous, converter on. Both are left running, as the vendor
- * driver leaves them; turning a clock off is how a probe takes a peripheral
- * away from its owner (OpenIPC/firmware#2439). */
+ * channel 3 of the ADC, averaged by the ADC into its own register. A kernel
+ * without nvt_adc (OpenIPC's, until OpenIPC/firmware#2950) leaves the ADC
+ * gated and idle, so it is started here the way the RTOS side's
+ * thermal_channel_init() does: clock on, channel 3 continuous, converter on.
+ * Both are left running, as the vendor driver leaves them; turning a clock off
+ * is how a probe takes a peripheral away from its owner
+ * (OpenIPC/firmware#2439). */
 #define NVT_CG_CLK_EN1 0xF0020074
 #define NVT_CG_ADC (1u << 13)
 #define NVT_ADC_CTRL 0xF0260000
@@ -221,19 +255,33 @@ static bool nvt_efuse_row(uint32_t row, uint32_t *data) {
  *
  * The row is read twice and taken only if both agree. Nothing here can lock
  * out the kernel or a second ipctool, and a sequence one of them interleaved
- * with comes back as a different word, which costs the calibration and
- * nothing else. */
+ * with comes back as a different word, which costs us the calibration. It can
+ * also hand the kernel's reader our row, which is why the result is kept: a
+ * fuse does not change, and a libipchw consumer such as a metrics exporter
+ * may ask for the temperature every few seconds. A read that did not complete
+ * is not kept, so the next call tries again rather than living with the
+ * default. */
+static int nvt_trim = -1;
+
 static int nvt_thermal_trim() {
+    if (nvt_trim >= 0)
+        return nvt_trim;
+    const int dflt = chip_generation == CHIP_NA51055 ? NA51055_DEFAULT_TRIM
+                                                     : NVT_DEFAULT_TRIM;
     uint32_t row, again;
-    if (nvt_efuse_row(NVT_THERMAL_TRIM_ROW, &row) &&
-        nvt_efuse_row(NVT_THERMAL_TRIM_ROW, &again) && row == again)
-        for (int half = 0; half < 2; half++) {
-            const uint32_t w = (row >> (16 * half)) & 0xffff;
-            if ((w & 0xc000) == 0x8000)
-                return w & 0x3fff;
+    if (!nvt_efuse_row(NVT_THERMAL_TRIM_ROW, &row) ||
+        !nvt_efuse_row(NVT_THERMAL_TRIM_ROW, &again) || row != again)
+        return dflt;
+    int trim = dflt;
+    for (int half = 0; half < 2; half++) {
+        const uint32_t w = (row >> (16 * half)) & 0xffff;
+        if ((w & 0xc000) == 0x8000) {
+            trim = w & 0x3fff;
+            break;
         }
-    return chip_generation == CHIP_NA51055 ? NA51055_DEFAULT_TRIM
-                                           : NVT_DEFAULT_TRIM;
+    }
+    nvt_trim = trim; /* stored once, never half-decided */
+    return trim;
 }
 
 static float nvt_read_temp() {
@@ -269,9 +317,12 @@ static float nvt_read_temp() {
     return ((int)code - nvt_thermal_trim()) * slope + 30;
 }
 
-/* A kernel that withholds /dev/mem may still carry the vendor driver. */
 static float nvt_get_temp() {
-    const float t = nvt_read_temp();
+    float t;
+    if (nvt_zone_temp(&t))
+        return t;
+    t = nvt_read_temp();
+    /* A kernel that withholds /dev/mem may still have a zone of its own. */
     return isnan(t) ? novatek_get_temp() : t;
 }
 
