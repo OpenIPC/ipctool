@@ -11,6 +11,43 @@ const char *getsensorshort();
 float gethwtemp();
 
 /* ------------------------------------------------------------------------
+ * Sensor connectors
+ *
+ * A board family with more than one sensor connector, and a HAL that knows
+ * which i2c bus each one is wired to, can be asked one connector at a time.
+ * Today that is the Hi3519DV500 reference design: SENSOR0..3 on I2C4, I2C5,
+ * I2C3 and I2C6. Everywhere else ipchw_sensor_ports() is 0 and
+ * getsensorshort() remains the question to ask.
+ *
+ * Sensors on these boards come and go with their ribbon cables, so a consumer
+ * that wants to know what is fitted asks at start-up rather than trusting a
+ * name saved on an earlier boot.
+ *
+ * The probe ungates the connector's sensor clock where it has to, and on
+ * DV500 switches SENSOR1's I2C5 pads from GPIO for the duration; both go back
+ * as they were found. A consumer that goes on to run that sensor muxes the
+ * pads itself (ipchw_padmux_set()).
+ *
+ * Threading: serialised with getsensoridentity() and getsensorshort(). It
+ * reaches registers through the same unlocked window as ipchw_padmux_get().
+ * ---------------------------------------------------------------------- */
+typedef struct {
+    int bus;        /* the connector's i2c adapter */
+    char model[16]; /* as getsensorshort() spells it: "os08a10" */
+    char twin[16];  /* another part with the same ID registers, spelled the
+                     * same way ("os08a20"), or "" */
+} ipchw_sensor_t;
+
+/* The number of connectors, 0 where the board family has one or the HAL does
+ * not know the wiring. */
+int ipchw_sensor_ports(void);
+
+/* What is on connector `port` (0-based): 1 and *out filled, 0 when nothing
+ * answers on its bus (out->bus still says which bus was asked), -1 for a port
+ * this board family does not have. */
+int ipchw_sensor_probe(int port, ipchw_sensor_t *out);
+
+/* ------------------------------------------------------------------------
  * Pad multiplexing
  *
  * One row of the running SoC's pad-mux table: a named function, the pad it
