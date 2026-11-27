@@ -57,11 +57,28 @@ bool sstar_detect_cpu(char *chip_name) {
 
         switch (val) {
         case INFINITY2M:
-            /* SSD201/SSD202 and the SSR62x NVR parts are one generation and
-             * nothing read here tells them apart, so the name is the group's,
-             * as for the others. An SSR621Q (Jooan JA-8108 NVR) with the BROM
-             * tag ...I2m_ROM... was reported as "unknown" before this case. */
+            /* SSD201/SSD202 and the SSR62x NVR parts are one generation;
+             * the bond strap tells the package. The IPL reads its low byte
+             * and prints it after "D-": an SSR621Q (Xiongmai NBD80S16S)
+             * prints "D-1b"; 0x1D and 0x1E are the SSD201's and SSD202D's.
+             * Any other package, or a strap that cannot be read, keeps the
+             * group's name, as for the other generations. An SSR621Q (Jooan
+             * JA-8108 NVR) with the BROM tag ...I2m_ROM... was reported as
+             * "unknown" before this case. */
             strcpy(chip_name, "SSD20X");
+            if (mem_reg(SSTAR_BOND_ADDR, &val, OP_READ)) {
+                switch (val & 0xFF) {
+                case I2M_BOND_SSR621Q:
+                    strcpy(chip_name, "SSR621Q");
+                    break;
+                case I2M_BOND_SSD201:
+                    strcpy(chip_name, "SSD201");
+                    break;
+                case I2M_BOND_SSD202D:
+                    strcpy(chip_name, "SSD202D");
+                    break;
+                }
+            }
             break;
         case INFINITY5:
             strcpy(chip_name, "SSC32X");
