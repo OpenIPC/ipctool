@@ -3,7 +3,7 @@
  * Each generation's name is pinned here: dropping or renaming a case puts that
  * generation back to "unknown" in every report, which is what Infinity2M
  * (0xF0) did until it had one (an SSR621Q in a Jooan JA-8108 NVR, BROM tag
- * ...I2m_ROM...).
+ * ...I2m_ROM...). Infinity2M's parts are named by their bond strap.
  *
  * CHECK rather than assert(), because the release flags carry -DNDEBUG and
  * would compile an assert-based test into one that passes unconditionally.
@@ -28,13 +28,22 @@ static int failures;
     } while (0)
 
 static uint32_t generation_reg; /* what SSTAR_ADDR reads */
+static uint32_t bond_reg;       /* what SSTAR_BOND_ADDR reads */
+static bool bond_fails;         /* the strap alone unreadable */
 static bool mmio_fails;         /* /dev/mem withheld */
 
 bool mem_reg(uint32_t addr, uint32_t *data, enum REG_OPS op) {
-    if (mmio_fails || op != OP_READ || addr != SSTAR_ADDR)
+    if (mmio_fails || op != OP_READ)
         return false;
-    *data = generation_reg;
-    return true;
+    if (addr == SSTAR_ADDR) {
+        *data = generation_reg;
+        return true;
+    }
+    if (addr == SSTAR_BOND_ADDR && !bond_fails) {
+        *data = bond_reg;
+        return true;
+    }
+    return false;
 }
 
 /* The rest of sstar.c's externals; nothing below reads a file. */
@@ -60,8 +69,33 @@ static bool detects(uint32_t reg, const char *want) {
     return true;
 }
 
+/* An Infinity2M part by its bond strap. */
+static bool i2m_detects(uint32_t bond, const char *want) {
+    bond_reg = bond;
+    bool ok = detects(INFINITY2M, want);
+    if (!ok)
+        fprintf(stderr, "  bond 0x%X\n", bond);
+    bond_reg = 0;
+    return ok;
+}
+
 int main(void) {
-    CHECK(detects(INFINITY2M, "SSD20X"));
+    /* The packages the IPLs name a DDR setting for, by the low byte the
+     * IPL reads; the rest of the register is ignored, as there. */
+    CHECK(i2m_detects(0x1B, "SSR621Q"));
+    CHECK(i2m_detects(0x1D, "SSD201"));
+    CHECK(i2m_detects(0x1E, "SSD202D"));
+    CHECK(i2m_detects(0x11B, "SSR621Q"));
+    /* 0x1F has a DDR setting but no known part; anything else is not a
+     * package: the group's name. */
+    CHECK(i2m_detects(0x1F, "SSD20X"));
+    CHECK(i2m_detects(0x00, "SSD20X"));
+    CHECK(i2m_detects(0x3B, "SSD20X"));
+    /* The strap unreadable: still the generation, by the group's name. */
+    bond_fails = true;
+    CHECK(i2m_detects(0x1B, "SSD20X"));
+    bond_fails = false;
+
     CHECK(detects(INFINITY5, "SSC32X"));
     CHECK(detects(INFINITY6, "SSC32X"));
     CHECK(detects(INFINITY6B, "SSC33X"));
