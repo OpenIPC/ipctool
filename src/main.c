@@ -101,7 +101,8 @@ void print_usage() {
         "  nand-migrate [--dry-run] [--wipe-settings] <rootfs.ubifs>\n"
         "                            move a NAND camera off the retired\n"
         "                            layout with a `kernel` UBI volume\n"
-        "  printenv                  drop-in replacement for fw_printenv\n"
+        "  printenv [-n] [name...]   drop-in replacement for fw_printenv;\n"
+        "                            -n prints just the value of one name\n"
         "  setenv <key> <value>      drop-in replacement for fw_setenv\n"
         "  dmesg                     drop-in replacement for dmesg\n"
         "  i2cget <device address> <register>\n"
@@ -252,7 +253,7 @@ int main(int argc, char *argv[]) {
         else if (!strcmp(argv[1], "nand-migrate"))
             return nand_migrate_cmd(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "printenv"))
-            return cmd_printenv();
+            return cmd_printenv(argc - 1, argv + 1);
         else if (!strcmp(argv[1], "setenv"))
             return cmd_set_env(argc - 1, argv + 1);
         else if (!strcmp(argv[optind], "dmesg"))
