@@ -1817,8 +1817,10 @@ const char *getsensorshort() {
 }
 
 /* How many sensor connectors this board family has, where it has more than
- * one and the HAL knows which bus each is on (hal_sensor_buses). */
-int ipchw_sensor_ports(void) {
+ * one and the HAL knows which bus each is on (hal_sensor_buses). Called with
+ * the identity lock held: getchipname() sets the HAL up on first use and is
+ * not safe to race. */
+static int sensor_ports_locked(void) {
     if (!getchipname() || !hal_sensor_buses)
         return 0;
     int n = 0;
@@ -1827,18 +1829,31 @@ int ipchw_sensor_ports(void) {
     return n;
 }
 
+int ipchw_sensor_ports(void) {
+    pthread_mutex_lock(&sensor_indentity_mtx);
+    const int n = sensor_ports_locked();
+    pthread_mutex_unlock(&sensor_indentity_mtx);
+    return n;
+}
+
 /* One connector's bus and nothing else: no fallback to SPI or to the other
  * buses, which getsensorid() does and which would name the sensor on the
- * next connector as this one's. Under the identity lock, because the probe
- * steers the process-global adapter number. */
+ * next connector as this one's. Everything from the HAL's first-use setup to
+ * the restore of the process-global adapter number runs under the identity
+ * lock, as getsensoridentity() does. */
 int ipchw_sensor_probe(int port, ipchw_sensor_t *out) {
-    if (!out || port < 0 || port >= ipchw_sensor_ports())
+    if (!out || port < 0)
         return -1;
     memset(out, 0, sizeof(*out));
+
+    pthread_mutex_lock(&sensor_indentity_mtx);
+    if (port >= sensor_ports_locked()) {
+        pthread_mutex_unlock(&sensor_indentity_mtx);
+        return -1;
+    }
     const int bus = hal_sensor_buses[port];
     out->bus = bus;
 
-    pthread_mutex_lock(&sensor_indentity_mtx);
     const int saved = i2c_adapter_nr;
     /* Before the open: the HAL openers take no argument and open the adapter
      * this global names. */
@@ -1858,12 +1873,14 @@ int ipchw_sensor_probe(int port, ipchw_sensor_t *out) {
             if (twin)
                 lsnprintf(out->twin, sizeof(out->twin), "%s", twin);
         }
+        /* Only after an arm: the undo it owes is this probe's. A probe whose
+         * own open fails returns without one, and after one that ran this is
+         * a no-op, each undo being spent. A bus that would not open was never
+         * armed, and a cleanup there would spend a restore somebody else is
+         * owed -- the HAL's setup ungates the sensor clock too. */
+        if (hal_cleanup)
+            hal_cleanup();
     }
-    /* A probe whose own open fails returns without a cleanup, and what the
-     * arm switched must go back; after one that ran this is a no-op, each
-     * undo being spent. */
-    if (hal_cleanup)
-        hal_cleanup();
     i2c_adapter_nr = saved;
     restore_printk();
     pthread_mutex_unlock(&sensor_indentity_mtx);

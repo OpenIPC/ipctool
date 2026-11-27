@@ -825,6 +825,11 @@ static int ports_open(int adapter_nr) {
     return universal_open_sensor_fd("/dev/null");
 }
 
+/* A cleanup with no arm before it spends a restore somebody else is owed --
+ * the HAL's own setup ungates the sensor clock -- so it is counted. */
+static int ports_cleanups;
+static void ports_cleanup(void) { ports_cleanups++; }
+
 static int ports_read(int fd, unsigned char addr, uint32_t reg,
                       unsigned int reg_width, unsigned int data_width) {
     if (i2c_adapter_nr != ports_sensor_bus)
@@ -835,7 +840,8 @@ static int ports_read(int fd, unsigned char addr, uint32_t reg,
 static void check_sensor_ports(void) {
     static unsigned char addrs[] = {0x60, 0};
     static sensor_addr_t table[] = {{SENSOR_OMNIVISION, addrs}, {0, NULL}};
-    static const int buses[] = {4, 5, -1};
+    /* Bus 6 has no adapter: the third connector's open fails. */
+    static const int buses[] = {4, 5, 6, -1};
     ipchw_sensor_t s;
 
     setup_hal_fallback();
@@ -843,6 +849,7 @@ static void check_sensor_ports(void) {
     CHECK(ipchw_sensor_probe(0, &s) == -1);
 
     hal_sensor_buses = buses;
+    hal_cleanup = ports_cleanup;
     open_i2c_sensor_fd = ports_open;
     i2c_read_register = ports_read;
     i2c_change_addr = mock_change_addr;
@@ -852,7 +859,7 @@ static void check_sensor_ports(void) {
     mock_set(0x300B, 2, 1, 0x08);
     i2c_adapter_nr = 0;
 
-    CHECK(ipchw_sensor_ports() == 2);
+    CHECK(ipchw_sensor_ports() == 3);
 
     ports_sensor_bus = 5;
     ports_nopened = 0;
@@ -868,13 +875,23 @@ static void check_sensor_ports(void) {
     if (strcmp(s.model, "os08a10") || strcmp(s.twin, "os08a20"))
         fprintf(stderr, "    (port 1: got \"%s\" / \"%s\")\n", s.model, s.twin);
 
-    CHECK(ipchw_sensor_probe(2, &s) == -1);
+    /* Connector 2's bus does not open: nothing armed, so nothing undone. */
+    ports_cleanups = 0;
+    CHECK(ipchw_sensor_probe(2, &s) == 0);
+    CHECK(s.bus == 6 && !s.model[0]);
+    CHECK(ports_cleanups == 0);
+    /* An armed probe is undone, found or not. */
+    CHECK(ipchw_sensor_probe(0, &s) == 0);
+    CHECK(ports_cleanups > 0);
+
+    CHECK(ipchw_sensor_probe(3, &s) == -1);
     CHECK(ipchw_sensor_probe(-1, &s) == -1);
     CHECK(ipchw_sensor_probe(0, NULL) == -1);
     /* The global is put back for `ipctool i2cget` and friends. */
     CHECK(i2c_adapter_nr == 0);
 
     hal_sensor_buses = NULL;
+    hal_cleanup = NULL;
     possible_i2c_addrs = NULL;
     i2c_read_register = mock_read;
     mock_clear();
